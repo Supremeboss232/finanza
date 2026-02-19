@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finanza - Fund & Balance Management</title>
+    <link href="/static/css/style.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        .admin-nav { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .operation-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .operation-card h5 { color: #333; margin-bottom: 15px; }
+        .modal-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .form-control:focus { border-color: #667eea; box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25); }
+        .btn-primary { background: #667eea; border: none; }
+        .btn-primary:hover { background: #5568d3; }
+        .alert-info { background: #e3f2fd; border: 1px solid #2196f3; color: #1565c0; }
+        .tabs-container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .nav-tabs .nav-link { color: #667eea; border: none; border-bottom: 3px solid transparent; }
+        .nav-tabs .nav-link.active { color: #667eea; border-bottom: 3px solid #667eea; }
+        .operation-history { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-top: 20px; }
+        .history-item { padding: 15px; border-bottom: 1px solid #eee; }
+        .history-item:last-child { border-bottom: none; }
+        .badge-credit { background: #d4edda; color: #155724; }
+        .badge-debit { background: #f8d7da; color: #721c24; }
+        .amount-positive { color: #28a745; font-weight: 600; }
+        .amount-negative { color: #dc3545; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <nav class="admin-nav navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/user/admin/dashboard"><i class="fas fa-chart-line"></i> Finanza Admin</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarAdmin">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarAdmin">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/dashboard"><i class="fas fa-home"></i> Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div class="mb-4">
+            <h2><i class="fas fa-money-bill-wave"></i> Fund & Balance Management</h2>
+            <p class="text-muted">Credit or debit user accounts and manage account funding</p>
+        </div>
+
+        <div class="alert alert-info mb-4">
+            <i class="fas fa-info-circle"></i> <strong>Important:</strong> All fund and balance operations are recorded in the system audit log.
+        </div>
+
+        <div class="tabs-container">
+            <ul class="nav nav-tabs mb-4" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="fundTab" data-bs-toggle="tab" data-bs-target="#fundContent" role="tab">
+                        <i class="fas fa-plus-circle"></i> Fund Account
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="adjustTab" data-bs-toggle="tab" data-bs-target="#adjustContent" role="tab">
+                        <i class="fas fa-balance-scale"></i> Adjust Balance
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="historyTab" data-bs-toggle="tab" data-bs-target="#historyContent" role="tab">
+                        <i class="fas fa-history"></i> History
+                    </button>
+                </li>
+            </ul>
+
+            <!-- Fund Account Tab -->
+            <div class="tab-content">
+                <div id="fundContent" class="tab-pane fade show active" role="tabpanel">
+                    <div class="operation-card">
+                        <h5><i class="fas fa-plus-circle"></i> Fund User Account</h5>
+                        <form id="fundForm">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="fundUserSelect" class="form-label">Select User</label>
+                                        <select class="form-control" id="fundUserSelect" required onchange="onFundUserSelected()">
+                                            <option value="">Loading users...</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="fundAmount" class="form-label">Amount to Fund</label>
+                                        <input type="number" class="form-control" id="fundAmount" placeholder="0.00" step="0.01" min="0" required>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="fundUserInfo" style="display:none;" class="mb-3 p-3 bg-light rounded">
+                                <p class="mb-1"><strong>Email:</strong> <span id="fundUserEmail"></span></p>
+                                <p class="mb-0"><strong>Current Balance:</strong> <span id="fundUserBalance" class="text-success">$0.00</span></p>
+                            </div>
+                            <div class="mb-3">
+                                <label for="fundDescription" class="form-label">Description / Reason</label>
+                                <textarea class="form-control" id="fundDescription" rows="3" placeholder="Why is this account being funded?" required></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="fundAccount" class="form-label">Account to Fund (Optional)</label>
+                                <input type="text" class="form-control" id="fundAccount" placeholder="Leave blank to fund primary account">
+                            </div>
+                            <button type="button" class="btn btn-success btn-lg" onclick="fundUserAccount()">
+                                <i class="fas fa-check"></i> Fund Account
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Adjust Balance Tab -->
+                <div id="adjustContent" class="tab-pane fade" role="tabpanel">
+                    <div class="operation-card">
+                        <h5><i class="fas fa-balance-scale"></i> Adjust Account Balance</h5>
+                        <form id="adjustForm">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="adjustUserSelect" class="form-label">Select User</label>
+                                        <select class="form-control" id="adjustUserSelect" required onchange="onAdjustUserSelected()">
+                                            <option value="">Loading users...</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="adjustType" class="form-label">Operation Type</label>
+                                        <select class="form-control" id="adjustType" required>
+                                            <option value="">Select type...</option>
+                                            <option value="credit">Credit (Add)</option>
+                                            <option value="debit">Debit (Subtract)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="adjustUserInfo" style="display:none;" class="mb-3 p-3 bg-light rounded">
+                                <p class="mb-1"><strong>Email:</strong> <span id="adjustUserEmail"></span></p>
+                                <p class="mb-0"><strong>Current Balance:</strong> <span id="adjustUserBalance" class="text-success">$0.00</span></p>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="adjustAmount" class="form-label">Amount</label>
+                                        <input type="number" class="form-control" id="adjustAmount" placeholder="0.00" step="0.01" min="0" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="adjustAccount" class="form-label">Account (Optional)</label>
+                                        <input type="text" class="form-control" id="adjustAccount" placeholder="Account ID or number">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="adjustReason" class="form-label">Reason for Adjustment</label>
+                                <textarea class="form-control" id="adjustReason" rows="3" placeholder="Reason for this adjustment" required></textarea>
+                            </div>
+                            <button type="button" class="btn btn-warning btn-lg" onclick="adjustBalance()">
+                                <i class="fas fa-exchange-alt"></i> Adjust Balance
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- History Tab -->
+                <div id="historyContent" class="tab-pane fade" role="tabpanel">
+                    <div class="operation-history">
+                        <h5>Recent Operations</h5>
+                        <div id="operationHistory">
+                            <p class="text-center text-muted">Loading history...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div class="modal fade" id="successModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Success</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="successMessage"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/admin_static/js/auth-helper.js"></script>
+    <script>
+        const API_BASE = apiConfig.baseURL + '/api/admin';
+        const FUND_API = apiConfig.baseURL + '/api/admin/fund';
+        let allUsers = [];
+
+        async function loadFundUsers() {
+            try {
+                const response = await authenticatedFetch(API_BASE + '/users');
+                if (!response.ok) throw new Error('Failed to load users');
+                
+                const result = await response.json();
+                allUsers = result.data || result;
+                const activeUsers = allUsers.filter(u => u.is_active);
+                
+                // Populate fund user select
+                const fundSelect = document.getElementById('fundUserSelect');
+                fundSelect.innerHTML = activeUsers.map(u => 
+                    `<option value="${u.id}" data-email="${u.email}" data-balance="${u.balance || 0}">${u.full_name} (${u.email})</option>`
+                ).join('');
+                fundSelect.insertAdjacentHTML('afterbegin', '<option value="">Select a user...</option>');
+                
+                // Populate adjust user select
+                const adjustSelect = document.getElementById('adjustUserSelect');
+                adjustSelect.innerHTML = activeUsers.map(u => 
+                    `<option value="${u.id}" data-email="${u.email}" data-balance="${u.balance || 0}">${u.full_name} (${u.email})</option>`
+                ).join('');
+                adjustSelect.insertAdjacentHTML('afterbegin', '<option value="">Select a user...</option>');
+            } catch (error) {
+                console.error('Error loading users:', error);
+            }
+        }
+
+        function onFundUserSelected() {
+            const fundSelect = document.getElementById('fundUserSelect');
+            const selectedOption = fundSelect.options[fundSelect.selectedIndex];
+            const userInfo = document.getElementById('fundUserInfo');
+            
+            if (fundSelect.value) {
+                document.getElementById('fundUserEmail').textContent = selectedOption.dataset.email;
+                document.getElementById('fundUserBalance').textContent = '$' + parseFloat(selectedOption.dataset.balance).toFixed(2);
+                userInfo.style.display = 'block';
+            } else {
+                userInfo.style.display = 'none';
+            }
+        }
+
+        function onAdjustUserSelected() {
+            const adjustSelect = document.getElementById('adjustUserSelect');
+            const selectedOption = adjustSelect.options[adjustSelect.selectedIndex];
+            const userInfo = document.getElementById('adjustUserInfo');
+            
+            if (adjustSelect.value) {
+                document.getElementById('adjustUserEmail').textContent = selectedOption.dataset.email;
+                document.getElementById('adjustUserBalance').textContent = '$' + parseFloat(selectedOption.dataset.balance).toFixed(2);
+                userInfo.style.display = 'block';
+            } else {
+                userInfo.style.display = 'none';
+            }
+        }
+
+        async function fundUserAccount() {
+            const fundSelect = document.getElementById('fundUserSelect');
+            const userId = fundSelect.value;
+            const email = fundSelect.options[fundSelect.selectedIndex].dataset.email;
+            const amount = parseFloat(document.getElementById('fundAmount').value);
+            const description = document.getElementById('fundDescription').value;
+            // Note: fundAccount is just for display/reference. Always use 'checking' as account type.
+            // If you want to support multiple account types, make fundAccount a dropdown instead.
+            const accountType = 'checking';
+
+            if (!userId || !amount || !description) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            if (amount <= 0) {
+                alert('Amount must be greater than 0');
+                return;
+            }
+
+            try {
+                // Fund the user using the fund router endpoint
+                const response = await authenticatedFetch(FUND_API + '/transfer', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        user_id: parseInt(userId),
+                        amount: amount,
+                        account_type: accountType,
+                        fund_source: 'admin',
+                        notes: description,
+                        send_notification: true
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    const errorDetail = errorData.detail || `HTTP ${response.status}`;
+                    throw new Error(errorDetail);
+                }
+                
+                const result = await response.json();
+                console.log('Fund transfer result:', result);
+                showSuccessModal('Account funded successfully with $' + amount.toFixed(2));
+                document.getElementById('fundForm').reset();
+                loadOperationHistory();
+            } catch (error) {
+                console.error('Fund error:', error);
+                alert('Failed to fund account: ' + error.message);
+            }
+        }
+
+        async function adjustBalance() {
+            const adjustSelect = document.getElementById('adjustUserSelect');
+            const userId = adjustSelect.value;
+            const email = adjustSelect.options[adjustSelect.selectedIndex].dataset.email;
+            const type = document.getElementById('adjustType').value;
+            const amount = parseFloat(document.getElementById('adjustAmount').value);
+            const accountType = document.getElementById('adjustAccount').value || 'checking';
+            const reason = document.getElementById('adjustReason').value;
+
+            if (!userId || !type || !amount || !reason) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            if (amount <= 0) {
+                alert('Amount must be greater than 0');
+                return;
+            }
+
+            try {
+                // Adjust balance using the fund router endpoint
+                const response = await authenticatedFetch(FUND_API + '/transfer', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        user_id: parseInt(userId),
+                        amount: amount,
+                        account_type: accountType,
+                        fund_source: type === 'credit' ? 'admin_credit' : 'admin_debit',
+                        notes: reason,
+                        send_notification: true
+                    })
+                });
+
+                if (!response.ok) throw new Error('Failed to adjust balance');
+                
+                const operation = type === 'credit' ? 'credited' : 'debited';
+                showSuccessModal(`Account ${operation} with $${amount.toFixed(2)}`);
+                document.getElementById('adjustForm').reset();
+                loadOperationHistory();
+            } catch (error) {
+                alert('Failed to adjust balance: ' + error.message);
+            }
+        }
+
+        async function loadOperationHistory() {
+            try {
+                const response = await authenticatedFetch(FUND_API);
+                if (!response.ok) throw new Error('Failed to load history');
+                
+                const data = await response.json();
+                const operations = data.transactions || [];
+                const historyContainer = document.getElementById('operationHistory');
+
+                if (operations.length === 0) {
+                    historyContainer.innerHTML = '<p class="text-center text-muted">No operations yet</p>';
+                    return;
+                }
+
+                historyContainer.innerHTML = operations.map(op => `
+                    <div class="history-item">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <p class="mb-1"><strong>${op.user_email || 'Unknown'}</strong></p>
+                                <p class="mb-1"><small>${op.notes || op.reason || 'No description'}</small></p>
+                            </div>
+                            <div class="col-md-4 text-end">
+                                <p class="mb-1">
+                                    <span class="badge ${op.type === 'credit' || op.fund_source.includes('credit') ? 'badge-credit' : 'badge-debit'}">
+                                        ${op.type ? op.type.toUpperCase() : op.fund_source.toUpperCase()}
+                                    </span>
+                                </p>
+                                <p class="mb-0">
+                                    <span class="${op.type === 'credit' || op.fund_source.includes('credit') ? 'amount-positive' : 'amount-negative'}">
+                                        ${op.type === 'credit' || op.fund_source.includes('credit') ? '+' : '-'}$${parseFloat(op.amount).toFixed(2)}
+                                    </span>
+                                </p>
+                                <small class="text-muted">${new Date(op.created_at).toLocaleDateString()}</small>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading history:', error);
+            }
+        }
+
+        function showSuccessModal(message) {
+            document.getElementById('successMessage').textContent = message;
+            new bootstrap.Modal(document.getElementById('successModal')).show();
+        }
+
+        // Initialize
+        window.addEventListener('load', () => {
+            loadFundUsers();
+            loadOperationHistory();
+        });
+
+        // Auto-refresh history every 30 seconds
+        setInterval(loadOperationHistory, 30000);
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/admin-guard.js"></script>
+</body>
+</html>

@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Investments - Finanza Bank</title>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <link href="/static/img/favicon.ico" rel="icon">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jost:wght@500;600;700&family=Open+Sans:wght@400;500&display=swap" rel="stylesheet">  
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/static/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/static/lib/animate/animate.min.css" rel="stylesheet">
+    <link href="/static/lib/owlcarousel/assets/owl.carousel.min.css" rel="stylesheet">
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <div id="spinner" class="show bg-white position-fixed translate-middle w-100 vh-100 top-50 start-50 d-flex align-items-center justify-content-center">
+        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
+    </div>
+    <!-- Navbar Start -->
+    <div class="container-fluid fixed-top px-0 wow fadeIn" data-wow-delay="0.1s">
+        <nav class="navbar navbar-expand-lg navbar-light py-lg-0 px-lg-5 wow fadeIn" data-wow-delay="0.1s">
+            <a href="/user/dashboard" class="navbar-brand ms-4 ms-lg-0">
+                <h5 class="m-0 text-primary"><i class="fa fa-university me-2"></i>Finanza</h5>
+            </a>
+            <button type="button" class="navbar-toggler me-4" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarCollapse">
+                <div class="navbar-nav ms-auto p-4 p-lg-0">
+                    <a href="/user/dashboard" class="nav-item nav-link">Dashboard</a>
+                    <a href="/user/account" class="nav-item nav-link">Account</a>
+                    <a href="/user/kyc_form" class="nav-item nav-link">KYC</a>
+                    <div class="nav-item dropdown">
+                        <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Products</a>
+                        <div class="dropdown-menu border-light m-0">
+                            <a href="/user/cards" class="dropdown-item">Cards</a>
+                            <a href="/user/deposits" class="dropdown-item">Deposits</a>
+                            <a href="/user/loans" class="dropdown-item">Loans</a>
+                            <a href="/user/investments" class="dropdown-item">Investments</a>
+                        </div>
+                    </div>
+                    <div class="nav-item dropdown">
+                        <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Services</a>
+                        <div class="dropdown-menu border-light m-0">
+                            <a href="/user/analytics" class="dropdown-item">Business Analysis</a>
+                            <a href="/user/treasury_portfolio" class="dropdown-item">Financial Planning</a>
+                            <a href="/user/insurance" class="dropdown-item">Insurance</a>
+                            <a href="/user/treasury_portfolio" class="dropdown-item">Projects</a>
+                        </div>
+                    </div>
+                    <div class="nav-item dropdown">
+                        <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">More</a>
+                        <div class="dropdown-menu border-light m-0">
+                            <a href="/user/profile" class="dropdown-item">Profile</a>
+                            <a href="/user/settings" class="dropdown-item">Settings</a>
+                            <a href="/user/notifications" class="dropdown-item">Notifications</a>
+                            <a href="/user/contact" class="dropdown-item">Contact/Support</a>
+                            <hr class="m-2">
+                            <a href="/logout" class="dropdown-item text-danger">Logout</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </div>
+    <!-- Navbar End -->
+    <div class="container-fluid page-header mb-5 wow fadeIn" data-wow-delay="0.1s">
+        <div class="container">
+            <h1 class="display-4 pb-3 animated slideInDown">Investments</h1>
+            <nav aria-label="breadcrumb animated slideInDown">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a class="text-white" href="/user/dashboard">Home</a></li>
+                    <li class="breadcrumb-item text-primary active" aria-current="page">Investments</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+    <div class="container-xxl py-5">
+        <div class="container">
+            <div class="row g-5">
+                <div class="col-lg-12 wow fadeInUp" data-wow-delay="0.1s">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <h2 class="mb-1"><i class="fas fa-chart-line text-primary me-2"></i>Investment Portfolio</h2>
+                            <p class="text-muted mb-0">Build wealth through diversified investments with competitive returns and strategic planning.</p>
+                        </div>
+                        <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#investmentModal">
+                            <i class="fas fa-plus me-2"></i>New Investment
+                        </button>
+                    </div>
+
+                    <!-- Summary Statistics Cards -->
+                    <div class="row mb-5">
+                        <div class="col-md-3 mb-3">
+                            <div class="card border-left-primary shadow h-100">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-grow-1">
+                                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Invested</div>
+                                            <div class="h3 mb-0 text-gray-800" id="totalInvested">$0.00</div>
+                                        </div>
+                                        <i class="fas fa-wallet fa-2x text-primary"></i>
+                                    </div>
+                                    <div class="small text-muted mt-2" id="investmentCount">0 Active Investments</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3 mb-3">
+                            <div class="card border-left-success shadow h-100">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-grow-1">
+                                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Current Value</div>
+                                            <div class="h3 mb-0 text-gray-800" id="currentValue">$0.00</div>
+                                        </div>
+                                        <i class="fas fa-chart-pie fa-2x text-success"></i>
+                                    </div>
+                                    <div class="small text-muted mt-2" id="gainPercentage">+0% gain</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3 mb-3">
+                            <div class="card border-left-info shadow h-100">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-grow-1">
+                                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Total Returns</div>
+                                            <div class="h3 mb-0 text-gray-800" id="totalReturns">$0.00</div>
+                                        </div>
+                                        <i class="fas fa-coins fa-2x text-info"></i>
+                                    </div>
+                                    <div class="small text-muted mt-2" id="avgReturn">Average: 0%</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-3 mb-3">
+                            <div class="card border-left-warning shadow h-100">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center">
+                                        <div class="flex-grow-1">
+                                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Avg Annual Return</div>
+                                            <div class="h3 mb-0 text-gray-800" id="avgAnnualReturn">0%</div>
+                                        </div>
+                                        <i class="fas fa-percentage fa-2x text-warning"></i>
+                                    </div>
+                                    <div class="small text-muted mt-2" id="diversification">Diversified Portfolio</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filtering Section -->
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">Filter by Type</label>
+                                    <select class="form-select" id="investmentTypeFilter">
+                                        <option value="">All Types</option>
+                                        <option value="stocks">Stocks</option>
+                                        <option value="bonds">Bonds</option>
+                                        <option value="mutual_fund">Mutual Funds</option>
+                                        <option value="insurance">Insurance</option>
+                                        <option value="real_estate">Real Estate</option>
+                                        <option value="term_deposit">Term Deposits</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">Filter by Status</label>
+                                    <select class="form-select" id="investmentStatusFilter">
+                                        <option value="">All Status</option>
+                                        <option value="active">Active</option>
+                                        <option value="pending">Pending</option>
+                                        <option value="matured">Matured</option>
+                                        <option value="closed">Closed</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label fw-bold">Sort By</label>
+                                    <select class="form-select" id="investmentSort">
+                                        <option value="date">Newest First</option>
+                                        <option value="amount">Amount (High to Low)</option>
+                                        <option value="value">Current Value (High to Low)</option>
+                                        <option value="returns">Returns (High to Low)</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button class="btn btn-primary mt-3" onclick="filterAndSortInvestments()">Apply Filters</button>
+                        </div>
+                    </div>
+
+                    <!-- Investment Cards View -->
+                    <div class="mb-4">
+                        <h4 class="mb-3"><i class="fas fa-layer-group text-primary me-2"></i>Investment Cards</h4>
+                        <div id="investmentCardsContainer" class="row g-4">
+                            <div class="col-12 text-center text-muted" id="noInvestmentsCard">
+                                <p class="py-4">No investments yet. Start investing today!</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Investment Table View -->
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0"><i class="fas fa-table text-primary me-2"></i>Investment Details</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Type</th>
+                                            <th>Amount Invested</th>
+                                            <th>Current Value</th>
+                                            <th>Returns Earned</th>
+                                            <th>Annual Return</th>
+                                            <th>Progress</th>
+                                            <th>Status</th>
+                                            <th>Maturity Date</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="investmentTableBody">
+                                        <tr id="noInvestmentsTable" class="text-center">
+                                            <td colspan="9" class="text-muted py-4">No investments found. Create your first investment to get started.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Investment Modal -->
+    <div class="modal fade" id="investmentModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="fas fa-plus-circle me-2"></i>Invest in New Opportunity</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="investmentForm">
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Investment Type</label>
+                                <select class="form-select" id="newInvestmentType" required>
+                                    <option value="">Select Type...</option>
+                                    <option value="stocks">🔵 Stocks</option>
+                                    <option value="bonds">📋 Bonds</option>
+                                    <option value="mutual_fund">📊 Mutual Funds</option>
+                                    <option value="insurance">🛡️ Insurance</option>
+                                    <option value="real_estate">🏠 Real Estate</option>
+                                    <option value="term_deposit">💰 Term Deposits</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Investment Amount ($)</label>
+                                <input type="number" class="form-control" id="newInvestmentAmount" placeholder="10000" min="100" step="100" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Annual Return Rate (%)</label>
+                                <input type="number" class="form-control" id="newInvestmentRate" placeholder="7.5" min="0" max="50" step="0.1" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Investment Term (Years)</label>
+                                <input type="number" class="form-control" id="newInvestmentTerm" placeholder="5" min="1" max="50" step="0.5" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Investment Purpose</label>
+                                <select class="form-select" id="newInvestmentPurpose" required>
+                                    <option value="">Select Purpose...</option>
+                                    <option value="retirement">Retirement Planning</option>
+                                    <option value="education">Education Fund</option>
+                                    <option value="wealth_growth">Wealth Growth</option>
+                                    <option value="income">Regular Income</option>
+                                    <option value="savings">Savings Goal</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Risk Level</label>
+                                <select class="form-select" id="newInvestmentRisk" required>
+                                    <option value="">Select Level...</option>
+                                    <option value="low">Low Risk</option>
+                                    <option value="medium">Medium Risk</option>
+                                    <option value="high">High Risk</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-bold">Investment Description</label>
+                                <textarea class="form-control" id="newInvestmentDescription" placeholder="Describe your investment goals..." rows="3"></textarea>
+                            </div>
+                            <div class="col-12">
+                                <div class="alert alert-info mb-0">
+                                    <strong>Expected Value at Maturity:</strong> <span id="expectedValueCalc" class="text-success fw-bold">$0.00</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-check me-2"></i>Create Investment</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Investment Detail Modal -->
+    <div class="modal fade" id="investmentDetailModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title"><i class="fas fa-info-circle me-2"></i>Investment Details</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="investmentDetailContent">
+                        <!-- Content populated by JavaScript -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="downloadInvestmentStatement()">
+                        <i class="fas fa-download me-2"></i>Download Statement
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Footer Start -->
+    <div class="container-fluid bg-dark text-light footer mt-5 py-5 wow fadeIn" data-wow-delay="0.1s">
+        <div class="container py-5">
+            <div class="row g-5">
+                <div class="col-lg-3 col-md-6">
+                    <h5 class="text-white mb-4">Address</h5>
+                    <p class="mb-2"><i class="fa fa-map-marker-alt me-3"></i>123 Street, New York, USA</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Footer End -->
+    <a href="#" class="btn btn-lg btn-primary btn-lg-square back-to-top"><i class="bi bi-arrow-up"></i></a>
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/static/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/lib/wow/wow.min.js"></script>
+    <script src="/static/lib/easing/easing.min.js"></script>
+    <script src="/static/lib/waypoints/waypoints.min.js"></script>
+    <script src="/static/lib/counterup/counterup.min.js"></script>
+    <script src="/static/lib/owlcarousel/owl.carousel.min.js"></script>
+    <script src="/static/js/main.js"></script>
+    <script src="/static/js/user-guard.js"></script>
+    <script src="/static/js/realtime.js"></script>
+    <script src="/static/js/page-sync.js"></script>
+    <script>
+        let allInvestments = [];
+        let currentFilter = {
+            type: '',
+            status: '',
+            sort: 'date'
+        };
+
+        // Load investments from API
+        async function loadInvestments() {
+            try {
+                const response = await fetch('/api/user/investments', {
+                    credentials: 'include'
+                });
+                if (!response.ok) throw new Error('Failed to load investments');
+                
+                allInvestments = await response.json() || [];
+                updateSummaryStats();
+                filterAndSortInvestments();
+                hideSpinner();
+            } catch (error) {
+                console.error('Error loading investments:', error);
+                showNoInvestments();
+                hideSpinner();
+            }
+        }
+
+        // Hide spinner
+        function hideSpinner() {
+            const spinner = document.getElementById('spinner');
+            if (spinner) spinner.style.display = 'none';
+        }
+
+        // Update summary statistics
+        function updateSummaryStats() {
+            if (!allInvestments || allInvestments.length === 0) {
+                document.getElementById('totalInvested').textContent = '$0.00';
+                document.getElementById('currentValue').textContent = '$0.00';
+                document.getElementById('totalReturns').textContent = '$0.00';
+                document.getElementById('investmentCount').textContent = '0 Active Investments';
+                document.getElementById('gainPercentage').textContent = '+0% gain';
+                document.getElementById('avgReturn').textContent = 'Average: 0%';
+                document.getElementById('avgAnnualReturn').textContent = '0%';
+                return;
+            }
+
+            let totalInvested = 0;
+            let totalValue = 0;
+            let totalReturns = 0;
+            let activeCount = 0;
+            let totalRate = 0;
+            let typeSet = new Set();
+
+            allInvestments.forEach(inv => {
+                const amount = inv.amount || 0;
+                const value = inv.current_value || amount;
+                const returns = (inv.interest_earned || 0);
+                
+                totalInvested += amount;
+                totalValue += value;
+                totalReturns += returns;
+                totalRate += (inv.annual_return_rate || 0);
+                if (inv.status === 'active') activeCount++;
+                typeSet.add(inv.investment_type);
+            });
+
+            const gainPercentage = totalInvested > 0 ? ((totalValue - totalInvested) / totalInvested * 100) : 0;
+            const avgRate = allInvestments.length > 0 ? (totalRate / allInvestments.length) : 0;
+
+            document.getElementById('totalInvested').textContent = `$${totalInvested.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('currentValue').textContent = `$${totalValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('totalReturns').textContent = `$${totalReturns.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('investmentCount').textContent = `${activeCount} Active Investment${activeCount !== 1 ? 's' : ''}`;
+            document.getElementById('gainPercentage').textContent = `${gainPercentage >= 0 ? '+' : ''}${gainPercentage.toFixed(2)}% gain`;
+            document.getElementById('avgReturn').textContent = `Average: ${totalReturns.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            document.getElementById('avgAnnualReturn').textContent = `${avgRate.toFixed(2)}%`;
+            document.getElementById('diversification').textContent = `${typeSet.size} Asset Type${typeSet.size !== 1 ? 's' : ''}`;
+
+            if (gainPercentage >= 0) {
+                document.querySelector('#gainPercentage').className = 'small text-success mt-2';
+            } else {
+                document.querySelector('#gainPercentage').className = 'small text-danger mt-2';
+            }
+        }
+
+        // Filter and sort investments
+        function filterAndSortInvestments() {
+            currentFilter.type = document.getElementById('investmentTypeFilter').value;
+            currentFilter.status = document.getElementById('investmentStatusFilter').value;
+            currentFilter.sort = document.getElementById('investmentSort').value;
+
+            let filtered = [...allInvestments];
+
+            if (currentFilter.type) {
+                filtered = filtered.filter(inv => inv.investment_type.toLowerCase() === currentFilter.type.toLowerCase());
+            }
+            if (currentFilter.status) {
+                filtered = filtered.filter(inv => (inv.status || 'active').toLowerCase() === currentFilter.status.toLowerCase());
+            }
+
+            // Sort
+            filtered.sort((a, b) => {
+                switch(currentFilter.sort) {
+                    case 'amount':
+                        return (b.amount || 0) - (a.amount || 0);
+                    case 'value':
+                        return (b.current_value || 0) - (a.current_value || 0);
+                    case 'returns':
+                        return (b.interest_earned || 0) - (a.interest_earned || 0);
+                    case 'date':
+                    default:
+                        return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+                }
+            });
+
+            displayInvestments(filtered);
+        }
+
+        // Display investments in cards and table
+        function displayInvestments(investments) {
+            const cardsContainer = document.getElementById('investmentCardsContainer');
+            const tableBody = document.getElementById('investmentTableBody');
+            const noCardsMsg = document.getElementById('noInvestmentsCard');
+            const noTableMsg = document.getElementById('noInvestmentsTable');
+
+            // Clear existing
+            cardsContainer.innerHTML = '';
+            tableBody.innerHTML = '';
+
+            if (!investments || investments.length === 0) {
+                noCardsMsg.style.display = 'block';
+                noTableMsg.style.display = '';
+                return;
+            }
+
+            noCardsMsg.style.display = 'none';
+            noTableMsg.style.display = 'none';
+
+            // Display cards
+            investments.forEach(inv => {
+                const card = createInvestmentCard(inv);
+                cardsContainer.appendChild(card);
+
+                // Add table row
+                const row = createInvestmentTableRow(inv);
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Create investment card
+        function createInvestmentCard(inv) {
+            const div = document.createElement('div');
+            div.className = 'col-md-6 col-lg-4';
+            
+            const amount = inv.amount || 0;
+            const value = inv.current_value || amount;
+            const returns = inv.interest_earned || 0;
+            const progress = amount > 0 ? (returns / amount * 100) : 0;
+            const statusColor = {
+                'active': 'success',
+                'pending': 'warning',
+                'matured': 'info',
+                'closed': 'secondary'
+            }[inv.status || 'active'] || 'secondary';
+
+            div.innerHTML = `
+                <div class="card h-100 shadow-sm border-0 cursor-pointer" style="transition: transform 0.2s; cursor: pointer;" 
+                     onmouseover="this.style.transform='translateY(-5px)'" 
+                     onmouseout="this.style.transform='translateY(0)'"
+                     onclick="viewInvestmentDetail(${inv.id})">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div>
+                                <h6 class="card-title text-primary fw-bold mb-1">${formatInvestmentType(inv.investment_type)}</h6>
+                                <small class="text-muted">ID: ${inv.id}</small>
+                            </div>
+                            <span class="badge bg-${statusColor}">${(inv.status || 'active').charAt(0).toUpperCase() + (inv.status || 'active').slice(1)}</span>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-2">
+                                <small class="text-muted">Invested</small>
+                                <strong>$${amount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-3">
+                                <small class="text-muted">Current Value</small>
+                                <strong class="text-success">$${value.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-2">
+                                <small class="text-muted">Returns Earned</small>
+                                <strong>${inv.annual_return_rate || 0}%</strong>
+                            </div>
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar" role="progressbar" style="width: ${Math.min(progress, 100)}%" aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                            <small class="text-muted mt-2">$${returns.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} earned</small>
+                        </div>
+
+                        <div class="row text-center text-sm">
+                            <div class="col-6 border-end">
+                                <small class="text-muted d-block">Term</small>
+                                <strong>${inv.term_years || 'N/A'} yrs</strong>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted d-block">Purpose</small>
+                                <strong>${(inv.purpose || 'N/A').substring(0, 8)}</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer bg-light border-top-0">
+                        <button class="btn btn-sm btn-outline-primary w-100" onclick="event.stopPropagation(); viewInvestmentDetail(${inv.id})">
+                            <i class="fas fa-eye me-1"></i>View Details
+                        </button>
+                    </div>
+                </div>
+            `;
+            return div;
+        }
+
+        // Create table row
+        function createInvestmentTableRow(inv) {
+            const tr = document.createElement('tr');
+            const amount = inv.amount || 0;
+            const value = inv.current_value || amount;
+            const returns = inv.interest_earned || 0;
+            const progress = amount > 0 ? (returns / amount * 100) : 0;
+            const statusColor = {
+                'active': 'success',
+                'pending': 'warning',
+                'matured': 'info',
+                'closed': 'secondary'
+            }[inv.status || 'active'] || 'secondary';
+
+            const maturityDate = inv.maturity_date ? new Date(inv.maturity_date).toLocaleDateString() : 'N/A';
+
+            tr.innerHTML = `
+                <td class="fw-bold">${formatInvestmentType(inv.investment_type)}</td>
+                <td>$${amount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td class="text-success fw-bold">$${value.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td>$${returns.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td>${inv.annual_return_rate || 0}%</td>
+                <td>
+                    <div class="progress" style="height: 20px; width: 100px;">
+                        <div class="progress-bar" style="width: ${Math.min(progress, 100)}%;" role="progressbar" 
+                             aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100">
+                            ${progress.toFixed(0)}%
+                        </div>
+                    </div>
+                </td>
+                <td><span class="badge bg-${statusColor}">${(inv.status || 'active').charAt(0).toUpperCase() + (inv.status || 'active').slice(1)}</span></td>
+                <td>${maturityDate}</td>
+                <td><button class="btn btn-sm btn-outline-primary" onclick="viewInvestmentDetail(${inv.id})"><i class="fas fa-eye"></i></button></td>
+            `;
+            return tr;
+        }
+
+        // Format investment type
+        function formatInvestmentType(type) {
+            const types = {
+                'stocks': '🔵 Stocks',
+                'bonds': '📋 Bonds',
+                'mutual_fund': '📊 Mutual Funds',
+                'insurance': '🛡️ Insurance',
+                'real_estate': '🏠 Real Estate',
+                'term_deposit': '💰 Term Deposits'
+            };
+            return types[type?.toLowerCase()] || type || 'Unknown';
+        }
+
+        // View investment detail
+        function viewInvestmentDetail(investmentId) {
+            const inv = allInvestments.find(i => i.id === investmentId);
+            if (!inv) return;
+
+            const amount = inv.amount || 0;
+            const value = inv.current_value || amount;
+            const returns = inv.interest_earned || 0;
+            const progress = amount > 0 ? (returns / amount * 100) : 0;
+
+            const detailContent = document.getElementById('investmentDetailContent');
+            const maturityDate = inv.maturity_date ? new Date(inv.maturity_date).toLocaleDateString() : 'N/A';
+
+            detailContent.innerHTML = `
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h5 class="mb-3">${formatInvestmentType(inv.investment_type)}</h5>
+                        <div class="alert alert-info">
+                            <strong>Investment Status:</strong> <span class="badge bg-info">${(inv.status || 'active').toUpperCase()}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6 class="text-muted text-uppercase mb-2">Amount Invested</h6>
+                        <h4 class="text-primary">$${amount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</h4>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted text-uppercase mb-2">Current Value</h6>
+                        <h4 class="text-success">$${value.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</h4>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6 class="text-muted text-uppercase mb-2">Returns Earned</h6>
+                        <h4 class="text-info">$${returns.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</h4>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted text-uppercase mb-2">Annual Return Rate</h6>
+                        <h4 class="text-warning">${inv.annual_return_rate || 0}%</h4>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <h6 class="text-muted text-uppercase mb-3">Return Progress</h6>
+                    <div class="progress" style="height: 25px;">
+                        <div class="progress-bar bg-success" style="width: ${Math.min(progress, 100)}%;" role="progressbar" 
+                             aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100">
+                            ${progress.toFixed(1)}% Complete
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-6 border-end">
+                        <h6 class="text-muted text-uppercase mb-2">Investment Purpose</h6>
+                        <p class="mb-0"><strong>${inv.purpose || 'N/A'}</strong></p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted text-uppercase mb-2">Risk Level</h6>
+                        <p class="mb-0"><strong>${inv.risk_level || 'Medium'}</strong></p>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-6 border-end">
+                        <h6 class="text-muted text-uppercase mb-2">Investment Term</h6>
+                        <p class="mb-0"><strong>${inv.term_years || 'N/A'} Years</strong></p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted text-uppercase mb-2">Maturity Date</h6>
+                        <p class="mb-0"><strong>${maturityDate}</strong></p>
+                    </div>
+                </div>
+
+                ${inv.description ? `<div class="alert alert-light"><strong>Description:</strong> ${inv.description}</div>` : ''}
+            `;
+
+            const modal = new bootstrap.Modal(document.getElementById('investmentDetailModal'));
+            modal.show();
+        }
+
+        // Show no investments message
+        function showNoInvestments() {
+            document.getElementById('noInvestmentsCard').style.display = 'block';
+            document.getElementById('noInvestmentsTable').style.display = '';
+        }
+
+        // Calculate expected value
+        function calculateExpectedValue() {
+            const amount = parseFloat(document.getElementById('newInvestmentAmount').value) || 0;
+            const rate = parseFloat(document.getElementById('newInvestmentRate').value) || 0;
+            const term = parseFloat(document.getElementById('newInvestmentTerm').value) || 0;
+            
+            if (amount && rate && term) {
+                const expectedValue = amount * Math.pow(1 + (rate / 100), term);
+                document.getElementById('expectedValueCalc').textContent = 
+                    `$${expectedValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+            }
+        }
+
+        // Update expected value on input
+        function setupEventListeners() {
+            ['newInvestmentAmount', 'newInvestmentRate', 'newInvestmentTerm'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.addEventListener('input', calculateExpectedValue);
+            });
+
+            // Handle form submission
+            const form = document.getElementById('investmentForm');
+            if (form) {
+                form.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    
+                    const investmentData = {
+                        investment_type: document.getElementById('newInvestmentType').value,
+                        amount: parseFloat(document.getElementById('newInvestmentAmount').value),
+                        annual_return_rate: parseFloat(document.getElementById('newInvestmentRate').value),
+                        term_years: parseFloat(document.getElementById('newInvestmentTerm').value),
+                        purpose: document.getElementById('newInvestmentPurpose').value,
+                        risk_level: document.getElementById('newInvestmentRisk').value,
+                        description: document.getElementById('newInvestmentDescription').value
+                    };
+
+                    try {
+                        const response = await fetch('/api/user/investments', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(investmentData),
+                            credentials: 'include'
+                        });
+
+                        if (!response.ok) throw new Error('Failed to create investment');
+                        
+                        const newInvest = await response.json();
+                        allInvestments.push(newInvest);
+                        
+                        document.getElementById('investmentForm').reset();
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('investmentModal'));
+                        if (modal) modal.hide();
+                        
+                        updateSummaryStats();
+                        filterAndSortInvestments();
+                        
+                        alert('Investment created successfully!');
+                    } catch (error) {
+                        alert('Error: ' + error.message);
+                    }
+                });
+            }
+        }
+
+        // Download investment statement
+        function downloadInvestmentStatement() {
+            alert('Statement download feature coming soon!');
+        }
+
+        // Load investments on page load
+        function initPage() {
+            loadInvestments();
+            setupEventListeners();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initPage);
+        } else {
+            initPage();
+        }
+    </script>
+
+    <style>
+        .border-left-primary {
+            border-left: 4px solid #0d6efd;
+        }
+        .border-left-success {
+            border-left: 4px solid #28a745;
+        }
+        .border-left-info {
+            border-left: 4px solid #17a2b8;
+        }
+        .border-left-warning {
+            border-left: 4px solid #ffc107;
+        }
+        .text-xs {
+            font-size: 0.75rem;
+        }
+        .text-gray-800 {
+            color: #2e3338;
+        }
+        .shadow {
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+        }
+        .shadow-sm {
+            box-shadow: 0 0.1rem 0.3rem 0 rgba(0, 0, 0, 0.1);
+        }
+        .cursor-pointer {
+            cursor: pointer;
+        }
+        .card {
+            border: 1px solid #e3e6f0;
+        }
+        .card-header {
+            border-bottom: 1px solid #e3e6f0;
+        }
+        .progress {
+            background-color: #e3e6f0;
+        }
+        .table-hover tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+        .badge {
+            padding: 0.35rem 0.65rem;
+            font-size: 0.75rem;
+        }
+    </style>
+</body>
+
+</html>

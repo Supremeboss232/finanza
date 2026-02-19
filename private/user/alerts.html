@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Alerts - Finanza Bank</title>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <meta content="" name="keywords">
+    <meta content="" name="description">
+
+    <!-- Favicon -->
+    <link href="/img/favicon.ico" rel="icon">
+
+    <!-- Google Web Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jost:wght@500;600;700&family=Open+Sans:wght@400;500&display=swap" rel="stylesheet">  
+
+    <!-- Icon Font Stylesheet -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- Libraries Stylesheet -->
+    <link href="/static/lib/animate/animate.min.css" rel="stylesheet">
+    <link href="/static/lib/owlcarousel/assets/owl.carousel.min.css" rel="stylesheet">
+
+    <!-- Customized Bootstrap Stylesheet -->
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Template Stylesheet -->
+    <link href="/static/css/style.css" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Spinner Start -->
+    <div id="spinner" class="show bg-white position-fixed translate-middle w-100 vh-100 top-50 start-50 d-flex align-items-center justify-content-center">
+        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
+    </div>
+    <!-- Spinner End -->
+
+    <!-- Navbar Start -->
+    <div class="container-fluid fixed-top px-0 wow fadeIn" data-wow-delay="0.1s">
+        <nav class="navbar navbar-expand-lg navbar-light py-lg-0 px-lg-5 wow fadeIn" data-wow-delay="0.1s">
+            <a href="/user/dashboard" class="navbar-brand ms-4 ms-lg-0">
+                <h5 class="m-0 text-primary"><i class="fa fa-university me-2"></i>Finanza</h5>
+            </a>
+            <button type="button" class="navbar-toggler me-4" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarCollapse">
+                <div class="navbar-nav ms-auto p-4 p-lg-0">
+                    <a href="/user/dashboard" class="nav-item nav-link">Dashboard</a>
+                    <a href="/user/account" class="nav-item nav-link">Account</a>
+                    <a href="/user/kyc_form" class="nav-item nav-link">KYC</a>
+                    <div class="nav-item dropdown">
+                        <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Products</a>
+                        <div class="dropdown-menu border-light m-0">
+                            <a href="/user/cards" class="dropdown-item">Cards</a>
+                            <a href="/user/deposits" class="dropdown-item">Deposits</a>
+                            <a href="/user/loans" class="dropdown-item">Loans</a>
+                            <a href="/user/investments" class="dropdown-item">Investments</a>
+                            <a href="/user/bill_pay" class="dropdown-item">Transfers</a>
+                        </div>
+                    </div>
+                    <div class="nav-item dropdown">
+                        <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Services</a>
+                        <div class="dropdown-menu border-light m-0">
+                            <a href="/user/analytics" class="dropdown-item">Business Analysis</a>
+                            <a href="/user/treasury_portfolio" class="dropdown-item">Financial Planning</a>
+                            <a href="/user/insurance" class="dropdown-item">Insurance</a>
+                            <a href="/user/treasury_portfolio" class="dropdown-item">Projects</a>
+                        </div>
+                    </div>
+                    <div class="nav-item dropdown">
+                        <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">More</a>
+                        <div class="dropdown-menu border-light m-0">
+                            <a href="/user/profile" class="dropdown-item">Profile</a>
+                            <a href="/user/settings" class="dropdown-item">Settings</a>
+                            <a href="/user/notifications" class="dropdown-item">Notifications</a>
+                            <a href="/user/transactions" class="dropdown-item">Transactions</a>
+                            <a href="/user/security" class="dropdown-item">Security</a>
+                            <a href="/user/alerts" class="dropdown-item">Alerts</a>
+                            <a href="/user/contact" class="dropdown-item">Contact/Support</a>
+                            <hr class="m-2">
+                            <a href="/logout" class="dropdown-item text-danger">Logout</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </div>
+    <!-- Navbar End -->
+
+    <!-- Page Header Start -->
+    <div class="container-fluid page-header mb-5 wow fadeIn" data-wow-delay="0.1s">
+        <div class="container">
+            <h1 class="display-4 pb-3 animated slideInDown">Alerts</h1>
+            <nav aria-label="breadcrumb animated slideInDown">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a class="text-white" href="/user/dashboard">Home</a></li>
+                    <li class="breadcrumb-item text-primary active" aria-current="page">Alerts</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+    <!-- Page Header End -->
+
+    <!-- Content Start -->
+    <div class="container-xxl py-5">
+        <div class="container">
+            <div class="row g-5">
+                <div class="col-lg-12 wow fadeInUp" data-wow-delay="0.1s">
+
+    <div class="container-fluid pt-4 pb-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2 class="mb-0">
+                <i class="fas fa-bell me-2"></i>Alerts & Notifications
+            </h2>
+            <small class="text-muted">Customize how and when you receive banking alerts</small>
+        </div>
+    </div>
+
+    <!-- Alert Configuration Tabs -->
+    <ul class="nav nav-tabs mb-4" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" href="#channels" data-bs-toggle="tab">
+                <i class="fas fa-envelope me-1"></i>Channels
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="#alertTypes" data-bs-toggle="tab">
+                <i class="fas fa-list me-1"></i>Alert Types
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="#rules" data-bs-toggle="tab">
+                <i class="fas fa-sliders-h me-1"></i>Rules & Triggers
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="#history" data-bs-toggle="tab">
+                <i class="fas fa-history me-1"></i>Alert History
+            </a>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+        <!-- Channels Tab -->
+        <div class="tab-pane fade show active" id="channels" role="tabpanel">
+            <div class="row">
+                <div class="col-lg-8">
+                    <form id="channelsForm">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h5 class="mb-0">Notification Channels</h5>
+                            </div>
+                            <div class="card-body">
+                                <!-- In-App Notifications -->
+                                <div class="mb-4">
+                                    <div class="d-flex align-items-center justify-content-between p-3 border rounded">
+                                        <div>
+                                            <h6 class="mb-1">
+                                                <i class="fas fa-bell text-primary me-2"></i>In-App Notifications
+                                            </h6>
+                                            <small class="text-muted">See alerts when you're logged into your account</small>
+                                        </div>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="inAppToggle" name="enable_in_app" checked>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Email Notifications -->
+                                <div class="mb-4">
+                                    <div class="d-flex align-items-center justify-content-between p-3 border rounded">
+                                        <div>
+                                            <h6 class="mb-1">
+                                                <i class="fas fa-envelope text-success me-2"></i>Email Notifications
+                                            </h6>
+                                            <small class="text-muted">Receive alerts at <strong id="emailDisplay">user@example.com</strong></small>
+                                        </div>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="emailToggle" name="enable_email" checked>
+                                        </div>
+                                    </div>
+                                    <div id="emailSettings" class="mt-2 ms-4">
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="radio" id="emailImmediate" name="email_frequency" value="immediate" checked>
+                                            <label class="form-check-label" for="emailImmediate">
+                                                Send immediately
+                                            </label>
+                                        </div>
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input" type="radio" id="emailDaily" name="email_frequency" value="daily">
+                                            <label class="form-check-label" for="emailDaily">
+                                                Daily digest (morning)
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" id="emailWeekly" name="email_frequency" value="weekly">
+                                            <label class="form-check-label" for="emailWeekly">
+                                                Weekly digest (Monday morning)
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- SMS Notifications -->
+                                <div class="mb-4">
+                                    <div class="d-flex align-items-center justify-content-between p-3 border rounded">
+                                        <div>
+                                            <h6 class="mb-1">
+                                                <i class="fas fa-sms text-info me-2"></i>SMS Text Messages
+                                            </h6>
+                                            <small class="text-muted">Receive alerts via text to <strong id="phoneDisplay">****-****</strong></small>
+                                        </div>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="smsToggle" name="enable_sms">
+                                        </div>
+                                    </div>
+                                    <div id="smsSettings" class="mt-2 ms-4" style="display: none;">
+                                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#updatePhoneModal">
+                                            <i class="fas fa-edit me-1"></i>Update Phone Number
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Push Notifications -->
+                                <div class="mb-4">
+                                    <div class="d-flex align-items-center justify-content-between p-3 border rounded">
+                                        <div>
+                                            <h6 class="mb-1">
+                                                <i class="fas fa-mobile-alt text-warning me-2"></i>Mobile Push Notifications
+                                            </h6>
+                                            <small class="text-muted">Receive alerts on your mobile device (iOS/Android)</small>
+                                        </div>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="pushToggle" name="enable_push">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Quiet Hours -->
+                                <div class="card mt-4 bg-light">
+                                    <div class="card-body">
+                                        <h6 class="card-title mb-3">
+                                            <i class="fas fa-moon text-secondary me-2"></i>Quiet Hours
+                                        </h6>
+                                        <p class="small text-muted mb-3">During quiet hours, you won't receive email, SMS, or push notifications (in-app alerts still available)</p>
+                                        
+                                        <div class="form-check mb-3">
+                                            <input class="form-check-input" type="checkbox" id="quietHoursToggle" name="enable_quiet_hours">
+                                            <label class="form-check-label" for="quietHoursToggle">
+                                                Enable quiet hours
+                                            </label>
+                                        </div>
+
+                                        <div id="quietHoursSettings" style="display: none;">
+                                            <div class="row g-3">
+                                                <div class="col-md-6">
+                                                    <label for="quietStart" class="form-label">Start Time</label>
+                                                    <input type="time" class="form-control" id="quietStart" name="quiet_hours_start">
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <label for="quietEnd" class="form-label">End Time</label>
+                                                    <input type="time" class="form-control" id="quietEnd" name="quiet_hours_end">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                                    <button type="reset" class="btn btn-outline-secondary">Cancel</button>
+                                    <button type="submit" class="btn btn-primary">Save Preferences</button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0">Channel Tips</h6>
+                        </div>
+                        <div class="card-body">
+                            <h6 class="small mb-2">💡 In-App Only</h6>
+                            <p class="small text-muted mb-3">Best for non-urgent notifications you can check at your convenience</p>
+                            
+                            <h6 class="small mb-2">📧 Email</h6>
+                            <p class="small text-muted mb-3">Good for detailed alerts and records you want to keep</p>
+                            
+                            <h6 class="small mb-2">📱 SMS</h6>
+                            <p class="small text-muted mb-3">Best for urgent transactions and suspicious activity</p>
+                            
+                            <h6 class="small mb-2">🔔 Push</h6>
+                            <p class="small text-muted">Real-time alerts on your mobile device</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alert Types Tab -->
+        <div class="tab-pane fade" id="alertTypes" role="tabpanel">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Select Alert Types</h5>
+                </div>
+                <div class="card-body">
+                    <form id="alertTypesForm">
+                        <div class="row">
+                            <!-- Transaction Alerts -->
+                            <div class="col-md-6 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h6 class="card-title mb-3">
+                                            <i class="fas fa-exchange-alt text-primary me-2"></i>Transaction Alerts
+                                        </h6>
+                                        
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input alert-type" type="checkbox" name="alert_deposits" id="alertDeposits" value="deposits">
+                                            <label class="form-check-label" for="alertDeposits">
+                                                Deposits & Credits
+                                                <small class="text-muted d-block ms-4">Money received into your account</small>
+                                            </label>
+                                        </div>
+
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input alert-type" type="checkbox" name="alert_withdrawals" id="alertWithdrawals" value="withdrawals" checked>
+                                            <label class="form-check-label" for="alertWithdrawals">
+                                                Withdrawals & Debits
+                                                <small class="text-muted d-block ms-4">Money leaving your account</small>
+                                            </label>
+                                        </div>
+
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input alert-type" type="checkbox" name="alert_transfers" id="alertTransfers" value="transfers" checked>
+                                            <label class="form-check-label" for="alertTransfers">
+                                                Transfers
+                                                <small class="text-muted d-block ms-4">Money sent to other accounts</small>
+                                            </label>
+                                        </div>
+
+                                        <div class="form-check">
+                                            <input class="form-check-input alert-type" type="checkbox" name="alert_fees" id="alertFees" value="fees">
+                                            <label class="form-check-label" for="alertFees">
+                                                Fees & Interest
+                                                <small class="text-muted d-block ms-4">Account fees and interest posted</small>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Security Alerts -->
+                            <div class="col-md-6 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h6 class="card-title mb-3">
+                                            <i class="fas fa-lock text-danger me-2"></i>Security Alerts
+                                        </h6>
+                                        
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input alert-type" type="checkbox" name="alert_login" id="alertLogin" value="login" checked>
+                                            <label class="form-check-label" for="alertLogin">
+                                                Login Activity
+                                                <small class="text-muted d-block ms-4">New sign-ins from different locations</small>
+                                            </label>
+                                        </div>
+
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input alert-type" type="checkbox" name="alert_suspicious" id="alertSuspicious" value="suspicious" checked>
+                                            <label class="form-check-label" for="alertSuspicious">
+                                                Suspicious Activity
+                                                <small class="text-muted d-block ms-4">Unusual account activity detected</small>
+                                            </label>
+                                        </div>
+
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input alert-type" type="checkbox" name="alert_password" id="alertPassword" value="password" checked>
+                                            <label class="form-check-label" for="alertPassword">
+                                                Password Changes
+                                                <small class="text-muted d-block ms-4">When password or security settings change</small>
+                                            </label>
+                                        </div>
+
+                                        <div class="form-check">
+                                            <input class="form-check-input alert-type" type="checkbox" name="alert_device" id="alertDevice" value="device">
+                                            <label class="form-check-label" for="alertDevice">
+                                                New Devices
+                                                <small class="text-muted d-block ms-4">New device verification</small>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Account Alerts -->
+                            <div class="col-md-6 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h6 class="card-title mb-3">
+                                            <i class="fas fa-chart-bar text-warning me-2"></i>Account Alerts
+                                        </h6>
+                                        
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input alert-type" type="checkbox" name="alert_balance_low" id="alertBalanceLow" value="balance_low">
+                                            <label class="form-check-label" for="alertBalanceLow">
+                                                Low Balance
+                                                <small class="text-muted d-block ms-4">When balance falls below threshold</small>
+                                            </label>
+                                        </div>
+
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input alert-type" type="checkbox" name="alert_large" id="alertLarge" value="large" checked>
+                                            <label class="form-check-label" for="alertLarge">
+                                                Large Transactions
+                                                <small class="text-muted d-block ms-4">Transactions over $1,000</small>
+                                            </label>
+                                        </div>
+
+                                        <div class="form-check">
+                                            <input class="form-check-input alert-type" type="checkbox" name="alert_overdraft" id="alertOverdraft" value="overdraft">
+                                            <label class="form-check-label" for="alertOverdraft">
+                                                Overdraft Warnings
+                                                <small class="text-muted d-block ms-4">When you're close to overdraft</small>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Marketing & Updates -->
+                            <div class="col-md-6 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h6 class="card-title mb-3">
+                                            <i class="fas fa-megaphone text-info me-2"></i>Updates & Promotions
+                                        </h6>
+                                        
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input alert-type" type="checkbox" name="alert_products" id="alertProducts">
+                                            <label class="form-check-label" for="alertProducts">
+                                                New Products
+                                                <small class="text-muted d-block ms-4">New features and services available</small>
+                                            </label>
+                                        </div>
+
+                                        <div class="form-check mb-2">
+                                            <input class="form-check-input alert-type" type="checkbox" name="alert_promotions" id="alertPromotions">
+                                            <label class="form-check-label" for="alertPromotions">
+                                                Promotions & Offers
+                                                <small class="text-muted d-block ms-4">Special offers for your account</small>
+                                            </label>
+                                        </div>
+
+                                        <div class="form-check">
+                                            <input class="form-check-input alert-type" type="checkbox" name="alert_updates" id="alertUpdates">
+                                            <label class="form-check-label" for="alertUpdates">
+                                                System Updates
+                                                <small class="text-muted d-block ms-4">Important system maintenance notices</small>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                            <button type="reset" class="btn btn-outline-secondary">Reset</button>
+                            <button type="submit" class="btn btn-primary">Save Alert Types</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rules & Triggers Tab -->
+        <div class="tab-pane fade" id="rules" role="tabpanel">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Custom Rules & Thresholds</h5>
+                </div>
+                <div class="card-body">
+                    <form id="rulesForm">
+                        <div class="mb-4">
+                            <label for="largeTransactionAmount" class="form-label">
+                                <strong>Large Transaction Threshold</strong>
+                            </label>
+                            <div class="input-group mb-2">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="largeTransactionAmount" name="large_transaction_threshold" value="1000" min="0" step="100">
+                            </div>
+                            <small class="text-muted">You'll be alerted for transactions exceeding this amount</small>
+                        </div>
+
+                        <hr>
+
+                        <div class="mb-4">
+                            <label for="lowBalanceAmount" class="form-label">
+                                <strong>Low Balance Alert Threshold</strong>
+                            </label>
+                            <div class="input-group mb-2">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="lowBalanceAmount" name="low_balance_threshold" value="500" min="0" step="100">
+                            </div>
+                            <small class="text-muted">You'll be alerted when balance drops below this amount</small>
+                        </div>
+
+                        <hr>
+
+                        <div class="mb-4">
+                            <label for="dailySpendLimit" class="form-label">
+                                <strong>Daily Spending Limit Alert</strong>
+                            </label>
+                            <div class="input-group mb-2">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="dailySpendLimit" name="daily_spend_limit" value="5000" min="0" step="100">
+                            </div>
+                            <small class="text-muted">Alert if daily spending exceeds this amount</small>
+                        </div>
+
+                        <hr>
+
+                        <div class="mb-4">
+                            <label for="geolocationAlert" class="form-label">
+                                <strong>Location-Based Alerts</strong>
+                            </label>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="geolocationAlert" name="enable_location_alerts" checked>
+                                <label class="form-check-label" for="geolocationAlert">
+                                    Alert me for unusual location activity (unusual login locations, large transactions from different states)
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                            <button type="reset" class="btn btn-outline-secondary">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save Rules</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alert History Tab -->
+        <div class="tab-pane fade" id="history" role="tabpanel">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Recent Alerts</h5>
+                        <input type="text" class="form-control" id="alertSearch" placeholder="Search alerts..." style="max-width: 250px;">
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date & Time</th>
+                                <th>Type</th>
+                                <th>Alert</th>
+                                <th>Channels Sent</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="alertHistoryList">
+                            <tr><td colspan="6" class="text-center py-4">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Update Phone Modal -->
+<div class="modal fade" id="updatePhoneModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Update Phone Number</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="updatePhoneForm">
+                    <div class="mb-3">
+                        <label for="newPhone" class="form-label">Phone Number</label>
+                        <input type="tel" class="form-control" id="newPhone" name="phone" placeholder="(XXX) XXX-XXXX" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="updatePhone()">Verify & Update</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', async function() {
+    loadPreferences();
+    loadAlertHistory();
+    setupToggleHandlers();
+    setupFormSubmissions();
+});
+
+async function loadPreferences() {
+    try {
+        const response = await fetch('/api/alerts/preferences', {
+            headers: {'Authorization': `Bearer ${localStorage.getItem('token')}`}
+        });
+        const prefs = await response.json();
+        
+        // Populate form with preferences
+        document.getElementById('inAppToggle').checked = prefs.enable_in_app;
+        document.getElementById('emailToggle').checked = prefs.enable_email;
+        document.getElementById('smsToggle').checked = prefs.enable_sms;
+        document.getElementById('pushToggle').checked = prefs.enable_push;
+        
+        if (prefs.quiet_hours_start) {
+            document.getElementById('quietStart').value = prefs.quiet_hours_start;
+            document.getElementById('quietEnd').value = prefs.quiet_hours_end;
+            document.getElementById('quietHoursToggle').checked = true;
+            document.getElementById('quietHoursSettings').style.display = 'block';
+        }
+        
+        if (prefs.alert_types) {
+            prefs.alert_types.forEach(type => {
+                const el = document.querySelector(`[value="${type}"]`);
+                if (el) el.checked = true;
+            });
+        }
+        
+        document.getElementById('largeTransactionAmount').value = prefs.large_transaction_threshold || 1000;
+    } catch (error) {
+        console.error('Error loading preferences:', error);
+    }
+}
+
+async function loadAlertHistory() {
+    try {
+        const response = await fetch('/api/alerts?limit=50', {
+            headers: {'Authorization': `Bearer ${localStorage.getItem('token')}`}
+        });
+        const alerts = await response.json();
+        
+        const tbody = document.getElementById('alertHistoryList');
+        tbody.innerHTML = alerts.map(alert => `
+            <tr>
+                <td>${new Date(alert.created_at).toLocaleString()}</td>
+                <td><span class="badge bg-light text-dark">${alert.alert_type}</span></td>
+                <td>${alert.message}</td>
+                <td>${alert.sent_channels.join(', ')}</td>
+                <td><span class="badge ${alert.is_read ? 'bg-secondary' : 'bg-primary'}">
+                    ${alert.is_read ? 'Read' : 'New'}
+                </span></td>
+                <td>
+                    ${!alert.is_read ? `<button class="btn btn-sm btn-outline-primary" onclick="markAlertRead('${alert.id}')">Mark Read</button>` : ''}
+                </td>
+            </tr>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading alert history:', error);
+    }
+}
+
+function setupToggleHandlers() {
+    document.getElementById('quietHoursToggle').addEventListener('change', function() {
+        document.getElementById('quietHoursSettings').style.display = this.checked ? 'block' : 'none';
+    });
+
+    document.getElementById('smsToggle').addEventListener('change', function() {
+        document.getElementById('smsSettings').style.display = this.checked ? 'block' : 'none';
+    });
+}
+
+function setupFormSubmissions() {
+    document.getElementById('channelsForm').addEventListener('submit', saveChannels);
+    document.getElementById('alertTypesForm').addEventListener('submit', saveAlertTypes);
+    document.getElementById('rulesForm').addEventListener('submit', saveRules);
+}
+
+async function saveChannels(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const data = Object.fromEntries(formData);
+    
+    try {
+        const response = await fetch('/api/alerts/preferences', {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            alert('Preferences saved successfully');
+        }
+    } catch (error) {
+        alert('Error saving preferences: ' + error.message);
+    }
+}
+
+async function saveAlertTypes(e) {
+    e.preventDefault();
+    const checkedTypes = Array.from(document.querySelectorAll('.alert-type:checked'))
+        .map(el => el.value);
+    
+    try {
+        const response = await fetch('/api/alerts/preferences', {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ alert_types: checkedTypes })
+        });
+        
+        if (response.ok) {
+            alert('Alert types saved successfully');
+        }
+    } catch (error) {
+        alert('Error saving alert types: ' + error.message);
+    }
+}
+
+async function saveRules(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const data = Object.fromEntries(formData);
+    
+    try {
+        const response = await fetch('/api/alerts/preferences', {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            alert('Rules saved successfully');
+        }
+    } catch (error) {
+        alert('Error saving rules: ' + error.message);
+    }
+}
+
+async function markAlertRead(alertId) {
+    try {
+        const response = await fetch(`/api/alerts/${alertId}/read`, {
+            method: 'PUT',
+            headers: {'Authorization': `Bearer ${localStorage.getItem('token')}`}
+        });
+        
+        if (response.ok) {
+            loadAlertHistory();
+        }
+    } catch (error) {
+        console.error('Error marking alert read:', error);
+    }
+}
+
+async function updatePhone() {
+    const form = document.getElementById('updatePhoneForm');
+    const phone = document.getElementById('newPhone').value;
+    
+    try {
+        const response = await fetch('/api/alerts/verify-phone', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ phone_number: phone })
+        });
+        
+        if (response.ok) {
+            // Show verification code modal
+            alert('Verification code sent to ' + phone);
+            bootstrap.Modal.getInstance(document.getElementById('updatePhoneModal')).hide();
+        }
+    } catch (error) {
+        alert('Error updating phone: ' + error.message);
+    }
+}
+</script>
+
+<style>
+    .card {
+        transition: all 0.3s ease;
+    }
+    .card:hover {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    .form-check-label {
+        cursor: pointer;
+        user-select: none;
+    }
+</style>
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Content End -->
+
+    <!-- Footer Start -->
+    <div class="container-fluid bg-dark text-light footer mt-5 py-5 wow fadeIn" data-wow-delay="0.1s">
+        <div class="container py-5">
+            <div class="row g-5">
+                <div class="col-lg-3 col-md-6">
+                    <h5 class="text-white mb-4">Address</h5>
+                    <p class="mb-2"><i class="fa fa-map-marker-alt me-3"></i>123 Street, New York, USA</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Footer End -->
+
+    <a href="#" class="btn btn-lg btn-primary btn-lg-square back-to-top"><i class="bi bi-arrow-up"></i></a>
+
+    <!-- JavaScript Libraries -->
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/lib/wow/wow.min.js"></script>
+    <script src="/static/lib/easing/easing.min.js"></script>
+    <script src="/static/lib/waypoints/waypoints.min.js"></script>
+    <script src="/static/lib/counterup/counterup.min.js"></script>
+    <script src="/static/lib/owlcarousel/owl.carousel.min.js"></script>
+    <script src="/static/js/main.js"></script>
+    <script src="/static/js/user-guard.js"></script>
+</body>
+
+</html>

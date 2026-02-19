@@ -1,0 +1,336 @@
+<!DOCTYPE html> 
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Notifications - Finanza Bank</title>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <link href="/img/favicon.ico" rel="icon">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jost:wght@500;600;700&family=Open+Sans:wght@400;500&display=swap" rel="stylesheet">  
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/static/lib/animate/animate.min.css" rel="stylesheet">
+    <link href="/static/lib/owlcarousel/assets/owl.carousel.min.css" rel="stylesheet">
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <div id="spinner" class="show bg-white position-fixed translate-middle w-100 vh-100 top-50 start-50 d-flex align-items-center justify-content-center">
+        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
+    </div>
+    <!-- Navbar Start -->
+    <div class="container-fluid fixed-top px-0 wow fadeIn" data-wow-delay="0.1s">
+        <nav class="navbar navbar-expand-lg navbar-light py-lg-0 px-lg-5 wow fadeIn" data-wow-delay="0.1s">
+            <a href="/user/dashboard" class="navbar-brand ms-4 ms-lg-0">
+                <h5 class="m-0 text-primary"><i class="fa fa-university me-2"></i>Finanza</h5>
+            </a>
+            <button type="button" class="navbar-toggler me-4" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarCollapse">
+                <div class="navbar-nav ms-auto p-4 p-lg-0">
+                    <a href="/user/dashboard" class="nav-item nav-link">Dashboard</a>
+                    <a href="/user/account" class="nav-item nav-link">Account</a>
+                    <a href="/user/kyc_form" class="nav-item nav-link">KYC</a>
+                    <div class="nav-item dropdown">
+                        <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Products</a>
+                        <div class="dropdown-menu border-light m-0">
+                            <a href="/user/cards" class="dropdown-item">Cards</a>
+                            <a href="/user/deposits" class="dropdown-item">Deposits</a>
+                            <a href="/user/loans" class="dropdown-item">Loans</a>
+                            <a href="/user/investments" class="dropdown-item">Investments</a>
+                        </div>
+                    </div>
+                    <div class="nav-item dropdown">
+                        <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Services</a>
+                        <div class="dropdown-menu border-light m-0">
+                            <a href="/user/analytics" class="dropdown-item">Business Analysis</a>
+                            <a href="/user/treasury_portfolio" class="dropdown-item">Financial Planning</a>
+                            <a href="/user/insurance" class="dropdown-item">Insurance</a>
+                            <a href="/user/treasury_portfolio" class="dropdown-item">Projects</a>
+                        </div>
+                    </div>
+                    <div class="nav-item dropdown">
+                        <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">More</a>
+                        <div class="dropdown-menu border-light m-0">
+                            <a href="/user/profile" class="dropdown-item">Profile</a>
+                            <a href="/user/settings" class="dropdown-item">Settings</a>
+                            <a href="/user/notifications" class="dropdown-item active">Notifications</a>
+                            <a href="/user/contact" class="dropdown-item">Contact/Support</a>
+                            <hr class="m-2">
+                            <a href="/logout" class="dropdown-item text-danger">Logout</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </div>
+    <!-- Navbar End -->
+    <div class="container-fluid page-header mb-5 wow fadeIn" data-wow-delay="0.1s">
+        <div class="container">
+            <h1 class="display-4 pb-3 animated slideInDown">Notifications</h1>
+            <nav aria-label="breadcrumb animated slideInDown">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a class="text-white" href="/user/dashboard">Home</a></li>
+                    <li class="breadcrumb-item text-primary active" aria-current="page">Notifications</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+    <div class="container-xxl py-5">
+        <div class="container">
+            <div class="row g-5">
+                <div class="col-lg-12 wow fadeInUp" data-wow-delay="0.1s">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2 class="mb-0">Notifications</h2>
+                        <div>
+                            <button id="mark-all-read-btn" class="btn btn-sm btn-outline-primary me-2">Mark All as Read</button>
+                            <button id="refresh-notifications-btn" class="btn btn-sm btn-outline-secondary">Refresh</button>
+                        </div>
+                    </div>
+                    <p class="mb-4">Stay updated with your transactions, alerts, and account activities.</p>
+
+                    <!-- Notification Stats -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h6 class="card-title">Unread Notifications</h6>
+                                    <p class="display-6 text-primary" id="unread-count">0</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h6 class="card-title">Total Notifications</h6>
+                                    <p class="display-6" id="total-count">0</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card text-center">
+                                <div class="card-body">
+                                    <h6 class="card-title">Last Updated</h6>
+                                    <p class="small" id="last-updated">—</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notification Filters -->
+                    <div class="mb-4">
+                        <div class="btn-group" role="group">
+                            <input type="radio" class="btn-check" name="filter" id="filter-all" value="all" checked>
+                            <label class="btn btn-outline-primary" for="filter-all">All</label>
+                            
+                            <input type="radio" class="btn-check" name="filter" id="filter-unread" value="unread">
+                            <label class="btn btn-outline-primary" for="filter-unread">Unread</label>
+                            
+                            <input type="radio" class="btn-check" name="filter" id="filter-transactions" value="transaction">
+                            <label class="btn btn-outline-primary" for="filter-transactions">Transactions</label>
+                            
+                            <input type="radio" class="btn-check" name="filter" id="filter-alerts" value="alert">
+                            <label class="btn btn-outline-primary" for="filter-alerts">Alerts</label>
+                        </div>
+                    </div>
+
+                    <!-- Notifications List -->
+                    <div class="card">
+                        <div class="card-body p-0">
+                            <div class="list-group list-group-flush" id="notifications-list">
+                                <div class="list-group-item text-center text-muted py-5">
+                                    <i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.5;"></i>
+                                    <p class="mt-3">No notifications yet</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Footer Start -->
+    <div class="container-fluid bg-dark text-light footer mt-5 py-5 wow fadeIn" data-wow-delay="0.1s">
+        <div class="container py-5">
+            <div class="row g-5">
+                <div class="col-lg-3 col-md-6">
+                    <h5 class="text-white mb-4">Address</h5>
+                    <p class="mb-2"><i class="fa fa-map-marker-alt me-3"></i>123 Street, New York, USA</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Footer End -->
+    <a href="#" class="btn btn-lg btn-primary btn-lg-square back-to-top"><i class="bi bi-arrow-up"></i></a>
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/lib/wow/wow.min.js"></script>
+    <script src="/static/lib/easing/easing.min.js"></script>
+    <script src="/static/lib/waypoints/waypoints.min.js"></script>
+    <script src="/static/lib/counterup/counterup.min.js"></script>
+    <script src="/static/lib/owlcarousel/owl.carousel.min.js"></script>
+    <script src="/static/js/main.js"></script>
+    <script src="/static/js/user-guard.js"></script>
+    <script src="/static/js/realtime.js"></script>
+    <script src="/static/js/page-sync.js"></script>
+    <script>
+        let allNotifications = [];
+
+        // Get icon and color based on notification type
+        function getNotificationIcon(type) {
+            const icons = {
+                'transaction': { icon: 'bi-arrow-left-right', color: 'text-success' },
+                'alert': { icon: 'bi-exclamation-circle', color: 'text-warning' },
+                'deposit': { icon: 'bi-cash-coin', color: 'text-info' },
+                'withdrawal': { icon: 'bi-wallet2', color: 'text-danger' },
+                'transfer': { icon: 'bi-arrow-up-right', color: 'text-primary' },
+                'system': { icon: 'bi-info-circle', color: 'text-secondary' }
+            };
+            return icons[type] || { icon: 'bi-bell', color: 'text-muted' };
+        }
+
+        // Format time ago
+        function timeAgo(date) {
+            const now = new Date();
+            const then = new Date(date);
+            const seconds = Math.floor((now - then) / 1000);
+            
+            if (seconds < 60) return 'just now';
+            if (seconds < 3600) return Math.floor(seconds / 60) + 'm ago';
+            if (seconds < 86400) return Math.floor(seconds / 3600) + 'h ago';
+            return Math.floor(seconds / 86400) + 'd ago';
+        }
+
+        // Load and display notifications
+        async function loadNotifications(filter = 'all') {
+            try {
+                const res = await fetch('/api/v1/notifications?limit=100', { credentials: 'include' });
+                if (!res.ok) throw new Error('Failed to load notifications');
+                allNotifications = await res.json();
+                
+                // Get unread count
+                const unreadRes = await fetch('/api/v1/notifications/unread/count', { credentials: 'include' });
+                const unreadData = await unreadRes.json();
+                document.getElementById('unread-count').textContent = unreadData.unread_count || 0;
+                document.getElementById('total-count').textContent = allNotifications.length;
+                document.getElementById('last-updated').textContent = new Date().toLocaleTimeString();
+
+                // Filter notifications
+                let filtered = allNotifications;
+                if (filter === 'unread') {
+                    filtered = allNotifications.filter(n => !n.read);
+                } else if (filter !== 'all') {
+                    filtered = allNotifications.filter(n => n.type === filter);
+                }
+
+                // Render notifications
+                const list = document.getElementById('notifications-list');
+                if (filtered.length === 0) {
+                    list.innerHTML = `<div class="list-group-item text-center text-muted py-5"><i class="bi bi-inbox" style="font-size: 3rem; opacity: 0.5;"></i><p class="mt-3">No ${filter !== 'all' ? filter + ' ' : ''}notifications</p></div>`;
+                    return;
+                }
+
+                list.innerHTML = filtered.map(n => {
+                    const icon = getNotificationIcon(n.type);
+                    const isUnread = !n.read;
+                    return `
+                        <div class="list-group-item d-flex gap-3 py-3 ${isUnread ? 'bg-light' : ''}">
+                            <i class="bi ${icon.icon} ${icon.color}" style="font-size: 1.5rem; flex-shrink: 0;"></i>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">${n.title || n.type}</h6>
+                                <p class="mb-2 small">${n.message || ''}</p>
+                                <small class="text-muted">${timeAgo(n.created_at)}</small>
+                            </div>
+                            <div class="text-end">
+                                ${isUnread ? '<span class="badge bg-primary">New</span>' : ''}
+                                <button class="btn btn-sm btn-link delete-notification" data-id="${n.id}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                // Attach delete handlers
+                document.querySelectorAll('.delete-notification').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        e.preventDefault();
+                        const id = btn.dataset.id;
+                        try {
+                            const r = await fetch(`/api/v1/notifications/${id}`, { method: 'DELETE', credentials: 'include' });
+                            if (r.ok) loadNotifications(filter);
+                        } catch (err) {
+                            console.error(err);
+                        }
+                    });
+                });
+
+            } catch (err) {
+                console.error('Error loading notifications:', err);
+                document.getElementById('notifications-list').innerHTML = '<div class="alert alert-danger">Failed to load notifications</div>';
+            }
+        }
+
+        // Filter handlers
+        document.querySelectorAll('input[name="filter"]').forEach(radio => {
+            radio.addEventListener('change', () => loadNotifications(radio.value));
+        });
+
+        // Mark all as read
+        document.getElementById('mark-all-read-btn').addEventListener('click', async () => {
+            try {
+                const res = await fetch('/api/v1/notifications/mark-all-as-read', {
+                    method: 'PUT',
+                    credentials: 'include'
+                });
+                if (res.ok) {
+                    loadNotifications(document.querySelector('input[name="filter"]:checked').value);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        });
+
+        // Refresh button
+        document.getElementById('refresh-notifications-btn').addEventListener('click', () => {
+            loadNotifications(document.querySelector('input[name="filter"]:checked').value);
+        });
+
+        // Load on page ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadNotifications);
+        } else {
+            loadNotifications();
+        }
+
+        // SECURE Logout handler - Clear all session state
+        document.addEventListener('click', function(e) {
+            if (e.target && e.target.getAttribute('href') === '/logout') {
+                e.preventDefault();
+                if (confirm('Are you sure you want to logout?')) {
+                    // Clear all client-side storage
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    // Navigate to logout endpoint (server clears cookie)
+                    window.location.href = '/logout';
+                }
+            }
+        });
+        
+        // Prevent back button from restoring cached pages
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {  // Page restored from back/forward cache
+                if (!localStorage.getItem('token')) {
+                    window.location.href = '/signin';
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

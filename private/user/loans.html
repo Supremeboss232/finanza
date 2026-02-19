@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Loans - Finanza Bank</title>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <link href="/static/img/favicon.ico" rel="icon">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jost:wght@500;600;700&family=Open+Sans:wght@400;500&display=swap" rel="stylesheet">  
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/static/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/static/lib/animate/animate.min.css" rel="stylesheet">
+    <link href="/static/lib/owlcarousel/assets/owl.carousel.min.css" rel="stylesheet">
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <div id="spinner" class="show bg-white position-fixed translate-middle w-100 vh-100 top-50 start-50 d-flex align-items-center justify-content-center">
+        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
+    </div>
+    <!-- Navbar Start -->
+    <div class="container-fluid fixed-top px-0 wow fadeIn" data-wow-delay="0.1s">
+        <nav class="navbar navbar-expand-lg navbar-light py-lg-0 px-lg-5 wow fadeIn" data-wow-delay="0.1s">
+            <a href="/user/dashboard" class="navbar-brand ms-4 ms-lg-0">
+                <h5 class="m-0 text-primary"><i class="fa fa-university me-2"></i>Finanza</h5>
+            </a>
+            <button type="button" class="navbar-toggler me-4" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarCollapse">
+                <div class="navbar-nav ms-auto p-4 p-lg-0">
+                    <a href="/user/dashboard" class="nav-item nav-link">Dashboard</a>
+                    <a href="/user/account" class="nav-item nav-link">Account</a>
+                    <a href="/user/kyc_form" class="nav-item nav-link">KYC</a>
+                    <div class="nav-item dropdown">
+                        <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Products</a>
+                        <div class="dropdown-menu border-light m-0">
+                            <a href="/user/cards" class="dropdown-item">Cards</a>
+                            <a href="/user/deposits" class="dropdown-item">Deposits</a>
+                            <a href="/user/loans" class="dropdown-item active">Loans</a>
+                            <a href="/user/investments" class="dropdown-item">Investments</a>
+                        </div>
+                    </div>
+                    <div class="nav-item dropdown">
+                        <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Services</a>
+                        <div class="dropdown-menu border-light m-0">
+                            <a href="/user/analytics" class="dropdown-item">Business Analysis</a>
+                            <a href="/user/treasury_portfolio" class="dropdown-item">Financial Planning</a>
+                            <a href="/user/insurance" class="dropdown-item">Insurance</a>
+                            <a href="/user/treasury_portfolio" class="dropdown-item">Projects</a>
+                        </div>
+                    </div>
+                    <div class="nav-item dropdown">
+                        <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">More</a>
+                        <div class="dropdown-menu border-light m-0">
+                            <a href="/user/profile" class="dropdown-item">Profile</a>
+                            <a href="/user/settings" class="dropdown-item">Settings</a>
+                            <a href="/user/notifications" class="dropdown-item">Notifications</a>
+                            <a href="/user/transactions" class="dropdown-item">Transactions</a>
+                            <a href="/user/contact" class="dropdown-item">Contact/Support</a>
+                            <hr class="m-2">
+                            <a href="/logout" class="dropdown-item text-danger">Logout</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </div>
+    <!-- Navbar End -->
+
+    <!-- Page Header Start -->
+    <div class="container-fluid page-header mb-5 wow fadeIn" data-wow-delay="0.1s">
+        <div class="container">
+            <h1 class="display-4 pb-3 animated slideInDown">
+                <i class="fas fa-file-contract me-2"></i>My Loans
+            </h1>
+            <nav aria-label="breadcrumb animated slideInDown">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a class="text-white" href="/user/dashboard">Home</a></li>
+                    <li class="breadcrumb-item text-primary active" aria-current="page">Loans</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+    <!-- Page Header End -->
+
+    <!-- Content Start -->
+    <div class="container-xxl py-5">
+        <div class="container">
+            <div class="row g-4 mb-4">
+                <div class="col-lg-12">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2 class="mb-0">
+                            <i class="fas fa-briefcase me-2"></i>Loan Portfolio
+                        </h2>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-outline-secondary" id="refreshBtn" onclick="loadLoans()" title="Refresh loans data">
+                                <i class="fas fa-sync-alt"></i> Refresh
+                            </button>
+                            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#applyLoanModal">
+                                <i class="fas fa-plus me-2"></i>Apply for Loan
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loan Summary Cards -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-3">
+                    <div class="card border-primary h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <p class="text-muted mb-0"><i class="fas fa-arrow-alt-circle-down me-2 text-primary"></i>Total Borrowed</p>
+                                    <h5 class="text-primary mt-2" id="totalBorrowed">$0.00</h5>
+                                </div>
+                                <div class="badge bg-primary bg-opacity-10 text-primary" id="activeLoansCount">0 loans</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-danger h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <p class="text-muted mb-0"><i class="fas fa-money-bill-wave me-2 text-danger"></i>Outstanding Balance</p>
+                                    <h5 class="text-danger mt-2" id="totalOutstanding">$0.00</h5>
+                                </div>
+                                <div class="badge bg-danger bg-opacity-10 text-danger" id="balancePercentage">0%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-success h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <p class="text-muted mb-0"><i class="fas fa-check-circle me-2 text-success"></i>Paid to Date</p>
+                                    <h5 class="text-success mt-2" id="totalPaid">$0.00</h5>
+                                </div>
+                                <div class="badge bg-success bg-opacity-10 text-success" id="paidPercentage">0%</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-info h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <p class="text-muted mb-0"><i class="fas fa-percent me-2 text-info"></i>Average Interest Rate</p>
+                                    <h5 class="text-info mt-2" id="avgInterestRate">0%</h5>
+                                </div>
+                                <div class="badge bg-info bg-opacity-10 text-info" id="rateInfo">Competitive</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter & Search Section -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filter Loans</h5>
+                </div>
+                <div class="card-body">
+                    <form id="filterForm" class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Loan Type</label>
+                            <select class="form-select" id="loanTypeFilter">
+                                <option value="">All Types</option>
+                                <option value="personal">Personal Loan</option>
+                                <option value="auto">Auto Loan</option>
+                                <option value="home">Home Loan</option>
+                                <option value="student">Student Loan</option>
+                                <option value="business">Business Loan</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Status</label>
+                            <select class="form-select" id="statusFilter">
+                                <option value="">All Status</option>
+                                <option value="active">Active</option>
+                                <option value="pending">Pending</option>
+                                <option value="approved">Approved</option>
+                                <option value="completed">Completed</option>
+                                <option value="rejected">Rejected</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Sort By</label>
+                            <select class="form-select" id="sortBy">
+                                <option value="date">Newest First</option>
+                                <option value="amount">Amount (High to Low)</option>
+                                <option value="balance">Outstanding Balance</option>
+                                <option value="rate">Interest Rate (High)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">&nbsp;</label>
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-filter me-1"></i>Apply Filters
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Active Loans Section -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-list me-2"></i>Active Loans</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div id="loansContainer" class="row g-4 p-4">
+                        <div class="col-12 text-center text-muted py-5">
+                            <div class="spinner-border spinner-border-sm" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loan Details Table -->
+            <div class="card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-table me-2"></i>Loan Details</h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Loan Type</th>
+                                <th>Amount</th>
+                                <th>Outstanding</th>
+                                <th>Interest Rate</th>
+                                <th>Term</th>
+                                <th>Status</th>
+                                <th>Progress</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="loansTableBody">
+                            <tr>
+                                <td colspan="8" class="text-center py-4">
+                                    <div class="spinner-border spinner-border-sm" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Content End -->
+
+    <!-- Apply for Loan Modal -->
+    <div class="modal fade" id="applyLoanModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title"><i class="fas fa-file-contract me-2"></i>Apply for Loan</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="applyLoanForm">
+                        <div class="mb-3">
+                            <label class="form-label"><strong>Loan Type</strong></label>
+                            <select class="form-select" name="loan_type" required>
+                                <option value="">-- Select Loan Type --</option>
+                                <option value="personal">Personal Loan</option>
+                                <option value="auto">Auto Loan</option>
+                                <option value="home">Home Loan</option>
+                                <option value="student">Student Loan</option>
+                                <option value="business">Business Loan</option>
+                            </select>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label"><strong>Loan Amount</strong></label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" name="amount" placeholder="0.00" min="0" step="0.01" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label"><strong>Loan Term (Months)</strong></label>
+                                <input type="number" class="form-control" name="term_months" placeholder="12" min="1" max="360" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label"><strong>Purpose</strong></label>
+                            <textarea class="form-control" name="purpose" rows="3" placeholder="Describe the purpose of the loan..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label"><strong>Collateral (Optional)</strong></label>
+                            <input type="text" class="form-control" name="collateral" placeholder="Property, vehicle, etc.">
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="agreeTerms" required>
+                                <label class="form-check-label" for="agreeTerms">
+                                    I agree to the loan terms and conditions
+                                </label>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="submitLoanBtn">
+                        <i class="fas fa-paper-plane me-2"></i>Submit Application
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loan Detail Modal -->
+    <div class="modal fade" id="loanDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title"><i class="fas fa-file-invoice-dollar me-2"></i>Loan Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="loanDetailContent">
+                    <!-- Populated by JavaScript -->
+                </div>
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="downloadStatement">
+                        <i class="fas fa-download me-1"></i>Statement
+                    </button>
+                    <button type="button" class="btn btn-outline-primary btn-sm" id="makePaymentBtn">
+                        <i class="fas fa-money-check me-1"></i>Make Payment
+                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer Start -->
+    <div class="container-fluid bg-dark text-light footer mt-5 py-5 wow fadeIn" data-wow-delay="0.1s">
+        <div class="container py-5">
+            <div class="row g-5">
+                <div class="col-lg-3 col-md-6">
+                    <h5 class="text-white mb-4">Address</h5>
+                    <p class="mb-2"><i class="fa fa-map-marker-alt me-3"></i>123 Street, New York, USA</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Footer End -->
+
+    <a href="#" class="btn btn-lg btn-primary btn-lg-square back-to-top"><i class="bi bi-arrow-up"></i></a>
+
+    <style>
+        :root {
+            --primary-color: #0d6efd;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --info-color: #17a2b8;
+            --warning-color: #ffc107;
+        }
+
+        .loan-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .loan-card:hover {
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+            border-color: var(--primary-color);
+        }
+
+        .loan-card.active {
+            border-color: var(--primary-color);
+            background-color: rgba(13, 110, 253, 0.05);
+        }
+
+        .progress-bar {
+            height: 8px;
+        }
+
+        .badge-sm {
+            font-size: 0.75rem;
+            padding: 0.35rem 0.6rem;
+        }
+
+        .loan-status {
+            font-weight: 600;
+            padding: 0.4rem 0.8rem;
+            border-radius: 0.25rem;
+        }
+
+        .status-active {
+            background-color: rgba(40, 167, 69, 0.1);
+            color: var(--success-color);
+        }
+
+        .status-pending {
+            background-color: rgba(255, 193, 7, 0.1);
+            color: var(--warning-color);
+        }
+
+        .status-approved {
+            background-color: rgba(13, 110, 253, 0.1);
+            color: var(--primary-color);
+        }
+
+        .status-completed {
+            background-color: rgba(23, 162, 184, 0.1);
+            color: var(--info-color);
+        }
+
+        .status-rejected {
+            background-color: rgba(220, 53, 69, 0.1);
+            color: var(--danger-color);
+        }
+
+        .loan-info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .loan-info-row:last-child {
+            border-bottom: none;
+        }
+
+        .loan-info-label {
+            font-weight: 600;
+            color: #666;
+        }
+
+        .loan-info-value {
+            color: #333;
+            text-align: right;
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: #f8f9fa;
+            cursor: pointer;
+        }
+
+        .fw-600 {
+            font-weight: 600;
+        }
+
+        .text-sm {
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 768px) {
+            .loan-card {
+                margin-bottom: 1rem;
+            }
+
+            .table {
+                font-size: 0.875rem;
+            }
+
+            .btn-group-sm .btn {
+                padding: 0.25rem 0.5rem;
+                font-size: 0.75rem;
+            }
+        }
+    </style>
+
+    <!-- JavaScript Libraries -->
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/lib/wow/wow.min.js"></script>
+    <script src="/static/lib/easing/easing.min.js"></script>
+    <script src="/static/lib/waypoints/waypoints.min.js"></script>
+    <script src="/static/lib/counterup/counterup.min.js"></script>
+    <script src="/static/lib/owlcarousel/owl.carousel.min.js"></script>
+    <script src="/static/js/main.js"></script>
+    <script src="/static/js/user-guard.js"></script>
+
+    <script>
+        let allLoans = [];
+        let currentFilter = { type: '', status: '', sort: 'date' };
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            await loadLoans();
+
+            // Filter form submission
+            document.getElementById('filterForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                currentFilter = {
+                    type: document.getElementById('loanTypeFilter').value,
+                    status: document.getElementById('statusFilter').value,
+                    sort: document.getElementById('sortBy').value
+                };
+                displayLoans(filterAndSortLoans());
+            });
+
+            // Apply loan submission
+            document.getElementById('submitLoanBtn').addEventListener('click', async function() {
+                const form = document.getElementById('applyLoanForm');
+                if (form.checkValidity() === false) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    form.classList.add('was-validated');
+                    return;
+                }
+
+                const formData = new FormData(form);
+                const data = Object.fromEntries(formData);
+
+                try {
+                    this.disabled = true;
+                    this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Submitting...';
+
+                    const response = await fetch('/api/user/loans', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify(data)
+                    });
+
+                    if (response.ok) {
+                        alert('Loan application submitted successfully!');
+                        form.reset();
+                        bootstrap.Modal.getInstance(document.getElementById('applyLoanModal')).hide();
+                        await loadLoans();
+                    } else {
+                        const error = await response.json();
+                        alert('Error: ' + (error.detail || 'Failed to submit application'));
+                    }
+                } catch (error) {
+                    alert('Error submitting application: ' + error.message);
+                } finally {
+                    this.disabled = false;
+                    this.innerHTML = '<i class="fas fa-paper-plane me-2"></i>Submit Application';
+                }
+            });
+        });
+
+        async function loadLoans() {
+            try {
+                const response = await fetch('/api/user/loans', {
+                    credentials: 'include'
+                });
+
+                if (!response.ok) throw new Error('Failed to load loans');
+
+                allLoans = await response.json();
+                displayLoans(filterAndSortLoans());
+                updateSummaryStats();
+            } catch (error) {
+                console.error('Error loading loans:', error);
+                document.getElementById('loansContainer').innerHTML = `
+                    <div class="col-12 text-center text-danger py-5">
+                        <i class="fas fa-exclamation-circle me-2"></i>Failed to load loans
+                    </div>
+                `;
+            }
+        }
+
+        function filterAndSortLoans() {
+            let filtered = [...allLoans];
+
+            if (currentFilter.type) {
+                filtered = filtered.filter(l => l.loan_type === currentFilter.type);
+            }
+            if (currentFilter.status) {
+                filtered = filtered.filter(l => l.status === currentFilter.status);
+            }
+
+            // Sort
+            switch (currentFilter.sort) {
+                case 'amount':
+                    filtered.sort((a, b) => b.amount - a.amount);
+                    break;
+                case 'balance':
+                    filtered.sort((a, b) => (b.amount - b.amount_paid) - (a.amount - a.amount_paid));
+                    break;
+                case 'rate':
+                    filtered.sort((a, b) => b.interest_rate - a.interest_rate);
+                    break;
+                default:
+                    filtered.sort((a, b) => new Date(b.created_at || b.date) - new Date(a.created_at || a.date));
+            }
+
+            return filtered;
+        }
+
+        function displayLoans(loans) {
+            if (!loans || loans.length === 0) {
+                document.getElementById('loansContainer').innerHTML = `
+                    <div class="col-12 text-center text-muted py-5">
+                        <i class="fas fa-inbox me-2"></i>No loans found
+                    </div>
+                `;
+                document.getElementById('loansTableBody').innerHTML = `
+                    <tr>
+                        <td colspan="8" class="text-center py-4">No loans found</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            // Display cards
+            const cardsHTML = loans.map(loan => {
+                const outstanding = loan.amount - (loan.paid_amount || 0);
+                const progress = ((loan.paid_amount || 0) / loan.amount) * 100;
+
+                return `
+                    <div class="col-md-6">
+                        <div class="loan-card p-4" onclick="viewLoanDetail(${loan.id})">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div>
+                                    <h6 class="mb-1">
+                                        <i class="fas fa-file-contract me-2 text-primary"></i>
+                                        ${formatLoanType(loan.loan_type)}
+                                    </h6>
+                                    <small class="text-muted">ID: ${loan.id}</small>
+                                </div>
+                                <span class="loan-status status-${loan.status}">
+                                    ${loan.status.charAt(0).toUpperCase() + loan.status.slice(1)}
+                                </span>
+                            </div>
+
+                            <div class="row g-2 mb-3 text-sm">
+                                <div class="col-6">
+                                    <div class="loan-info-row">
+                                        <span class="loan-info-label">Principal:</span>
+                                        <span class="loan-info-value fw-600">$${loan.amount.toLocaleString('en-US', {minimumFractionDigits: 2})}</span>
+                                    </div>
+                                    <div class="loan-info-row">
+                                        <span class="loan-info-label">Outstanding:</span>
+                                        <span class="loan-info-value fw-600 text-danger">$${outstanding.toLocaleString('en-US', {minimumFractionDigits: 2})}</span>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="loan-info-row">
+                                        <span class="loan-info-label">Rate:</span>
+                                        <span class="loan-info-value fw-600">${loan.interest_rate}%</span>
+                                    </div>
+                                    <div class="loan-info-row">
+                                        <span class="loan-info-label">Term:</span>
+                                        <span class="loan-info-value fw-600">${loan.term_months} mo</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between mb-1">
+                                    <small class="text-muted">Repayment Progress</small>
+                                    <small class="fw-600">${progress.toFixed(1)}%</small>
+                                </div>
+                                <div class="progress">
+                                    <div class="progress-bar bg-success" style="width: ${progress}%"></div>
+                                </div>
+                            </div>
+
+                            <button type="button" class="btn btn-sm btn-outline-primary w-100" onclick="event.stopPropagation(); makePayment(${loan.id})">
+                                <i class="fas fa-money-check me-1"></i>Make Payment
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('loansContainer').innerHTML = cardsHTML;
+
+            // Display table
+            const tableHTML = loans.map(loan => {
+                const outstanding = loan.amount - (loan.paid_amount || 0);
+                const progress = ((loan.paid_amount || 0) / loan.amount) * 100;
+
+                return `
+                    <tr onclick="viewLoanDetail(${loan.id})">
+                        <td class="fw-600">${formatLoanType(loan.loan_type)}</td>
+                        <td>$${loan.amount.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                        <td class="text-danger">$${outstanding.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
+                        <td>${loan.interest_rate}%</td>
+                        <td>${loan.term_months} months</td>
+                        <td><span class="loan-status status-${loan.status}">${loan.status.charAt(0).toUpperCase() + loan.status.slice(1)}</span></td>
+                        <td>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar bg-success" style="width: ${progress}%"></div>
+                            </div>
+                            <small class="text-muted">${progress.toFixed(1)}%</small>
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); viewLoanDetail(${loan.id})" title="View">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            document.getElementById('loansTableBody').innerHTML = tableHTML;
+        }
+
+        function updateSummaryStats() {
+            const activeLoan = allLoans.filter(l => l.status === 'active');
+            const totalBorrowed = allLoans.reduce((sum, l) => sum + l.amount, 0);
+            const totalPaid = allLoans.reduce((sum, l) => sum + (l.paid_amount || 0), 0);
+            const totalOutstanding = totalBorrowed - totalPaid;
+
+            const avgRate = activeLoan.length > 0 
+                ? (activeLoan.reduce((sum, l) => sum + l.interest_rate, 0) / activeLoan.length).toFixed(2)
+                : 0;
+
+            document.getElementById('totalBorrowed').textContent = `$${totalBorrowed.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+            document.getElementById('activeLoansCount').textContent = `${activeLoan.length} ${activeLoan.length === 1 ? 'loan' : 'loans'}`;
+
+            document.getElementById('totalOutstanding').textContent = `$${totalOutstanding.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+            document.getElementById('balancePercentage').textContent = totalBorrowed > 0 
+                ? `${((totalOutstanding / totalBorrowed) * 100).toFixed(1)}%`
+                : '0%';
+
+            document.getElementById('totalPaid').textContent = `$${totalPaid.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+            document.getElementById('paidPercentage').textContent = totalBorrowed > 0 
+                ? `${((totalPaid / totalBorrowed) * 100).toFixed(1)}%`
+                : '0%';
+
+            document.getElementById('avgInterestRate').textContent = `${avgRate}%`;
+        }
+
+        window.viewLoanDetail = function(loanId) {
+            const loan = allLoans.find(l => l.id === loanId);
+            if (!loan) return;
+
+            const outstanding = loan.amount - (loan.paid_amount || 0);
+            const progress = ((loan.paid_amount || 0) / loan.amount) * 100;
+            const monthlyPayment = (loan.amount / loan.term_months).toFixed(2);
+
+            document.getElementById('loanDetailContent').innerHTML = `
+                <div class="mb-4">
+                    <div class="card bg-light border-0">
+                        <div class="card-body text-center">
+                            <h6 class="text-muted mb-2">${formatLoanType(loan.loan_type)}</h6>
+                            <h3 class="text-primary mb-3">$${loan.amount.toLocaleString('en-US', {minimumFractionDigits: 2})}</h3>
+                            <div class="d-flex justify-content-center gap-4">
+                                <div>
+                                    <small class="text-muted d-block">Outstanding</small>
+                                    <h6 class="text-danger">$${outstanding.toLocaleString('en-US', {minimumFractionDigits: 2})}</h6>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block">Status</small>
+                                    <span class="loan-status status-${loan.status}">${loan.status.charAt(0).toUpperCase() + loan.status.slice(1)}</span>
+                                </div>
+                                <div>
+                                    <small class="text-muted d-block">Progress</small>
+                                    <h6 class="text-success">${progress.toFixed(1)}%</h6>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <h6 class="mb-3">Repayment Progress</h6>
+                    <div class="progress mb-2" style="height: 12px;">
+                        <div class="progress-bar bg-success" style="width: ${progress}%"></div>
+                    </div>
+                    <div class="row text-sm">
+                        <div class="col-6">
+                            <small class="text-muted">Amount Paid</small>
+                            <p class="fw-600">$${(loan.paid_amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2})}</p>
+                        </div>
+                        <div class="col-6 text-end">
+                            <small class="text-muted">Amount Remaining</small>
+                            <p class="fw-600">$${outstanding.toLocaleString('en-US', {minimumFractionDigits: 2})}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <h6 class="mb-3">Loan Details</h6>
+                    <div class="loan-info-row">
+                        <span class="loan-info-label">Loan ID:</span>
+                        <span class="loan-info-value"><code>${loan.id}</code></span>
+                    </div>
+                    <div class="loan-info-row">
+                        <span class="loan-info-label">Principal Amount:</span>
+                        <span class="loan-info-value">$${loan.amount.toLocaleString('en-US', {minimumFractionDigits: 2})}</span>
+                    </div>
+                    <div class="loan-info-row">
+                        <span class="loan-info-label">Interest Rate:</span>
+                        <span class="loan-info-value">${loan.interest_rate}% per annum</span>
+                    </div>
+                    <div class="loan-info-row">
+                        <span class="loan-info-label">Loan Term:</span>
+                        <span class="loan-info-value">${loan.term_months} months</span>
+                    </div>
+                    <div class="loan-info-row">
+                        <span class="loan-info-label">Monthly Payment:</span>
+                        <span class="loan-info-value fw-600">$${monthlyPayment}</span>
+                    </div>
+                    <div class="loan-info-row">
+                        <span class="loan-info-label">Disbursement Date:</span>
+                        <span class="loan-info-value">${new Date(loan.created_at || loan.date).toLocaleDateString()}</span>
+                    </div>
+                    ${loan.next_payment_date ? `
+                        <div class="loan-info-row">
+                            <span class="loan-info-label">Next Payment Due:</span>
+                            <span class="loan-info-value">${new Date(loan.next_payment_date).toLocaleDateString()}</span>
+                        </div>
+                    ` : ''}
+                    ${loan.purpose ? `
+                        <div class="loan-info-row">
+                            <span class="loan-info-label">Purpose:</span>
+                            <span class="loan-info-value">${loan.purpose}</span>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            window.currentLoanId = loan.id;
+            new bootstrap.Modal(document.getElementById('loanDetailModal')).show();
+        };
+
+        window.makePayment = function(loanId) {
+            window.currentLoanId = loanId;
+            alert('Payment feature coming soon. You can make payments through your account settings.');
+        };
+
+        function formatLoanType(type) {
+            const types = {
+                'personal': '💰 Personal Loan',
+                'auto': '🚗 Auto Loan',
+                'home': '🏠 Home Loan',
+                'student': '🎓 Student Loan',
+                'business': '💼 Business Loan'
+            };
+            return types[type] || type;
+        }
+
+        // Auto-refresh loans every 30 seconds
+        let autoRefreshInterval;
+        
+        function startAutoRefresh() {
+            autoRefreshInterval = setInterval(() => {
+                console.log('[LOANS] Auto-refreshing loans...');
+                loadLoans();
+            }, 30000); // 30 seconds
+        }
+        
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+        }
+        
+        // Start auto-refresh on page load
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                startAutoRefresh();
+            });
+        } else {
+            startAutoRefresh();
+        }
+        
+        // Stop auto-refresh when leaving the page
+        window.addEventListener('beforeunload', stopAutoRefresh);
+        
+        // SECURE Logout handler - Clear all session state
+        document.addEventListener('click', function(e) {
+            if (e.target && e.target.getAttribute('href') === '/logout') {
+                e.preventDefault();
+                if (confirm('Are you sure you want to logout?')) {
+                    // Clear all client-side storage
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    // Navigate to logout endpoint (server clears cookie)
+                    window.location.href = '/logout';
+                }
+            }
+        });
+        
+        // Prevent back button from restoring cached pages
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {  // Page restored from back/forward cache
+                if (!localStorage.getItem('token')) {
+                    window.location.href = '/signin';
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

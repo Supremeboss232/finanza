@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Users Management - Finanza Admin</title>
+    <link href="/static/css/style.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+    <style>
+        body { background: #f8f9fa; }
+        .admin-nav { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .admin-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; }
+        .stat-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .stat-number { font-size: 2rem; font-weight: bold; color: #667eea; }
+        .stat-label { color: #666; font-size: 0.9rem; margin-top: 5px; }
+        .dashboard-section { background: white; border-radius: 10px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 30px; }
+        .chart-container { position: relative; height: 300px; margin-bottom: 20px; }
+        .modal-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .form-control:focus { border-color: #667eea; box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25); }
+        .btn-primary { background: #667eea; border: none; }
+        .btn-primary:hover { background: #5568d3; }
+        .table-responsive { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .status-badge { padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+        .status-active { background: #d4edda; color: #155724; }
+        .status-inactive { background: #f8d7da; color: #721c24; }
+        .kyc-badge { padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+        .kyc-verified { background: #d4edda; color: #155724; }
+        .kyc-pending { background: #fff3cd; color: #856404; }
+        .kyc-rejected { background: #f8d7da; color: #721c24; }
+        .hold-badge { display: inline-block; padding: 4px 8px; background: #f5c2c7; color: #721c24; border-radius: 4px; font-size: 0.85rem; margin: 2px; }
+        .credit-score { padding: 8px 12px; border-radius: 6px; background: #e3f2fd; color: #1976d2; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="admin-nav navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/user/admin/dashboard">
+                <i class="fas fa-chart-line"></i> Finanza Admin
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/dashboard">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-5 mb-5">
+        <!-- Header -->
+        <div class="admin-header">
+            <h1><i class="fas fa-users"></i> User Management</h1>
+            <p class="mb-0">Manage user accounts, KYC status, holds, credit scoring, and device fingerprinting</p>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="row g-4 mb-5">
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalUsers">-</div>
+                    <div class="stat-label">Total Users</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card">
+                    <div class="stat-number" id="activeUsers">-</div>
+                    <div class="stat-label">Active Users</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card">
+                    <div class="stat-number" id="kycVerified">-</div>
+                    <div class="stat-label">KYC Verified</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card">
+                    <div class="stat-number" id="accountHolds">-</div>
+                    <div class="stat-label">Account Holds</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row mb-5">
+            <div class="col-lg-6">
+                <div class="dashboard-section">
+                    <h5>User Status Distribution</h5>
+                    <div class="chart-container">
+                        <canvas id="statusChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="dashboard-section">
+                    <h5>Credit Score Distribution</h5>
+                    <div class="chart-container">
+                        <canvas id="creditChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Users Table -->
+        <div class="dashboard-section">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5><i class="fas fa-list"></i> Users</h5>
+                <button class="btn btn-primary btn-sm" onclick="openModal('createUserModal')">
+                    <i class="fas fa-plus"></i> New User
+                </button>
+            </div>
+            <div class="mb-3">
+                <div class="row g-2">
+                    <div class="col-md-3">
+                        <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Search by email or name...">
+                    </div>
+                    <div class="col-md-2">
+                        <select id="statusFilter" class="form-control form-control-sm">
+                            <option value="">All Status</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                            <option value="frozen">Frozen</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select id="kycFilter" class="form-control form-control-sm">
+                            <option value="">All KYC</option>
+                            <option value="verified">Verified</option>
+                            <option value="pending">Pending</option>
+                            <option value="rejected">Rejected</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-primary btn-sm w-100" onclick="loadUsers()">
+                            <i class="fas fa-filter"></i> Apply Filters
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Email</th>
+                            <th>Name</th>
+                            <th>Status</th>
+                            <th>KYC</th>
+                            <th>Credit Score</th>
+                            <th>Holds</th>
+                            <th>Registered</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTable">
+                        <tr><td colspan="9" class="text-center text-muted">Loading users...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Account Holds -->
+        <div class="dashboard-section">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5><i class="fas fa-lock"></i> Account Holds</h5>
+                <button class="btn btn-warning btn-sm" onclick="openModal('createHoldModal')">
+                    <i class="fas fa-plus"></i> New Hold
+                </button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Hold ID</th>
+                            <th>User</th>
+                            <th>Hold Type</th>
+                            <th>Reason</th>
+                            <th>Amount (if applicable)</th>
+                            <th>Created</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="holdsTable">
+                        <tr><td colspan="8" class="text-center text-muted">Loading holds...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Frozen Accounts -->
+        <div class="dashboard-section">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5><i class="fas fa-snowflake"></i> Frozen Accounts</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>User</th>
+                            <th>Email</th>
+                            <th>Freeze Date</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="frozenTable">
+                        <tr><td colspan="6" class="text-center text-muted">No frozen accounts</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Credit Scoring -->
+        <div class="dashboard-section">
+            <h5><i class="fas fa-credit-card"></i> Recent Credit Scores</h5>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>User</th>
+                            <th>Email</th>
+                            <th>Current Score</th>
+                            <th>Previous Score</th>
+                            <th>Change</th>
+                            <th>Last Update</th>
+                            <th>Data Source</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="creditsTable">
+                        <tr><td colspan="8" class="text-center text-muted">Loading credit scores...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Device Fingerprinting -->
+        <div class="dashboard-section">
+            <h5><i class="fas fa-fingerprint"></i> Device Fingerprinting & Security</h5>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>User</th>
+                            <th>Device ID</th>
+                            <th>Device Type</th>
+                            <th>IP Address</th>
+                            <th>Browser</th>
+                            <th>First Seen</th>
+                            <th>Last Active</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="devicesTable">
+                        <tr><td colspan="8" class="text-center text-muted">Loading device data...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Container -->
+    <div id="alertContainer" style="position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px;"></div>
+
+    <!-- Create User Modal -->
+    <div class="modal fade" id="createUserModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create New User</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="createUserForm" onsubmit="handleCreateUser(event)">
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">First Name</label>
+                                    <input type="text" id="firstName" class="form-control" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Last Name</label>
+                                    <input type="text" id="lastName" class="form-control" required>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" id="userEmail" class="form-control" required>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Phone</label>
+                                    <input type="tel" id="userPhone" class="form-control">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Date of Birth</label>
+                                    <input type="date" id="userDob" class="form-control">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="userActive" checked>
+                            <label class="form-check-label" for="userActive">Active</label>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Create User</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Hold Modal -->
+    <div class="modal fade" id="createHoldModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create Account Hold</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="holdForm" onsubmit="handleCreateHold(event)">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">User</label>
+                            <select id="holdUser" class="form-control" required>
+                                <option value="">Select User</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Hold Type</label>
+                            <select id="holdType" class="form-control" required>
+                                <option value="">Select Type</option>
+                                <option value="compliance">Compliance Hold</option>
+                                <option value="fraud">Fraud Investigation</option>
+                                <option value="dispute">Chargeback Dispute</option>
+                                <option value="regulatory">Regulatory Hold</option>
+                                <option value="manual">Manual Review</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Reason</label>
+                            <textarea id="holdReason" class="form-control" rows="3" required></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Amount (Optional)</label>
+                            <input type="number" id="holdAmount" class="form-control" step="0.01" placeholder="Leave blank for full account hold">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-warning">Create Hold</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/admin_static/js/auth-helper.js"></script>
+    <script src="/admin_static/js/admin-utils.js"></script>
+    <script>
+        const AUTH_HEADER = () => ({ 'Authorization': 'Bearer ' + localStorage.getItem('token'), 'Content-Type': 'application/json' });
+        let statusChart = null;
+        let creditChart = null;
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            await loadUserMetrics();
+            await loadUsers();
+            await loadHolds();
+            await loadFrozenAccounts();
+            await loadCreditScores();
+            await loadDeviceFingerprints();
+            await populateUserSelects();
+            initCharts();
+        });
+
+        async function loadUserMetrics() {
+            try {
+                const response = await fetchAPI('/api/v1/users/metrics');
+                if (!response) return;
+                
+                document.getElementById('totalUsers').textContent = response.total_users || 0;
+                document.getElementById('activeUsers').textContent = response.active_users || 0;
+                document.getElementById('kycVerified').textContent = response.kyc_verified || 0;
+                document.getElementById('accountHolds').textContent = response.account_holds || 0;
+            } catch (error) {
+                console.error('Error loading metrics:', error);
+            }
+        }
+
+        async function loadUsers() {
+            try {
+                const statusFilter = document.getElementById('statusFilter').value;
+                const kycFilter = document.getElementById('kycFilter').value;
+                const search = document.getElementById('searchInput').value;
+                
+                let url = '/api/v1/users?limit=50';
+                if (statusFilter) url += '&status=' + statusFilter;
+                if (kycFilter) url += '&kyc_status=' + kycFilter;
+                if (search) url += '&search=' + search;
+
+                const response = await fetchAPI(url);
+                if (!response || !response.data) return;
+                
+                const tbody = document.getElementById('usersTable');
+                tbody.innerHTML = response.data.map(u => `
+                    <tr>
+                        <td>${u.id}</td>
+                        <td>${u.email}</td>
+                        <td>${u.full_name || 'N/A'}</td>
+                        <td><span class="status-badge status-${u.is_active ? 'active' : 'inactive'}">${u.is_active ? 'Active' : 'Inactive'}</span></td>
+                        <td><span class="kyc-badge kyc-${u.kyc_status || 'pending'}">${(u.kyc_status || 'pending').toUpperCase()}</span></td>
+                        <td>${u.credit_score ? `<span class="credit-score">${u.credit_score}</span>` : 'N/A'}</td>
+                        <td>${u.account_holds_count || 0}</td>
+                        <td>${formatDate(u.created_at)}</td>
+                        <td>
+                            <button class="btn btn-sm btn-info" onclick="viewUser(${u.id})"><i class="fas fa-eye"></i></button>
+                            <button class="btn btn-sm btn-warning" onclick="editUser(${u.id})"><i class="fas fa-edit"></i></button>
+                            ${u.account_holds_count > 0 ? `<button class="btn btn-sm btn-danger" onclick="viewHolds(${u.id})"><i class="fas fa-lock"></i></button>` : ''}
+                        </td>
+                    </tr>
+                `).join('') || '<tr><td colspan="9" class="text-center text-muted">No users found</td></tr>';
+            } catch (error) {
+                console.error('Error loading users:', error);
+            }
+        }
+
+        async function loadHolds() {
+            try {
+                const response = await fetchAPI('/api/v1/users/holds?limit=20');
+                if (!response || !response.data) return;
+                
+                const tbody = document.getElementById('holdsTable');
+                tbody.innerHTML = response.data.map(h => `
+                    <tr>
+                        <td>${h.id}</td>
+                        <td>${h.user_email}</td>
+                        <td><span class="hold-badge">${h.hold_type}</span></td>
+                        <td>${h.reason}</td>
+                        <td>${h.hold_amount ? formatCurrency(h.hold_amount) : 'Full Account'}</td>
+                        <td>${formatDate(h.created_at)}</td>
+                        <td><span class="status-badge status-${h.is_active ? 'active' : 'inactive'}">${h.is_active ? 'Active' : 'Removed'}</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-success" onclick="removeHold(${h.id})"><i class="fas fa-check"></i> Remove</button>
+                        </td>
+                    </tr>
+                `).join('') || '<tr><td colspan="8" class="text-center text-muted">No holds</td></tr>';
+            } catch (error) {
+                console.error('Error loading holds:', error);
+            }
+        }
+
+        async function loadFrozenAccounts() {
+            try {
+                const response = await fetchAPI('/api/v1/users/frozen?limit=20');
+                if (!response || !response.data) return;
+                
+                const tbody = document.getElementById('frozenTable');
+                tbody.innerHTML = response.data.map(f => `
+                    <tr>
+                        <td>${f.full_name}</td>
+                        <td>${f.email}</td>
+                        <td>${formatDate(f.frozen_date)}</td>
+                        <td>${f.freeze_reason}</td>
+                        <td><span class="status-badge status-${f.is_frozen ? 'active' : 'inactive'}">${f.is_frozen ? 'Frozen' : 'Unfrozen'}</span></td>
+                        <td>
+                            ${f.is_frozen ? `<button class="btn btn-sm btn-success" onclick="unfreezeAccount(${f.id})"><i class="fas fa-unlock"></i> Unfreeze</button>` : ''}
+                        </td>
+                    </tr>
+                `).join('') || '<tr><td colspan="6" class="text-center text-muted">No frozen accounts</td></tr>';
+            } catch (error) {
+                console.error('Error loading frozen accounts:', error);
+            }
+        }
+
+        async function loadCreditScores() {
+            try {
+                const response = await fetchAPI('/api/v1/users/credit-scores?limit=20');
+                if (!response || !response.data) return;
+                
+                const tbody = document.getElementById('creditsTable');
+                tbody.innerHTML = response.data.map(c => `
+                    <tr>
+                        <td>${c.full_name}</td>
+                        <td>${c.email}</td>
+                        <td><span class="credit-score">${c.current_score}</span></td>
+                        <td>${c.previous_score || 'N/A'}</td>
+                        <td>${c.score_change ? (c.score_change > 0 ? '+' : '') + c.score_change : 'N/A'}</td>
+                        <td>${formatDate(c.last_updated)}</td>
+                        <td>${c.data_source}</td>
+                        <td><button class="btn btn-sm btn-primary" onclick="updateCreditScore(${c.user_id})">Refresh</button></td>
+                    </tr>
+                `).join('') || '<tr><td colspan="8" class="text-center text-muted">No credit scores</td></tr>';
+            } catch (error) {
+                console.error('Error loading credit scores:', error);
+            }
+        }
+
+        async function loadDeviceFingerprints() {
+            try {
+                const response = await fetchAPI('/api/v1/users/devices?limit=20');
+                if (!response || !response.data) return;
+                
+                const tbody = document.getElementById('devicesTable');
+                tbody.innerHTML = response.data.map(d => `
+                    <tr>
+                        <td>${d.user_email}</td>
+                        <td><code style="font-size: 0.75rem;">${d.device_id.substring(0, 20)}...</code></td>
+                        <td>${d.device_type}</td>
+                        <td>${d.ip_address}</td>
+                        <td>${d.browser_info}</td>
+                        <td>${formatDate(d.first_seen)}</td>
+                        <td>${formatDate(d.last_active)}</td>
+                        <td><button class="btn btn-sm btn-primary" onclick="viewDevice(${d.id})">View</button></td>
+                    </tr>
+                `).join('') || '<tr><td colspan="8" class="text-center text-muted">No device data</td></tr>';
+            } catch (error) {
+                console.error('Error loading device fingerprints:', error);
+            }
+        }
+
+        async function populateUserSelects() {
+            try {
+                const response = await fetchAPI('/api/v1/users?limit=200');
+                if (!response || !response.data) return;
+                
+                const select = document.getElementById('holdUser');
+                select.innerHTML = '<option value="">Select User</option>' + response.data.map(u => 
+                    `<option value="${u.id}">${u.email}</option>`
+                ).join('');
+            } catch (error) {
+                console.error('Error populating user selects:', error);
+            }
+        }
+
+        function initCharts() {
+            // Status Chart
+            const statusCtx = document.getElementById('statusChart')?.getContext('2d');
+            if (statusCtx) {
+                statusChart = new Chart(statusCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Active', 'Inactive', 'Frozen'],
+                        datasets: [{
+                            data: [850, 120, 30],
+                            backgroundColor: ['#28a745', '#ffc107', '#dc3545']
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            }
+
+            // Credit Score Chart
+            const creditCtx = document.getElementById('creditChart')?.getContext('2d');
+            if (creditCtx) {
+                creditChart = new Chart(creditCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['600-650', '650-700', '700-750', '750-800', '800+'],
+                        datasets: [{
+                            label: 'Users',
+                            data: [85, 120, 180, 250, 215],
+                            backgroundColor: ['#dc3545', '#ffc107', '#17a2b8', '#28a745', '#667eea']
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            }
+        }
+
+        async function handleCreateUser(event) {
+            event.preventDefault();
+            const data = {
+                email: document.getElementById('userEmail').value,
+                full_name: document.getElementById('firstName').value + ' ' + document.getElementById('lastName').value,
+                phone: document.getElementById('userPhone').value,
+                date_of_birth: document.getElementById('userDob').value,
+                is_active: document.getElementById('userActive').checked
+            };
+
+            try {
+                const response = await fetch('/api/v1/users', {
+                    method: 'POST',
+                    headers: AUTH_HEADER(),
+                    body: JSON.stringify(data)
+                });
+                if (!response.ok) throw new Error('Failed');
+                showAlert('User created successfully', 'success');
+                closeModal('createUserModal');
+                await loadUsers();
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'danger');
+            }
+        }
+
+        async function handleCreateHold(event) {
+            event.preventDefault();
+            const data = {
+                user_id: document.getElementById('holdUser').value,
+                hold_type: document.getElementById('holdType').value,
+                reason: document.getElementById('holdReason').value,
+                hold_amount: document.getElementById('holdAmount').value || null
+            };
+
+            try {
+                const response = await fetch('/api/v1/users/holds', {
+                    method: 'POST',
+                    headers: AUTH_HEADER(),
+                    body: JSON.stringify(data)
+                });
+                if (!response.ok) throw new Error('Failed');
+                showAlert('Hold created successfully', 'success');
+                closeModal('createHoldModal');
+                await loadHolds();
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'danger');
+            }
+        }
+
+        function viewUser(id) { alert('View user ' + id); }
+        function editUser(id) { alert('Edit user ' + id); }
+        function viewHolds(id) { alert('View holds for user ' + id); }
+        function removeHold(id) { alert('Remove hold ' + id); }
+        function unfreezeAccount(id) { alert('Unfreeze account ' + id); }
+        function updateCreditScore(id) { alert('Update credit score for user ' + id); }
+        function viewDevice(id) { alert('View device ' + id); }
+        
+        function openModal(id) { new bootstrap.Modal(document.getElementById(id)).show(); }
+        function closeModal(id) { bootstrap.Modal.getInstance(document.getElementById(id))?.hide(); }
+        function formatCurrency(amount) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount); }
+        function formatDate(date) { return new Date(date).toLocaleString(); }
+    </script>
+    <script src="/static/js/admin-guard.js"></script>
+</body>
+</html>

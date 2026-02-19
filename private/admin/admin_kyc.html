@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KYC Management - Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+    <script src="/admin_static/js/admin-utils.js"></script>
+    <style>
+        .admin-nav { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .table-container { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .kyc-card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 15px; border-left: 5px solid #667eea; }
+        .status-pending { border-left-color: #ffc107; }
+        .status-approved { border-left-color: #28a745; }
+        .status-rejected { border-left-color: #dc3545; }
+        .status-badge { padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+        .badge-pending { background: #fff3cd; color: #856404; }
+        .badge-approved { background: #d4edda; color: #155724; }
+        .badge-rejected { background: #f8d7da; color: #721c24; }
+        .modal-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .form-control:focus { border-color: #667eea; box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25); }
+        .btn-primary { background: #667eea; border: none; }
+        .btn-primary:hover { background: #5568d3; }
+        .search-bar { background: white; padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .stats-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin: 20px 0; }
+        .stat-card { background: white; padding: 15px; border-radius: 8px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .stat-number { font-size: 2rem; font-weight: bold; color: #667eea; }
+        .document-preview { max-width: 100%; max-height: 300px; margin-top: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <nav class="admin-nav navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/user/admin/dashboard"><i class="fas fa-chart-line"></i> Finanza Admin</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarAdmin">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarAdmin">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/dashboard"><i class="fas fa-home"></i> Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/dashboard"><i class="fas fa-arrow-left"></i> Back</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2><i class="fas fa-file-alt"></i> KYC Management</h2>
+                <p class="text-muted">Review and manage KYC submissions</p>
+            </div>
+            <a href="/user/admin/dashboard" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
+
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-number" id="pendingCount">0</div>
+                <div class="text-muted">Pending</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="approvedCount">0</div>
+                <div class="text-muted">Approved</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="rejectedCount">0</div>
+                <div class="text-muted">Rejected</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="totalCount">0</div>
+                <div class="text-muted">Total</div>
+            </div>
+        </div>
+
+        <div class="search-bar">
+            <div class="row">
+                <div class="col-md-4">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search by email or name...">
+                </div>
+                <div class="col-md-3">
+                    <select id="statusFilter" class="form-control">
+                        <option value="">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="approved">Approved</option>
+                        <option value="rejected">Rejected</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-outline-primary w-100" onclick="loadKYCSubmissions()">
+                        <i class="fas fa-search"></i> Filter
+                    </button>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-outline-success w-100" onclick="refreshKYC()">
+                        <i class="fas fa-sync"></i> Auto-refresh (30s)
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="kycContainer">
+            <p class="text-center text-muted">Loading KYC submissions...</p>
+        </div>
+    </div>
+
+    <!-- KYC Review Modal -->
+    <div class="modal fade" id="kycReviewModal" tabindex="-1" size="lg">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Review KYC Submission</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="kycReviewContent">Loading...</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-danger" onclick="rejectKYC()">Reject</button>
+                    <button type="button" class="btn btn-success" onclick="approveKYC()">Approve</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Comments Modal -->
+    <div class="modal fade" id="commentsModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Comments</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="commentKYCId">
+                    <textarea id="commentsText" class="form-control" rows="5" placeholder="Enter your comments..."></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveComments()">Save Comments</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/admin_static/js/auth-helper.js"></script>
+    <script>
+        const API_BASE = apiConfig.baseURL + '/api/admin';
+        let allKYC = [];
+        let currentKYCId = null;
+        let autoRefreshInterval = null;
+
+        async function loadKYCSubmissions() {
+            try {
+                const response = await authenticatedFetch(API_BASE + '/kyc/submissions');
+                if (!response.ok) throw new Error('Failed to load KYC submissions');
+                
+                allKYC = await response.json();
+                
+                // Update stats
+                const pending = allKYC.filter(k => k.status === 'pending').length;
+                const approved = allKYC.filter(k => k.status === 'approved').length;
+                const rejected = allKYC.filter(k => k.status === 'rejected').length;
+
+                document.getElementById('pendingCount').textContent = pending;
+                document.getElementById('approvedCount').textContent = approved;
+                document.getElementById('rejectedCount').textContent = rejected;
+                document.getElementById('totalCount').textContent = allKYC.length;
+
+                // Filter by status
+                const statusFilter = document.getElementById('statusFilter').value;
+                const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+                
+                let filtered = allKYC;
+                if (statusFilter) {
+                    filtered = filtered.filter(k => k.status === statusFilter);
+                }
+                if (searchTerm) {
+                    filtered = filtered.filter(k => 
+                        (k.user?.email?.toLowerCase().includes(searchTerm)) ||
+                        (k.user?.full_name?.toLowerCase().includes(searchTerm))
+                    );
+                }
+
+                renderKYC(filtered);
+            } catch (error) {
+                console.error('Error loading KYC:', error);
+                document.getElementById('kycContainer').innerHTML = '<p class="text-danger">Failed to load KYC submissions</p>';
+            }
+        }
+
+        function renderKYC(kycList) {
+            const container = document.getElementById('kycContainer');
+            if (kycList.length === 0) {
+                container.innerHTML = '<p class="text-center text-muted">No KYC submissions found</p>';
+                return;
+            }
+
+            container.innerHTML = kycList.map(kyc => `
+                <div class="kyc-card status-${kyc.status}">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h6>${kyc.user?.full_name || 'Unknown'}</h6>
+                            <p class="mb-1"><strong>Email:</strong> ${kyc.user?.email || 'N/A'}</p>
+                            <p class="mb-1"><strong>Document Type:</strong> ${kyc.document_type}</p>
+                            <p class="mb-1"><strong>Document Number:</strong> ${kyc.document_number}</p>
+                            <p class="mb-1"><small class="text-muted">Submitted: ${new Date(kyc.submitted_at).toLocaleDateString()}</small></p>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <p><span class="status-badge badge-${kyc.status}">${kyc.status.toUpperCase()}</span></p>
+                            <button class="btn btn-sm btn-primary mb-2" onclick="viewKYCDetails(${kyc.id})">
+                                <i class="fas fa-eye"></i> Review
+                            </button>
+                            ${kyc.status === 'pending' ? `
+                                <button class="btn btn-sm btn-success mb-2" onclick="approveKYCQuick(${kyc.id})">
+                                    <i class="fas fa-check"></i> Approve
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="rejectKYCQuick(${kyc.id})">
+                                    <i class="fas fa-times"></i> Reject
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function viewKYCDetails(kycId) {
+            currentKYCId = kycId;
+            try {
+                const response = await authenticatedFetch(API_BASE + '/kyc/submissions/' + kycId);
+                if (!response.ok) throw new Error('Failed to load KYC details');
+                
+                const kyc = await response.json();
+                
+                const content = document.getElementById('kycReviewContent');
+                let documentPreview = '';
+                
+                // Check if document exists and can be displayed
+                if (kyc.document_url || kyc.document_file_path) {
+                    const docUrl = kyc.document_url || kyc.document_file_path;
+                    if (docUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+                        documentPreview = `<img src="${docUrl}" alt="Document preview" class="document-preview img-fluid" />`;
+                    } else if (docUrl.match(/\.pdf$/i)) {
+                        documentPreview = `<iframe src="${docUrl}" class="document-preview" style="width: 100%; height: 400px; border: none;"></iframe>`;
+                    }
+                }
+                
+                // Helper function to format date safely
+                function formatDate(dateString) {
+                    if (!dateString) return 'Not available';
+                    const date = new Date(dateString);
+                    if (isNaN(date.getTime())) return 'Not available';
+                    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+                }
+                
+                // Helper function to get user info (with fallback to user_id if user not loaded)
+                const userName = kyc.user?.full_name || `User ID: ${kyc.user_id}`;
+                const userEmail = kyc.user?.email || 'Not available';
+                const userPhone = kyc.user?.phone || 'Not available';
+                const userAddress = kyc.user?.address || 'Not available';
+                
+                content.innerHTML = `
+                    <div class="alert alert-info" role="alert">
+                        <i class="fas fa-info-circle"></i> 
+                        <strong>User Status:</strong> ${kyc.user ? 'User profile linked' : 'Unidentified user (no user profile found)'}
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <p><strong>Full Name:</strong> ${userName}</p>
+                            <p><strong>Email:</strong> ${userEmail}</p>
+                            <p><strong>Phone:</strong> ${userPhone}</p>
+                            <p><strong>Address:</strong> ${userAddress}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Document Type:</strong> ${kyc.document_type || 'Not specified'}</p>
+                            <p><strong>Document Path:</strong> ${kyc.document_file_path || 'No document uploaded'}</p>
+                            <p><strong>Status:</strong> <span class="status-badge badge-${kyc.status}">${kyc.status.toUpperCase()}</span></p>
+                            <p><strong>Submitted:</strong> ${formatDate(kyc.submitted_at)}</p>
+                        </div>
+                    </div>
+                    ${documentPreview ? `<hr><h6>Document Preview</h6>${documentPreview}<hr>` : '<p class="text-muted">No document preview available</p><hr>'}
+                    <h6>Review Comments</h6>
+                    <textarea id="reviewComments" class="form-control" rows="4" placeholder="Enter your review comments..."></textarea>
+                `;
+
+                new bootstrap.Modal(document.getElementById('kycReviewModal')).show();
+            } catch (error) {
+                alert('Failed to load KYC details: ' + error.message);
+            }
+        }
+
+        async function approveKYC() {
+            const comments = document.getElementById('reviewComments')?.value || '';
+            try {
+                const response = await authenticatedFetch(API_BASE + '/kyc/' + currentKYCId + '/approve', {
+                    method: 'POST',
+                    body: JSON.stringify({ comments })
+                });
+
+                if (!response.ok) throw new Error('Failed to approve KYC');
+                
+                alert('KYC approved successfully!');
+                bootstrap.Modal.getInstance(document.getElementById('kycReviewModal')).hide();
+                loadKYCSubmissions();
+            } catch (error) {
+                alert('Failed to approve KYC: ' + error.message);
+            }
+        }
+
+        async function rejectKYC() {
+            const comments = document.getElementById('reviewComments')?.value || '';
+            if (!comments) {
+                alert('Please provide a reason for rejection');
+                return;
+            }
+
+            try {
+                const response = await authenticatedFetch(API_BASE + '/kyc/' + currentKYCId + '/reject', {
+                    method: 'POST',
+                    body: JSON.stringify({ comments })
+                });
+
+                if (!response.ok) throw new Error('Failed to reject KYC');
+                
+                alert('KYC rejected successfully!');
+                bootstrap.Modal.getInstance(document.getElementById('kycReviewModal')).hide();
+                loadKYCSubmissions();
+            } catch (error) {
+                alert('Failed to reject KYC: ' + error.message);
+            }
+        }
+
+        async function approveKYCQuick(kycId) {
+            if (!confirm('Are you sure you want to approve this KYC submission?')) return;
+            currentKYCId = kycId;
+            document.getElementById('reviewComments').value = 'Approved';
+            approveKYC();
+        }
+
+        async function rejectKYCQuick(kycId) {
+            const reason = prompt('Enter reason for rejection:');
+            if (!reason) return;
+            currentKYCId = kycId;
+            document.getElementById('reviewComments').value = reason;
+            rejectKYC();
+        }
+
+        function refreshKYC() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+                alert('Auto-refresh stopped');
+            } else {
+                loadKYCSubmissions();
+                autoRefreshInterval = setInterval(loadKYCSubmissions, 30000);
+                alert('Auto-refresh started (every 30 seconds)');
+            }
+        }
+
+        // Initialize
+        window.addEventListener('load', loadKYCSubmissions);
+
+        // Cleanup on unload
+        window.addEventListener('beforeunload', () => {
+            if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/admin-guard.js"></script>
+</body>
+</html>

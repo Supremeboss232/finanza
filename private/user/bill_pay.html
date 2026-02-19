@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bill Pay - Finanza</title>
+    <link href="/static/css/style.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .bill-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; }
+        .bill-card { border-left: 4px solid #667eea; }
+        .status-paid { background: #d4edda; color: #155724; }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-scheduled { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/user/dashboard">
+                <i class="fas fa-receipt"></i> Bill Pay
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="productsDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-th"></i> Products
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/user/deposits">Accounts</a></li>
+                            <li><a class="dropdown-item" href="/user/cards">Cards</a></li>
+                            <li><a class="dropdown-item" href="/user/bill_pay">Transfers</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="servicesDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-concierge-bell"></i> Services
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item active" href="/user/bill_pay">Bill Pay</a></li>
+                            <li><a class="dropdown-item" href="/user/scheduled_transfers">Scheduled</a></li>
+                            <li><a class="dropdown-item" href="/user/currency_exchange">Currency Exchange</a></li>
+                            <li><a class="dropdown-item" href="/user/international_transfers">International</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="accountDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle"></i> Account
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/user/profile">Profile</a></li>
+                            <li><a class="dropdown-item" href="/user/profile">Settings</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="/logout">Logout</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-5 mb-5">
+        <!-- Header -->
+        <div class="bill-header">
+            <h1><i class="fas fa-receipt"></i> Bill Payment</h1>
+            <p class="mb-0">Pay your bills quickly and securely</p>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="row g-4 mb-5">
+            <div class="col-lg-3 col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title text-muted">Bills This Month</h6>
+                        <h2 id="billsCount">-</h2>
+                        <p class="text-muted mb-0">Total: <span id="billsTotal">$-</span></p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title text-muted">Paid This Month</h6>
+                        <h2 id="paidCount">-</h2>
+                        <p class="text-muted mb-0">Amount: <span id="paidAmount">$-</span></p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title text-muted">Pending</h6>
+                        <h2 id="pendingCount">-</h2>
+                        <p class="text-muted mb-0">Amount Due: <span id="pendingAmount">$-</span></p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title text-muted">Overdue</h6>
+                        <h2 id="overdueCount">-</h2>
+                        <p class="text-muted mb-0" id="overdueAmount">$-</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pay a Bill -->
+        <div class="card mb-5">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-credit-card"></i> Pay a Bill</h5>
+            </div>
+            <div class="card-body">
+                <form id="payBillForm">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Payee</label>
+                            <input type="text" class="form-control" id="payee" placeholder="e.g., Electric Company" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Payee Account</label>
+                            <input type="text" class="form-control" id="payeeAccount" placeholder="Enter payee account number">
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Amount</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="amount" step="0.01" placeholder="0.00" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Due Date</label>
+                            <input type="date" class="form-control" id="dueDate">
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Pay From Account</label>
+                            <select class="form-control" id="fromAccount" required>
+                                <option value="">Select account</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Payment Date</label>
+                            <input type="date" class="form-control" id="paymentDate" required>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <label class="form-label">Memo</label>
+                            <textarea class="form-control" id="memo" rows="2" placeholder="Add a note for this payment"></textarea>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-lg"><i class="fas fa-check"></i> Submit Payment</button>
+                    <button type="reset" class="btn btn-outline-secondary btn-lg">Clear</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Pending Bills -->
+        <div class="card mb-5">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-hourglass-half"></i> Pending Bills</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Payee</th>
+                                <th>Amount</th>
+                                <th>Due Date</th>
+                                <th>Status</th>
+                                <th>Days Until Due</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pendingBillsBody">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Payments -->
+        <div class="card mb-5">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-check-circle"></i> Recent Payments</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Payee</th>
+                                <th>Amount</th>
+                                <th>Payment Date</th>
+                                <th>Status</th>
+                                <th>Confirmation #</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recentPaymentsBody">
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Saved Payees -->
+        <div class="card mb-5">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-address-book"></i> Saved Payees</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3" id="payeesList">
+                    <div class="col-12 text-center text-muted">Loading...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bill Settings -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-cogs"></i> Bill Payment Settings</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Default Payment Account</label>
+                        <select class="form-control" id="defaultAccount">
+                            <option>Select account</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Payment Processing Days</label>
+                        <input type="number" class="form-control" value="1">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="autoPayReminder" checked>
+                            <label class="form-check-label" for="autoPayReminder">
+                                Remind me before due date
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="enableAutoPay">
+                            <label class="form-check-label" for="enableAutoPay">
+                                Enable AutoPay for recurring bills
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-primary">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        const token = localStorage.getItem('token');
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (!token) {
+                window.location.href = '/signin';
+                return;
+            }
+
+            try {
+                await loadBillStats();
+                await loadAccounts();
+                await loadPendingBills();
+                await loadRecentPayments();
+                await loadPayees();
+            } catch (error) {
+                console.error('Error loading bill data:', error);
+            }
+
+            document.getElementById('payBillForm').addEventListener('submit', handlePayBill);
+        });
+
+        async function loadBillStats() {
+            try {
+                const response = await fetch('/api/v1/bill_pay/stats', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    document.getElementById('billsCount').textContent = data.total_bills || '0';
+                    document.getElementById('billsTotal').textContent = '$' + (data.total_amount || 0).toLocaleString('en-US', {maximumFractionDigits: 2});
+                    
+                    document.getElementById('paidCount').textContent = data.paid_count || '0';
+                    document.getElementById('paidAmount').textContent = '$' + (data.paid_amount || 0).toLocaleString('en-US', {maximumFractionDigits: 2});
+                    
+                    document.getElementById('pendingCount').textContent = data.pending_count || '0';
+                    document.getElementById('pendingAmount').textContent = '$' + (data.pending_amount || 0).toLocaleString('en-US', {maximumFractionDigits: 2});
+                    
+                    document.getElementById('overdueCount').textContent = data.overdue_count || '0';
+                    document.getElementById('overdueAmount').textContent = 'Amount: $' + (data.overdue_amount || 0).toLocaleString('en-US', {maximumFractionDigits: 2});
+                }
+            } catch (error) {
+                console.error('Error loading bill stats:', error);
+            }
+        }
+
+        async function loadAccounts() {
+            try {
+                const response = await fetch('/api/v1/accounts', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const select = document.getElementById('fromAccount');
+                    const defaultSelect = document.getElementById('defaultAccount');
+                    
+                    select.innerHTML = '<option value="">Select account</option>';
+                    defaultSelect.innerHTML = '<option>Select account</option>';
+                    
+                    if (data.accounts && data.accounts.length > 0) {
+                        data.accounts.forEach(account => {
+                            const option = `<option value="${account.id}">${account.name} - $${account.balance.toLocaleString('en-US', {maximumFractionDigits: 2})}</option>`;
+                            select.innerHTML += option;
+                            defaultSelect.innerHTML += option;
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading accounts:', error);
+            }
+        }
+
+        async function loadPendingBills() {
+            try {
+                const response = await fetch('/api/v1/bill_pay/pending', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const tbody = document.getElementById('pendingBillsBody');
+                    tbody.innerHTML = '';
+
+                    if (data.bills && data.bills.length > 0) {
+                        data.bills.forEach(bill => {
+                            const daysUntil = Math.ceil((new Date(bill.due_date) - new Date()) / (1000 * 60 * 60 * 24));
+                            const statusClass = daysUntil < 0 ? 'status-paid' : daysUntil <= 3 ? 'status-pending' : 'status-scheduled';
+                            
+                            tbody.innerHTML += `
+                                <tr>
+                                    <td><strong>${bill.payee}</strong></td>
+                                    <td>$${bill.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}</td>
+                                    <td>${new Date(bill.due_date).toLocaleDateString()}</td>
+                                    <td><span class="badge ${statusClass}">${bill.status}</span></td>
+                                    <td>${daysUntil > 0 ? daysUntil + ' days' : 'Due today'}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-primary">Pay Now</button>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No pending bills</td></tr>';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading pending bills:', error);
+            }
+        }
+
+        async function loadRecentPayments() {
+            try {
+                const response = await fetch('/api/v1/bill_pay/history?limit=15', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const tbody = document.getElementById('recentPaymentsBody');
+                    tbody.innerHTML = '';
+
+                    if (data.payments && data.payments.length > 0) {
+                        data.payments.forEach(payment => {
+                            tbody.innerHTML += `
+                                <tr>
+                                    <td>${payment.payee}</td>
+                                    <td>$${payment.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}</td>
+                                    <td>${new Date(payment.payment_date).toLocaleDateString()}</td>
+                                    <td><span class="badge bg-success">${payment.status}</span></td>
+                                    <td>${payment.confirmation_number}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary">View</button>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No recent payments</td></tr>';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading recent payments:', error);
+            }
+        }
+
+        async function loadPayees() {
+            try {
+                const response = await fetch('/api/v1/bill_pay/payees', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const container = document.getElementById('payeesList');
+                    container.innerHTML = '';
+
+                    if (data.payees && data.payees.length > 0) {
+                        data.payees.forEach(payee => {
+                            container.innerHTML += `
+                                <div class="col-md-4">
+                                    <div class="card bill-card">
+                                        <div class="card-body">
+                                            <h6 class="card-title">${payee.name}</h6>
+                                            <p class="text-muted small">${payee.account_number}</p>
+                                            <button class="btn btn-sm btn-primary w-100" onclick="quickPay('${payee.id}')">Pay</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    } else {
+                        container.innerHTML = '<div class="col-12 text-center text-muted">No saved payees yet. Add one when you make your first payment.</div>';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading payees:', error);
+            }
+        }
+
+        async function handlePayBill(e) {
+            e.preventDefault();
+
+            const payment = {
+                payee: document.getElementById('payee').value,
+                payee_account: document.getElementById('payeeAccount').value,
+                amount: parseFloat(document.getElementById('amount').value),
+                from_account_id: document.getElementById('fromAccount').value,
+                payment_date: document.getElementById('paymentDate').value,
+                due_date: document.getElementById('dueDate').value,
+                memo: document.getElementById('memo').value
+            };
+
+            try {
+                const response = await fetch('/api/v1/bill_pay/submit', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payment)
+                });
+
+                if (response.ok) {
+                    alert('Bill payment submitted successfully!');
+                    document.getElementById('payBillForm').reset();
+                    await loadBillStats();
+                    await loadPendingBills();
+                } else {
+                    alert('Error submitting payment');
+                }
+            } catch (error) {
+                console.error('Error submitting payment:', error);
+                alert('Error submitting payment');
+            }
+        }
+
+        function quickPay(payeeId) {
+            alert('Quick pay functionality for payee: ' + payeeId);
+        }
+    </script>
+</body>
+</html>

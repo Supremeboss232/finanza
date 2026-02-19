@@ -1,0 +1,366 @@
+================================================================================
+ADMIN HTML FILES - ENDPOINT PREFIX FIXES REQUIRED
+================================================================================
+
+This document lists all 15 admin HTML files that need endpoint prefix updates.
+
+ACTION: Find & Replace in each file to update API endpoint calls from /api/admin/*
+to correct /api/v1/* prefixes.
+
+================================================================================
+FILES REQUIRING FIXES (15 total)
+================================================================================
+
+FILE 1: admin_blockchain.html
+────────────────────────────
+LOCATION: private/admin/admin_blockchain.html
+
+CURRENT CALLS (WRONG):
+  fetch('/api/admin/blockchain/dashboard', ...)
+  fetch('/api/admin/blockchain/accounts', ...)
+  fetch('/api/admin/blockchain/transactions?limit=20', ...)
+  fetch('/api/admin/blockchain/contracts', ...)
+  fetch('/api/admin/blockchain/settlements?limit=10', ...)
+
+FIX: Replace all /api/admin/blockchain/ with /api/v1/blockchain/
+
+SEARCH & REPLACE:
+  Find:    /api/admin/blockchain/
+  Replace: /api/v1/blockchain/
+
+================================================================================
+
+FILE 2: admin_fraud_detection.html
+──────────────────────────────────
+LOCATION: private/admin/admin_fraud_detection.html
+
+CURRENT CALLS (WRONG):
+  fetch('/api/admin/fraud/metrics', ...)
+  fetch('/api/admin/fraud/alerts', ...)
+  fetch('/api/admin/fraud/rules', ...)
+  fetch('/api/admin/fraud/transactions', ...)
+
+FIX: Replace all /api/admin/fraud/ with /api/v1/fraud/
+
+SEARCH & REPLACE:
+  Find:    /api/admin/fraud/
+  Replace: /api/v1/fraud/
+
+================================================================================
+
+FILE 3: admin_settlement.html
+─────────────────────────────
+LOCATION: private/admin/admin_settlement.html
+
+CURRENT CALLS (WRONG):
+  fetch('/api/admin/settlement/dashboard', ...)
+  fetch('/api/admin/settlement/pending?limit=20', ...)
+  fetch('/api/admin/settlement/recent?limit=15', ...)
+  fetch('/api/admin/settlement/audit-log?limit=10', ...)
+
+FIX: Replace all /api/admin/settlement/ with /api/v1/settlement/
+
+SEARCH & REPLACE:
+  Find:    /api/admin/settlement/
+  Replace: /api/v1/settlement/
+
+================================================================================
+
+FILE 4: admin_reporting.html
+────────────────────────────
+LOCATION: private/admin/admin_reporting.html
+
+CURRENT CALLS (WRONG):
+  fetch('/api/admin/reporting/metrics', ...)
+  fetch('/api/admin/reporting/reports', ...)
+  fetch('/api/admin/reporting/exports', ...)
+
+FIX: Replace all /api/admin/reporting/ with /api/v1/reporting/
+
+SEARCH & REPLACE:
+  Find:    /api/admin/reporting/
+  Replace: /api/v1/reporting/
+
+================================================================================
+
+FILE 5: admin_international_compliance.html
+────────────────────────────────────────────
+LOCATION: private/admin/admin_international_compliance.html
+
+CURRENT CALLS (WRONG):
+  fetch('/api/admin/compliance/data', ...)
+  fetch('/api/admin/compliance/high-risk', ...)
+  fetch('/api/admin/compliance/flagged-transactions', ...)
+  fetch('/api/admin/compliance/sanctions-screen', ...)
+  fetch('/api/admin/compliance/country-risk', ...)
+
+FIX: Replace all /api/admin/compliance/ with /api/v1/compliance/
+
+SEARCH & REPLACE:
+  Find:    /api/admin/compliance/
+  Replace: /api/v1/compliance/
+
+================================================================================
+
+FILE 6: admin_monitoring.html
+─────────────────────────────
+LOCATION: private/admin/admin_monitoring.html
+
+CURRENT CALLS (WRONG):
+  fetch('/api/admin/monitoring/system-health', ...)
+  fetch('/api/admin/monitoring/services', ...)
+  fetch('/api/admin/monitoring/performance', ...)
+  fetch('/api/admin/monitoring/alerts', ...)
+
+FIX: Replace all /api/admin/monitoring/ with /api/v1/monitoring/
+
+SEARCH & REPLACE:
+  Find:    /api/admin/monitoring/
+  Replace: /api/v1/monitoring/
+
+================================================================================
+
+FILE 7: admin_currency_exchange.html
+────────────────────────────────────
+LOCATION: private/admin/admin_currency_exchange.html
+
+CURRENT CALLS (WRONG):
+  fetch('/api/admin/currency/metrics', ...)
+  fetch('/api/admin/currency/rates', ...)
+  fetch('/api/admin/currency/transactions', ...)
+  fetch('/api/admin/currency/fees', ...)
+
+FIX: Replace all /api/admin/currency/ with /api/v1/
+
+SEARCH & REPLACE:
+  Find:    /api/admin/currency/
+  Replace: /api/v1/
+
+================================================================================
+
+FILE 8: admin_treasury.html
+───────────────────────────
+LOCATION: private/admin/admin_treasury.html
+
+CURRENT CALLS (WRONG):
+  fetch('/api/admin/treasury/dashboard', ...)
+  fetch('/api/admin/treasury/portfolios', ...)
+  fetch('/api/admin/treasury/assets', ...)
+  fetch('/api/admin/treasury/strategies', ...)
+
+FIX: Replace all /api/admin/treasury/ with /api/v1/treasury/
+
+SEARCH & REPLACE:
+  Find:    /api/admin/treasury/
+  Replace: /api/v1/treasury/
+
+================================================================================
+
+FILE 9: admin_lending.html
+──────────────────────────
+LOCATION: private/admin/admin_lending.html
+
+CURRENT CALLS (WRONG):
+  fetch('/api/admin/lending/metrics', ...)
+  fetch('/api/admin/lending/loans', ...)
+  fetch('/api/admin/lending/schedules', ...)
+  fetch('/api/admin/lending/payments', ...)
+
+FIX: Replace all /api/admin/lending/ with /api/v1/loans/
+
+SEARCH & REPLACE:
+  Find:    /api/admin/lending/
+  Replace: /api/v1/loans/
+
+================================================================================
+
+FILE 10: admin_lending_compliance.html
+──────────────────────────────────────
+LOCATION: private/admin/admin_lending_compliance.html
+
+CURRENT CALLS (WRONG):
+  fetch('/api/admin/lending/metrics', ...)
+  fetch('/api/admin/lending/delinquencies', ...)
+  fetch('/api/admin/lending/collections', ...)
+  fetch('/api/admin/lending/holds', ...)
+  fetch('/api/admin/lending/forbearance', ...)
+  fetch('/api/admin/lending/chargeoffs', ...)
+
+FIX: Replace all /api/admin/lending/ with /api/v1/loans/
+
+SEARCH & REPLACE:
+  Find:    /api/admin/lending/
+  Replace: /api/v1/loans/
+
+================================================================================
+
+FILE 11: admin_hmda.html
+────────────────────────
+LOCATION: private/admin/admin_hmda.html
+
+CURRENT CALLS (WRONG):
+  fetch('/api/admin/hmda/metrics', ...)
+  fetch('/api/admin/hmda/applications', ...)
+  fetch('/api/admin/hmda/applicants', ...)
+  fetch('/api/admin/hmda/submissions', ...)
+
+FIX: Replace all /api/admin/hmda/ with /api/v1/hmda/
+
+SEARCH & REPLACE:
+  Find:    /api/admin/hmda/
+  Replace: /api/v1/hmda/
+
+================================================================================
+
+FILE 12: admin_mobile_deposit.html
+──────────────────────────────────
+LOCATION: private/admin/admin_mobile_deposit.html
+
+CURRENT CALLS (WRONG):
+  fetch('/api/admin/mobile-deposit/metrics', ...)
+  fetch('/api/admin/mobile-deposit/deposits', ...)
+  fetch('/api/admin/mobile-deposit/images', ...)
+
+FIX: Verify actual endpoint prefix in mobile_deposit_priority3_api or mobile_deposit_admin_api
+Then replace accordingly.
+
+LIKELY: /api/v1/mobile-deposit/ or similar
+
+================================================================================
+
+FILE 13: admin_ach_management.html
+──────────────────────────────────
+LOCATION: private/admin/admin_ach_management.html
+
+CURRENT CALLS (WRONG):
+  fetch('/api/admin/ach/metrics', ...)
+  fetch('/api/admin/ach/files', ...)
+  fetch('/api/admin/ach/returns', ...)
+  fetch('/api/admin/ach/nsf', ...)
+
+FIX: Verify actual endpoint prefix in returns_api or settlement_api
+Likely: /api/v1/returns/ or /api/v1/ach/
+
+================================================================================
+
+FILE 14: admin_reports.html
+───────────────────────────
+LOCATION: private/admin/admin_reports.html
+
+CURRENT CALLS (WRONG):
+  fetch('/api/admin/reports/metrics', ...)
+  fetch('/api/admin/reports/reports', ...)
+  fetch('/api/admin/reports/schedules', ...)
+
+FIX: Replace all /api/admin/reports/ with /api/v1/reporting/
+
+SEARCH & REPLACE:
+  Find:    /api/admin/reports/
+  Replace: /api/v1/reporting/
+
+================================================================================
+
+FILE 15: admin_settings.html
+────────────────────────────
+LOCATION: private/admin/admin_settings.html
+
+CURRENT CALLS (WRONG):
+  fetch('/api/admin/settings/general', ...)
+  fetch('/api/admin/settings/security', ...)
+  fetch('/api/admin/settings/system', ...)
+
+FIX: Verify actual endpoint prefix in settings router
+Likely: /api/v1/settings/ or similar
+
+================================================================================
+IMPLEMENTATION PLAN
+================================================================================
+
+STEP 1: File-by-File Fixes
+──────────────────────────
+For each of the 15 files:
+  1. Open file in editor
+  2. Use Find & Replace feature
+  3. Replace /api/admin/{prefix}/ with /api/v1/{prefix}/
+  4. Save file
+  5. Verify no other /api/admin/ calls remain
+
+STEP 2: Testing
+───────────────
+For each file after fix:
+  1. Open admin page in browser
+  2. Check browser console for 404 errors
+  3. Verify data loads (tables populate, stats display)
+  4. Check Network tab for all API calls returning 200 OK
+  5. Test at least one CRUD operation per page
+
+STEP 3: Verification
+────────────────────
+  1. Search entire project for "/api/admin/" calls
+  2. Ensure only /api/admin/users, /api/admin/kyc, /api/admin/fund remain
+  3. All other /api/admin/* calls should be gone or fixed
+
+STEP 4: Deployment
+──────────────────
+After all tests pass:
+  1. Commit changes to repository
+  2. Deploy updated HTML files
+  3. Monitor logs for 404 errors
+  4. Verify admin users can access pages and data
+
+
+================================================================================
+TESTING CHECKLIST FOR EACH FIX
+================================================================================
+
+For each admin page after endpoint fix:
+
+Browser Console:
+  ☐ No 404 errors
+  ☐ No 401/403 errors
+  ☐ No CORS errors
+  ☐ No JavaScript errors
+
+Network Tab:
+  ☐ All API calls return 200 OK (or expected status)
+  ☐ Response time < 2 seconds
+  ☐ Response payload is valid JSON
+  ☐ No hanging requests
+
+Functional:
+  ☐ Data loads on page load
+  ☐ Tables populate with correct data
+  ☐ Stats display correct values
+  ☐ Filters work (if applicable)
+  ☐ CRUD operations work (create, read, update, delete)
+  ☐ Error messages display properly
+  ☐ Loading states show correctly
+
+
+================================================================================
+SUMMARY
+================================================================================
+
+TOTAL FILES TO FIX: 15
+ESTIMATED TIME: 1-2 hours (including testing)
+
+FILES & SEARCH/REPLACE:
+  1. admin_blockchain.html              /api/admin/blockchain/ → /api/v1/blockchain/
+  2. admin_fraud_detection.html         /api/admin/fraud/ → /api/v1/fraud/
+  3. admin_settlement.html              /api/admin/settlement/ → /api/v1/settlement/
+  4. admin_reporting.html               /api/admin/reporting/ → /api/v1/reporting/
+  5. admin_international_compliance.html /api/admin/compliance/ → /api/v1/compliance/
+  6. admin_monitoring.html              /api/admin/monitoring/ → /api/v1/monitoring/
+  7. admin_currency_exchange.html       /api/admin/currency/ → /api/v1/
+  8. admin_treasury.html                /api/admin/treasury/ → /api/v1/treasury/
+  9. admin_lending.html                 /api/admin/lending/ → /api/v1/loans/
+  10. admin_lending_compliance.html     /api/admin/lending/ → /api/v1/loans/
+  11. admin_hmda.html                   /api/admin/hmda/ → /api/v1/hmda/
+  12. admin_mobile_deposit.html         /api/admin/mobile-deposit/ → VERIFY
+  13. admin_ach_management.html         /api/admin/ach/ → VERIFY
+  14. admin_reports.html                /api/admin/reports/ → /api/v1/reporting/
+  15. admin_settings.html               /api/admin/settings/ → VERIFY
+
+STATUS: Ready for implementation
+
+================================================================================

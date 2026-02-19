@@ -1,0 +1,25 @@
+# Robots.txt for Financial Services Website
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin_static/
+Disallow: /uploads/
+Allow: /api/v1/kyc/documents (for public KYC endpoints if needed)
+
+# Crawl delay and request rate
+Crawl-delay: 1
+Request-rate: 1/10s
+
+# Sitemap location
+Sitemap: http://localhost:8000/sitemap.xml
+
+# Specific rules for common search engines
+User-agent: Googlebot
+Allow: /
+Disallow: /api/
+Disallow: /admin_static/
+
+User-agent: Bingbot
+Allow: /
+Disallow: /api/
+Disallow: /admin_static/

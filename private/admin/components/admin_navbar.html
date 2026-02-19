@@ -1,0 +1,171 @@
+<!-- Admin Navigation Bar Component - Shared across all admin pages -->
+<nav class="admin-nav navbar navbar-expand-lg navbar-dark" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/user/admin/dashboard">
+            <i class="fas fa-chart-line"></i> Finanza Admin
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#adminNavbar" aria-controls="adminNavbar">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <div class="collapse navbar-collapse" id="adminNavbar">
+            <ul class="navbar-nav ms-auto">
+                <!-- Dashboard -->
+                <li class="nav-item">
+                    <a class="nav-link" href="/user/admin/dashboard"><i class="fas fa-home"></i> Dashboard</a>
+                </li>
+                
+                <!-- User Management -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="usersDropdown" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-users"></i> Users
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="usersDropdown">
+                        <li><a class="dropdown-item" href="/user/admin/users">User Management</a></li>
+                        <li><a class="dropdown-item" href="/user/admin/kyc">KYC Management</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="/user/admin/users?role=admin">Admin Users</a></li>
+                    </ul>
+                </li>
+                
+                <!-- Transactions & Settlement -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="transactionsDropdown" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-exchange-alt"></i> Transactions
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="transactionsDropdown">
+                        <li><a class="dropdown-item" href="/user/admin/transactions">Transactions</a></li>
+                        <li><a class="dropdown-item" href="/user/admin/settlement">Settlement Management</a></li>
+                        <li><a class="dropdown-item" href="/user/admin/dashboard">ACH Management</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="/user/admin/mobile_deposit">Mobile Deposits</a></li>
+                        <li><a class="dropdown-item" href="/user/admin/bill_pay">Bill Pay</a></li>
+                    </ul>
+                </li>
+                
+                <!-- Lending & Loans -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="lendingDropdown" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-credit-card"></i> Lending
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="lendingDropdown">
+                        <li><a class="dropdown-item" href="/user/admin/dashboard">Loan Management</a></li>
+                        <li><a class="dropdown-item" href="/user/admin/dashboard">Compliance & Collections</a></li>
+                        <li><a class="dropdown-item" href="/user/admin/dashboard">HMDA Compliance</a></li>
+                    </ul>
+                </li>
+                
+                <!-- Compliance & Risk -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="complianceDropdown" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-shield-alt"></i> Compliance
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="complianceDropdown">
+                        <li><a class="dropdown-item" href="/user/admin/fraud_detection">Fraud Detection</a></li>
+                        <li><a class="dropdown-item" href="/user/admin/international_compliance">International Compliance</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="/user/admin/monitoring">System Monitoring</a></li>
+                    </ul>
+                </li>
+                
+                <!-- Treasury & Investment -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="treasuryDropdown" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-piggy-bank"></i> Treasury
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="treasuryDropdown">
+                        <li><a class="dropdown-item" href="/user/admin/treasury">Treasury Management</a></li>
+                        <li><a class="dropdown-item" href="/user/admin/fund">Fund Management</a></li>
+                        <li><a class="dropdown-item" href="/user/admin/currency_exchange">Currency Exchange</a></li>
+                        <li><a class="dropdown-item" href="/user/admin/blockchain">Blockchain Assets</a></li>
+                    </ul>
+                </li>
+                
+                <!-- Analytics & Reports -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="analyticsDropdown" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-chart-bar"></i> Analytics
+                    </a>
+                    <ul class="dropdown-menu" aria-labelledby="analyticsDropdown">
+                        <li><a class="dropdown-item" href="/user/admin/reporting">Reports & Analytics</a></li>
+                        <li><a class="dropdown-item" href="/user/admin/monitoring">System Health</a></li>
+                    </ul>
+                </li>
+                
+                <!-- Integration & Webhooks -->
+                <li class="nav-item">
+                    <a class="nav-link" href="/user/admin/webhooks"><i class="fas fa-plug"></i> Webhooks</a>
+                </li>
+                
+                <!-- Settings -->
+                <li class="nav-item">
+                    <a class="nav-link" href="/user/admin/settings"><i class="fas fa-cog"></i> Settings</a>
+                </li>
+                
+                <!-- Profile Dropdown -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="profileDropdown" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user-circle"></i>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
+                        <li><a class="dropdown-item" href="/user/profile">My Profile</a></li>
+                        <li><a class="dropdown-item" href="/user/profile">Settings</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="/auth/logout">Logout</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<style>
+    .admin-nav {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .admin-nav .navbar-brand {
+        font-weight: 700;
+        font-size: 1.3rem;
+        margin-right: 2rem;
+    }
+    
+    .admin-nav .navbar-brand i {
+        margin-right: 8px;
+    }
+    
+    .admin-nav .nav-link {
+        color: rgba(255, 255, 255, 0.85) !important;
+        margin: 0 10px;
+        transition: all 0.3s ease;
+        border-radius: 4px;
+        padding: 8px 12px !important;
+    }
+    
+    .admin-nav .nav-link:hover {
+        color: #fff !important;
+        background-color: rgba(255, 255, 255, 0.15);
+    }
+    
+    .admin-nav .dropdown-menu {
+        background: #f8f9fa;
+        border: none;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        border-radius: 8px;
+    }
+    
+    .admin-nav .dropdown-item {
+        color: #333;
+        transition: all 0.3s ease;
+    }
+    
+    .admin-nav .dropdown-item:hover {
+        background-color: #667eea;
+        color: white;
+    }
+    
+    .admin-nav .dropdown-item.active {
+        background-color: #667eea;
+        color: white;
+    }
+</style>

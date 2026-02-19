@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bill Pay Management - Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.css">
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        body { background: #f5f7fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+        .navbar { background: var(--primary-gradient); box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 1rem 2rem; }
+        .navbar-brand { font-weight: 700; font-size: 1.5rem; color: white; }
+
+        .page-header { background: var(--primary-gradient); color: white; padding: 2rem; border-radius: 8px; margin-bottom: 2rem; }
+        .page-header h1 { font-weight: 700; margin-bottom: 0.5rem; }
+
+        .metric-card { background: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 1.5rem; transition: transform 0.2s; }
+        .metric-card:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
+        .metric-card .metric-value { font-size: 2.5rem; font-weight: 700; color: #667eea; }
+        .metric-card .metric-label { font-size: 0.875rem; color: #6b7280; font-weight: 500; margin-top: 0.5rem; }
+        .metric-icon { font-size: 2rem; color: #667eea; margin-bottom: 1rem; }
+
+        .chart-container { position: relative; height: 300px; margin-bottom: 2rem; }
+
+        .data-table { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+        .data-table table { margin-bottom: 0; }
+        .data-table thead { background: #f9fafb; border-bottom: 2px solid #e5e7eb; }
+        .data-table th { font-weight: 600; color: #374151; padding: 1rem; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .data-table td { padding: 1rem; vertical-align: middle; }
+
+        .badge { padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+        .badge-scheduled { background: #dbeafe; color: #0c2d6b; }
+        .badge-sent { background: #d1fae5; color: #065f46; }
+        .badge-failed { background: #fee2e2; color: #7f1d1d; }
+        .badge-completed { background: #d1fae5; color: #065f46; }
+
+        .action-buttons { display: flex; gap: 0.5rem; }
+        .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.75rem; }
+
+        .btn-primary { background: #667eea; border-color: #667eea; }
+        .btn-primary:hover { background: #5568d3; border-color: #5568d3; }
+
+        .modal-header { background: var(--primary-gradient); color: white; }
+        .modal-header .btn-close { filter: brightness(0) invert(1); }
+
+        .form-label { font-weight: 600; color: #374151; margin-bottom: 0.5rem; }
+        .form-control, .form-select { border: 1px solid #d1d5db; border-radius: 6px; padding: 0.7rem; }
+        .form-control:focus, .form-select:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.1); }
+
+        .section-divider { display: flex; align-items: center; margin: 2rem 0 1.5rem; gap: 1rem; }
+        .section-divider h3 { margin: 0; font-weight: 700; color: #1f2937; font-size: 1.25rem; }
+        .section-divider hr { flex: 1; border-color: #e5e7eb; }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <span class="navbar-brand"><i class="fas fa-credit-card"></i> Bill Pay</span>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link text-white" href="javascript:navigateTo('/user/admin/')">&larr; Dashboard</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid p-4">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1><i class="fas fa-file-invoice-dollar"></i> Bill Pay Management</h1>
+            <p class="mb-0">Scheduled payments, payee management, and payment tracking</p>
+        </div>
+
+        <!-- Metrics Row -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-icon"><i class="fas fa-calendar-check"></i></div>
+                    <div class="metric-value" id="scheduledPayments">0</div>
+                    <div class="metric-label">Scheduled Payments</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-icon"><i class="fas fa-check-circle"></i></div>
+                    <div class="metric-value" id="processedToday">0</div>
+                    <div class="metric-label">Processed Today</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-icon"><i class="fas fa-dollar-sign"></i></div>
+                    <div class="metric-value" id="totalPayments">$0M</div>
+                    <div class="metric-label">Total in Queue</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-icon"><i class="fas fa-users"></i></div>
+                    <div class="metric-value" id="activePayees">0</div>
+                    <div class="metric-label">Active Payees</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="data-table">
+                    <div style="padding: 1.5rem;">
+                        <h5 class="mb-3">Payment Status (30 Days)</h5>
+                        <div class="chart-container">
+                            <canvas id="paymentStatusChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="data-table">
+                    <div style="padding: 1.5rem;">
+                        <h5 class="mb-3">Payment Categories</h5>
+                        <div class="chart-container">
+                            <canvas id="categoriesChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scheduled Bills Table -->
+        <div class="section-divider">
+            <h3>Scheduled Bills</h3>
+            <hr>
+        </div>
+
+        <div class="data-table">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Bill ID</th>
+                        <th>User</th>
+                        <th>Payee</th>
+                        <th>Amount</th>
+                        <th>Schedule</th>
+                        <th>Due Date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="billsTable">
+                    <tr><td colspan="8" class="text-center text-muted py-4">Loading bills...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Payees Table -->
+        <div class="section-divider">
+            <h3>Payee Directory</h3>
+            <hr>
+        </div>
+
+        <div class="data-table">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Payee ID</th>
+                        <th>Payee Name</th>
+                        <th>Account #</th>
+                        <th>Routing #</th>
+                        <th>Category</th>
+                        <th>Active Users</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="payeesTable">
+                    <tr><td colspan="8" class="text-center text-muted py-4">Loading payees...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Payments History Table -->
+        <div class="section-divider">
+            <h3>Payment History</h3>
+            <hr>
+        </div>
+
+        <div class="data-table">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Payment ID</th>
+                        <th>User</th>
+                        <th>Payee</th>
+                        <th>Amount</th>
+                        <th>Sent Date</th>
+                        <th>Delivered Date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="paymentsTable">
+                    <tr><td colspan="8" class="text-center text-muted py-4">Loading payments...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Schedule Bill Modal -->
+    <div class="modal fade" id="scheduleBillModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-calendar-plus"></i> Schedule Bill</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="scheduleBillForm">
+                        <div class="mb-3">
+                            <label class="form-label">User</label>
+                            <select class="form-select" id="billUser" required>
+                                <option value="">Select User...</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Payee</label>
+                            <select class="form-select" id="billPayee" required>
+                                <option value="">Select Payee...</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Amount</label>
+                            <input type="number" class="form-control" id="billAmount" step="0.01" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Due Date</label>
+                            <input type="date" class="form-control" id="billDueDate" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Recurring</label>
+                            <select class="form-select" id="billRecurring">
+                                <option value="once">One Time</option>
+                                <option value="monthly">Monthly</option>
+                                <option value="quarterly">Quarterly</option>
+                                <option value="annually">Annually</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Schedule Bill</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Payee Modal -->
+    <div class="modal fade" id="addPayeeModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-user-plus"></i> Add Payee</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addPayeeForm">
+                        <div class="mb-3">
+                            <label class="form-label">Payee Name</label>
+                            <input type="text" class="form-control" id="payeeName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Account Number</label>
+                            <input type="text" class="form-control" id="payeeAccount" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Routing Number</label>
+                            <input type="text" class="form-control" id="payeeRouting" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Category</label>
+                            <select class="form-select" id="payeeCategory" required>
+                                <option value="">Select Category...</option>
+                                <option value="utilities">Utilities</option>
+                                <option value="healthcare">Healthcare</option>
+                                <option value="insurance">Insurance</option>
+                                <option value="mortgage">Mortgage</option>
+                                <option value="education">Education</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Add Payee</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+    <script src="/admin_static/js/admin-utils.js"></script>
+
+    <script>
+        let paymentStatusChart, categoriesChart;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAdminAccess();
+            loadBillPayMetrics();
+            loadScheduledBills();
+            loadPayees();
+            loadPayments();
+            initCharts();
+        });
+
+        async function loadBillPayMetrics() {
+            try {
+                const response = await fetchAPI('/api/v1/bill-pay/metrics');
+                if (response.success) {
+                    document.getElementById('scheduledPayments').textContent = response.data.scheduled_payments || 0;
+                    document.getElementById('processedToday').textContent = response.data.processed_today || 0;
+                    document.getElementById('totalPayments').textContent = formatCurrency(response.data.total_in_queue || 0, true);
+                    document.getElementById('activePayees').textContent = response.data.active_payees || 0;
+                }
+            } catch (error) {
+                console.error('Error loading metrics:', error);
+            }
+        }
+
+        async function loadScheduledBills() {
+            try {
+                const response = await fetchAPI('/api/v1/bill-pay/bills');
+                const table = document.getElementById('billsTable');
+                
+                if (!response.success || !response.data?.length) {
+                    table.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No scheduled bills</td></tr>';
+                    return;
+                }
+
+                table.innerHTML = response.data.map(bill => `
+                    <tr>
+                        <td><strong>#${bill.id}</strong></td>
+                        <td>${bill.user_email}</td>
+                        <td>${bill.payee_name}</td>
+                        <td>${formatCurrency(bill.amount)}</td>
+                        <td><span class="badge bg-info">${bill.frequency}</span></td>
+                        <td>${formatDate(bill.due_date)}</td>
+                        <td><span class="badge badge-${bill.status}">${bill.status}</span></td>
+                        <td><button class="btn btn-sm btn-primary" onclick="editBill('${bill.id}')">Edit</button></td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading bills:', error);
+            }
+        }
+
+        async function loadPayees() {
+            try {
+                const response = await fetchAPI('/api/v1/bill-pay/payees');
+                const table = document.getElementById('payeesTable');
+                
+                if (!response.success || !response.data?.length) {
+                    table.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No payees found</td></tr>';
+                    return;
+                }
+
+                table.innerHTML = response.data.map(payee => `
+                    <tr>
+                        <td><strong>#${payee.id}</strong></td>
+                        <td>${payee.payee_name}</td>
+                        <td>${payee.account_number}</td>
+                        <td>${payee.routing_number}</td>
+                        <td><span class="badge bg-secondary">${payee.category}</span></td>
+                        <td><strong>${payee.active_users}</strong></td>
+                        <td><span class="badge bg-success">Active</span></td>
+                        <td><button class="btn btn-sm btn-warning" onclick="editPayee('${payee.id}')">Edit</button></td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading payees:', error);
+            }
+        }
+
+        async function loadPayments() {
+            try {
+                const response = await fetchAPI('/api/v1/bill-pay/payments');
+                const table = document.getElementById('paymentsTable');
+                
+                if (!response.success || !response.data?.length) {
+                    table.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No payment history</td></tr>';
+                    return;
+                }
+
+                table.innerHTML = response.data.map(payment => `
+                    <tr>
+                        <td><strong>#${payment.id}</strong></td>
+                        <td>${payment.user_email}</td>
+                        <td>${payment.payee_name}</td>
+                        <td>${formatCurrency(payment.amount)}</td>
+                        <td>${formatDate(payment.sent_date)}</td>
+                        <td>${payment.delivered_date ? formatDate(payment.delivered_date) : '-'}</td>
+                        <td><span class="badge badge-${getPaymentStatusClass(payment.status)}">${payment.status}</span></td>
+                        <td><button class="btn btn-sm btn-primary" onclick="viewPayment('${payment.id}')">View</button></td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading payments:', error);
+            }
+        }
+
+        function getPaymentStatusClass(status) {
+            const map = { 'scheduled': 'scheduled', 'sent': 'sent', 'delivered': 'completed', 'failed': 'failed' };
+            return map[status] || 'scheduled';
+        }
+
+        function initCharts() {
+            const statusCtx = document.getElementById('paymentStatusChart').getContext('2d');
+            paymentStatusChart = new Chart(statusCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Day 1', 'Day 5', 'Day 10', 'Day 15', 'Day 20', 'Day 25', 'Day 30'],
+                    datasets: [{
+                        label: 'Scheduled',
+                        data: [12, 19, 15, 25, 22, 30, 28],
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }, {
+                        label: 'Processed',
+                        data: [10, 16, 12, 22, 20, 27, 25],
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: true } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+
+            const categoriesCtx = document.getElementById('categoriesChart').getContext('2d');
+            categoriesChart = new Chart(categoriesCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Utilities', 'Mortgage', 'Healthcare', 'Insurance', 'Other'],
+                    datasets: [{
+                        data: [25, 30, 15, 20, 10],
+                        backgroundColor: ['#667eea', '#764ba2', '#f59e0b', '#10b981', '#06b6d4'],
+                        borderColor: 'white',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+        }
+
+        function editBill(billId) {
+            showAlert(`Editing bill #${billId}...`, 'info');
+        }
+
+        function editPayee(payeeId) {
+            showAlert(`Editing payee #${payeeId}...`, 'info');
+        }
+
+        function viewPayment(paymentId) {
+            showAlert(`Viewing payment #${paymentId}...`, 'info');
+        }
+
+        document.getElementById('scheduleBillForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            try {
+                const response = await fetchAPI('/api/v1/bill-pay/bills', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        user_id: document.getElementById('billUser').value,
+                        payee_id: document.getElementById('billPayee').value,
+                        amount: document.getElementById('billAmount').value,
+                        due_date: document.getElementById('billDueDate').value,
+                        frequency: document.getElementById('billRecurring').value
+                    })
+                });
+                if (response.success) {
+                    showAlert('Bill scheduled successfully', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('scheduleBillModal')).hide();
+                    loadScheduledBills();
+                }
+            } catch (error) {
+                showAlert('Error scheduling bill', 'danger');
+            }
+        });
+
+        document.getElementById('addPayeeForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            try {
+                const response = await fetchAPI('/api/v1/bill-pay/payees', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        payee_name: document.getElementById('payeeName').value,
+                        account_number: document.getElementById('payeeAccount').value,
+                        routing_number: document.getElementById('payeeRouting').value,
+                        category: document.getElementById('payeeCategory').value
+                    })
+                });
+                if (response.success) {
+                    showAlert('Payee added successfully', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('addPayeeModal')).hide();
+                    loadPayees();
+                }
+            } catch (error) {
+                showAlert('Error adding payee', 'danger');
+            }
+        });
+    </script>
+    <script src="/static/js/admin-guard.js"></script>
+</body>
+</html>

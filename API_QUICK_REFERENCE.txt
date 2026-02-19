@@ -1,0 +1,289 @@
+# API Quick Reference Guide
+
+## Base URL
+All API endpoints assume base URL: `http://your-domain.com`
+
+## Authentication
+Include JWT token in Authorization header:
+```
+Authorization: Bearer <your_jwt_token>
+```
+
+## User API Endpoints
+
+### Get User Profile
+```
+GET /api/user/profile
+Response: User object with id, email, full_name, account_number
+```
+
+### Get Dashboard Data
+```
+GET /api/user/dashboard
+Response: {
+  user: {...},
+  balance: float,
+  active_investments: int,
+  active_loans: int,
+  recent_transactions: [...],
+}
+```
+
+### Cards
+```
+GET /api/user/cards?skip=0&limit=100
+GET /api/user/cards/{card_id}
+Response: Card[] | Card
+```
+
+### Deposits
+```
+GET /api/user/deposits?skip=0&limit=100
+GET /api/user/deposits/{deposit_id}
+Response: Deposit[] | Deposit
+```
+
+### Loans
+```
+GET /api/user/loans?skip=0&limit=100
+GET /api/user/loans/{loan_id}
+Response: Loan[] | Loan
+```
+
+### Investments
+```
+GET /api/user/investments?skip=0&limit=100
+GET /api/user/investments/{investment_id}
+Response: Investment[] | Investment
+```
+
+### Transactions
+```
+GET /api/user/transactions?skip=0&limit=100
+Response: Transaction[]
+```
+
+## Admin API Endpoints (Requires Admin Role)
+
+### Manage User Cards
+```
+GET    /admin/users/{user_id}/cards
+POST   /admin/users/{user_id}/cards
+       Body: { card_number, card_type, expiry_date, status }
+PUT    /admin/users/{user_id}/cards/{card_id}
+       Body: { card_type?, status?, expiry_date? }
+DELETE /admin/users/{user_id}/cards/{card_id}
+```
+
+### Manage User Deposits
+```
+GET    /admin/users/{user_id}/deposits
+POST   /admin/users/{user_id}/deposits
+       Body: { amount, currency, status? }
+PUT    /admin/users/{user_id}/deposits/{deposit_id}
+       Body: { amount?, currency?, status? }
+DELETE /admin/users/{user_id}/deposits/{deposit_id}
+```
+
+### Manage User Loans
+```
+GET    /admin/users/{user_id}/loans
+POST   /admin/users/{user_id}/loans
+       Body: { amount, interest_rate, term_months, status? }
+PUT    /admin/users/{user_id}/loans/{loan_id}
+       Body: { amount?, interest_rate?, term_months?, status? }
+DELETE /admin/users/{user_id}/loans/{loan_id}
+```
+
+### Manage User Investments
+```
+GET    /admin/users/{user_id}/investments
+POST   /admin/users/{user_id}/investments
+       Body: { investment_type, amount, status? }
+PUT    /admin/users/{user_id}/investments/{investment_id}
+       Body: { investment_type?, amount?, status? }
+DELETE /admin/users/{user_id}/investments/{investment_id}
+```
+
+## HTTP Status Codes
+- `200 OK` - Successful GET/PUT
+- `201 Created` - Successful POST
+- `400 Bad Request` - Invalid request data
+- `401 Unauthorized` - Missing/invalid token
+- `403 Forbidden` - Insufficient permissions
+- `404 Not Found` - Resource doesn't exist
+- `500 Internal Server Error` - Server error
+
+## Error Response Format
+```json
+{
+  "detail": "Error message describing what went wrong"
+}
+```
+
+## Common Query Parameters
+- `skip` - Number of records to skip (default: 0)
+- `limit` - Number of records to return (default: 100)
+
+## JavaScript Fetch Examples
+
+### Get Dashboard Data
+```javascript
+const response = await fetch('/api/user/dashboard');
+const data = await response.json();
+console.log(data.balance); // Access nested properties
+```
+
+### Create a Deposit
+```javascript
+const response = await fetch('/admin/users/123/deposits', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    amount: 1000,
+    currency: 'USD',
+    status: 'completed'
+  })
+});
+const deposit = await response.json();
+```
+
+### Update a Loan
+```javascript
+const response = await fetch('/admin/users/123/loans/456', {
+  method: 'PUT',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    status: 'completed'
+  })
+});
+```
+
+### Delete a Card
+```javascript
+const response = await fetch('/admin/users/123/cards/789', {
+  method: 'DELETE'
+});
+```
+
+## Data Models
+
+### Card
+```json
+{
+  "id": int,
+  "user_id": int,
+  "card_number": string,
+  "card_type": string,
+  "expiry_date": string,
+  "status": string,
+  "created_at": datetime
+}
+```
+
+### Deposit
+```json
+{
+  "id": int,
+  "user_id": int,
+  "amount": float,
+  "currency": string,
+  "status": string,
+  "created_at": datetime
+}
+```
+
+### Loan
+```json
+{
+  "id": int,
+  "user_id": int,
+  "amount": float,
+  "interest_rate": float,
+  "term_months": int,
+  "status": string,
+  "created_at": datetime
+}
+```
+
+### Investment
+```json
+{
+  "id": int,
+  "user_id": int,
+  "investment_type": string,
+  "amount": float,
+  "status": string,
+  "created_at": datetime
+}
+```
+
+### Transaction
+```json
+{
+  "id": int,
+  "user_id": int,
+  "account_id": int,
+  "amount": float,
+  "transaction_type": string,
+  "status": string,
+  "created_at": datetime,
+  "updated_at": datetime
+}
+```
+
+## Status Values
+
+### Card Status
+- `active` - Card is active and usable
+- `inactive` - Card is deactivated
+- `blocked` - Card is blocked
+
+### Deposit Status
+- `completed` - Deposit transaction completed
+- `pending` - Deposit is pending
+
+### Loan Status
+- `active` - Loan is active
+- `completed` - Loan paid off
+- `default` - Loan in default
+
+### Investment Status
+- `active` - Investment is active
+- `closed` - Investment is closed
+- `pending` - Investment pending approval
+
+## WebSocket Events (Broadcasting)
+
+When admin performs CRUD operations, these events are broadcast:
+- `card:admin_created` - Card created
+- `card:admin_updated` - Card updated
+- `card:admin_deleted` - Card deleted
+- `deposit:admin_created` - Deposit created
+- `deposit:admin_updated` - Deposit updated
+- `deposit:admin_deleted` - Deposit deleted
+- `loan:admin_created` - Loan created
+- `loan:admin_updated` - Loan updated
+- `loan:admin_deleted` - Loan deleted
+- `investment:admin_created` - Investment created
+- `investment:admin_updated` - Investment updated
+- `investment:admin_deleted` - Investment deleted
+
+## Rate Limiting
+No rate limiting currently implemented. Consider adding in production.
+
+## Pagination Example
+```javascript
+// Get second page of cards (10 per page)
+const response = await fetch('/api/user/cards?skip=10&limit=10');
+```
+
+## Filtering Notes
+- Currently no filtering by date range, status, etc.
+- Consider adding querystring filters: `?status=active&from_date=2025-01-01`
+
+## Caching Recommendations
+- Cache user profile (changes infrequently)
+- Cache card list (changes when new card added)
+- Don't cache dashboard (shows real-time data)
+- Use ETag headers for conditional requests

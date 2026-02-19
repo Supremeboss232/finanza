@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fraud Detection - Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.css">
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+        }
+
+        body { background: #f5f7fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+        .navbar { background: var(--primary-gradient); box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 1rem 2rem; }
+        .navbar-brand { font-weight: 700; font-size: 1.5rem; color: white; }
+
+        .page-header { background: var(--primary-gradient); color: white; padding: 2rem; border-radius: 8px; margin-bottom: 2rem; }
+        .page-header h1 { font-weight: 700; margin-bottom: 0.5rem; }
+
+        .metric-card { background: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 1.5rem; transition: transform 0.2s; }
+        .metric-card:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
+        .metric-card .metric-value { font-size: 2.5rem; font-weight: 700; color: #667eea; }
+        .metric-card .metric-label { font-size: 0.875rem; color: #6b7280; font-weight: 500; margin-top: 0.5rem; }
+        .metric-icon { font-size: 2rem; color: #667eea; margin-bottom: 1rem; }
+
+        .chart-container { position: relative; height: 300px; margin-bottom: 2rem; }
+
+        .data-table { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 2rem; }
+        .data-table table { margin-bottom: 0; }
+        .data-table thead { background: #f9fafb; border-bottom: 2px solid #e5e7eb; }
+        .data-table th { font-weight: 600; color: #374151; padding: 1rem; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .data-table td { padding: 1rem; vertical-align: middle; }
+        .data-table tbody tr:hover { background: #f9fafb; }
+
+        .badge { padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+        .badge-blocked { background: #fee2e2; color: #7f1d1d; }
+        .badge-flagged { background: #fef3c7; color: #78350f; }
+        .badge-cleared { background: #d1fae5; color: #065f46; }
+        .badge-active { background: #dbeafe; color: #0c2d6b; }
+
+        .action-buttons { display: flex; gap: 0.5rem; }
+        .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.75rem; }
+
+        .btn-primary { background: #667eea; border-color: #667eea; }
+        .btn-primary:hover { background: #5568d3; border-color: #5568d3; }
+
+        .modal-header { background: var(--primary-gradient); color: white; }
+        .modal-header .btn-close { filter: brightness(0) invert(1); }
+
+        .form-label { font-weight: 600; color: #374151; margin-bottom: 0.5rem; }
+        .form-control, .form-select { border: 1px solid #d1d5db; border-radius: 6px; padding: 0.7rem; }
+        .form-control:focus, .form-select:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.1); }
+
+        .section-divider { display: flex; align-items: center; margin: 2rem 0 1.5rem; gap: 1rem; }
+        .section-divider h3 { margin: 0; font-weight: 700; color: #1f2937; font-size: 1.25rem; }
+        .section-divider hr { flex: 1; border-color: #e5e7eb; }
+
+        .threat-alert { background: #fee2e2; border-left: 4px solid #ef4444; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem; }
+        .threat-alert strong { color: #7f1d1d; }
+        .threat-alert p { color: #b91c1c; margin-bottom: 0; font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <span class="navbar-brand"><i class="fas fa-shield-alt"></i> Fraud Detection</span>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link text-white" href="javascript:navigateTo('/user/admin/')">&larr; Dashboard</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid p-4">
+        <!-- Page Header -->
+        <div class="page-header">
+            <h1><i class="fas fa-exclamation-triangle"></i> Fraud Detection System</h1>
+            <p class="mb-0">Advanced monitoring, threat detection, and fraud rule management</p>
+        </div>
+
+        <!-- Threat Alert -->
+        <div class="threat-alert">
+            <strong><i class="fas fa-exclamation-circle"></i> Current Threats:</strong>
+            <p>Active blocked transactions: 8 | Flagged users: 12 | Rules triggered: 5 in last 24h</p>
+        </div>
+
+        <!-- Metrics Row -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-icon"><i class="fas fa-ban"></i></div>
+                    <div class="metric-value" id="blockedTransactions">0</div>
+                    <div class="metric-label">Blocked Today</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-icon"><i class="fas fa-flag"></i></div>
+                    <div class="metric-value" id="flaggedCount">0</div>
+                    <div class="metric-label">Flagged Users</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-icon"><i class="fas fa-shield-alt"></i></div>
+                    <div class="metric-value" id="rulesActive">0</div>
+                    <div class="metric-label">Active Rules</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="metric-card">
+                    <div class="metric-icon"><i class="fas fa-check-circle"></i></div>
+                    <div class="metric-value" id="sanctionsCount">0</div>
+                    <div class="metric-label">Sanctions Matches</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="data-table">
+                    <div style="padding: 1.5rem;">
+                        <h5 class="mb-3">Fraud Alert Distribution</h5>
+                        <div class="chart-container">
+                            <canvas id="threatChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="data-table">
+                    <div style="padding: 1.5rem;">
+                        <h5 class="mb-3">Blocked Transactions (7 Days)</h5>
+                        <div class="chart-container">
+                            <canvas id="blockedChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Blocked Transactions Table -->
+        <div class="section-divider">
+            <h3>Blocked Transactions</h3>
+            <hr>
+        </div>
+
+        <div class="data-table">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Transaction ID</th>
+                        <th>User</th>
+                        <th>Amount</th>
+                        <th>Threat Type</th>
+                        <th>Risk Score</th>
+                        <th>Blocked Date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="blockedTable">
+                    <tr><td colspan="8" class="text-center text-muted py-4">Loading transactions...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Device Fingerprints Table -->
+        <div class="section-divider">
+            <h3>Device Fingerprinting</h3>
+            <hr>
+        </div>
+
+        <div class="data-table">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Device ID</th>
+                        <th>User</th>
+                        <th>Browser</th>
+                        <th>IP Address</th>
+                        <th>Location</th>
+                        <th>Risk Level</th>
+                        <th>Last Active</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="devicesTable">
+                    <tr><td colspan="8" class="text-center text-muted py-4">Loading devices...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Fraud Rules Table -->
+        <div class="section-divider">
+            <h3>Active Fraud Rules</h3>
+            <hr>
+        </div>
+
+        <div class="data-table">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Rule ID</th>
+                        <th>Rule Name</th>
+                        <th>Trigger Condition</th>
+                        <th>Action</th>
+                        <th>Matches (24h)</th>
+                        <th>Status</th>
+                        <th>Last Modified</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="rulesTable">
+                    <tr><td colspan="8" class="text-center text-muted py-4">Loading rules...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Sanctions Check Results Table -->
+        <div class="section-divider">
+            <h3>Sanctions List Matches</h3>
+            <hr>
+        </div>
+
+        <div class="data-table">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Match ID</th>
+                        <th>User Name</th>
+                        <th>Sanction List</th>
+                        <th>Match Score</th>
+                        <th>Confidence</th>
+                        <th>Detection Date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="sanctionsTable">
+                    <tr><td colspan="8" class="text-center text-muted py-4">Loading sanctions...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Block Transaction Modal -->
+    <div class="modal fade" id="blockTransactionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-ban"></i> Block Transaction</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="blockTransactionForm">
+                        <div class="mb-3">
+                            <label class="form-label">Transaction ID</label>
+                            <input type="text" class="form-control" id="blockTxnId" required readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Block Reason</label>
+                            <select class="form-select" id="blockReason" required>
+                                <option value="">Select Reason...</option>
+                                <option value="suspicious_activity">Suspicious Activity</option>
+                                <option value="fraud_detected">Fraud Detected</option>
+                                <option value="compliance_issue">Compliance Issue</option>
+                                <option value="manual_review">Manual Review Required</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Block Notes</label>
+                            <textarea class="form-control" id="blockNotes" rows="3" placeholder="Enter blocking reason..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Block Transaction</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Fraud Rule Modal -->
+    <div class="modal fade" id="createRuleModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-shield-alt"></i> Create Fraud Rule</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createRuleForm">
+                        <div class="mb-3">
+                            <label class="form-label">Rule Name</label>
+                            <input type="text" class="form-control" id="ruleName" placeholder="e.g., High Value Transfer" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Trigger Type</label>
+                            <select class="form-select" id="triggerType" required>
+                                <option value="">Select Type...</option>
+                                <option value="amount_threshold">Amount Threshold</option>
+                                <option value="transaction_count">Transaction Count</option>
+                                <option value="velocity_check">Velocity Check</option>
+                                <option value="geographic_anomaly">Geographic Anomaly</option>
+                                <option value="device_change">Device Change</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Threshold Value</label>
+                            <input type="number" class="form-control" id="threshold" placeholder="e.g., 10000" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Action on Trigger</label>
+                            <select class="form-select" id="ruleAction" required>
+                                <option value="">Select Action...</option>
+                                <option value="block">Block Transaction</option>
+                                <option value="flag">Flag for Review</option>
+                                <option value="require_verification">Require Verification</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">Create Rule</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+    <script src="/admin_static/js/admin-utils.js"></script>
+
+    <script>
+        let threatChart, blockedChart;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAdminAccess();
+            loadFraudMetrics();
+            loadBlockedTransactions();
+            loadDevices();
+            loadFraudRules();
+            loadSanctionsMatches();
+            initCharts();
+        });
+
+        async function loadFraudMetrics() {
+            try {
+                const response = await fetchAPI('/api/v1/fraud/metrics');
+                if (response.success) {
+                    document.getElementById('blockedTransactions').textContent = response.data.blocked_today || 0;
+                    document.getElementById('flaggedCount').textContent = response.data.flagged_users || 0;
+                    document.getElementById('rulesActive').textContent = response.data.active_rules || 0;
+                    document.getElementById('sanctionsCount').textContent = response.data.sanctions_matches || 0;
+                }
+            } catch (error) {
+                console.error('Error loading metrics:', error);
+            }
+        }
+
+        async function loadBlockedTransactions() {
+            try {
+                const response = await fetchAPI('/api/v1/fraud/blocked-transactions');
+                const table = document.getElementById('blockedTable');
+                
+                if (!response.success || !response.data?.length) {
+                    table.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No blocked transactions</td></tr>';
+                    return;
+                }
+
+                table.innerHTML = response.data.map(txn => `
+                    <tr>
+                        <td><strong>#${txn.id}</strong></td>
+                        <td>${txn.user_email}</td>
+                        <td>${formatCurrency(txn.amount)}</td>
+                        <td><span class="badge bg-danger">${txn.threat_type}</span></td>
+                        <td><strong>${txn.risk_score}/100</strong></td>
+                        <td>${formatDate(txn.blocked_date)}</td>
+                        <td><span class="badge badge-blocked">Blocked</span></td>
+                        <td><button class="btn btn-sm btn-primary" onclick="unblockTransaction('${txn.id}')">Review</button></td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading blocked transactions:', error);
+            }
+        }
+
+        async function loadDevices() {
+            try {
+                const response = await fetchAPI('/api/v1/fraud/devices');
+                const table = document.getElementById('devicesTable');
+                
+                if (!response.success || !response.data?.length) {
+                    table.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No device records</td></tr>';
+                    return;
+                }
+
+                table.innerHTML = response.data.map(dev => `
+                    <tr>
+                        <td><strong>${dev.device_id}</strong></td>
+                        <td>${dev.user_email}</td>
+                        <td>${dev.browser}</td>
+                        <td>${dev.ip_address}</td>
+                        <td>${dev.location}</td>
+                        <td><span class="badge ${dev.risk_level === 'high' ? 'bg-danger' : dev.risk_level === 'medium' ? 'bg-warning' : 'bg-success'}">${dev.risk_level}</span></td>
+                        <td>${formatDate(dev.last_active)}</td>
+                        <td><button class="btn btn-sm btn-warning" onclick="flagDevice('${dev.device_id}')">Flag</button></td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading devices:', error);
+            }
+        }
+
+        async function loadFraudRules() {
+            try {
+                const response = await fetchAPI('/api/v1/fraud/rules');
+                const table = document.getElementById('rulesTable');
+                
+                if (!response.success || !response.data?.length) {
+                    table.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No fraud rules</td></tr>';
+                    return;
+                }
+
+                table.innerHTML = response.data.map(rule => `
+                    <tr>
+                        <td><strong>#${rule.id}</strong></td>
+                        <td>${rule.rule_name}</td>
+                        <td>${rule.trigger_condition}</td>
+                        <td><span class="badge bg-info">${rule.action}</span></td>
+                        <td><strong>${rule.matches_24h}</strong></td>
+                        <td><span class="badge ${rule.is_active ? 'bg-success' : 'bg-secondary'}">${rule.is_active ? 'Active' : 'Inactive'}</span></td>
+                        <td>${formatDate(rule.last_modified)}</td>
+                        <td><button class="btn btn-sm btn-primary" onclick="editRule('${rule.id}')">Edit</button></td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading fraud rules:', error);
+            }
+        }
+
+        async function loadSanctionsMatches() {
+            try {
+                const response = await fetchAPI('/api/v1/fraud/sanctions');
+                const table = document.getElementById('sanctionsTable');
+                
+                if (!response.success || !response.data?.length) {
+                    table.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No sanctions matches</td></tr>';
+                    return;
+                }
+
+                table.innerHTML = response.data.map(match => `
+                    <tr>
+                        <td><strong>#${match.id}</strong></td>
+                        <td>${match.user_name}</td>
+                        <td><span class="badge bg-warning">${match.sanction_list}</span></td>
+                        <td>${match.match_score}%</td>
+                        <td><strong>${match.confidence}%</strong></td>
+                        <td>${formatDate(match.detection_date)}</td>
+                        <td><span class="badge badge-flagged">Under Review</span></td>
+                        <td><button class="btn btn-sm btn-primary" onclick="reviewSanctions('${match.id}')">Review</button></td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading sanctions:', error);
+            }
+        }
+
+        function initCharts() {
+            const threatCtx = document.getElementById('threatChart').getContext('2d');
+            threatChart = new Chart(threatCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Suspicious Activity', 'Device Anomaly', 'Velocity Check', 'Geographic'],
+                    datasets: [{
+                        data: [35, 25, 20, 20],
+                        backgroundColor: ['#ef4444', '#f59e0b', '#06b6d4', '#8b5cf6'],
+                        borderColor: 'white',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+
+            const blockedCtx = document.getElementById('blockedChart').getContext('2d');
+            blockedChart = new Chart(blockedCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'Blocked Transactions',
+                        data: [8, 12, 6, 15, 11, 5, 3],
+                        backgroundColor: '#ef4444',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+        }
+
+        async function unblockTransaction(txnId) {
+            document.getElementById('blockTxnId').value = txnId;
+            new bootstrap.Modal(document.getElementById('blockTransactionModal')).show();
+        }
+
+        function flagDevice(deviceId) {
+            showAlert(`Device ${deviceId} flagged for review`, 'warning');
+        }
+
+        function editRule(ruleId) {
+            showAlert(`Editing rule #${ruleId}`, 'info');
+        }
+
+        function reviewSanctions(matchId) {
+            showAlert(`Reviewing sanctions match #${matchId}`, 'info');
+        }
+
+        document.getElementById('blockTransactionForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            try {
+                const response = await fetchAPI('/api/v1/fraud/blocked-transactions', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        transaction_id: document.getElementById('blockTxnId').value,
+                        reason: document.getElementById('blockReason').value,
+                        notes: document.getElementById('blockNotes').value
+                    })
+                });
+                if (response.success) {
+                    showAlert('Transaction blocked successfully', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('blockTransactionModal')).hide();
+                    loadBlockedTransactions();
+                }
+            } catch (error) {
+                showAlert('Error blocking transaction', 'danger');
+            }
+        });
+
+        document.getElementById('createRuleForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            try {
+                const response = await fetchAPI('/api/v1/fraud/rules', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        rule_name: document.getElementById('ruleName').value,
+                        trigger_type: document.getElementById('triggerType').value,
+                        threshold: document.getElementById('threshold').value,
+                        action: document.getElementById('ruleAction').value
+                    })
+                });
+                if (response.success) {
+                    showAlert('Fraud rule created successfully', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('createRuleModal')).hide();
+                    loadFraudRules();
+                }
+            } catch (error) {
+                showAlert('Error creating fraud rule', 'danger');
+            }
+        });
+    </script>
+    <script src="/static/js/admin-guard.js"></script>
+</body>
+</html>

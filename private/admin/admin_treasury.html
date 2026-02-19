@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Treasury Management - Finanza Admin</title>
+    <link href="/static/css/style.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+    <style>
+        .admin-nav { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .admin-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; }
+        .stat-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .dashboard-section { background: white; border-radius: 10px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 30px; }
+        .portfolio-card { border-left: 4px solid #667eea; }
+        .chart-container { position: relative; height: 300px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <!-- Admin Navigation -->
+    <nav class="admin-nav navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/user/admin/dashboard">
+                <i class="fas fa-landmark"></i> Treasury Management
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarAdmin">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarAdmin">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/dashboard">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/fraud_detection">Fraud</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/blockchain">Blockchain</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/user/admin/treasury">Treasury</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-5 mb-5">
+        <!-- Header -->
+        <div class="admin-header">
+            <h1><i class="fas fa-landmark"></i> Treasury Management</h1>
+            <p class="mb-0">Manage investment portfolios, liquidity, and asset allocation</p>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="row g-4 mb-5">
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card">
+                    <div style="font-size: 2rem; color: #667eea; font-weight: bold;">$<span id="totalAssets">-</span>M</div>
+                    <div class="text-muted">Total Assets Under Management</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card">
+                    <div style="font-size: 2rem; color: #667eea; font-weight: bold;" id="portfoliosCount">-</div>
+                    <div class="text-muted">Active Portfolios</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card">
+                    <div style="font-size: 2rem; color: #667eea; font-weight: bold;" id="portfolioReturn">+0.0%</div>
+                    <div class="text-muted">Average Portfolio Return</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card">
+                    <div style="font-size: 2rem; color: #667eea; font-weight: bold;">$<span id="liquidityReserve">-</span>M</div>
+                    <div class="text-muted">Liquidity Reserve</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Portfolio Allocation -->
+        <div class="row g-4 mb-5">
+            <div class="col-lg-6">
+                <div class="dashboard-section">
+                    <h5 class="mb-3"><i class="fas fa-pie-chart"></i> Asset Allocation</h5>
+                    <div class="chart-container">
+                        <canvas id="allocationChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="dashboard-section">
+                    <h5 class="mb-3"><i class="fas fa-chart-line"></i> Portfolio Performance (YTD)</h5>
+                    <div class="chart-container">
+                        <canvas id="performanceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Managed Portfolios -->
+        <div class="dashboard-section">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4><i class="fas fa-briefcase"></i> Managed Portfolios</h4>
+                <button class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> Create Portfolio</button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Portfolio Name</th>
+                            <th>Investor</th>
+                            <th>Strategy</th>
+                            <th>Value</th>
+                            <th>YTD Return</th>
+                            <th>Risk Level</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="portfoliosBody">
+                        <tr>
+                            <td colspan="8" class="text-center text-muted">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Asset Classes -->
+        <div class="dashboard-section">
+            <h4 class="mb-4"><i class="fas fa-cube"></i> Asset Classes</h4>
+            <div class="row g-4">
+                <div class="col-lg-3 col-md-6">
+                    <div class="portfolio-card card">
+                        <div class="card-body">
+                            <h5 class="card-title"><i class="fas fa-coins"></i> Equities</h5>
+                            <p class="card-text"><strong>$<span id="equitiesValue">-</span>M</strong></p>
+                            <p class="text-muted" id="equitiesPercent">-</p>
+                            <small>Holdings: <span id="equitiesCount">-</span></small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="portfolio-card card">
+                        <div class="card-body">
+                            <h5 class="card-title"><i class="fas fa-file"></i> Fixed Income</h5>
+                            <p class="card-text"><strong>$<span id="fixedValue">-</span>M</strong></p>
+                            <p class="text-muted" id="fixedPercent">-</p>
+                            <small>Holdings: <span id="fixedCount">-</span></small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="portfolio-card card">
+                        <div class="card-body">
+                            <h5 class="card-title"><i class="fas fa-home"></i> Real Estate</h5>
+                            <p class="card-text"><strong>$<span id="reValue">-</span>M</strong></p>
+                            <p class="text-muted" id="rePercent">-</p>
+                            <small>Holdings: <span id="reCount">-</span></small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="portfolio-card card">
+                        <div class="card-body">
+                            <h5 class="card-title"><i class="fas fa-cube"></i> Alternative</h5>
+                            <p class="card-text"><strong>$<span id="altValue">-</span>M</strong></p>
+                            <p class="text-muted" id="altPercent">-</p>
+                            <small>Holdings: <span id="altCount">-</span></small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Investment Strategy Templates -->
+        <div class="dashboard-section">
+            <h4 class="mb-4"><i class="fas fa-chess"></i> Investment Strategies</h4>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Strategy Name</th>
+                            <th>Target Return</th>
+                            <th>Risk Profile</th>
+                            <th>Rebalance Frequency</th>
+                            <th>Portfolios Using</th>
+                            <th>Performance</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="strategiesBody">
+                        <tr>
+                            <td colspan="7" class="text-center text-muted">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Rebalancing Schedule -->
+        <div class="dashboard-section">
+            <h4 class="mb-4"><i class="fas fa-sync-alt"></i> Rebalancing Schedule</h4>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Portfolio</th>
+                            <th>Last Rebalanced</th>
+                            <th>Next Rebalance</th>
+                            <th>Deviation</th>
+                            <th>Recommendation</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rebalanceBody">
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Liquidity Management -->
+        <div class="dashboard-section">
+            <h4 class="mb-4"><i class="fas fa-water"></i> Liquidity Management</h4>
+            <div class="row mb-4">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Minimum Liquidity Threshold</label>
+                    <div class="input-group">
+                        <input type="number" class="form-control" id="liquidityThreshold" value="25">
+                        <span class="input-group-text">%</span>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Rebalance Frequency</label>
+                    <select class="form-control">
+                        <option>Daily</option>
+                        <option selected>Weekly</option>
+                        <option>Monthly</option>
+                        <option>Quarterly</option>
+                    </select>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Account</th>
+                            <th>Current Liquidity</th>
+                            <th>Threshold</th>
+                            <th>Status</th>
+                            <th>Action Required</th>
+                        </tr>
+                    </thead>
+                    <tbody id="liquidityBody">
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Risk Management -->
+        <div class="dashboard-section">
+            <h4 class="mb-4"><i class="fas fa-exclamation-triangle"></i> Risk Management</h4>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Max Concentration Risk (%)</label>
+                    <input type="number" class="form-control" value="20">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">VaR Limit (95% Confidence)</label>
+                    <input type="number" class="form-control" value="100000">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Sector Concentration Limit (%)</label>
+                    <input type="number" class="form-control" value="15">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Correlation Threshold</label>
+                    <input type="number" class="form-control" step="0.1" value="0.7">
+                </div>
+            </div>
+            <button class="btn btn-primary">Update Risk Parameters</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        const token = localStorage.getItem('token');
+        let allocationChart, performanceChart;
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (!token) {
+                window.location.href = '/signin';
+                return;
+            }
+
+            try {
+                await loadTreasuryData();
+                await loadPortfolios();
+                await loadStrategies();
+                await loadRebalanceInfo();
+                await loadLiquidityInfo();
+                initializeCharts();
+            } catch (error) {
+                console.error('Error loading treasury data:', error);
+            }
+        });
+
+        async function loadTreasuryData() {
+            try {
+                const response = await fetch('/api/v1/treasury/dashboard', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    document.getElementById('totalAssets').textContent = (data.total_aum / 1000000).toFixed(1);
+                    document.getElementById('portfoliosCount').textContent = data.active_portfolios || '-';
+                    document.getElementById('portfolioReturn').textContent = (data.average_return || 0).toFixed(1) + '%';
+                    document.getElementById('liquidityReserve').textContent = (data.liquidity_reserve / 1000000).toFixed(1);
+
+                    // Asset classes
+                    document.getElementById('equitiesValue').textContent = (data.equities_value / 1000000).toFixed(1);
+                    document.getElementById('equitiesPercent').textContent = (data.equities_percent || 0).toFixed(1) + '%';
+                    document.getElementById('equitiesCount').textContent = data.equities_count || '0';
+
+                    document.getElementById('fixedValue').textContent = (data.fixed_income_value / 1000000).toFixed(1);
+                    document.getElementById('fixedPercent').textContent = (data.fixed_income_percent || 0).toFixed(1) + '%';
+                    document.getElementById('fixedCount').textContent = data.fixed_income_count || '0';
+
+                    document.getElementById('reValue').textContent = (data.real_estate_value / 1000000).toFixed(1);
+                    document.getElementById('rePercent').textContent = (data.real_estate_percent || 0).toFixed(1) + '%';
+                    document.getElementById('reCount').textContent = data.real_estate_count || '0';
+
+                    document.getElementById('altValue').textContent = (data.alternative_value / 1000000).toFixed(1);
+                    document.getElementById('altPercent').textContent = (data.alternative_percent || 0).toFixed(1) + '%';
+                    document.getElementById('altCount').textContent = data.alternative_count || '0';
+                }
+            } catch (error) {
+                console.error('Error loading treasury data:', error);
+            }
+        }
+
+        async function loadPortfolios() {
+            try {
+                const response = await fetch('/api/v1/treasury/portfolios', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const tbody = document.getElementById('portfoliosBody');
+                    tbody.innerHTML = '';
+
+                    if (data.portfolios && data.portfolios.length > 0) {
+                        data.portfolios.forEach(portfolio => {
+                            tbody.innerHTML += `
+                                <tr>
+                                    <td><strong>${portfolio.name}</strong></td>
+                                    <td>${portfolio.investor}</td>
+                                    <td>${portfolio.strategy}</td>
+                                    <td>$${portfolio.value.toLocaleString('en-US', {maximumFractionDigits: 0})}</td>
+                                    <td class="${portfolio.return >= 0 ? 'text-success' : 'text-danger'}">${portfolio.return >= 0 ? '+' : ''}${portfolio.return.toFixed(2)}%</td>
+                                    <td><span class="badge bg-${portfolio.risk_level === 'Low' ? 'success' : portfolio.risk_level === 'Medium' ? 'warning' : 'danger'}">${portfolio.risk_level}</span></td>
+                                    <td><span class="badge bg-info">${portfolio.status}</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-primary">Manage</button>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No portfolios found</td></tr>';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading portfolios:', error);
+            }
+        }
+
+        async function loadStrategies() {
+            try {
+                const response = await fetch('/api/v1/treasury/strategies', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const tbody = document.getElementById('strategiesBody');
+                    tbody.innerHTML = '';
+
+                    if (data.strategies && data.strategies.length > 0) {
+                        data.strategies.forEach(strategy => {
+                            tbody.innerHTML += `
+                                <tr>
+                                    <td>${strategy.name}</td>
+                                    <td>${strategy.target_return}%</td>
+                                    <td><span class="badge bg-info">${strategy.risk_profile}</span></td>
+                                    <td>${strategy.rebalance_frequency}</td>
+                                    <td>${strategy.portfolio_count}</td>
+                                    <td class="${strategy.performance >= 0 ? 'text-success' : 'text-danger'}">${strategy.performance >= 0 ? '+' : ''}${strategy.performance.toFixed(2)}%</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-primary">Edit</button>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading strategies:', error);
+            }
+        }
+
+        async function loadRebalanceInfo() {
+            try {
+                const response = await fetch('/api/v1/treasury/rebalancing', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const tbody = document.getElementById('rebalanceBody');
+                    tbody.innerHTML = '';
+
+                    if (data.portfolios && data.portfolios.length > 0) {
+                        data.portfolios.forEach(portfolio => {
+                            tbody.innerHTML += `
+                                <tr>
+                                    <td>${portfolio.name}</td>
+                                    <td>${new Date(portfolio.last_rebalanced).toLocaleDateString()}</td>
+                                    <td>${new Date(portfolio.next_rebalance).toLocaleDateString()}</td>
+                                    <td class="${Math.abs(portfolio.deviation) > 5 ? 'text-danger' : 'text-success'}">${portfolio.deviation > 0 ? '+' : ''}${portfolio.deviation.toFixed(2)}%</td>
+                                    <td>${portfolio.recommendation}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-success">Rebalance Now</button>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading rebalance info:', error);
+            }
+        }
+
+        async function loadLiquidityInfo() {
+            try {
+                const response = await fetch('/api/v1/treasury/liquidity', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const tbody = document.getElementById('liquidityBody');
+                    tbody.innerHTML = '';
+
+                    if (data.accounts && data.accounts.length > 0) {
+                        data.accounts.forEach(account => {
+                            const statusClass = account.liquidity >= account.threshold ? 'success' : 'danger';
+                            tbody.innerHTML += `
+                                <tr>
+                                    <td>${account.name}</td>
+                                    <td>${account.liquidity.toFixed(1)}%</td>
+                                    <td>${account.threshold}%</td>
+                                    <td><span class="badge bg-${statusClass}">${account.liquidity >= account.threshold ? 'OK' : 'LOW'}</span></td>
+                                    <td>${account.liquidity >= account.threshold ? 'None' : '<button class="btn btn-sm btn-warning">Review</button>'}</td>
+                                </tr>
+                            `;
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading liquidity info:', error);
+            }
+        }
+
+        function initializeCharts() {
+            // Asset Allocation
+            const allocationCtx = document.getElementById('allocationChart').getContext('2d');
+            allocationChart = new Chart(allocationCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Equities', 'Fixed Income', 'Real Estate', 'Alternative'],
+                    datasets: [{
+                        data: [40, 30, 20, 10],
+                        backgroundColor: ['#667eea', '#764ba2', '#f093fb', '#4facfe']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+
+            // Portfolio Performance
+            const performanceCtx = document.getElementById('performanceChart').getContext('2d');
+            performanceChart = new Chart(performanceCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                    datasets: [{
+                        label: 'Portfolio Value',
+                        data: [100, 102, 101, 105, 103, 107, 110, 108, 112, 115, 118, 120],
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top' }
+                    }
+                }
+            });
+        }
+    </script>
+    <script src="/static/js/admin-guard.js"></script>
+</body>
+</html>

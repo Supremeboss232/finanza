@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blockchain Management - Finanza Admin</title>
+    <link href="/static/css/style.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .admin-nav { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .admin-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; }
+        .stat-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .dashboard-section { background: white; border-radius: 10px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 30px; }
+        .chain-badge { display: inline-block; padding: 10px 15px; border-radius: 5px; font-size: 0.9rem; font-weight: bold; }
+        .chain-eth { background: #627eea; color: white; }
+        .chain-btc { background: #f7931a; color: white; }
+        .chain-polygon { background: #8247e5; color: white; }
+        .chain-bsc { background: #f3ba2f; color: white; }
+    </style>
+</head>
+<body>
+    <!-- Admin Navigation -->
+    <nav class="admin-nav navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/user/admin/dashboard">
+                <i class="fas fa-cube"></i> Blockchain Management
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarAdmin">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarAdmin">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/dashboard">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/fraud_detection">Fraud</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/user/admin/blockchain">Blockchain</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/reporting">Reports</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-5 mb-5">
+        <!-- Header -->
+        <div class="admin-header">
+            <h1><i class="fas fa-cube"></i> Blockchain & Cryptocurrency Management</h1>
+            <p class="mb-0">Monitor wallets, accounts, and blockchain transactions</p>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="row g-4 mb-5">
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card">
+                    <div style="font-size: 2rem; color: #667eea; font-weight: bold;" id="totalWallets">-</div>
+                    <div class="text-muted">Total Wallets</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card">
+                    <div style="font-size: 2rem; color: #667eea; font-weight: bold;" id="totalAccounts">-</div>
+                    <div class="text-muted">Active Accounts</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card">
+                    <div style="font-size: 2rem; color: #667eea; font-weight: bold;" id="totalValue">$-</div>
+                    <div class="text-muted">Total Value</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card">
+                    <div style="font-size: 2rem; color: #667eea; font-weight: bold;" id="pendingTxn">-</div>
+                    <div class="text-muted">Pending Tx</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Supported Blockchains -->
+        <div class="dashboard-section">
+            <h4 class="mb-4"><i class="fas fa-network-wired"></i> Blockchain Networks</h4>
+            <div class="row g-4">
+                <div class="col-lg-3 col-md-6">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <div class="chain-badge chain-eth mb-3" style="width: 100%;">Ethereum</div>
+                            <div id="ethStats">
+                                <p class="mb-2"><strong id="ethWallets">-</strong> Wallets</p>
+                                <p class="mb-0"><span id="ethTVL">$-</span> TVL</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <div class="chain-badge chain-btc mb-3" style="width: 100%;">Bitcoin</div>
+                            <div id="btcStats">
+                                <p class="mb-2"><strong id="btcWallets">-</strong> Wallets</p>
+                                <p class="mb-0"><span id="btcTVL">$-</span> TVL</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <div class="chain-badge chain-polygon mb-3" style="width: 100%;">Polygon</div>
+                            <div id="polyStats">
+                                <p class="mb-2"><strong id="polyWallets">-</strong> Wallets</p>
+                                <p class="mb-0"><span id="polyTVL">$-</span> TVL</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <div class="chain-badge chain-bsc mb-3" style="width: 100%;">BSC</div>
+                            <div id="bscStats">
+                                <p class="mb-2"><strong id="bscWallets">-</strong> Wallets</p>
+                                <p class="mb-0"><span id="bscTVL">$-</span> TVL</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Crypto Accounts -->
+        <div class="dashboard-section">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4><i class="fas fa-user-circle"></i> User Crypto Accounts</h4>
+                <button class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> Approve Account</button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Account ID</th>
+                            <th>Chains</th>
+                            <th>Wallets</th>
+                            <th>Total Value</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="accountsBody">
+                        <tr>
+                            <td colspan="7" class="text-center text-muted">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Recent Transactions -->
+        <div class="dashboard-section">
+            <h4 class="mb-4"><i class="fas fa-exchange-alt"></i> Recent Transactions</h4>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Tx Hash</th>
+                            <th>From User</th>
+                            <th>To</th>
+                            <th>Amount</th>
+                            <th>Chain</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionsBody">
+                        <tr>
+                            <td colspan="8" class="text-center text-muted">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Smart Contract Management -->
+        <div class="dashboard-section">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4><i class="fas fa-code"></i> Smart Contracts</h4>
+                <button class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> Deploy Contract</button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Contract Name</th>
+                            <th>Chain</th>
+                            <th>Address</th>
+                            <th>Status</th>
+                            <th>Deployments</th>
+                            <th>Last Updated</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="contractsBody">
+                        <tr>
+                            <td colspan="7" class="text-center text-muted">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Settlement Tracking -->
+        <div class="dashboard-section">
+            <h4 class="mb-4"><i class="fas fa-sync"></i> On-Chain Settlements</h4>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Settlement ID</th>
+                            <th>User</th>
+                            <th>Amount</th>
+                            <th>Chain</th>
+                            <th>Status</th>
+                            <th>Confirmations</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="settlementsBody">
+                        <tr>
+                            <td colspan="7" class="text-center text-muted">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Blockchain Configuration -->
+        <div class="dashboard-section">
+            <h4 class="mb-4"><i class="fas fa-cogs"></i> Blockchain Configuration</h4>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Max Transaction Amount</label>
+                    <input type="number" class="form-control" id="maxTxAmount" value="100000">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Min Wallet Balance</label>
+                    <input type="number" class="form-control" id="minWalletBalance" value="0.001">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Gas Fee Multiplier</label>
+                    <input type="number" class="form-control" id="gasFeeMultiplier" value="1.0" step="0.1">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Settlement Timeout (hours)</label>
+                    <input type="number" class="form-control" id="settlementTimeout" value="24">
+                </div>
+                <div class="col-12 mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="enableAutoReconcile" checked>
+                        <label class="form-check-label" for="enableAutoReconcile">
+                            Enable Automatic Reconciliation
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <button class="btn btn-primary">Save Configuration</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        const token = localStorage.getItem('token');
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (!token) {
+                window.location.href = '/signin';
+                return;
+            }
+
+            try {
+                await loadBlockchainData();
+                await loadAccounts();
+                await loadTransactions();
+                await loadContracts();
+                await loadSettlements();
+            } catch (error) {
+                console.error('Error loading blockchain data:', error);
+            }
+        });
+
+        async function loadBlockchainData() {
+            try {
+                const response = await fetch('/api/v1/blockchain/dashboard', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    document.getElementById('totalWallets').textContent = data.total_wallets || '-';
+                    document.getElementById('totalAccounts').textContent = data.total_accounts || '-';
+                    document.getElementById('totalValue').textContent = '$' + (data.total_value || 0).toLocaleString('en-US', {maximumFractionDigits: 2});
+                    document.getElementById('pendingTxn').textContent = data.pending_transactions || '-';
+
+                    // Update chain stats
+                    const chains = data.chains || {};
+                    Object.keys(chains).forEach(chain => {
+                        document.getElementById(chain + 'Wallets').textContent = chains[chain].wallets || '-';
+                        document.getElementById(chain + 'TVL').textContent = '$' + (chains[chain].tvl || 0).toLocaleString('en-US', {maximumFractionDigits: 0});
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading blockchain data:', error);
+            }
+        }
+
+        async function loadAccounts() {
+            try {
+                const response = await fetch('/api/v1/blockchain/accounts', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const tbody = document.getElementById('accountsBody');
+                    tbody.innerHTML = '';
+
+                    if (data.accounts && data.accounts.length > 0) {
+                        data.accounts.forEach(account => {
+                            tbody.innerHTML += `
+                                <tr>
+                                    <td>${account.user_name}</td>
+                                    <td>${account.id}</td>
+                                    <td>${account.chains.join(', ')}</td>
+                                    <td>${account.wallet_count}</td>
+                                    <td>$${account.total_value.toLocaleString('en-US', {maximumFractionDigits: 2})}</td>
+                                    <td><span class="badge bg-${account.status === 'active' ? 'success' : 'warning'}">${account.status}</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-primary">View</button>
+                                        <button class="btn btn-sm btn-danger">Suspend</button>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No accounts found</td></tr>';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading accounts:', error);
+            }
+        }
+
+        async function loadTransactions() {
+            try {
+                const response = await fetch('/api/v1/blockchain/transactions?limit=20', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const tbody = document.getElementById('transactionsBody');
+                    tbody.innerHTML = '';
+
+                    if (data.transactions && data.transactions.length > 0) {
+                        data.transactions.forEach(tx => {
+                            tbody.innerHTML += `
+                                <tr>
+                                    <td><small>${tx.hash.substring(0, 10)}...</small></td>
+                                    <td>${tx.from_user}</td>
+                                    <td><small>${tx.to_address.substring(0, 10)}...</small></td>
+                                    <td>${tx.amount}</td>
+                                    <td><span class="badge bg-primary">${tx.chain.toUpperCase()}</span></td>
+                                    <td><span class="badge bg-${tx.status === 'confirmed' ? 'success' : 'warning'}">${tx.status}</span></td>
+                                    <td>${new Date(tx.date).toLocaleDateString()}</td>
+                                    <td>
+                                        <a href="https://etherscan.io/tx/${tx.hash}" target="_blank" class="text-primary text-decoration-none">View</a>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading transactions:', error);
+            }
+        }
+
+        async function loadContracts() {
+            try {
+                const response = await fetch('/api/v1/blockchain/contracts', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const tbody = document.getElementById('contractsBody');
+                    tbody.innerHTML = '';
+
+                    if (data.contracts && data.contracts.length > 0) {
+                        data.contracts.forEach(contract => {
+                            tbody.innerHTML += `
+                                <tr>
+                                    <td>${contract.name}</td>
+                                    <td><span class="badge bg-primary">${contract.chain.toUpperCase()}</span></td>
+                                    <td><small>${contract.address.substring(0, 10)}...</small></td>
+                                    <td><span class="badge bg-success">Active</span></td>
+                                    <td>${contract.deployments}</td>
+                                    <td>${new Date(contract.updated).toLocaleDateString()}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-primary">Details</button>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading contracts:', error);
+            }
+        }
+
+        async function loadSettlements() {
+            try {
+                const response = await fetch('/api/v1/blockchain/settlements?limit=10', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const tbody = document.getElementById('settlementsBody');
+                    tbody.innerHTML = '';
+
+                    if (data.settlements && data.settlements.length > 0) {
+                        data.settlements.forEach(settlement => {
+                            tbody.innerHTML += `
+                                <tr>
+                                    <td>${settlement.id}</td>
+                                    <td>${settlement.user_name}</td>
+                                    <td>$${settlement.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}</td>
+                                    <td><span class="badge bg-primary">${settlement.chain.toUpperCase()}</span></td>
+                                    <td><span class="badge bg-${settlement.status === 'settled' ? 'success' : 'warning'}">${settlement.status}</span></td>
+                                    <td>${settlement.confirmations}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-primary">Monitor</button>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading settlements:', error);
+            }
+        }
+    </script>
+    <script src="/static/js/admin-guard.js"></script>
+</body>
+</html>

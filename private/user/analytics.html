@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Analytics & Reports - Finanza Bank</title>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <link href="/img/favicon.ico" rel="icon">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jost:wght@500;600;700&family=Open+Sans:wght@400;500&display=swap" rel="stylesheet">  
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/static/lib/animate/animate.min.css" rel="stylesheet">
+    <link href="/static/lib/owlcarousel/assets/owl.carousel.min.css" rel="stylesheet">
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/css/style.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+</head>
+<body>
+    <div id="spinner" class="show bg-white position-fixed translate-middle w-100 vh-100 top-50 start-50 d-flex align-items-center justify-content-center">
+        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
+    </div>
+
+    <!-- Navbar Start -->
+    <div class="container-fluid fixed-top px-0 wow fadeIn" data-wow-delay="0.1s">
+        <nav class="navbar navbar-expand-lg navbar-light py-lg-0 px-lg-5 wow fadeIn" data-wow-delay="0.1s">
+            <a href="/user/dashboard" class="navbar-brand ms-4 ms-lg-0">
+                <h5 class="m-0 text-primary"><i class="fa fa-university me-2"></i>Finanza</h5>
+            </a>
+            <button type="button" class="navbar-toggler me-4" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarCollapse">
+                <div class="navbar-nav ms-auto p-4 p-lg-0">
+                    <a href="/user/dashboard" class="nav-item nav-link">Dashboard</a>
+                    <a href="/user/analytics" class="nav-item nav-link active">Analytics</a>
+                    <a href="/user/account" class="nav-item nav-link">Account</a>
+                    <a href="/logout" class="nav-item nav-link text-danger">Logout</a>
+                </div>
+            </div>
+        </nav>
+    </div>
+    <!-- Navbar End -->
+
+    <div class="container-fluid page-header mb-5 wow fadeIn" data-wow-delay="0.1s">
+        <div class="container">
+            <h1 class="display-4 pb-3 animated slideInDown"><i class="fas fa-chart-bar"></i> Analytics & Reports</h1>
+            <nav aria-label="breadcrumb animated slideInDown">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a class="text-white" href="/user/dashboard">Home</a></li>
+                    <li class="breadcrumb-item text-primary active" aria-current="page">Analytics</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="container-xxl py-5">
+        <div class="container">
+            <!-- Filter Section -->
+            <div class="row g-4 mb-5">
+                <div class="col-lg-12">
+                    <div class="card border-0 shadow-lg">
+                        <div class="card-body p-4">
+                            <h5 class="card-title mb-4"><i class="fas fa-filter text-primary"></i> Report Filters</h5>
+                            <div class="row g-3">
+                                <div class="col-md-3">
+                                    <label class="form-label">Date Range</label>
+                                    <select class="form-control" id="dateRange" onchange="updateReports()">
+                                        <option value="7d">Last 7 Days</option>
+                                        <option value="30d">Last 30 Days</option>
+                                        <option value="90d">Last 90 Days</option>
+                                        <option value="1y">Last Year</option>
+                                        <option value="custom">Custom</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Report Type</label>
+                                    <select class="form-control" id="reportType" onchange="updateReports()">
+                                        <option value="transactions">Transactions</option>
+                                        <option value="spending">Spending</option>
+                                        <option value="income">Income</option>
+                                        <option value="investments">Investments</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Account</label>
+                                    <select class="form-control" id="account">
+                                        <option>All Accounts</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">&nbsp;</label>
+                                    <button class="btn btn-primary w-100" onclick="exportReport()">
+                                        <i class="fas fa-download"></i> Export
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="row g-4 mb-5">
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-lg">
+                        <div class="card-body p-4">
+                            <h5 class="card-title mb-4"><i class="fas fa-line-chart text-primary"></i> Transaction Trends</h5>
+                            <canvas id="transactionChart" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="card border-0 shadow-lg">
+                        <div class="card-body p-4">
+                            <h5 class="card-title mb-4"><i class="fas fa-pie-chart text-primary"></i> Spending Breakdown</h5>
+                            <canvas id="spendingChart" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Key Metrics -->
+            <div class="row g-4 mb-5">
+                <div class="col-lg-3 col-md-6">
+                    <div class="card border-0 shadow-lg">
+                        <div class="card-body text-center">
+                            <h1 id="totalSpending" class="text-danger">$-</h1>
+                            <p class="text-muted mb-0">Total Spending</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="card border-0 shadow-lg">
+                        <div class="card-body text-center">
+                            <h1 id="totalIncome" class="text-success">$-</h1>
+                            <p class="text-muted mb-0">Total Income</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="card border-0 shadow-lg">
+                        <div class="card-body text-center">
+                            <h1 id="avgTransaction" class="text-primary">$-</h1>
+                            <p class="text-muted mb-0">Avg Transaction</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <div class="card border-0 shadow-lg">
+                        <div class="card-body text-center">
+                            <h1 id="netSavings" class="text-info">$-</h1>
+                            <p class="text-muted mb-0">Net Savings</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category Breakdown -->
+            <div class="row g-4 mb-5">
+                <div class="col-lg-12">
+                    <div class="card border-0 shadow-lg">
+                        <div class="card-body p-4">
+                            <h5 class="card-title mb-4"><i class="fas fa-folder-open text-primary"></i> Spending by Category</h5>
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Category</th>
+                                            <th>Count</th>
+                                            <th>Total</th>
+                                            <th>Percentage</th>
+                                            <th>Trend</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="categoryBody">
+                                        <tr>
+                                            <td colspan="5" class="text-center text-muted">Loading...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Insights -->
+            <div class="row g-4">
+                <div class="col-lg-12">
+                    <div class="card border-0 shadow-lg bg-light">
+                        <div class="card-body p-4">
+                            <h5 class="card-title mb-4"><i class="fas fa-lightbulb text-warning"></i> Smart Insights</h5>
+                            <div id="insightsList">
+                                <p class="text-muted">Loading insights...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="container-fluid footer bg-dark text-light footer mt-5 pt-5 wow fadeIn" data-wow-delay="0.1s">
+        <div class="container py-5">
+            <div class="row g-5">
+                <div class="col-lg-3 col-md-6">
+                    <h4 class="text-light mb-4">Address</h4>
+                    <p class="mb-2"><i class="fa fa-map-marker-alt me-3"></i>123 Bank Street, Finance City</p>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <h4 class="text-light mb-4">Services</h4>
+                    <a class="btn btn-link" href="/user/analytics">Analytics</a>
+                    <a class="btn btn-link" href="/user/analytics">Transactions</a>
+                </div>
+                <div class="col-lg-3 col-md-6">
+                    <h4 class="text-light mb-4">Quick Links</h4>
+                    <a class="btn btn-link" href="/user/account">Account</a>
+                    <a class="btn btn-link" href="/logout">Logout</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <a href="#" class="btn btn-lg btn-primary btn-lg-square back-to-top"><i class="bi bi-arrow-up"></i></a>
+
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script src="/static/lib/wow/wow.min.js"></script>
+    <script src="/static/lib/easing/easing.min.js"></script>
+    <script src="/static/lib/waypoints/waypoints.min.js"></script>
+    <script src="/static/lib/owlcarousel/owl.carousel.min.js"></script>
+    <script src="/static/css/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/main.js"></script>
+
+    <script>
+        const token = localStorage.getItem('token');
+        let transactionChart, spendingChart;
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (!token) {
+                window.location.href = '/signin';
+                return;
+            }
+
+            try {
+                await initCharts();
+                await updateReports();
+                await loadInsights();
+            } catch (error) {
+                console.error('Error loading analytics:', error);
+            }
+        });
+
+        function initCharts() {
+            // Transaction Trends Chart
+            const tctx = document.getElementById('transactionChart').getContext('2d');
+            transactionChart = new Chart(tctx, {
+                type: 'line',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'Transactions',
+                        data: [12, 19, 3, 5, 2, 3, 15],
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } }
+                }
+            });
+
+            // Spending Chart
+            const sctx = document.getElementById('spendingChart').getContext('2d');
+            spendingChart = new Chart(sctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Food', 'Transport', 'Entertainment', 'Utilities', 'Other'],
+                    datasets: [{
+                        data: [30, 20, 15, 20, 15],
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.8)',
+                            'rgba(54, 162, 235, 0.8)',
+                            'rgba(255, 206, 86, 0.8)',
+                            'rgba(75, 192, 192, 0.8)',
+                            'rgba(153, 102, 255, 0.8)'
+                        ]
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+
+        async function updateReports() {
+            try {
+                const dateRange = document.getElementById('dateRange').value;
+                const reportType = document.getElementById('reportType').value;
+
+                const response = await fetch(`/api/v1/reporting/analytics/${reportType}?period=${dateRange}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    document.getElementById('totalSpending').textContent = '$' + (data.total_spending || 0).toFixed(2);
+                    document.getElementById('totalIncome').textContent = '$' + (data.total_income || 0).toFixed(2);
+                    document.getElementById('avgTransaction').textContent = '$' + (data.avg_transaction || 0).toFixed(2);
+                    document.getElementById('netSavings').textContent = '$' + (data.net_savings || 0).toFixed(2);
+
+                    // Update category breakdown
+                    const tbody = document.getElementById('categoryBody');
+                    tbody.innerHTML = '';
+                    if (data.categories && data.categories.length > 0) {
+                        data.categories.forEach(cat => {
+                            tbody.innerHTML += `
+                                <tr>
+                                    <td>${cat.name}</td>
+                                    <td>${cat.count}</td>
+                                    <td>$${cat.total.toFixed(2)}</td>
+                                    <td>${cat.percentage}%</td>
+                                    <td><i class="fas fa-${cat.trend === 'up' ? 'arrow-up text-danger' : 'arrow-down text-success'}"></i></td>
+                                </tr>
+                            `;
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Error updating reports:', error);
+            }
+        }
+
+        async function loadInsights() {
+            try {
+                const response = await fetch('/api/v1/reporting/insights', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const insightsList = document.getElementById('insightsList');
+                    insightsList.innerHTML = '';
+
+                    if (data.insights && data.insights.length > 0) {
+                        data.insights.forEach(insight => {
+                            insightsList.innerHTML += `
+                                <div class="alert alert-info mb-2">
+                                    <strong>${insight.title}:</strong> ${insight.description}
+                                </div>
+                            `;
+                        });
+                    } else {
+                        insightsList.innerHTML = '<p class="text-muted">No insights available yet</p>';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading insights:', error);
+            }
+        }
+
+        function exportReport() {
+            const reportType = document.getElementById('reportType').value;
+            const dateRange = document.getElementById('dateRange').value;
+            window.location.href = `/api/v1/reporting/export?type=${reportType}&period=${dateRange}`;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Transactions - Finanza Bank</title>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <meta content="" name="keywords">
+    <meta content="" name="description">
+
+    <!-- Favicon -->
+    <link href="/img/favicon.ico" rel="icon">
+
+    <!-- Google Web Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jost:wght@500;600;700&family=Open+Sans:wght@400;500&display=swap" rel="stylesheet">  
+
+    <!-- Icon Font Stylesheet -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css" rel="stylesheet">
+
+    <!-- Libraries Stylesheet -->
+    <link href="/static/lib/animate/animate.min.css" rel="stylesheet">
+    <link href="/static/lib/owlcarousel/assets/owl.carousel.min.css" rel="stylesheet">
+
+    <!-- Customized Bootstrap Stylesheet -->
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Template Stylesheet -->
+    <link href="/static/css/style.css" rel="stylesheet">
+</head>
+
+<body>
+    <!-- Spinner Start -->
+    <div id="spinner" class="show bg-white position-fixed translate-middle w-100 vh-100 top-50 start-50 d-flex align-items-center justify-content-center">
+        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
+    </div>
+    <!-- Spinner End -->
+
+    <!-- Navbar Start -->
+    <div class="container-fluid fixed-top px-0 wow fadeIn" data-wow-delay="0.1s">
+        <nav class="navbar navbar-expand-lg navbar-light py-lg-0 px-lg-5 wow fadeIn" data-wow-delay="0.1s">
+            <a href="/user/dashboard" class="navbar-brand ms-4 ms-lg-0">
+                <h5 class="m-0 text-primary"><i class="fa fa-university me-2"></i>Finanza</h5>
+            </a>
+            <button type="button" class="navbar-toggler me-4" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarCollapse">
+                <div class="navbar-nav ms-auto p-4 p-lg-0">
+                    <a href="/user/dashboard" class="nav-item nav-link">Dashboard</a>
+                    <a href="/user/account" class="nav-item nav-link">Account</a>
+                    <a href="/user/kyc_form" class="nav-item nav-link">KYC</a>
+                    <div class="nav-item dropdown">
+                        <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Products</a>
+                        <div class="dropdown-menu border-light m-0">
+                            <a href="/user/cards" class="dropdown-item">Cards</a>
+                            <a href="/user/deposits" class="dropdown-item">Deposits</a>
+                            <a href="/user/loans" class="dropdown-item">Loans</a>
+                            <a href="/user/investments" class="dropdown-item">Investments</a>
+                            <a href="/user/bill_pay" class="dropdown-item">Transfers</a>
+                        </div>
+                    </div>
+                    <div class="nav-item dropdown">
+                        <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Services</a>
+                        <div class="dropdown-menu border-light m-0">
+                            <a href="/user/analytics" class="dropdown-item">Business Analysis</a>
+                            <a href="/user/treasury_portfolio" class="dropdown-item">Financial Planning</a>
+                            <a href="/user/insurance" class="dropdown-item">Insurance</a>
+                            <a href="/user/treasury_portfolio" class="dropdown-item">Projects</a>
+                        </div>
+                    </div>
+                    <div class="nav-item dropdown">
+                        <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">More</a>
+                        <div class="dropdown-menu border-light m-0">
+                            <a href="/user/profile" class="dropdown-item">Profile</a>
+                            <a href="/user/settings" class="dropdown-item">Settings</a>
+                            <a href="/user/notifications" class="dropdown-item">Notifications</a>
+                            <a href="/user/transactions" class="dropdown-item">Transactions</a>
+                            <a href="/user/security" class="dropdown-item">Security</a>
+                            <a href="/user/alerts" class="dropdown-item">Alerts</a>
+                            <a href="/user/contact" class="dropdown-item">Contact/Support</a>
+                            <hr class="m-2">
+                            <a href="/logout" class="dropdown-item text-danger">Logout</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </div>
+    <!-- Navbar End -->
+
+    <!-- Page Header Start -->
+    <div class="container-fluid page-header mb-5 wow fadeIn" data-wow-delay="0.1s">
+        <div class="container">
+            <h1 class="display-4 pb-3 animated slideInDown">Transactions</h1>
+            <nav aria-label="breadcrumb animated slideInDown">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a class="text-white" href="/user/dashboard">Home</a></li>
+                    <li class="breadcrumb-item text-primary active" aria-current="page">Transactions</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+    <!-- Page Header End -->
+
+    <!-- Content Start -->
+    <div class="container-xxl py-5">
+        <div class="container">
+            <div class="row g-5">
+                <div class="col-lg-12 wow fadeInUp" data-wow-delay="0.1s">
+
+    <div class="container-fluid pt-4 pb-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h2 class="mb-0">
+                <i class="fas fa-exchange-alt me-2"></i>Transaction History
+            </h2>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-outline-primary btn-sm" id="exportCSV">
+                    <i class="fas fa-download me-1"></i>CSV
+                </button>
+                <button type="button" class="btn btn-outline-primary btn-sm" id="exportPDF">
+                    <i class="fas fa-file-pdf me-1"></i>PDF
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters Card -->
+    <div class="card mb-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">
+                <i class="fas fa-search me-2"></i>Search & Filters
+            </h5>
+        </div>
+        <div class="card-body">
+            <form id="filterForm" class="row g-3">
+                <div class="col-md-3">
+                    <label for="fromDate" class="form-label">From Date</label>
+                    <input type="date" class="form-control" id="fromDate" name="fromDate">
+                </div>
+                <div class="col-md-3">
+                    <label for="toDate" class="form-label">To Date</label>
+                    <input type="date" class="form-control" id="toDate" name="toDate">
+                </div>
+                <div class="col-md-2">
+                    <label for="transactionType" class="form-label">Type</label>
+                    <select class="form-select" id="transactionType" name="type">
+                        <option value="">All Types</option>
+                        <option value="deposit">Deposit</option>
+                        <option value="withdrawal">Withdrawal</option>
+                        <option value="transfer">Transfer</option>
+                        <option value="payment">Payment</option>
+                        <option value="fee">Fee</option>
+                        <option value="interest">Interest</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="transactionStatus" class="form-label">Status</label>
+                    <select class="form-select" id="transactionStatus" name="status">
+                        <option value="">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="completed">Completed</option>
+                        <option value="failed">Failed</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="amountRange" class="form-label">Amount Range</label>
+                    <select class="form-select" id="amountRange" name="amount">
+                        <option value="">All Amounts</option>
+                        <option value="0-100">$0 - $100</option>
+                        <option value="100-500">$100 - $500</option>
+                        <option value="500-1000">$500 - $1,000</option>
+                        <option value="1000-5000">$1,000 - $5,000</option>
+                        <option value="5000+">$5,000+</option>
+                    </select>
+                </div>
+                <div class="col-md-12">
+                    <label for="searchTerm" class="form-label">Search</label>
+                    <input type="text" class="form-control" id="searchTerm" name="search" placeholder="Recipient, description, reference number...">
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-filter me-1"></i>Filter Results
+                    </button>
+                    <button type="reset" class="btn btn-secondary">
+                        <i class="fas fa-redo me-1"></i>Clear Filters
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" id="advancedToggle">
+                        <i class="fas fa-sliders-h me-1"></i>Advanced
+                    </button>
+                </div>
+            </form>
+
+            <!-- Advanced Filters (Hidden by default) -->
+            <div id="advancedFilters" style="display: none;" class="mt-3 pt-3 border-top">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <label for="category" class="form-label">Category</label>
+                        <select class="form-select" id="category" name="category">
+                            <option value="">All Categories</option>
+                            <option value="income">Income</option>
+                            <option value="expense">Expense</option>
+                            <option value="transfer">Transfers</option>
+                            <option value="investment">Investment</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="minAmount" class="form-label">Minimum Amount</label>
+                        <input type="number" class="form-control" id="minAmount" name="minAmount" placeholder="0.00" min="0" step="0.01">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="maxAmount" class="form-label">Maximum Amount</label>
+                        <input type="number" class="form-control" id="maxAmount" name="maxAmount" placeholder="0.00" min="0" step="0.01">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="merchant" class="form-label">Merchant</label>
+                        <input type="text" class="form-control" id="merchant" name="merchant" placeholder="Filter by merchant...">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card border-success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted mb-0"><i class="fas fa-arrow-down me-2 text-success"></i>Total Income</p>
+                            <h5 class="text-success mt-2" id="totalInflow">$0.00</h5>
+                        </div>
+                        <div class="badge bg-success bg-opacity-10 text-success" id="incomeCount">0 txns</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-danger">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted mb-0"><i class="fas fa-arrow-up me-2 text-danger"></i>Total Expenses</p>
+                            <h5 class="text-danger mt-2" id="totalOutflow">$0.00</h5>
+                        </div>
+                        <div class="badge bg-danger bg-opacity-10 text-danger" id="expenseCount">0 txns</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-primary">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted mb-0"><i class="fas fa-exchange-alt me-2 text-primary"></i>Net Change</p>
+                            <h5 class="text-primary mt-2" id="netChange">$0.00</h5>
+                        </div>
+                        <div class="badge bg-primary bg-opacity-10 text-primary" id="changeTrend">+0%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-info">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="text-muted mb-0"><i class="fas fa-list me-2 text-info"></i>Total Count</p>
+                            <h5 class="text-info mt-2" id="totalCount">0</h5>
+                        </div>
+                        <div class="badge bg-info bg-opacity-10 text-info" id="avgAmount">Avg: $0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transactions Table -->
+    <div class="card">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">Transaction Records</h6>
+            <div class="btn-group btn-group-sm" role="group">
+                <button type="button" class="btn btn-outline-secondary" id="viewToggle" title="Toggle view">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <button type="button" class="btn btn-outline-primary" id="exportCSV" title="Export CSV">
+                    <i class="fas fa-download me-1"></i>CSV
+                </button>
+                <button type="button" class="btn btn-outline-primary" id="exportPDF" title="Export PDF">
+                    <i class="fas fa-file-pdf me-1"></i>PDF
+                </button>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 100px;">Date</th>
+                        <th style="width: 150px;">Description</th>
+                        <th style="width: 100px;">Type</th>
+                        <th style="width: 120px;">Amount</th>
+                        <th style="width: 120px;">Category</th>
+                        <th style="width: 100px;">Status</th>
+                        <th style="width: 80px;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="transactionsList">
+                    <tr>
+                        <td colspan="7" class="text-center py-4">
+                            <div class="spinner-border spinner-border-sm" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    <nav aria-label="Page navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+            <li class="page-item disabled" id="prevPage">
+                <a class="page-link" href="#">Previous</a>
+            </li>
+            <li class="page-item" id="pageInfo">
+                <span class="page-link">Page 1</span>
+            </li>
+            <li class="page-item" id="nextPage">
+                <a class="page-link" href="#">Next</a>
+            </li>
+        </ul>
+    </nav>
+</div>
+
+<!-- Transaction Detail Modal -->
+<div class="modal fade" id="transactionModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title"><i class="fas fa-receipt me-2"></i>Transaction Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="transactionDetails">
+                <!-- Populated by JavaScript -->
+            </div>
+            <div class="modal-footer border-top">
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="downloadReceipt">
+                    <i class="fas fa-download me-1"></i>Receipt
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="shareTransaction">
+                    <i class="fas fa-share-alt me-1"></i>Share
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recurring Transactions Modal -->
+<div class="modal fade" id="recurringModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-sync-alt me-2"></i>Recurring Transactions</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="recurringTransactions">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    :root {
+        --primary-color: #0d6efd;
+        --success-color: #28a745;
+        --danger-color: #dc3545;
+        --warning-color: #ffc107;
+        --info-color: #17a2b8;
+    }
+
+    .transaction-income {
+        color: var(--success-color);
+        font-weight: 600;
+    }
+
+    .transaction-expense {
+        color: var(--danger-color);
+        font-weight: 600;
+    }
+
+    .badge-pending {
+        background-color: var(--warning-color);
+        color: #000;
+    }
+
+    .badge-completed {
+        background-color: var(--success-color);
+    }
+
+    .badge-failed {
+        background-color: var(--danger-color);
+    }
+
+    .badge-cancelled {
+        background-color: #6c757d;
+    }
+
+    .table-hover tbody tr {
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+
+    .table-hover tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+
+    .btn-xs {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+
+    .card {
+        border: 1px solid rgba(0, 0, 0, 0.125);
+        border-radius: 0.5rem;
+        transition: box-shadow 0.3s ease;
+    }
+
+    .card:hover {
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+
+    .card.border-success {
+        border-color: var(--success-color) !important;
+    }
+
+    .card.border-danger {
+        border-color: var(--danger-color) !important;
+    }
+
+    .card.border-primary {
+        border-color: var(--primary-color) !important;
+    }
+
+    .card.border-info {
+        border-color: var(--info-color) !important;
+    }
+
+    .fw-500 {
+        font-weight: 500;
+    }
+
+    .fw-600 {
+        font-weight: 600;
+    }
+
+    .text-sm {
+        font-size: 0.875rem;
+    }
+
+    .text-xs {
+        font-size: 0.75rem;
+    }
+
+    .cursor-pointer {
+        cursor: pointer;
+    }
+
+    #advancedFilters {
+        background-color: #f8f9fa;
+        border-radius: 0.5rem;
+        padding: 1rem;
+    }
+
+    .btn-group-sm .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .table td {
+        vertical-align: middle;
+    }
+
+    .table-light {
+        background-color: #f8f9fa;
+    }
+
+    @media (max-width: 768px) {
+        .table {
+            font-size: 0.875rem;
+        }
+
+        .card-body {
+            padding: 0.75rem;
+        }
+
+        .btn-group {
+            flex-wrap: wrap;
+        }
+    }
+</style>
+
+<script>
+let allTransactions = [];
+let currentPage = 1;
+let filters = {};
+
+document.addEventListener('DOMContentLoaded', async function() {
+    // Load transactions on page load
+    await loadTransactions(currentPage);
+
+    // Advanced filters toggle
+    document.getElementById('advancedToggle').addEventListener('click', function() {
+        const advancedFilters = document.getElementById('advancedFilters');
+        advancedFilters.style.display = advancedFilters.style.display === 'none' ? 'block' : 'none';
+    });
+
+    // Filter form submission
+    document.getElementById('filterForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        filters = {
+            from_date: document.getElementById('fromDate').value,
+            to_date: document.getElementById('toDate').value,
+            type: document.getElementById('transactionType').value,
+            status: document.getElementById('transactionStatus').value,
+            amount_range: document.getElementById('amountRange').value,
+            search: document.getElementById('searchTerm').value,
+            category: document.getElementById('category')?.value || '',
+            min_amount: document.getElementById('minAmount')?.value || '',
+            max_amount: document.getElementById('maxAmount')?.value || '',
+            merchant: document.getElementById('merchant')?.value || ''
+        };
+        currentPage = 1;
+        loadTransactions(currentPage);
+    });
+
+    // Reset filters
+    document.getElementById('filterForm').addEventListener('reset', function() {
+        setTimeout(() => {
+            filters = {};
+            currentPage = 1;
+            document.getElementById('advancedFilters').style.display = 'none';
+            loadTransactions(currentPage);
+        }, 0);
+    });
+
+    // Export functions
+    document.getElementById('exportCSV').addEventListener('click', exportToCSV);
+    document.getElementById('exportPDF').addEventListener('click', exportToPDF);
+
+    // Pagination
+    document.getElementById('prevPage').addEventListener('click', (e) => {
+        e.preventDefault();
+        if (currentPage > 1) {
+            currentPage--;
+            loadTransactions(currentPage);
+        }
+    });
+
+    document.getElementById('nextPage').addEventListener('click', (e) => {
+        e.preventDefault();
+        currentPage++;
+        loadTransactions(currentPage);
+    });
+
+    // View toggle
+    document.getElementById('viewToggle').addEventListener('click', function() {
+        const table = document.querySelector('table');
+        table.classList.toggle('table-sm');
+    });
+});
+
+async function loadTransactions(page) {
+    try {
+        const params = new URLSearchParams({
+            skip: (page - 1) * 20,
+            limit: 20,
+            ...Object.fromEntries(Object.entries(filters).filter(([_, v]) => v))
+        });
+
+        const response = await fetch(`/api/user/transactions?${params}`, {
+            method: 'GET',
+            credentials: 'include'
+        });
+
+        if (!response.ok) throw new Error('Failed to load transactions');
+        
+        const transactions = await response.json();
+        allTransactions = Array.isArray(transactions) ? transactions : [];
+        
+        renderTransactions(allTransactions);
+        updateStats(allTransactions);
+        updatePagination(page, allTransactions.length);
+    } catch (error) {
+        console.error('Error loading transactions:', error);
+        document.getElementById('transactionsList').innerHTML = `
+            <tr><td colspan="7" class="text-center text-danger py-4">
+                <i class="fas fa-exclamation-circle me-2"></i>Failed to load transactions
+            </td></tr>
+        `;
+    }
+}
+
+function renderTransactions(transactions) {
+    const tbody = document.getElementById('transactionsList');
+    if (!transactions || transactions.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center py-4">
+                    <i class="fas fa-inbox me-2"></i>No transactions found
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = transactions.map(t => `
+        <tr class="cursor-pointer" onclick="viewTransactionDetail(${t.id})">
+            <td class="fw-500">${formatDate(t.created_at || t.date)}</td>
+            <td>
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fas ${getTransactionIcon(t.transaction_type)} text-primary"></i>
+                    <span>${truncateText(t.description || t.purpose, 30)}</span>
+                </div>
+            </td>
+            <td>
+                <span class="badge bg-light text-dark text-uppercase text-sm">${t.transaction_type || t.type || 'Other'}</span>
+            </td>
+            <td class="fw-600 ${t.amount >= 0 ? 'text-success' : 'text-danger'}">
+                ${t.amount >= 0 ? '+' : ''}$${Math.abs(t.amount || 0).toFixed(2)}
+            </td>
+            <td>
+                <span class="text-muted small">${getCategory(t.transaction_type)}</span>
+            </td>
+            <td>
+                <span class="badge ${getStatusBadgeClass(t.status)}">
+                    ${(t.status || 'completed').charAt(0).toUpperCase() + (t.status || 'completed').slice(1)}
+                </span>
+            </td>
+            <td>
+                <div class="btn-group btn-group-sm" role="group">
+                    <button class="btn btn-outline-primary btn-xs" onclick="event.stopPropagation(); viewTransactionDetail(${t.id})" title="View">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn btn-outline-secondary btn-xs" onclick="event.stopPropagation(); downloadTransactionReceipt(${t.id})" title="Receipt">
+                        <i class="fas fa-download"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function updateStats(transactions) {
+    if (!transactions || transactions.length === 0) {
+        document.getElementById('totalInflow').textContent = '$0.00';
+        document.getElementById('totalOutflow').textContent = '$0.00';
+        document.getElementById('netChange').textContent = '$0.00';
+        document.getElementById('totalCount').textContent = '0';
+        return;
+    }
+
+    const inflow = transactions
+        .filter(t => t.amount > 0)
+        .reduce((sum, t) => sum + (t.amount || 0), 0);
+    const outflow = transactions
+        .filter(t => t.amount < 0)
+        .reduce((sum, t) => sum + Math.abs(t.amount || 0), 0);
+    const net = inflow - outflow;
+    const avg = transactions.length > 0 ? (inflow + outflow) / transactions.length : 0;
+
+    document.getElementById('totalInflow').textContent = `$${inflow.toFixed(2)}`;
+    document.getElementById('totalOutflow').textContent = `$${outflow.toFixed(2)}`;
+    document.getElementById('netChange').textContent = `$${Math.abs(net).toFixed(2)}`;
+    document.getElementById('netChange').style.color = net >= 0 ? '#28a745' : '#dc3545';
+    document.getElementById('totalCount').textContent = transactions.length;
+    
+    document.getElementById('incomeCount').textContent = `${transactions.filter(t => t.amount > 0).length} txns`;
+    document.getElementById('expenseCount').textContent = `${transactions.filter(t => t.amount < 0).length} txns`;
+    document.getElementById('avgAmount').textContent = `Avg: $${avg.toFixed(2)}`;
+    
+    const trend = inflow > 0 ? Math.round((inflow / (inflow + outflow)) * 100) : 0;
+    document.getElementById('changeTrend').textContent = `${trend}% in`;
+}
+
+function updatePagination(page, count) {
+    document.getElementById('pageInfo').innerHTML = `<span class="page-link">Page ${page}</span>`;
+    document.getElementById('prevPage').classList.toggle('disabled', page === 1);
+    document.getElementById('nextPage').classList.toggle('disabled', count < 20);
+}
+
+window.viewTransactionDetail = function(transactionId) {
+    const transaction = allTransactions.find(t => t.id === transactionId);
+    if (!transaction) return;
+
+    const statusClass = getStatusBadgeClass(transaction.status);
+    const amountClass = transaction.amount >= 0 ? 'text-success' : 'text-danger';
+    
+    document.getElementById('transactionDetails').innerHTML = `
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="card bg-light border-0">
+                    <div class="card-body text-center">
+                        <i class="fas ${getTransactionIcon(transaction.transaction_type)} fa-2x text-primary mb-2"></i>
+                        <h6 class="text-muted mb-2">${transaction.description || 'Transaction'}</h6>
+                        <h3 class="${amountClass} mb-0">
+                            ${transaction.amount >= 0 ? '+' : ''}$${Math.abs(transaction.amount || 0).toFixed(2)}
+                        </h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <dl class="row g-0">
+            <dt class="col-sm-4 fw-600">Date & Time:</dt>
+            <dd class="col-sm-8">${formatDateTime(transaction.created_at || transaction.date)}</dd>
+            
+            <dt class="col-sm-4 fw-600">Type:</dt>
+            <dd class="col-sm-8">
+                <span class="badge bg-light text-dark text-uppercase">${transaction.transaction_type || 'Other'}</span>
+            </dd>
+            
+            <dt class="col-sm-4 fw-600">Category:</dt>
+            <dd class="col-sm-8">${getCategory(transaction.transaction_type)}</dd>
+            
+            <dt class="col-sm-4 fw-600">Status:</dt>
+            <dd class="col-sm-8">
+                <span class="badge ${statusClass}">
+                    ${(transaction.status || 'completed').charAt(0).toUpperCase() + (transaction.status || 'completed').slice(1)}
+                </span>
+            </dd>
+            
+            ${transaction.reference_id ? `
+                <dt class="col-sm-4 fw-600">Reference:</dt>
+                <dd class="col-sm-8"><code class="bg-light px-2 py-1 rounded">${transaction.reference_id}</code></dd>
+            ` : ''}
+            
+            ${transaction.merchant ? `
+                <dt class="col-sm-4 fw-600">Merchant:</dt>
+                <dd class="col-sm-8">${transaction.merchant}</dd>
+            ` : ''}
+            
+            ${transaction.from_account ? `
+                <dt class="col-sm-4 fw-600">From:</dt>
+                <dd class="col-sm-8">${maskAccountNumber(transaction.from_account)}</dd>
+            ` : ''}
+            
+            ${transaction.to_account ? `
+                <dt class="col-sm-4 fw-600">To:</dt>
+                <dd class="col-sm-8">${maskAccountNumber(transaction.to_account)}</dd>
+            ` : ''}
+            
+            ${transaction.notes ? `
+                <dt class="col-sm-4 fw-600">Notes:</dt>
+                <dd class="col-sm-8 text-muted">${transaction.notes}</dd>
+            ` : ''}
+        </dl>
+    `;
+    
+    // Store current transaction for receipt download
+    window.currentTransaction = transaction;
+    
+    new bootstrap.Modal(document.getElementById('transactionModal')).show();
+};
+
+window.downloadTransactionReceipt = async function(transactionId) {
+    try {
+        const response = await fetch(`/api/user/transactions/${transactionId}/receipt`, {
+            credentials: 'include'
+        });
+        if (response.ok) {
+            const blob = await response.blob();
+            downloadFile(blob, `receipt-${transactionId}.pdf`);
+        }
+    } catch (error) {
+        console.error('Error downloading receipt:', error);
+        alert('Failed to download receipt');
+    }
+};
+
+async function exportToCSV() {
+    try {
+        const transactions = allTransactions.length > 0 ? allTransactions : await fetchAllTransactions();
+        const csv = [
+            ['Date', 'Description', 'Type', 'Amount', 'Category', 'Status', 'Reference'].join(','),
+            ...transactions.map(t => [
+                formatDate(t.created_at || t.date),
+                `"${t.description || ''}"`,
+                t.transaction_type || '',
+                t.amount || 0,
+                getCategory(t.transaction_type),
+                t.status || 'completed',
+                t.reference_id || ''
+            ].join(','))
+        ].join('\n');
+        
+        const blob = new Blob([csv], { type: 'text/csv' });
+        downloadFile(blob, `transactions-${new Date().toISOString().split('T')[0]}.csv`);
+    } catch (error) {
+        alert('Export failed: ' + error.message);
+    }
+}
+
+async function exportToPDF() {
+    try {
+        alert('PDF export feature coming soon. Please use CSV export for now.');
+        // Future: Implement PDF export with library like jsPDF
+    } catch (error) {
+        alert('Export failed: ' + error.message);
+    }
+}
+
+async function fetchAllTransactions() {
+    try {
+        const response = await fetch('/api/user/transactions?limit=1000', {
+            credentials: 'include'
+        });
+        return await response.json();
+    } catch (error) {
+        return [];
+    }
+}
+
+function downloadFile(blob, filename) {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+}
+
+// Helper functions
+function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function formatDateTime(dateString) {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function getTransactionIcon(type) {
+    const icons = {
+        'deposit': 'fa-arrow-down',
+        'withdrawal': 'fa-arrow-up',
+        'transfer': 'fa-exchange-alt',
+        'payment': 'fa-credit-card',
+        'fee': 'fa-percentage',
+        'interest': 'fa-percent'
+    };
+    return icons[type] || 'fa-money-bill-wave';
+}
+
+function getCategory(type) {
+    const categories = {
+        'deposit': 'Income',
+        'withdrawal': 'Expense',
+        'transfer': 'Transfer',
+        'payment': 'Payment',
+        'fee': 'Fees',
+        'interest': 'Interest'
+    };
+    return categories[type] || 'Other';
+}
+
+function getStatusBadgeClass(status) {
+    const classes = {
+        'pending': 'bg-warning',
+        'completed': 'bg-success',
+        'failed': 'bg-danger',
+        'cancelled': 'bg-secondary'
+    };
+    return classes[status] || 'bg-secondary';
+}
+
+function maskAccountNumber(accountNumber) {
+    if (!accountNumber) return 'N/A';
+    const str = String(accountNumber);
+    return `****${str.slice(-4)}`;
+}
+
+function truncateText(text, length) {
+    if (!text) return '';
+    return text.length > length ? text.substring(0, length) + '...' : text;
+}
+
+// SECURE Logout handler - Clear all session state
+document.addEventListener('click', function(e) {
+    if (e.target && e.target.getAttribute('href') === '/logout') {
+        e.preventDefault();
+        if (confirm('Are you sure you want to logout?')) {
+            // Clear all client-side storage
+            localStorage.clear();
+            sessionStorage.clear();
+            // Navigate to logout endpoint (server clears cookie)
+            window.location.href = '/logout';
+        }
+    }
+});
+
+// Prevent back button from restoring cached pages
+window.addEventListener('pageshow', function(event) {
+    if (event.persisted) {  // Page restored from back/forward cache
+        if (!localStorage.getItem('token')) {
+            window.location.href = '/signin';
+        }
+    }
+});
+</script>
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Content End -->
+
+    <!-- Footer Start -->
+    <div class="container-fluid bg-dark text-light footer mt-5 py-5 wow fadeIn" data-wow-delay="0.1s">
+        <div class="container py-5">
+            <div class="row g-5">
+                <div class="col-lg-3 col-md-6">
+                    <h5 class="text-white mb-4">Address</h5>
+                    <p class="mb-2"><i class="fa fa-map-marker-alt me-3"></i>123 Street, New York, USA</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Footer End -->
+
+    <a href="#" class="btn btn-lg btn-primary btn-lg-square back-to-top"><i class="bi bi-arrow-up"></i></a>
+
+    <!-- JavaScript Libraries -->
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/lib/wow/wow.min.js"></script>
+    <script src="/static/lib/easing/easing.min.js"></script>
+    <script src="/static/lib/waypoints/waypoints.min.js"></script>
+    <script src="/static/lib/counterup/counterup.min.js"></script>
+    <script src="/static/lib/owlcarousel/owl.carousel.min.js"></script>
+    <script src="/static/js/main.js"></script>
+    <script src="/static/js/user-guard.js"></script>
+</body>
+
+</html>

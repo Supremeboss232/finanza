@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>International Transfers - Finanza</title>
+    <link href="/static/css/style.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .intl-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; }
+        .country-flag { font-size: 24px; margin-right: 10px; }
+        .transfer-timeline { position: relative; padding: 20px 0; }
+        .timeline-step { margin-bottom: 30px; position: relative; padding-left: 50px; }
+        .timeline-step::before { content: ''; position: absolute; left: 0; width: 40px; height: 40px; background: #667eea; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .timeline-step.completed::before { background: #28a745; }
+        .timeline-step.completed .step-title { color: #28a745; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/user/dashboard">
+                <i class="fas fa-globe"></i> International Transfers
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="servicesDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-concierge-bell"></i> Services
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/user/bill_pay">Bill Pay</a></li>
+                            <li><a class="dropdown-item" href="/user/currency_exchange">Currency Exchange</a></li>
+                            <li><a class="dropdown-item active" href="/user/international_transfers">International</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-5 mb-5">
+        <!-- Header -->
+        <div class="intl-header">
+            <h1><i class="fas fa-globe"></i> International Transfers</h1>
+            <p class="mb-0">Send money abroad safely and efficiently</p>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="row g-4 mb-5">
+            <div class="col-lg-3 col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title text-muted">Monthly Limit</h6>
+                        <h2 id="monthlyLimit">$-</h2>
+                        <div class="progress mt-2">
+                            <div class="progress-bar" id="limitBar" style="width: 0%"></div>
+                        </div>
+                        <p class="text-muted small mt-1" id="limitUsed">$0 used</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title text-muted">Countries Served</h6>
+                        <h2 id="countriesCount">-</h2>
+                        <p class="text-muted mb-0">Growing coverage</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title text-muted">Transfers This Month</h6>
+                        <h2 id="thisMonthTransfers">-</h2>
+                        <p class="text-muted mb-0" id="thisMonthAmount">$-</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title text-muted">Saved Recipients</h6>
+                        <h2 id="recipientCount">-</h2>
+                        <p class="text-muted mb-0">Quick access</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- New Transfer -->
+        <div class="card mb-5">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-plus-circle"></i> New International Transfer</h5>
+            </div>
+            <div class="card-body">
+                <form id="transferForm">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Recipient Country</label>
+                            <select class="form-control" id="recipientCountry" required>
+                                <option value="">Select country</option>
+                                <option value="GB">🇬🇧 United Kingdom</option>
+                                <option value="CA">🇨🇦 Canada</option>
+                                <option value="MX">🇲🇽 Mexico</option>
+                                <option value="IN">🇮🇳 India</option>
+                                <option value="AU">🇦🇺 Australia</option>
+                                <option value="SG">🇸🇬 Singapore</option>
+                                <option value="JP">🇯🇵 Japan</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Recipient Type</label>
+                            <select class="form-control" id="recipientType" required>
+                                <option value="">Select type</option>
+                                <option value="individual">Individual</option>
+                                <option value="business">Business</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Recipient Name</label>
+                            <input type="text" class="form-control" id="recipientName" placeholder="Full name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" id="recipientEmail" placeholder="email@example.com">
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Bank Name</label>
+                            <input type="text" class="form-control" id="bankName" placeholder="Bank name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">IBAN / Account Number</label>
+                            <input type="text" class="form-control" id="accountNumber" placeholder="Account identifier" required>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">SWIFT / BIC Code</label>
+                            <input type="text" class="form-control" id="swiftCode" placeholder="SWIFT code (optional)">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Transfer Currency</label>
+                            <select class="form-control" id="transferCurrency" required>
+                                <option value="USD">USD - US Dollar</option>
+                                <option value="EUR">EUR - Euro</option>
+                                <option value="GBP">GBP - British Pound</option>
+                                <option value="CAD">CAD - Canadian Dollar</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Amount</label>
+                            <div class="input-group">
+                                <span class="input-group-text" id="currencySymbol">$</span>
+                                <input type="number" class="form-control" id="amount" step="0.01" placeholder="0.00" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Purpose of Transfer</label>
+                            <select class="form-control" id="purpose" required>
+                                <option value="">Select purpose</option>
+                                <option value="family_support">Family Support</option>
+                                <option value="business">Business Payment</option>
+                                <option value="investment">Investment</option>
+                                <option value="invoice">Invoice Payment</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <label class="form-label">Special Instructions</label>
+                            <textarea class="form-control" id="instructions" rows="2" placeholder="Any special instructions for the transfer"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3 p-3 bg-light rounded">
+                        <div class="col-md-4">
+                            <strong>Exchange Rate</strong><br>
+                            <h6 id="exchangeRate">1 USD = - EUR</h6>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Processing Fee</strong><br>
+                            <h6 id="processingFee">$-</h6>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Estimated Delivery</strong><br>
+                            <h6 id="estimatedDelivery">1-3 business days</h6>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-lg"><i class="fas fa-paper-plane"></i> Send Transfer</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- In-Progress Transfers -->
+        <div class="card mb-5">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-spinner"></i> In-Progress Transfers</h5>
+            </div>
+            <div class="card-body">
+                <div id="inProgressTransfers">
+                    <div class="text-center text-muted">Loading...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Completed Transfers -->
+        <div class="card mb-5">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-check-circle"></i> Completed Transfers</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Recipient</th>
+                                <th>Country</th>
+                                <th>Amount</th>
+                                <th>Currency</th>
+                                <th>Status</th>
+                                <th>Reference</th>
+                            </tr>
+                        </thead>
+                        <tbody id="completedTransfersBody">
+                            <tr><td colspan="7" class="text-center text-muted">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Saved Recipients -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-address-book"></i> Saved Recipients</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3" id="savedRecipients">
+                    <div class="col-12 text-center text-muted">Loading recipients...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        const token = localStorage.getItem('token');
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (!token) {
+                window.location.href = '/signin';
+                return;
+            }
+
+            try {
+                await loadTransferStats();
+                await loadInProgressTransfers();
+                await loadCompletedTransfers();
+                await loadSavedRecipients();
+            } catch (error) {
+                console.error('Error loading transfer data:', error);
+            }
+
+            document.getElementById('transferForm').addEventListener('submit', handleNewTransfer);
+            document.getElementById('amount').addEventListener('input', updateFeeEstimate);
+        });
+
+        async function loadTransferStats() {
+            try {
+                const response = await fetch('/api/v1/international_transfers/stats', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    document.getElementById('monthlyLimit').textContent = '$' + (data.monthly_limit || 50000).toLocaleString();
+                    const used = data.monthly_used || 0;
+                    const percent = (used / (data.monthly_limit || 50000)) * 100;
+                    document.getElementById('limitBar').style.width = percent + '%';
+                    document.getElementById('limitUsed').textContent = '$' + used.toLocaleString() + ' used';
+                    
+                    document.getElementById('countriesCount').textContent = data.countries_served || '150+';
+                    document.getElementById('thisMonthTransfers').textContent = data.transfers_this_month || '0';
+                    document.getElementById('thisMonthAmount').textContent = '$' + (data.amount_this_month || 0).toLocaleString();
+                    document.getElementById('recipientCount').textContent = data.saved_recipients || '0';
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        async function loadInProgressTransfers() {
+            try {
+                const response = await fetch('/api/v1/international_transfers/in-progress', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const container = document.getElementById('inProgressTransfers');
+                    container.innerHTML = '';
+
+                    if (data.transfers && data.transfers.length > 0) {
+                        data.transfers.forEach(transfer => {
+                            container.innerHTML += `
+                                <div class="mb-4">
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <div>
+                                            <h6>${transfer.recipient}</h6>
+                                            <p class="text-muted small">${transfer.country}</p>
+                                        </div>
+                                        <h5>$${transfer.amount.toLocaleString()}</h5>
+                                    </div>
+                                    <div class="transfer-timeline">
+                                        <div class="timeline-step ${transfer.step_1_completed ? 'completed' : ''}">
+                                            <p class="step-title mb-1">Submitted</p>
+                                            <p class="small text-muted">${transfer.submitted_date}</p>
+                                        </div>
+                                        <div class="timeline-step ${transfer.step_2_completed ? 'completed' : ''}">
+                                            <p class="step-title mb-1">Processing</p>
+                                            <p class="small text-muted">Verification in progress</p>
+                                        </div>
+                                        <div class="timeline-step ${transfer.step_3_completed ? 'completed' : ''}">
+                                            <p class="step-title mb-1">In Transit</p>
+                                            <p class="small text-muted">Being sent to recipient bank</p>
+                                        </div>
+                                        <div class="timeline-step">
+                                            <p class="step-title mb-1">Delivered</p>
+                                            <p class="small text-muted">Estimated: ${transfer.estimated_delivery}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <hr>
+                            `;
+                        });
+                    } else {
+                        container.innerHTML = '<div class="text-center text-muted">No transfers in progress</div>';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading in-progress transfers:', error);
+            }
+        }
+
+        async function loadCompletedTransfers() {
+            try {
+                const response = await fetch('/api/v1/international_transfers/completed', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const tbody = document.getElementById('completedTransfersBody');
+                    tbody.innerHTML = '';
+
+                    if (data.transfers && data.transfers.length > 0) {
+                        data.transfers.forEach(transfer => {
+                            tbody.innerHTML += `
+                                <tr>
+                                    <td>${new Date(transfer.date).toLocaleDateString()}</td>
+                                    <td>${transfer.recipient}</td>
+                                    <td>${transfer.country}</td>
+                                    <td>$${transfer.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}</td>
+                                    <td>${transfer.currency}</td>
+                                    <td><span class="badge bg-success">${transfer.status}</span></td>
+                                    <td><code>${transfer.reference}</code></td>
+                                </tr>
+                            `;
+                        });
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No completed transfers</td></tr>';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading completed transfers:', error);
+            }
+        }
+
+        async function loadSavedRecipients() {
+            try {
+                const response = await fetch('/api/v1/international_transfers/recipients', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const container = document.getElementById('savedRecipients');
+                    container.innerHTML = '';
+
+                    if (data.recipients && data.recipients.length > 0) {
+                        data.recipients.forEach(recipient => {
+                            container.innerHTML += `
+                                <div class="col-md-6 col-lg-4">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <h6 class="card-title">${recipient.name}</h6>
+                                            <p class="text-muted small">${recipient.country} · ${recipient.bank}</p>
+                                            <p class="text-muted small mb-2">Account: ${recipient.account_number}</p>
+                                            <button class="btn btn-sm btn-primary w-100" onclick="transferToRecipient('${recipient.id}')">Send to ${recipient.name.split(' ')[0]}</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    } else {
+                        container.innerHTML = '<div class="col-12 text-center text-muted">No saved recipients. Add one when creating your first transfer.</div>';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading recipients:', error);
+            }
+        }
+
+        function updateFeeEstimate() {
+            const amount = parseFloat(document.getElementById('amount').value) || 0;
+            const fee = amount * 0.015; // 1.5% fee
+            document.getElementById('processingFee').textContent = '$' + fee.toFixed(2);
+        }
+
+        async function handleNewTransfer(e) {
+            e.preventDefault();
+
+            const transfer = {
+                recipient_country: document.getElementById('recipientCountry').value,
+                recipient_type: document.getElementById('recipientType').value,
+                recipient_name: document.getElementById('recipientName').value,
+                recipient_email: document.getElementById('recipientEmail').value,
+                bank_name: document.getElementById('bankName').value,
+                account_number: document.getElementById('accountNumber').value,
+                swift_code: document.getElementById('swiftCode').value,
+                currency: document.getElementById('transferCurrency').value,
+                amount: parseFloat(document.getElementById('amount').value),
+                purpose: document.getElementById('purpose').value,
+                instructions: document.getElementById('instructions').value
+            };
+
+            try {
+                const response = await fetch('/api/v1/international_transfers/send', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(transfer)
+                });
+
+                if (response.ok) {
+                    alert('Transfer sent successfully!');
+                    document.getElementById('transferForm').reset();
+                    await loadTransferStats();
+                    await loadInProgressTransfers();
+                } else {
+                    alert('Error sending transfer');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error sending transfer');
+            }
+        }
+
+        function transferToRecipient(recipientId) {
+            alert('Transfer to recipient: ' + recipientId);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settlement Status - Finanza</title>
+    <link href="/static/css/style.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .settlement-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; }
+        .status-badge { display: inline-block; padding: 8px 12px; border-radius: 20px; font-weight: bold; }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-processing { background: #d1ecf1; color: #0c5460; }
+        .status-confirmed { background: #d4edda; color: #155724; }
+        .status-failed { background: #f8d7da; color: #721c24; }
+        .settlement-card { border-left: 4px solid #667eea; padding: 20px; margin-bottom: 15px; background: #f8f9fa; border-radius: 5px; }
+        .timeline-item { position: relative; padding-left: 40px; margin-bottom: 20px; }
+        .timeline-item::before { content: ''; position: absolute; left: 10px; top: 0; width: 20px; height: 20px; background: #667eea; border-radius: 50%; }
+        .timeline-item::after { content: ''; position: absolute; left: 19px; top: 20px; height: 30px; width: 2px; background: #ddd; }
+        .timeline-item:last-child::after { display: none; }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/user/dashboard">
+                <i class="fas fa-exchange-alt"></i> Settlement Status
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="productsDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-th"></i> Products
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/user/deposits">Accounts</a></li>
+                            <li><a class="dropdown-item" href="/user/cards">Cards</a></li>
+                            <li><a class="dropdown-item" href="/user/deposits">Deposits</a></li>
+                            <li><a class="dropdown-item" href="/user/bill_pay">Transfers</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="servicesDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-concierge-bell"></i> Services
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/user/treasury_portfolio">Treasury</a></li>
+                            <li><a class="dropdown-item active" href="/user/settlement_status">Settlement</a></li>
+                            <li><a class="dropdown-item" href="/user/blockchain">Blockchain</a></li>
+                        </ul>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="accountDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle"></i> Account
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/user/profile">Profile</a></li>
+                            <li><a class="dropdown-item" href="/user/profile">Settings</a></li>
+                            <li><a class="dropdown-item" href="/user/profile">Security</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="/logout">Logout</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-5 mb-5">
+        <!-- Header -->
+        <div class="settlement-header">
+            <h1><i class="fas fa-exchange-alt"></i> Settlement Status</h1>
+            <p class="mb-0">Track and manage your SWIFT, ACH, and blockchain settlements</p>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="row g-4 mb-5">
+            <div class="col-lg-3 col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title text-muted">Pending Settlements</h6>
+                        <h2 id="pendingCount">-</h2>
+                        <p class="text-muted mb-0" id="pendingValue">$-</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title text-muted">This Month</h6>
+                        <h2 id="thisMonthCount">-</h2>
+                        <p class="text-muted mb-0" id="thisMonthValue">$-</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title text-muted">Avg Time to Settle</h6>
+                        <h2 id="avgTime">-</h2>
+                        <p class="text-muted mb-0">From submission</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h6 class="card-title text-muted">Success Rate</h6>
+                        <h2 id="successRate">-</h2>
+                        <p class="text-muted mb-0">Last 30 days</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters & Search -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <input type="text" class="form-control" placeholder="Search by ID or reference..." id="searchInput">
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-control" id="statusFilter">
+                            <option value="">All Statuses</option>
+                            <option value="pending">Pending</option>
+                            <option value="processing">Processing</option>
+                            <option value="confirmed">Confirmed</option>
+                            <option value="failed">Failed</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-control" id="typeFilter">
+                            <option value="">All Types</option>
+                            <option value="swift">SWIFT</option>
+                            <option value="ach">ACH</option>
+                            <option value="blockchain">Blockchain</option>
+                            <option value="forex">Forex</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-outline-primary w-100" onclick="applyFilters()"><i class="fas fa-filter"></i> Filter</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending Settlements -->
+        <div class="card mb-5">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-hourglass-half"></i> Pending Settlements</h5>
+            </div>
+            <div class="card-body">
+                <div id="pendingList">
+                    <p class="text-center text-muted">Loading...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Confirmed Settlements -->
+        <div class="card mb-5">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-check-circle"></i> Confirmed Settlements</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Settlement ID</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>Recipient</th>
+                                <th>Settled Date</th>
+                                <th>Reference #</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="confirmedBody">
+                            <tr>
+                                <td colspan="7" class="text-center text-muted">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settlement Details Modal -->
+        <div class="modal fade" id="detailsModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Settlement Details</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body" id="detailsContent">
+                        <!-- Details will be inserted here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settlement Timeline Info -->
+        <div class="card mb-5">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-info-circle"></i> Settlement Process & Timeline</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="mb-3"><strong>SWIFT Transfers</strong></h6>
+                        <div class="timeline-item">
+                            <strong>Submission</strong>
+                            <p class="text-muted">Initiate transfer</p>
+                        </div>
+                        <div class="timeline-item">
+                            <strong>Validation</strong>
+                            <p class="text-muted">1-2 hours</p>
+                        </div>
+                        <div class="timeline-item">
+                            <strong>Sent to Bank</strong>
+                            <p class="text-muted">Same day</p>
+                        </div>
+                        <div class="timeline-item">
+                            <strong>Settled</strong>
+                            <p class="text-muted">1-2 business days</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="mb-3"><strong>ACH Transfers</strong></h6>
+                        <div class="timeline-item">
+                            <strong>Submission</strong>
+                            <p class="text-muted">Before cutoff (5 PM)</p>
+                        </div>
+                        <div class="timeline-item">
+                            <strong>Batching</strong>
+                            <p class="text-muted">Same day</p>
+                        </div>
+                        <div class="timeline-item">
+                            <strong>Processing</strong>
+                            <p class="text-muted">1-3 business days</p>
+                        </div>
+                        <div class="timeline-item">
+                            <strong>Settled</strong>
+                            <p class="text-muted">Recipient account updated</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settlement Help & FAQ -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-question-circle"></i> Settlement Help</h5>
+            </div>
+            <div class="card-body">
+                <div class="accordion" id="settleAccordion">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne">
+                                Why is my settlement pending?
+                            </button>
+                        </h2>
+                        <div id="collapseOne" class="accordion-collapse collapse show" data-bs-parent="#settleAccordion">
+                            <div class="accordion-body">
+                                Settlements typically take 1-3 business days depending on the method. SWIFT transfers are faster (1-2 days) while ACH takes longer. You can check the detailed status and timeline in the pending settlements section above.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo">
+                                What's the difference between SWIFT and ACH?
+                            </button>
+                        </h2>
+                        <div id="collapseTwo" class="accordion-collapse collapse" data-bs-parent="#settleAccordion">
+                            <div class="accordion-body">
+                                <strong>SWIFT:</strong> International wire transfer system, faster but higher fees. Best for large amounts or international transfers.
+                                <br><strong>ACH:</strong> Automated Clearing House, slower but lower fees. Best for domestic transfers of any amount.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree">
+                                Can I cancel a pending settlement?
+                            </button>
+                        </h2>
+                        <div id="collapseThree" class="accordion-collapse collapse" data-bs-parent="#settleAccordion">
+                            <div class="accordion-body">
+                                Yes, you can cancel pending settlements that haven't been processed yet. Once in processing or confirmed, cancellation is not possible. Contact support if you need assistance.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour">
+                                What's included in settlement fees?
+                            </button>
+                        </h2>
+                        <div id="collapseFour" class="accordion-collapse collapse" data-bs-parent="#settleAccordion">
+                            <div class="accordion-body">
+                                Settlement fees vary by method and amount. SWIFT typically includes correspondence bank fees, while ACH has a flat rate. View the fee breakdown in your settlement confirmation.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        const token = localStorage.getItem('token');
+        let detailsModal;
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (!token) {
+                window.location.href = '/signin';
+                return;
+            }
+
+            detailsModal = new bootstrap.Modal(document.getElementById('detailsModal'));
+
+            try {
+                await loadSettlementStats();
+                await loadPendingSettlements();
+                await loadConfirmedSettlements();
+            } catch (error) {
+                console.error('Error loading settlement data:', error);
+            }
+
+            document.getElementById('statusFilter').addEventListener('change', applyFilters);
+            document.getElementById('typeFilter').addEventListener('change', applyFilters);
+            document.getElementById('searchInput').addEventListener('input', applyFilters);
+        });
+
+        async function loadSettlementStats() {
+            try {
+                const response = await fetch('/api/v1/settlement/stats', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    document.getElementById('pendingCount').textContent = data.pending_count || '0';
+                    document.getElementById('pendingValue').textContent = '$' + (data.pending_value || 0).toLocaleString('en-US', {maximumFractionDigits: 2});
+                    
+                    document.getElementById('thisMonthCount').textContent = data.month_count || '0';
+                    document.getElementById('thisMonthValue').textContent = '$' + (data.month_value || 0).toLocaleString('en-US', {maximumFractionDigits: 2});
+                    
+                    document.getElementById('avgTime').textContent = data.avg_time_hours || '-';
+                    document.getElementById('successRate').textContent = (data.success_rate || 0).toFixed(1) + '%';
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        async function loadPendingSettlements() {
+            try {
+                const response = await fetch('/api/v1/settlement/pending', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const pendingList = document.getElementById('pendingList');
+                    
+                    if (!data.settlements || data.settlements.length === 0) {
+                        pendingList.innerHTML = '<p class="text-center text-muted">No pending settlements</p>';
+                        return;
+                    }
+
+                    let html = '';
+                    data.settlements.forEach(settlement => {
+                        const statusClass = `status-${settlement.status}`;
+                        const elapsedHours = Math.floor((Date.now() - new Date(settlement.submitted).getTime()) / 3600000);
+                        
+                        html += `
+                            <div class="settlement-card">
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <h6>Settlement ID</h6>
+                                        <p>${settlement.id}</p>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <h6>Type</h6>
+                                        <p><span class="badge bg-primary">${settlement.type.toUpperCase()}</span></p>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <h6>Amount</h6>
+                                        <p><strong>$${settlement.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}</strong></p>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <h6>Status</h6>
+                                        <p><span class="status-badge ${statusClass}">${settlement.status}</span></p>
+                                    </div>
+                                    <div class="col-md-3 text-end">
+                                        <p><small class="text-muted">Elapsed: ${elapsedHours} hours</small></p>
+                                        <button class="btn btn-sm btn-primary" onclick="viewDetails('${settlement.id}')">Details</button>
+                                        ${settlement.status === 'pending' ? '<button class="btn btn-sm btn-danger">Cancel</button>' : ''}
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted">Recipient: ${settlement.recipient} • Submitted: ${new Date(settlement.submitted).toLocaleString()}</small>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    pendingList.innerHTML = html;
+                }
+            } catch (error) {
+                console.error('Error loading pending settlements:', error);
+            }
+        }
+
+        async function loadConfirmedSettlements() {
+            try {
+                const response = await fetch('/api/v1/settlement/confirmed', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const tbody = document.getElementById('confirmedBody');
+                    tbody.innerHTML = '';
+
+                    if (data.settlements && data.settlements.length > 0) {
+                        data.settlements.forEach(settlement => {
+                            tbody.innerHTML += `
+                                <tr>
+                                    <td>${settlement.id}</td>
+                                    <td><span class="badge bg-primary">${settlement.type.toUpperCase()}</span></td>
+                                    <td>$${settlement.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}</td>
+                                    <td>${settlement.recipient}</td>
+                                    <td>${new Date(settlement.settled_date).toLocaleDateString()}</td>
+                                    <td><small>${settlement.reference}</small></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="viewDetails('${settlement.id}')">View</button>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No confirmed settlements</td></tr>';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading confirmed settlements:', error);
+            }
+        }
+
+        async function viewDetails(settlementId) {
+            try {
+                const response = await fetch(`/api/v1/settlement/${settlementId}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const settlement = await response.json();
+                    const detailsContent = document.getElementById('detailsContent');
+                    
+                    detailsContent.innerHTML = `
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <h6>Settlement ID</h6>
+                                <p>${settlement.id}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Status</h6>
+                                <p><span class="status-badge status-${settlement.status}">${settlement.status}</span></p>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <h6>Type</h6>
+                                <p>${settlement.type.toUpperCase()}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Amount</h6>
+                                <p><strong>$${settlement.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}</strong></p>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <h6>From Account</h6>
+                                <p>${settlement.from_account}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>To Account</h6>
+                                <p>${settlement.to_account}</p>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <h6>Submitted</h6>
+                                <p>${new Date(settlement.submitted).toLocaleString()}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Reference Number</h6>
+                                <p>${settlement.reference || 'N/A'}</p>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <h6>Timeline</h6>
+                                <div class="timeline-item">
+                                    <strong>Submitted</strong>
+                                    <p class="text-muted">${new Date(settlement.submitted).toLocaleString()}</p>
+                                </div>
+                                ${settlement.status !== 'pending' ? `
+                                    <div class="timeline-item">
+                                        <strong>Processing Started</strong>
+                                        <p class="text-muted">Processing</p>
+                                    </div>
+                                ` : ''}
+                                ${settlement.status === 'confirmed' ? `
+                                    <div class="timeline-item">
+                                        <strong>Confirmed</strong>
+                                        <p class="text-muted">${new Date(settlement.settled_date).toLocaleString()}</p>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                    
+                    detailsModal.show();
+                }
+            } catch (error) {
+                console.error('Error loading settlement details:', error);
+                alert('Error loading details');
+            }
+        }
+
+        function applyFilters() {
+            // Implement filtering logic
+            console.log('Filters applied');
+        }
+    </script>
+</body>
+</html>

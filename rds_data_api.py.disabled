@@ -1,0 +1,243 @@
+"""
+RDS Data API Connection Module
+Establishes connections to Finanza Bank cluster using AWS RDS Data API
+Note: boto3 is optional and only imported when needed
+"""
+
+from typing import Any, Dict, List, Optional
+from config import settings
+
+class RDSDataAPIClient:
+    """Client for RDS Data API connections to Finanza Bank cluster"""
+    
+    def __init__(
+        self,
+        cluster_arn: str = "arn:aws:rds:eu-north-1:714509060208:cluster:finanza-bank",
+        database: str = "postgres",
+        aws_region: str = "eu-north-1",
+        secret_arn: Optional[str] = None
+    ):
+        """
+        Initialize RDS Data API client
+        
+        Args:
+            cluster_arn: ARN of the RDS cluster
+            database: Database name (default: postgres)
+            aws_region: AWS region (default: eu-north-1)
+            secret_arn: ARN of secret containing credentials (optional)
+        """
+        import boto3
+        
+        self.cluster_arn = cluster_arn
+        self.database = database
+        self.aws_region = aws_region
+        self.secret_arn = secret_arn or self._get_secret_arn()
+        
+        # Initialize RDS Data API client
+        self.client = boto3.client('rds-data', region_name=aws_region)
+    
+    def _get_secret_arn(self) -> str:
+        """
+        Get secret ARN from AWS Secrets Manager
+        Falls back to using credentials directly if secret not found
+        """
+        try:
+            import boto3
+            secrets_client = boto3.client('secretsmanager', region_name=self.aws_region)
+            secrets = secrets_client.list_secrets()
+            
+            # Look for a secret containing 'finanza' or 'finbank'
+            for secret in secrets.get('SecretList', []):
+                if 'finanza' in secret['Name'].lower() or 'finbank' in secret['Name'].lower():
+                    return secret['ARN']
+        except Exception as e:
+            print(f"Warning: Could not retrieve secret ARN: {e}")
+        
+        return None
+    
+    def execute_query(
+        self,
+        sql: str,
+        parameters: Optional[List[Dict[str, Any]]] = None,
+        include_result_metadata: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Execute a SQL query using RDS Data API
+        
+        Args:
+            sql: SQL query to execute
+            parameters: Query parameters for parameterized queries
+            include_result_metadata: Include column metadata in response
+            
+        Returns:
+            Query result as dictionary
+        """
+        try:
+            kwargs = {
+                'resourceArn': self.cluster_arn,
+                'secretArn': self.secret_arn,
+                'database': self.database,
+                'sql': sql,
+                'includeResultMetadata': include_result_metadata
+            }
+            
+            if parameters:
+                kwargs['parameters'] = parameters
+            
+            response = self.client.execute_statement(**kwargs)
+            return response
+            
+        except Exception as e:
+            print(f"Error executing query: {e}")
+            raise
+    
+    def execute_batch(
+        self,
+        sql: str,
+        parameter_sets: List[List[Dict[str, Any]]]
+    ) -> Dict[str, Any]:
+        """
+        Execute batch operation using RDS Data API
+        
+        Args:
+            sql: SQL query to execute
+            parameter_sets: List of parameter sets for batch execution
+            
+        Returns:
+            Batch execution result
+        """
+        try:
+            response = self.client.batch_execute_statement(
+                resourceArn=self.cluster_arn,
+                secretArn=self.secret_arn,
+                database=self.database,
+                sql=sql,
+                parameterSets=parameter_sets
+            )
+            return response
+            
+        except Exception as e:
+            print(f"Error executing batch: {e}")
+            raise
+    
+    def begin_transaction(self) -> str:
+        """
+        Begin a database transaction
+        
+        Returns:
+            Transaction ID
+        """
+        try:
+            response = self.client.begin_transaction(
+                resourceArn=self.cluster_arn,
+                secretArn=self.secret_arn,
+                database=self.database
+            )
+            return response.get('transactionId')
+            
+        except Exception as e:
+            print(f"Error beginning transaction: {e}")
+            raise
+    
+    def commit_transaction(self, transaction_id: str) -> bool:
+        """
+        Commit a database transaction
+        
+        Args:
+            transaction_id: ID of transaction to commit
+            
+        Returns:
+            Success status
+        """
+        try:
+            self.client.commit_transaction(
+                resourceArn=self.cluster_arn,
+                secretArn=self.secret_arn,
+                transactionId=transaction_id
+            )
+            return True
+            
+        except Exception as e:
+            print(f"Error committing transaction: {e}")
+            raise
+    
+    def rollback_transaction(self, transaction_id: str) -> bool:
+        """
+        Rollback a database transaction
+        
+        Args:
+            transaction_id: ID of transaction to rollback
+            
+        Returns:
+            Success status
+        """
+        try:
+            self.client.rollback_transaction(
+                resourceArn=self.cluster_arn,
+                secretArn=self.secret_arn,
+                transactionId=transaction_id
+            )
+            return True
+            
+        except Exception as e:
+            print(f"Error rolling back transaction: {e}")
+            raise
+    
+    def test_connection(self) -> bool:
+        """
+        Test connection to RDS cluster
+        
+        Returns:
+            True if connection successful
+        """
+        try:
+            result = self.execute_query("SELECT 1")
+            return result.get('numberOfRecordsUpdated', 0) >= 0
+            
+        except Exception as e:
+            print(f"Connection test failed: {e}")
+            return False
+
+
+# Initialize default client (lazy - only on first use)
+default_client = None
+
+
+def get_rds_client() -> RDSDataAPIClient:
+    """Get the default RDS Data API client (lazy initialization)"""
+    global default_client
+    if default_client is None:
+        try:
+            default_client = RDSDataAPIClient(
+                cluster_arn="arn:aws:rds:eu-north-1:714509060208:cluster:finanza-bank",
+                database="postgres",
+                aws_region="eu-north-1"
+            )
+        except Exception as e:
+            print(f"Warning: Could not initialize RDS Data API client: {e}")
+            return None
+    return default_client
+
+
+def test_rds_connection():
+    """Test RDS Data API connection"""
+    client = get_rds_client()
+    if client.test_connection():
+        print("✅ RDS Data API connection successful!")
+        return True
+    else:
+        print("❌ RDS Data API connection failed!")
+        return False
+
+
+if __name__ == "__main__":
+    # Test the connection
+    test_rds_connection()
+    
+    # Example query
+    try:
+        client = get_rds_client()
+        result = client.execute_query("SELECT version();")
+        print(f"\nDatabase version: {result}")
+    except Exception as e:
+        print(f"Error: {e}")

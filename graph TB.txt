@@ -1,0 +1,51 @@
+graph TB
+    subgraph Frontend["🎨 FRONTEND LAYER"]
+        PublicPages["📄 Public Pages<br/>/static/*.html<br/>- index, about, service<br/>- signin, signup, contact"]
+        UserPages["👤 User Pages<br/>/private/user/*.html<br/>- dashboard, cards, loans<br/>- deposits, investments<br/>- kyc_form, transfers"]
+        AdminPages["🔐 Admin Pages<br/>/private/admin/*.html<br/>- admin_dashboard_hub<br/>- admin_users, admin_kyc<br/>- admin_fund, admin_reports"]
+        JS["⚙️ JavaScript<br/>admin-client.js<br/>user-client.js<br/>admin-guard.js<br/>user-guard.js"]
+    end
+
+    subgraph Backend["🔧 BACKEND LAYER"]
+        Auth["🔐 Authentication<br/>auth.py / auth_utils.py<br/>✓ JWT tokens<br/>✓ Password hashing<br/>✓ Cookie support"]
+        
+        Routers["📍 API Routers<br/>45+ endpoint modules<br/>- admin.py (21 endpoints)<br/>- kyc.py, cards.py<br/>- transfers.py, loans.py<br/>- deposits.py, etc."]
+        
+        Services["🎯 Core Services<br/>TransactionGate<br/>BalanceServiceLedger<br/>KYCService<br/>SystemFundService<br/>AdminService"]
+        
+        CRUD["📊 Data Access<br/>crud.py<br/>✓ get_user, create_user<br/>✓ get_transactions<br/>✓ approve_kyc_submission"]
+    end
+
+    subgraph Database["💾 DATABASE LAYER"]
+        Models["📋 Models<br/>30+ SQLAlchemy tables<br/>- User, Account<br/>- Transaction, Ledger<br/>- KYCInfo, KYCSubmission<br/>- Cards, Loans, etc."]
+        
+        DB["🗄️ PostgreSQL<br/>- finanza_bank DB<br/>- 30+ tables<br/>- Async connections<br/>- SSL support"]
+    end
+
+    subgraph Security["🛡️ SECURITY & CONFIG"]
+        Deps["🔑 Dependencies<br/>deps.py<br/>- get_current_user<br/>- get_current_admin_user<br/>- SessionDep"]
+        Config["⚙️ Config<br/>config.py<br/>- DATABASE_URL<br/>- SECRET_KEY<br/>- AWS settings"]
+    end
+
+    Frontend -->|HTTP/REST| Backend
+    PublicPages --> JS
+    UserPages --> JS
+    AdminPages --> JS
+    
+    Backend --> Auth
+    Backend --> Routers
+    Backend --> Services
+    Backend --> CRUD
+    
+    Routers -->|Depends| Deps
+    Routers -->|Uses| Services
+    Routers -->|Calls| CRUD
+    
+    Services -->|Query| Models
+    CRUD -->|ORM| Models
+    
+    Models -->|SQLAlchemy| DB
+    
+    Auth -->|Uses| Config
+    Deps -->|Uses| Config
+    Services -->|Uses| Config

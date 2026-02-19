@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACH Management - Finanza Admin</title>
+    <link href="/static/css/style.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+    <style>
+        body { background: #f8f9fa; }
+        .admin-nav { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .admin-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; }
+        .stat-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .stat-number { font-size: 2rem; font-weight: bold; color: #667eea; }
+        .stat-label { color: #666; font-size: 0.9rem; margin-top: 5px; }
+        .dashboard-section { background: white; border-radius: 10px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 30px; }
+        .chart-container { position: relative; height: 300px; margin-bottom: 20px; }
+        .status-badge { padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-processed { background: #d4edda; color: #155724; }
+        .status-returned { background: #f8d7da; color: #721c24; }
+        .modal-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .form-control:focus { border-color: #667eea; box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25); }
+        .btn-primary { background: #667eea; border: none; }
+        .btn-primary:hover { background: #5568d3; }
+        .table-responsive { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="admin-nav navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/user/admin/dashboard">
+                <i class="fas fa-chart-line"></i> Finanza Admin
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/dashboard">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/settlement">Settlement</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/transactions">Transactions</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-5 mb-5">
+        <!-- Header -->
+        <div class="admin-header">
+            <h1><i class="fas fa-stream"></i> ACH Management</h1>
+            <p class="mb-0">Monitor ACH files, returns, NSF management, and collection contacts</p>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="row g-4 mb-5">
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalFiles">-</div>
+                    <div class="stat-label">ACH Files</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalVolume">-</div>
+                    <div class="stat-label">Total Volume</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card">
+                    <div class="stat-number" id="returnRate">-</div>
+                    <div class="stat-label">Return Rate</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card">
+                    <div class="stat-number" id="nsfCount">-</div>
+                    <div class="stat-label">NSF Transactions</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row mb-5">
+            <div class="col-lg-6">
+                <div class="dashboard-section">
+                    <h5>ACH File Status Distribution</h5>
+                    <div class="chart-container">
+                        <canvas id="fileStatusChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="dashboard-section">
+                    <h5>Return Reasons</h5>
+                    <div class="chart-container">
+                        <canvas id="returnReasonsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ACH Files -->
+        <div class="dashboard-section">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5><i class="fas fa-file"></i> ACH Files</h5>
+                <button class="btn btn-primary btn-sm" onclick="openModal('uploadFileModal')">
+                    <i class="fas fa-upload"></i> Upload File
+                </button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>File ID</th>
+                            <th>Filename</th>
+                            <th>Upload Date</th>
+                            <th>Entries</th>
+                            <th>Volume</th>
+                            <th>Status</th>
+                            <th>Processing</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="filesTable">
+                        <tr><td colspan="8" class="text-center text-muted">Loading ACH files...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ACH Entries -->
+        <div class="dashboard-section">
+            <h5><i class="fas fa-list"></i> Recent ACH Entries</h5>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Entry ID</th>
+                            <th>File ID</th>
+                            <th>Type</th>
+                            <th>Account</th>
+                            <th>Amount</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody id="entriesTable">
+                        <tr><td colspan="8" class="text-center text-muted">Loading entries...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ACH Returns Management -->
+        <div class="dashboard-section">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5><i class="fas fa-undo"></i> ACH Returns</h5>
+                <button class="btn btn-primary btn-sm" onclick="openModal('processReturnModal')">
+                    <i class="fas fa-arrow-left"></i> Process Return
+                </button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Return ID</th>
+                            <th>Original Entry</th>
+                            <th>Return Code</th>
+                            <th>Reason</th>
+                            <th>Amount</th>
+                            <th>Return Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="returnsTable">
+                        <tr><td colspan="8" class="text-center text-muted">Loading returns...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- NSF Management -->
+        <div class="dashboard-section">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5><i class="fas fa-exclamation-triangle"></i> NSF Transactions</h5>
+                <button class="btn btn-warning btn-sm" onclick="openModal('nsfActionModal')">
+                    <i class="fas fa-bell"></i> NSF Actions
+                </button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Transaction ID</th>
+                            <th>Account</th>
+                            <th>Amount</th>
+                            <th>Fee</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Reversal Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="nsfTable">
+                        <tr><td colspan="8" class="text-center text-muted">Loading NSF transactions...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Collection Contacts -->
+        <div class="dashboard-section">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5><i class="fas fa-address-book"></i> Collection Contacts</h5>
+                <button class="btn btn-primary btn-sm" onclick="openModal('newContactModal')">
+                    <i class="fas fa-plus"></i> Add Contact
+                </button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Contact ID</th>
+                            <th>Name</th>
+                            <th>Phone</th>
+                            <th>Email</th>
+                            <th>Type</th>
+                            <th>Active</th>
+                            <th>Attempts</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="contactsTable">
+                        <tr><td colspan="8" class="text-center text-muted">Loading contacts...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload File Modal -->
+    <div class="modal fade" id="uploadFileModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Upload ACH File</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="uploadForm" onsubmit="handleUpload(event)">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">ACH File</label>
+                            <input type="file" class="form-control" accept=".ach,.txt" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">File Type</label>
+                            <select class="form-control" required>
+                                <option value="">Select type...</option>
+                                <option value="ppd">PPD (Payment)</option>
+                                <option value="ccd">CCD (Corporate)</option>
+                                <option value="cie">CIE (Customer Initiated Entry)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Upload</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Process Return Modal -->
+    <div class="modal fade" id="processReturnModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Process ACH Return</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="returnForm" onsubmit="handleProcessReturn(event)">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Original Entry ID</label>
+                            <input type="text" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Return Code</label>
+                            <select class="form-control" required>
+                                <option value="">Select code...</option>
+                                <option value="R01">R01 - Insufficient Funds</option>
+                                <option value="R02">R02 - Account Closed</option>
+                                <option value="R03">R03 - No Account/Unable to Locate</option>
+                                <option value="R04">R04 - Invalid Account Number</option>
+                                <option value="R05">R05 - Reserved</option>
+                                <option value="R06">R06 - Returned per ODP Order</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Process Return</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- NSF Action Modal -->
+    <div class="modal fade" id="nsfActionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">NSF Actions</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Action pending NSF transaction processing</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Contact Modal -->
+    <div class="modal fade" id="newContactModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add Collection Contact</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="contactForm" onsubmit="handleAddContact(event)">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Name</label>
+                            <input type="text" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Phone</label>
+                            <input type="tel" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Contact Type</label>
+                            <select class="form-control" required>
+                                <option value="">Select type...</option>
+                                <option value="debtor">Debtor</option>
+                                <option value="representative">Representative</option>
+                                <option value="employer">Employer</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Add Contact</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/admin_static/js/auth-helper.js"></script>
+    <script>
+        const token = localStorage.getItem('token');
+        let fileStatusChart = null;
+        let returnReasonsChart = null;
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            await loadACHMetrics();
+            await loadACHFiles();
+            await loadACHEntries();
+            await loadACHReturns();
+            await loadNSFTransactions();
+            await loadCollectionContacts();
+            initCharts();
+        });
+
+        async function loadACHMetrics() {
+            try {
+                const response = await fetch('/api/v1/settlement/ach/metrics', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!response.ok) throw new Error('Failed to load metrics');
+                const data = await response.json();
+                
+                document.getElementById('totalFiles').textContent = data.total_files || 0;
+                document.getElementById('totalVolume').textContent = '$' + (data.total_volume || 0).toLocaleString();
+                document.getElementById('returnRate').textContent = (data.return_rate || 0).toFixed(2) + '%';
+                document.getElementById('nsfCount').textContent = data.nsf_count || 0;
+            } catch (error) {
+                console.error('Error loading metrics:', error);
+            }
+        }
+
+        async function loadACHFiles() {
+            try {
+                const response = await fetch('/api/v1/settlement/ach/files?limit=50', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!response.ok) throw new Error('Failed to load files');
+                const files = await response.json();
+                
+                const tbody = document.getElementById('filesTable');
+                tbody.innerHTML = files.data?.map(file => `
+                    <tr>
+                        <td>${file.id}</td>
+                        <td>${file.filename}</td>
+                        <td>${new Date(file.upload_date).toLocaleDateString()}</td>
+                        <td>${file.entry_count}</td>
+                        <td>$${file.total_volume?.toLocaleString()}</td>
+                        <td><span class="status-badge status-${file.status}">${file.status}</span></td>
+                        <td>${Math.round(file.processing_pct)}%</td>
+                        <td><button class="btn btn-sm btn-info">Details</button></td>
+                    </tr>
+                `).join('') || '<tr><td colspan="8" class="text-center text-muted">No files found</td></tr>';
+            } catch (error) {
+                console.error('Error loading files:', error);
+            }
+        }
+
+        async function loadACHEntries() {
+            try {
+                const response = await fetch('/api/v1/settlement/ach/entries?limit=20', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!response.ok) throw new Error('Failed to load entries');
+                const entries = await response.json();
+                
+                const tbody = document.getElementById('entriesTable');
+                tbody.innerHTML = entries.data?.map(entry => `
+                    <tr>
+                        <td>${entry.id}</td>
+                        <td>${entry.file_id}</td>
+                        <td>${entry.type}</td>
+                        <td>${entry.account_number}</td>
+                        <td>$${entry.amount?.toFixed(2)}</td>
+                        <td>${entry.date}</td>
+                        <td><span class="status-badge status-${entry.status}">${entry.status}</span></td>
+                        <td><button class="btn btn-sm btn-primary">View</button></td>
+                    </tr>
+                `).join('') || '<tr><td colspan="8" class="text-center text-muted">No entries found</td></tr>';
+            } catch (error) {
+                console.error('Error loading entries:', error);
+            }
+        }
+
+        async function loadACHReturns() {
+            try {
+                const response = await fetch('/api/v1/settlement/ach/returns?limit=20', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!response.ok) throw new Error('Failed to load returns');
+                const returns = await response.json();
+                
+                const tbody = document.getElementById('returnsTable');
+                tbody.innerHTML = returns.data?.map(ret => `
+                    <tr>
+                        <td>${ret.id}</td>
+                        <td>${ret.original_entry_id}</td>
+                        <td>${ret.return_code}</td>
+                        <td>${ret.reason}</td>
+                        <td>$${ret.amount?.toFixed(2)}</td>
+                        <td>${ret.return_date}</td>
+                        <td><span class="status-badge status-${ret.status}">${ret.status}</span></td>
+                        <td><button class="btn btn-sm btn-warning">Process</button></td>
+                    </tr>
+                `).join('') || '<tr><td colspan="8" class="text-center text-muted">No returns found</td></tr>';
+            } catch (error) {
+                console.error('Error loading returns:', error);
+            }
+        }
+
+        async function loadNSFTransactions() {
+            try {
+                const response = await fetch('/api/v1/settlement/ach/nsf?limit=20', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!response.ok) throw new Error('Failed to load NSF');
+                const nsf = await response.json();
+                
+                const tbody = document.getElementById('nsfTable');
+                tbody.innerHTML = nsf.data?.map(n => `
+                    <tr>
+                        <td>${n.id}</td>
+                        <td>${n.account_number}</td>
+                        <td>$${n.amount?.toFixed(2)}</td>
+                        <td>$${n.fee?.toFixed(2)}</td>
+                        <td>${n.date}</td>
+                        <td><span class="status-badge status-${n.status}">${n.status}</span></td>
+                        <td>${n.reversal_status || 'N/A'}</td>
+                        <td><button class="btn btn-sm btn-primary">Action</button></td>
+                    </tr>
+                `).join('') || '<tr><td colspan="8" class="text-center text-muted">No NSF found</td></tr>';
+            } catch (error) {
+                console.error('Error loading NSF:', error);
+            }
+        }
+
+        async function loadCollectionContacts() {
+            try {
+                const response = await fetch('/api/v1/settlement/ach/contacts?limit=20', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!response.ok) throw new Error('Failed to load contacts');
+                const contacts = await response.json();
+                
+                const tbody = document.getElementById('contactsTable');
+                tbody.innerHTML = contacts.data?.map(contact => `
+                    <tr>
+                        <td>${contact.id}</td>
+                        <td>${contact.name}</td>
+                        <td>${contact.phone}</td>
+                        <td>${contact.email}</td>
+                        <td>${contact.type}</td>
+                        <td><span class="badge bg-${contact.active ? 'success' : 'secondary'}">${contact.active ? 'Active' : 'Inactive'}</span></td>
+                        <td>${contact.contact_attempts || 0}</td>
+                        <td><button class="btn btn-sm btn-primary">Edit</button></td>
+                    </tr>
+                `).join('') || '<tr><td colspan="8" class="text-center text-muted">No contacts found</td></tr>';
+            } catch (error) {
+                console.error('Error loading contacts:', error);
+            }
+        }
+
+        function initCharts() {
+            // File Status Chart
+            const statusCtx = document.getElementById('fileStatusChart')?.getContext('2d');
+            if (statusCtx) {
+                fileStatusChart = new Chart(statusCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Pending', 'Processed', 'Returned'],
+                        datasets: [{
+                            data: [25, 70, 5],
+                            backgroundColor: ['#ffc107', '#28a745', '#dc3545']
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            }
+
+            // Return Reasons Chart
+            const reasonCtx = document.getElementById('returnReasonsChart')?.getContext('2d');
+            if (reasonCtx) {
+                returnReasonsChart = new Chart(reasonCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['R01', 'R02', 'R03', 'R04', 'Other'],
+                        datasets: [{
+                            label: 'Returns',
+                            data: [45, 20, 15, 12, 8],
+                            backgroundColor: '#667eea'
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            }
+        }
+
+        async function handleUpload(event) {
+            event.preventDefault();
+            alert('File upload submitted');
+            bootstrap.Modal.getInstance(document.getElementById('uploadFileModal')).hide();
+        }
+
+        async function handleProcessReturn(event) {
+            event.preventDefault();
+            alert('Return processed');
+            bootstrap.Modal.getInstance(document.getElementById('processReturnModal')).hide();
+        }
+
+        async function handleAddContact(event) {
+            event.preventDefault();
+            alert('Contact added');
+            bootstrap.Modal.getInstance(document.getElementById('newContactModal')).hide();
+        }
+
+        function openModal(modalId) {
+            new bootstrap.Modal(document.getElementById(modalId)).show();
+        }
+    </script>
+    <script src="/static/js/admin-guard.js"></script>
+</body>
+</html>

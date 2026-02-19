@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finanza - Admin Profile</title>
+    <link href="/static/css/style.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        .admin-nav { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .profile-container { background: white; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); overflow: hidden; margin-top: 30px; }
+        .profile-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px 30px; text-align: center; }
+        .profile-avatar { width: 120px; height: 120px; border-radius: 50%; background: rgba(255,255,255,0.3); display: flex; align-items: center; justify-content: center; font-size: 48px; margin: 0 auto 20px; }
+        .profile-info { padding: 30px; border-bottom: 1px solid #dee2e6; }
+        .profile-field { display: flex; justify-content: space-between; padding: 10px 0; }
+        .profile-field label { font-weight: 600; color: #333; }
+        .profile-field value { color: #666; }
+        .profile-section { padding: 30px; }
+        .profile-section h5 { border-bottom: 2px solid #667eea; padding-bottom: 10px; margin-bottom: 20px; color: #333; }
+        .edit-form { display: none; }
+        .edit-form.active { display: block; }
+        .form-control { border: 1px solid #ddd; border-radius: 5px; padding: 10px 15px; }
+        .form-control:focus { border-color: #667eea; box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25); }
+        .btn-primary { background: #667eea; border: none; }
+        .btn-primary:hover { background: #5568d3; }
+        .btn-secondary { background: #999; border: none; }
+        .btn-secondary:hover { background: #777; }
+        .btn-edit { margin-top: 20px; }
+        .activity-item { padding: 15px; background: #f8f9fa; border-radius: 5px; margin-bottom: 10px; }
+        .activity-item .activity-date { color: #999; font-size: 0.9rem; }
+        .activity-item .activity-desc { color: #333; margin-top: 5px; }
+        .alert-info { background: #e3f2fd; border: 1px solid #2196f3; color: #1565c0; }
+    </style>
+</head>
+<body>
+    <nav class="admin-nav navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/user/admin/dashboard"><i class="fas fa-chart-line"></i> Finanza Admin</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarAdmin">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarAdmin">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/dashboard"><i class="fas fa-home"></i> Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="profile-container">
+            <!-- Profile Header -->
+            <div class="profile-header">
+                <div class="profile-avatar">
+                    <i class="fas fa-user-shield"></i>
+                </div>
+                <h3 id="adminName">Admin User</h3>
+                <p id="adminEmail">admin@example.com</p>
+                <p style="font-size: 0.9rem; opacity: 0.9;">Administrator Account</p>
+            </div>
+
+            <!-- Profile Info Section -->
+            <div class="profile-info">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="profile-field">
+                            <label>Full Name:</label>
+                            <span id="displayName">-</span>
+                        </div>
+                        <div class="profile-field">
+                            <label>Email:</label>
+                            <span id="displayEmail">-</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="profile-field">
+                            <label>Account Type:</label>
+                            <span id="displayStatus">Administrator</span>
+                        </div>
+                        <div class="profile-field">
+                            <label>Member Since:</label>
+                            <span id="displayJoined">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Edit Profile Section -->
+            <div class="profile-section">
+                <h5><i class="fas fa-edit"></i> Edit Profile</h5>
+                <form id="editProfileForm" class="edit-form active">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editName" class="form-label">Full Name</label>
+                                <input type="text" class="form-control" id="editName" placeholder="Enter full name">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="editEmail" class="form-label">Email Address</label>
+                                <input type="email" class="form-control" id="editEmail" placeholder="Enter email address">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editPassword" class="form-label">New Password (leave blank to keep current)</label>
+                        <input type="password" class="form-control" id="editPassword" placeholder="Enter new password">
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirmPassword" class="form-label">Confirm Password</label>
+                        <input type="password" class="form-control" id="confirmPassword" placeholder="Confirm password">
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Changes</button>
+                        <button type="button" class="btn btn-secondary" onclick="resetForm()"><i class="fas fa-times"></i> Cancel</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Activity Log Section -->
+            <div class="profile-section">
+                <h5><i class="fas fa-history"></i> Recent Activity</h5>
+                <div id="activityLog" style="max-height: 400px; overflow-y: auto;">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Loading activity log...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security Section -->
+            <div class="profile-section">
+                <h5><i class="fas fa-lock"></i> Security Settings</h5>
+                <div class="alert alert-info">
+                    <i class="fas fa-shield-alt"></i> 
+                    <strong>Security Status:</strong> Your account is secure with strong password protection and administrative privileges.
+                </div>
+                <button class="btn btn-primary" onclick="changePassword()">
+                    <i class="fas fa-key"></i> Change Password
+                </button>
+                <button class="btn btn-secondary ms-2" onclick="viewSessions()">
+                    <i class="fas fa-desktop"></i> Active Sessions
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load JavaScript guards -->
+    <script src="/static/js/admin-guard.js"></script>
+    <script>
+        // Load Admin Profile Data
+        async function loadAdminProfile() {
+            try {
+                const response = await fetch('/api/admin/metrics');
+                if (response.ok) {
+                    // Profile data would typically come from /users/me endpoint
+                    // For now, we display placeholder data
+                    loadProfileFromStorage();
+                } else {
+                    console.error('Failed to load profile');
+                }
+            } catch (error) {
+                console.error('Error loading profile:', error);
+                loadProfileFromStorage();
+            }
+        }
+
+        function loadProfileFromStorage() {
+            // Display profile info (in a real app, this would come from the API)
+            const nameEl = document.getElementById('adminName');
+            const emailEl = document.getElementById('adminEmail');
+            const displayNameEl = document.getElementById('displayName');
+            const displayEmailEl = document.getElementById('displayEmail');
+            const displayJoinedEl = document.getElementById('displayJoined');
+
+            // Example data - replace with actual API call
+            nameEl.textContent = 'Administrator';
+            emailEl.textContent = 'admin@finanzabank.com';
+            displayNameEl.textContent = 'Administrator';
+            displayEmailEl.textContent = 'admin@finanzabank.com';
+            displayJoinedEl.textContent = new Date().toLocaleDateString();
+        }
+
+        // Handle Form Submission
+        document.getElementById('editProfileForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const name = document.getElementById('editName').value;
+            const email = document.getElementById('editEmail').value;
+            const password = document.getElementById('editPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (password && password !== confirmPassword) {
+                alert('Passwords do not match!');
+                return;
+            }
+
+            // Send update request to API
+            try {
+                const payload = { full_name: name, email: email };
+                if (password) payload.password = password;
+
+                const response = await fetch('/api/users/me', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    alert('Profile updated successfully!');
+                    location.reload();
+                } else {
+                    alert('Failed to update profile');
+                }
+            } catch (error) {
+                console.error('Error updating profile:', error);
+                alert('Error updating profile');
+            }
+        });
+
+        function resetForm() {
+            document.getElementById('editProfileForm').reset();
+        }
+
+        function changePassword() {
+            alert('Password change dialog would open here');
+        }
+
+        function viewSessions() {
+            alert('Active sessions view would open here');
+        }
+
+        // Load profile on page load
+        window.addEventListener('load', loadAdminProfile);
+    </script>
+</body>
+</html>

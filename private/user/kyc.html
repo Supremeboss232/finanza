@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Know Your Customer Verification - Finanza Bank</title>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <link href="/static/img/favicon.ico" rel="icon">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jost:wght@500;600;700&family=Open+Sans:wght@400;500&display=swap" rel="stylesheet">  
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/static/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/static/lib/animate/animate.min.css" rel="stylesheet">
+    <link href="/static/lib/owlcarousel/assets/owl.carousel.min.css" rel="stylesheet">
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <div id="spinner" class="show bg-white position-fixed translate-middle w-100 vh-100 top-50 start-50 d-flex align-items-center justify-content-center">
+        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
+    </div>
+    <!-- Navbar Start -->
+    <div class="container-fluid fixed-top px-0 wow fadeIn" data-wow-delay="0.1s">
+        <nav class="navbar navbar-expand-lg navbar-light py-lg-0 px-lg-5 wow fadeIn" data-wow-delay="0.1s">
+            <a href="/user/dashboard" class="navbar-brand ms-4 ms-lg-0">
+                <h5 class="m-0 text-primary"><i class="fa fa-university me-2"></i>Finanza</h5>
+            </a>
+            <button type="button" class="navbar-toggler me-4" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarCollapse">
+                <div class="navbar-nav ms-auto p-4 p-lg-0">
+                    <a href="/user/dashboard" class="nav-item nav-link">Dashboard</a>
+                    <a href="/user/account" class="nav-item nav-link">Account</a>
+                    <a href="/user/kyc_form" class="nav-item nav-link">KYC</a>
+                    <div class="nav-item dropdown">
+                        <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Products</a>
+                        <div class="dropdown-menu border-light m-0">
+                            <a href="/user/cards" class="dropdown-item">Cards</a>
+                            <a href="/user/deposits" class="dropdown-item">Deposits</a>
+                            <a href="/user/loans" class="dropdown-item">Loans</a>
+                            <a href="/user/investments" class="dropdown-item">Investments</a>
+                        </div>
+                    </div>
+                    <div class="nav-item dropdown">
+                        <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Services</a>
+                        <div class="dropdown-menu border-light m-0">
+                            <a href="/user/analytics" class="dropdown-item">Business Analysis</a>
+                            <a href="/user/treasury_portfolio" class="dropdown-item">Financial Planning</a>
+                            <a href="/user/insurance" class="dropdown-item">Insurance</a>
+                            <a href="/user/treasury_portfolio" class="dropdown-item">Projects</a>
+                        </div>
+                    </div>
+                    <div class="nav-item dropdown">
+                        <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">More</a>
+                        <div class="dropdown-menu border-light m-0">
+                            <a href="/user/profile" class="dropdown-item">Profile</a>
+                            <a href="/user/settings" class="dropdown-item">Settings</a>
+                            <a href="/user/notifications" class="dropdown-item">Notifications</a>
+                            <a href="/user/contact" class="dropdown-item">Contact/Support</a>
+                            <hr class="m-2">
+                            <a href="/logout" class="dropdown-item text-danger">Logout</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </div>
+    <!-- Navbar End -->
+    <div class="container-fluid page-header mb-5 wow fadeIn" data-wow-delay="0.1s">
+        <div class="container">
+            <h1 class="display-4 pb-3 animated slideInDown">Know Your Customer Verification</h1>
+            <nav aria-label="breadcrumb animated slideInDown">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a class="text-white" href="/user/dashboard">Home</a></li>
+                    <li class="breadcrumb-item text-primary active" aria-current="page">Know Your Customer Verification</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+    <div class="container-xxl py-5">
+        <div class="container">
+            <div class="row g-5">
+                <div class="col-lg-12 wow fadeInUp" data-wow-delay="0.1s">
+                    <h2 class="mb-4">Know Your Customer (KYC) Verification</h2>
+                    <p class="mb-5">Complete your KYC verification to unlock all features and maintain account security. All documents are encrypted and securely stored.</p>
+                    
+                    <!-- Region Selection & Info -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">Your Region</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label"><strong>Country/Region:</strong></label>
+                                    <select id="kyc-region" class="form-select">
+                                        <option value="">-- Select Region --</option>
+                                        <option value="US">United States</option>
+                                        <option value="UK">United Kingdom</option>
+                                        <option value="EU">European Union</option>
+                                        <option value="CA">Canada</option>
+                                        <option value="AU">Australia</option>
+                                        <option value="SG">Singapore</option>
+                                        <option value="HK">Hong Kong</option>
+                                        <option value="IND">India</option>
+                                        <option value="AE">United Arab Emirates</option>
+                                        <option value="OTHER">Other</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label"><strong>Risk Level:</strong></label>
+                                    <p id="risk-level-display" class="mt-2">
+                                        <span class="badge bg-secondary">Select region to see requirements</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Regional Requirements Info -->
+                    <div id="regional-requirements" class="alert alert-info" style="display: none;">
+                        <h6><i class="bi bi-info-circle me-2"></i>Regional Requirements</h6>
+                        <div id="regional-requirements-content"></div>
+                    </div>
+                    
+                    <!-- KYC Status Card -->
+                    <div class="card mb-4">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">Your KYC Status</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Overall Status:</strong></p>
+                                    <p><span class="badge bg-warning" id="kyc-overall-status">Pending</span></p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Region:</strong></p>
+                                    <p id="kyc-region-display">—</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Last Updated:</strong></p>
+                                    <p id="kyc-last-updated">—</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Verification Level:</strong></p>
+                                    <p id="verification-level">—</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>ID Verification:</strong></p>
+                                    <p><span class="badge bg-secondary" id="id-status">Not Submitted</span></p>
+                                </div>
+                                <div class="col-md-6">
+                                    <p class="mb-1"><strong>Address Verification:</strong></p>
+                                    <p><span class="badge bg-secondary" id="address-status">Not Submitted</span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Upload Documents -->
+                    <div class="row g-4" id="document-upload-section">
+                        <!-- Government ID Upload -->
+                        <div class="col-lg-6">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h5 class="mb-0">Government ID <span id="id-requirement-label" class="badge bg-info ms-2">Required</span></h5>
+                                </div>
+                                <div class="card-body">
+                                    <p class="text-muted mb-3">Accepted formats: PDF, JPG, PNG (Max 5MB)</p>
+                                    <p class="mb-3"><small id="id-types-description"><strong>Accepted IDs:</strong> Passport, Driver License, National ID, or Government Issued ID</small></p>
+                                    <form class="kyc-upload-form" id="id-upload-form">
+                                        <div class="mb-3">
+                                            <input type="hidden" name="document_type" value="government_id">
+                                            <input type="file" class="form-control" name="file" accept=".pdf,.jpg,.jpeg,.png" required>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary w-100">Upload Government ID</button>
+                                    </form>
+                                    <div id="id-upload-status" class="mt-3"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ID Front Side -->
+                        <div class="col-lg-6">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h5 class="mb-0">Government ID - Front <span class="badge bg-info ms-2">Required</span></h5>
+                                </div>
+                                <div class="card-body">
+                                    <p class="text-muted mb-3">Accepted formats: PDF, JPG, PNG (Max 5MB)</p>
+                                    <p class="mb-3"><small><strong>Upload the front side of your ID</strong></small></p>
+                                    <form class="kyc-upload-form" id="id-front-upload-form">
+                                        <div class="mb-3">
+                                            <input type="hidden" name="document_type" value="id_front">
+                                            <input type="file" class="form-control" name="file" accept=".pdf,.jpg,.jpeg,.png" required>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary w-100">Upload ID Front</button>
+                                    </form>
+                                    <div id="id-front-upload-status" class="mt-3"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ID Back Side -->
+                        <div class="col-lg-6">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h5 class="mb-0">Government ID - Back <span class="badge bg-info ms-2">Required</span></h5>
+                                </div>
+                                <div class="card-body">
+                                    <p class="text-muted mb-3">Accepted formats: PDF, JPG, PNG (Max 5MB)</p>
+                                    <p class="mb-3"><small><strong>Upload the back side of your ID</strong></small></p>
+                                    <form class="kyc-upload-form" id="id-back-upload-form">
+                                        <div class="mb-3">
+                                            <input type="hidden" name="document_type" value="id_back">
+                                            <input type="file" class="form-control" name="file" accept=".pdf,.jpg,.jpeg,.png" required>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary w-100">Upload ID Back</button>
+                                    </form>
+                                    <div id="id-back-upload-status" class="mt-3"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SSN/Tax ID -->
+                        <div class="col-lg-6">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h5 class="mb-0">Social Security / Tax ID <span class="badge bg-info ms-2">Required</span></h5>
+                                </div>
+                                <div class="card-body">
+                                    <p class="text-muted mb-3">Accepted formats: PDF, JPG, PNG (Max 5MB)</p>
+                                    <p class="mb-3"><small><strong>Upload a document showing your SSN/Tax ID</strong> (e.g., Social Security card, Tax return)</small></p>
+                                    <form class="kyc-upload-form" id="ssn-upload-form">
+                                        <div class="mb-3">
+                                            <input type="hidden" name="document_type" value="ssn_tax_id">
+                                            <input type="file" class="form-control" name="file" accept=".pdf,.jpg,.jpeg,.png" required>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary w-100">Upload SSN/Tax ID</button>
+                                    </form>
+                                    <div id="ssn-upload-status" class="mt-3"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Proof of Address Upload -->
+                        <div class="col-lg-6">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h5 class="mb-0">Proof of Address <span id="address-requirement-label" class="badge bg-info ms-2">Required</span></h5>
+                                </div>
+                                <div class="card-body">
+                                    <p class="text-muted mb-3">Accepted formats: PDF, JPG, PNG (Max 5MB)</p>
+                                    <p class="mb-3"><small id="address-types-description"><strong>Accepted Documents:</strong> Utility Bill, Bank Statement, or Government Notice (Not older than 3 months)</small></p>
+                                    <form class="kyc-upload-form" id="address-upload-form">
+                                        <div class="mb-3">
+                                            <input type="hidden" name="document_type" value="proof_of_address">
+                                            <input type="file" class="form-control" name="file" accept=".pdf,.jpg,.jpeg,.png" required>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary w-100">Upload Proof of Address</button>
+                                    </form>
+                                    <div id="address-upload-status" class="mt-3"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Personal Details Form -->
+                    <div class="card mb-4 mt-4">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">Personal Details</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="personal-details-form">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label"><strong>Full Legal Name</strong></label>
+                                        <input type="text" class="form-control" name="full_name" placeholder="As shown on your ID" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label"><strong>Date of Birth</strong></label>
+                                        <input type="date" class="form-control" name="date_of_birth" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label"><strong>Place of Birth</strong></label>
+                                        <input type="text" class="form-control" name="place_of_birth" placeholder="City, Country">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label"><strong>Nationality</strong></label>
+                                        <input type="text" class="form-control" name="nationality" placeholder="Your country of citizenship">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label"><strong>Street Address</strong></label>
+                                        <input type="text" class="form-control" name="street_address" placeholder="House number and street name" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label"><strong>City</strong></label>
+                                        <input type="text" class="form-control" name="city" placeholder="City" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label"><strong>State/Province</strong></label>
+                                        <input type="text" class="form-control" name="state" placeholder="State or Province">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label"><strong>Postal Code</strong></label>
+                                        <input type="text" class="form-control" name="postal_code" placeholder="ZIP or Postal Code" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label"><strong>Country</strong></label>
+                                        <input type="text" class="form-control" name="country" placeholder="Country of residence" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label"><strong>Phone Number</strong></label>
+                                        <input type="tel" class="form-control" name="phone" placeholder="+1 (555) 123-4567" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label"><strong>Email Address</strong></label>
+                                        <input type="email" class="form-control" name="email" placeholder="your@email.com" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label"><strong>Document Type</strong></label>
+                                        <select class="form-control" name="document_type" required>
+                                            <option value="">-- Select Document Type --</option>
+                                            <option value="passport">Passport</option>
+                                            <option value="national_id">National ID</option>
+                                            <option value="driver_license">Driver's License</option>
+                                            <option value="government_id">Government Issued ID</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label"><strong>Document Number</strong></label>
+                                        <input type="text" class="form-control" name="document_number" placeholder="ID or Passport number" required>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label"><strong>Occupation</strong></label>
+                                        <input type="text" class="form-control" name="occupation" placeholder="Your profession or occupation">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label"><strong>Company/Employer</strong></label>
+                                        <input type="text" class="form-control" name="employer" placeholder="Name of employer (if applicable)">
+                                    </div>
+                                    <div class="col-12">
+                                        <button type="submit" class="btn btn-primary">Save Personal Details</button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Additional Documents for High-Risk Regions -->
+                    <div class="row g-4 mt-2" id="additional-docs-section" style="display: none;">
+                        <!-- Source of Funds -->
+                        <div class="col-lg-6">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h5 class="mb-0">Source of Funds <span class="badge bg-warning ms-2">Required for High-Risk</span></h5>
+                                </div>
+                                <div class="card-body">
+                                    <p class="text-muted mb-3">Accepted formats: PDF, JPG, PNG (Max 5MB)</p>
+                                    <p class="mb-3"><small><strong>Accepted Documents:</strong> Salary slips, Investment certificates, or business registration</small></p>
+                                    <form class="kyc-upload-form" id="funds-upload-form">
+                                        <div class="mb-3">
+                                            <input type="hidden" name="document_type" value="source_of_funds">
+                                            <input type="file" class="form-control" name="file" accept=".pdf,.jpg,.jpeg,.png">
+                                        </div>
+                                        <button type="submit" class="btn btn-primary w-100">Upload Source of Funds</button>
+                                    </form>
+                                    <div id="funds-upload-status" class="mt-3"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Beneficial Ownership -->
+                        <div class="col-lg-6">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h5 class="mb-0">Beneficial Ownership <span class="badge bg-warning ms-2">Required for High-Risk</span></h5>
+                                </div>
+                                <div class="card-body">
+                                    <p class="text-muted mb-3">Accepted formats: PDF, JPG, PNG (Max 5MB)</p>
+                                    <p class="mb-3"><small><strong>If applicable:</strong> Proof of business ownership or partnership documents</small></p>
+                                    <form class="kyc-upload-form" id="ownership-upload-form">
+                                        <div class="mb-3">
+                                            <input type="hidden" name="document_type" value="beneficial_ownership">
+                                            <input type="file" class="form-control" name="file" accept=".pdf,.jpg,.jpeg,.png">
+                                        </div>
+                                        <button type="submit" class="btn btn-primary w-100">Upload Beneficial Ownership (Optional)</button>
+                                    </form>
+                                    <div id="ownership-upload-status" class="mt-3"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Submitted Documents -->
+                    <div class="card mt-4">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">Submitted Documents</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="submitted-docs-container">
+                                <p class="text-muted">No documents submitted yet</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Requirements Info -->
+                    <div class="alert alert-info mt-4" id="standard-requirements">
+                        <h6><i class="bi bi-info-circle me-2"></i>General KYC Requirements</h6>
+                        <ul class="mb-0">
+                            <li>You must be at least 18 years old</li>
+                            <li>Government ID must be valid and not expired</li>
+                            <li>Proof of address must be dated within the last 3 months</li>
+                            <li>Documents must be clear and legible</li>
+                            <li>Processing typically takes 1-2 business days</li>
+                        </ul>
+                    </div>
+
+                    <div id="kyc-checklist" class="card mt-4">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">Verification Checklist</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="check-personal" disabled>
+                                <label class="form-check-label" for="check-personal">
+                                    Personal details completed
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="check-id-front" disabled>
+                                <label class="form-check-label" for="check-id-front">
+                                    Government ID - Front side uploaded
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="check-id-back" disabled>
+                                <label class="form-check-label" for="check-id-back">
+                                    Government ID - Back side uploaded
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="check-ssn" disabled>
+                                <label class="form-check-label" for="check-ssn">
+                                    SSN/Tax ID document uploaded
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="check-address" disabled>
+                                <label class="form-check-label" for="check-address">
+                                    Proof of address submitted
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="check-funds" disabled style="display: none;">
+                                <label class="form-check-label" for="check-funds" style="display: none;">
+                                    Source of funds submitted
+                                </label>
+                            </div>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="checkbox" id="check-ownership" disabled style="display: none;">
+                                <label class="form-check-label" for="check-ownership" style="display: none;">
+                                    Beneficial ownership documentation submitted
+                                </label>
+                            </div>
+                            <hr>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="check-consent" required>
+                                <label class="form-check-label" for="check-consent">
+                                    I agree to Finanza's data privacy and KYC verification policy
+                                </label>
+                            </div>
+                            <hr>
+                            <button id="submit-kyc-btn" type="button" class="btn btn-success w-100" disabled>
+                                Submit KYC Verification
+                            </button>
+                            <small id="submit-kyc-message" class="d-block mt-2 text-muted" style="display: none;">
+                                Complete all requirements above to submit
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Footer Start -->
+    <div class="container-fluid bg-dark text-light footer mt-5 py-5 wow fadeIn" data-wow-delay="0.1s">
+        <div class="container py-5">
+            <div class="row g-5">
+                <div class="col-lg-3 col-md-6">
+                    <h5 class="text-white mb-4">Address</h5>
+                    <p class="mb-2"><i class="fa fa-map-marker-alt me-3"></i>123 Street, New York, USA</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Footer End -->
+    <a href="#" class="btn btn-lg btn-primary btn-lg-square back-to-top"><i class="bi bi-arrow-up"></i></a>
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/lib/wow/wow.min.js"></script>
+    <script src="/static/lib/easing/easing.min.js"></script>
+    <script src="/static/lib/waypoints/waypoints.min.js"></script>
+    <script src="/static/lib/counterup/counterup.min.js"></script>
+    <script src="/static/lib/owlcarousel/owl.carousel.min.js"></script>
+    <script src="/static/js/main.js"></script>
+    <script src="/static/js/user-guard.js"></script>
+    <script src="/static/js/realtime.js"></script>
+    <script src="/static/js/page-sync.js"></script>
+    <script>
+        // Regional KYC Requirements Configuration
+        const regionalRequirements = {
+            'US': {
+                risk: 'LOW',
+                documents: ['government_id', 'proof_of_address'],
+                idTypes: 'Social Security Number, Driver License, or US Passport',
+                addressTypes: 'Utility Bill, Bank Statement, or Lease Agreement (not older than 3 months)',
+                requirements: [
+                    'Must be 18+ years old and US resident',
+                    'Valid government-issued photo ID required',
+                    'Proof of address dated within last 3 months',
+                    'All documents must be in English or have certified translation',
+                    'Processing: 1-2 business days'
+                ]
+            },
+            'UK': {
+                risk: 'LOW',
+                documents: ['government_id', 'proof_of_address'],
+                idTypes: 'UK Passport, Driving License, or National ID Card',
+                addressTypes: 'Council Tax Bill, Mortgage Statement, or Utility Bill (not older than 3 months)',
+                requirements: [
+                    'Must be 18+ years old and UK resident',
+                    'Valid UK government ID required',
+                    'Proof of address from last 3 months',
+                    'FCA compliance standards apply',
+                    'Processing: 1-2 business days'
+                ]
+            },
+            'EU': {
+                risk: 'MEDIUM',
+                documents: ['government_id', 'proof_of_address'],
+                idTypes: 'EU National ID Card or Passport',
+                addressTypes: 'Utility Bill, Rental Agreement, or Official Letter (not older than 3 months)',
+                requirements: [
+                    'Must be 18+ years old and EU resident',
+                    'Valid EU government ID or Passport',
+                    'Proof of address from last 3 months',
+                    'GDPR compliance standards apply',
+                    'Documents in English or certified translation required',
+                    'Processing: 2-3 business days'
+                ]
+            },
+            'CA': {
+                risk: 'LOW',
+                documents: ['government_id', 'proof_of_address'],
+                idTypes: 'Canadian Passport, Driver License, or Provincial ID',
+                addressTypes: 'Utility Bill, Bank Statement, or Rental Agreement (not older than 3 months)',
+                requirements: [
+                    'Must be 18+ years old and Canadian resident',
+                    'Valid Canadian government ID',
+                    'Proof of address from last 3 months',
+                    'FINTRAC compliance required',
+                    'Processing: 1-2 business days'
+                ]
+            },
+            'AU': {
+                risk: 'LOW',
+                documents: ['government_id', 'proof_of_address'],
+                idTypes: 'Australian Passport or Drivers License',
+                addressTypes: 'Utility Bill, Bank Statement, or Lease Agreement (not older than 3 months)',
+                requirements: [
+                    'Must be 18+ years old and Australian resident',
+                    'Valid Australian government ID',
+                    'Proof of address from last 3 months',
+                    'ASIC compliance standards apply',
+                    'Processing: 1-2 business days'
+                ]
+            },
+            'SG': {
+                risk: 'MEDIUM',
+                documents: ['government_id', 'proof_of_address', 'source_of_funds'],
+                idTypes: 'Singapore NRIC, Passport, or Work Permit',
+                addressTypes: 'Utility Bill, Tenancy Agreement, or HDB Statement (not older than 3 months)',
+                requirements: [
+                    'Must be 18+ years old and Singapore resident',
+                    'Valid Singapore government ID',
+                    'Proof of address from last 3 months',
+                    'Source of funds documentation required',
+                    'MAS compliance standards apply',
+                    'Processing: 2-3 business days'
+                ]
+            },
+            'HK': {
+                risk: 'MEDIUM',
+                documents: ['government_id', 'proof_of_address', 'source_of_funds'],
+                idTypes: 'Hong Kong ID Card or Passport',
+                addressTypes: 'Utility Bill, Tenancy Agreement, or Bank Statement (not older than 3 months)',
+                requirements: [
+                    'Must be 18+ years old and Hong Kong resident',
+                    'Valid Hong Kong government ID',
+                    'Proof of address from last 3 months',
+                    'Source of funds documentation required',
+                    'SFC compliance standards apply',
+                    'Processing: 2-3 business days'
+                ]
+            },
+            'IND': {
+                risk: 'HIGH',
+                documents: ['government_id', 'proof_of_address', 'source_of_funds', 'beneficial_ownership'],
+                idTypes: 'Aadhar, PAN, Driving License, or Passport',
+                addressTypes: 'Electricity Bill, Water Bill, or Bank Statement (not older than 3 months)',
+                requirements: [
+                    'Must be 18+ years old and India resident',
+                    'Valid Indian government ID (Aadhar preferred)',
+                    'PAN card required',
+                    'Proof of address from last 3 months',
+                    'Source of funds documentation required',
+                    'RBI compliance standards apply',
+                    'Enhanced due diligence may apply',
+                    'Processing: 3-5 business days'
+                ]
+            },
+            'AE': {
+                risk: 'HIGH',
+                documents: ['government_id', 'proof_of_address', 'source_of_funds', 'beneficial_ownership'],
+                idTypes: 'UAE National ID or Passport',
+                addressTypes: 'Utility Bill, Tenancy Contract, or Bank Statement (not older than 3 months)',
+                requirements: [
+                    'Must be 18+ years old',
+                    'Valid UAE National ID or Passport',
+                    'Proof of address from last 3 months',
+                    'Source of funds documentation required',
+                    'Business ownership documentation if applicable',
+                    'DFSA/SCA compliance standards apply',
+                    'Enhanced verification may be required',
+                    'Processing: 3-5 business days'
+                ]
+            },
+            'OTHER': {
+                risk: 'HIGH',
+                documents: ['government_id', 'proof_of_address', 'source_of_funds', 'beneficial_ownership'],
+                idTypes: 'Valid government-issued Passport',
+                addressTypes: 'Utility Bill, Bank Statement, or Official Document (not older than 3 months)',
+                requirements: [
+                    'Must be 18+ years old',
+                    'Valid government-issued Passport required',
+                    'Proof of current address from last 3 months',
+                    'Source of funds documentation required',
+                    'Additional verification may be required',
+                    'Enhanced due diligence standards apply',
+                    'Processing: 5-7 business days'
+                ]
+            }
+        };
+
+        // Handle region selection change
+        document.getElementById('kyc-region').addEventListener('change', function(e) {
+            const region = e.target.value;
+            if (!region) {
+                document.getElementById('regional-requirements').style.display = 'none';
+                document.getElementById('additional-docs-section').style.display = 'none';
+                return;
+            }
+
+            const requirements = regionalRequirements[region];
+            
+            // Show regional requirements
+            document.getElementById('regional-requirements').style.display = 'block';
+            document.getElementById('regional-requirements-content').innerHTML = `
+                <div class="mb-3">
+                    <strong>Risk Assessment:</strong>
+                    <span class="badge ${getRiskBadgeClass(requirements.risk)}">${requirements.risk}</span>
+                </div>
+                <div class="mb-3">
+                    <strong>Required Documents:</strong>
+                    <ul class="mb-0 mt-2">
+                        ${requirements.documents.map(doc => `<li>${formatDocumentName(doc)}</li>`).join('')}
+                    </ul>
+                </div>
+                <div class="mb-3">
+                    <strong>Accepted ID Types:</strong> ${requirements.idTypes}
+                </div>
+                <div>
+                    <strong>Proof of Address:</strong> ${requirements.addressTypes}
+                </div>
+            `;
+
+            // Update document upload section descriptions
+            document.getElementById('id-types-description').innerHTML = `<strong>Accepted IDs (${region}):</strong> ${requirements.idTypes}`;
+            document.getElementById('address-types-description').innerHTML = `<strong>Accepted Documents (${region}):</strong> ${requirements.addressTypes}`;
+
+            // Show additional docs for high-risk regions
+            if (requirements.risk === 'HIGH' || requirements.risk === 'MEDIUM') {
+                document.getElementById('additional-docs-section').style.display = requirements.documents.length > 2 ? 'grid' : 'none';
+                if (requirements.documents.includes('source_of_funds')) {
+                    document.querySelector('#funds-upload-form').parentElement.parentElement.style.display = 'block';
+                }
+                if (requirements.documents.includes('beneficial_ownership')) {
+                    document.querySelector('#ownership-upload-form').parentElement.parentElement.style.display = 'block';
+                }
+                document.getElementById('check-funds').style.display = requirements.documents.includes('source_of_funds') ? 'block' : 'none';
+                document.querySelector('label[for="check-funds"]').style.display = requirements.documents.includes('source_of_funds') ? 'block' : 'none';
+            } else {
+                document.getElementById('additional-docs-section').style.display = 'none';
+            }
+
+            // Update risk level display
+            const riskDisplay = document.getElementById('risk-level-display');
+            riskDisplay.innerHTML = `<span class="badge ${getRiskBadgeClass(requirements.risk)}">${requirements.risk} Risk</span>`;
+
+            // Store region in session
+            localStorage.setItem('kyc_region', region);
+        });
+
+        function getRiskBadgeClass(risk) {
+            if (risk === 'HIGH') return 'bg-danger';
+            if (risk === 'MEDIUM') return 'bg-warning';
+            return 'bg-success';
+        }
+
+        function formatDocumentName(doc) {
+            const names = {
+                'government_id': 'Government ID',
+                'proof_of_address': 'Proof of Address',
+                'source_of_funds': 'Source of Funds',
+                'beneficial_ownership': 'Beneficial Ownership Documentation'
+            };
+            return names[doc] || doc;
+        }
+
+        // Handle KYC document uploads
+        document.querySelectorAll('.kyc-upload-form').forEach(form => {
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const region = document.getElementById('kyc-region').value;
+                if (!region) {
+                    alert('Please select your region first');
+                    return;
+                }
+
+                const formData = new FormData(form);
+                formData.append('region', region);
+                const documentType = formData.get('document_type');
+                const statusContainer = form.nextElementSibling;
+
+                try {
+                    statusContainer.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"><span class="sr-only">Uploading...</span></div>';
+                    
+                    const res = await fetch('/api/v1/kyc/verify', {
+                        method: 'POST',
+                        credentials: 'include',
+                        body: formData
+                    });
+
+                    if (res.ok) {
+                        const result = await res.json();
+                        statusContainer.innerHTML = '<div class="alert alert-success">✓ Document uploaded successfully!</div>';
+                        form.reset();
+                        
+                        // Refresh KYC status and update submit button
+                        await refreshKYCStatus();
+                        updateSubmitButtonState();
+                        
+                        setTimeout(() => loadKYCStatus(), 500);
+                    } else {
+                        const error = await res.json();
+                        statusContainer.innerHTML = `<div class="alert alert-danger">✗ Upload failed: ${error.detail || 'Unknown error'}</div>`;
+                    }
+                } catch (err) {
+                    console.error('Upload error:', err);
+                    statusContainer.innerHTML = '<div class="alert alert-danger">✗ Error uploading document</div>';
+                }
+            });
+        });
+
+        // Load KYC status from API
+        async function loadKYCStatus() {
+            try {
+                const res = await fetch('/api/user/profile', { credentials: 'include' });
+                if (!res.ok) throw new Error('Failed to load KYC status');
+                const user = await res.json();
+                
+                // Set region if available
+                if (user.country) {
+                    const regionMap = { 'US': 'US', 'United Kingdom': 'UK', 'India': 'IND', 'UAE': 'AE' };
+                    const region = regionMap[user.country] || 'OTHER';
+                    document.getElementById('kyc-region').value = region;
+                    document.getElementById('kyc-region-display').textContent = user.country || '—';
+                    
+                    // Trigger region change to show requirements
+                    document.getElementById('kyc-region').dispatchEvent(new Event('change'));
+                }
+                
+                // Update KYC status
+                if (user.kyc_verified || user.status === 'verified') {
+                    document.getElementById('kyc-overall-status').textContent = 'Verified';
+                    document.getElementById('kyc-overall-status').className = 'badge bg-success';
+                    document.getElementById('id-status').textContent = 'Verified';
+                    document.getElementById('id-status').className = 'badge bg-success';
+                    document.getElementById('address-status').textContent = 'Verified';
+                    document.getElementById('address-status').className = 'badge bg-success';
+                    document.getElementById('check-id').checked = true;
+                    document.getElementById('check-address').checked = true;
+                    document.getElementById('verification-level').textContent = 'Full KYC';
+                }
+                
+                if (user.updated_at) {
+                    const date = new Date(user.updated_at);
+                    document.getElementById('kyc-last-updated').textContent = date.toLocaleDateString();
+                }
+            } catch (err) {
+                console.error('Error loading KYC status:', err);
+            }
+        }
+
+        // ============================================================
+        // ENHANCED KYC STATUS & VALIDATION SYSTEM
+        // ============================================================
+
+        /**
+         * Fetch KYC submission status from backend
+         * Updates checklist and submit button based on actual backend state
+         */
+        async function refreshKYCStatus() {
+            try {
+                console.log('🔄 Refreshing KYC status from backend...');
+                const res = await fetch('/api/v1/kyc/submissions', { credentials: 'include' });
+                
+                if (!res.ok) {
+                    console.log('ℹ️ KYC record does not exist yet (first time)');
+                    return {
+                        personal_details_saved: false,
+                        id_front_uploaded: false,
+                        id_back_uploaded: false,
+                        ssn_uploaded: false,
+                        proof_of_address_uploaded: false,
+                        kyc_submitted: false,
+                        kyc_status: 'pending_documents'
+                    };
+                }
+                
+                const kyc_data = await res.json();
+                console.log('✅ KYC status:', kyc_data);
+                
+                // Update checklist checkboxes based on backend state
+                document.getElementById('check-id-front').checked = kyc_data.id_front_uploaded || false;
+                document.getElementById('check-id-back').checked = kyc_data.id_back_uploaded || false;
+                document.getElementById('check-ssn').checked = kyc_data.ssn_uploaded || false;
+                document.getElementById('check-address').checked = kyc_data.proof_of_address_uploaded || false;
+                
+                // If we reached here with personal details form, mark personal details as saved
+                const personalDetailsForm = document.getElementById('personal-details-form');
+                if (personalDetailsForm) {
+                    // Check if all personal detail fields have values
+                    const formFields = ['full_name', 'date_of_birth', 'place_of_birth', 'nationality', 'street_address', 'city', 'state', 'postal_code', 'country', 'phone', 'occupation', 'employer'];
+                    const allFilled = formFields.every(field => {
+                        const elem = personalDetailsForm.querySelector(`[name="${field}"]`);
+                        return elem && elem.value;
+                    });
+                    document.getElementById('check-personal').checked = allFilled;
+                }
+                
+                return kyc_data;
+            } catch (err) {
+                console.error('❌ Error refreshing KYC status:', err);
+                return null;
+            }
+        }
+
+        /**
+         * Check if all KYC requirements are met
+         * Returns true only if: personal details + all docs + consent
+         */
+        function canSubmitKYC() {
+            const checkPersonal = document.getElementById('check-personal').checked;
+            const checkIdFront = document.getElementById('check-id-front').checked;
+            const checkIdBack = document.getElementById('check-id-back').checked;
+            const checkSSN = document.getElementById('check-ssn').checked;
+            const checkAddress = document.getElementById('check-address').checked;
+            const checkConsent = document.getElementById('check-consent').checked;
+            
+            const canSubmit = checkPersonal && checkIdFront && checkIdBack && checkSSN && checkAddress && checkConsent;
+            
+            console.log('📋 KYC Submission Check:', {
+                personal_details: checkPersonal,
+                id_front: checkIdFront,
+                id_back: checkIdBack,
+                ssn: checkSSN,
+                address: checkAddress,
+                consent: checkConsent,
+                can_submit: canSubmit
+            });
+            
+            return canSubmit;
+        }
+
+        /**
+         * Update submit button state based on checklist
+         * Shows/hides submit button and help message
+         */
+        function updateSubmitButtonState() {
+            const submitBtn = document.getElementById('submit-kyc-btn');
+            const submitMsg = document.getElementById('submit-kyc-message');
+            const canSubmit = canSubmitKYC();
+            
+            if (canSubmit) {
+                submitBtn.disabled = false;
+                submitBtn.classList.add('btn-success');
+                submitBtn.classList.remove('btn-secondary');
+                submitMsg.style.display = 'none';
+                console.log('✅ Submit button ENABLED');
+            } else {
+                submitBtn.disabled = true;
+                submitBtn.classList.remove('btn-success');
+                submitBtn.classList.add('btn-secondary');
+                submitMsg.style.display = 'block';
+                console.log('❌ Submit button DISABLED');
+            }
+        }
+
+        // Load status on page ready
+        async function initializeKYC() {
+            // Initial load
+            loadKYCStatus();
+            
+            // Refresh KYC status and update checklist
+            await refreshKYCStatus();
+            updateSubmitButtonState();
+        }
+        
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeKYC);
+        } else {
+            initializeKYC();
+        }
+
+        // Restore region from session storage
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedRegion = localStorage.getItem('kyc_region');
+            if (savedRegion) {
+                document.getElementById('kyc-region').value = savedRegion;
+                document.getElementById('kyc-region').dispatchEvent(new Event('change'));
+            }
+        });
+
+        // Handle Personal Details Form Submission
+        const personalDetailsForm = document.getElementById('personal-details-form');
+        if (personalDetailsForm) {
+            personalDetailsForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const formData = new FormData(personalDetailsForm);
+                const data = Object.fromEntries(formData);
+
+                try {
+                    const submitBtn = personalDetailsForm.querySelector('button[type="submit"]');
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+
+                    const res = await fetch('/api/user/profile', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            full_name: data.full_name,
+                            date_of_birth: data.date_of_birth,
+                            place_of_birth: data.place_of_birth,
+                            nationality: data.nationality,
+                            street_address: data.street_address,
+                            city: data.city,
+                            state: data.state,
+                            postal_code: data.postal_code,
+                            country: data.country,
+                            phone: data.phone,
+                            email: data.email,
+                            occupation: data.occupation,
+                            employer: data.employer
+                        })
+                    });
+
+                    if (res.ok) {
+                        showAlert('Personal details saved successfully!', 'success');
+                        document.getElementById('check-personal').checked = true;
+                        
+                        // Refresh KYC status and update button
+                        await refreshKYCStatus();
+                        updateSubmitButtonState();
+                    } else {
+                        const error = await res.json();
+                        showAlert(`Error: ${error.detail || 'Failed to save'}`, 'danger');
+                    }
+                } catch (err) {
+                    console.error('Error saving personal details:', err);
+                    showAlert('Error saving personal details', 'danger');
+                } finally {
+                    const submitBtn = personalDetailsForm.querySelector('button[type="submit"]');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = 'Save Personal Details';
+                }
+            });
+        }
+
+        // Handle new document uploads (ID Front, ID Back, SSN)
+        const idFrontForm = document.getElementById('id-front-upload-form');
+        const idBackForm = document.getElementById('id-back-upload-form');
+        const ssnForm = document.getElementById('ssn-upload-form');
+
+        if (idFrontForm) {
+            idFrontForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const region = document.getElementById('kyc-region').value;
+                if (!region) {
+                    alert('Please select your region first');
+                    return;
+                }
+
+                const formData = new FormData(idFrontForm);
+                formData.append('region', region);
+                const statusContainer = document.getElementById('id-front-upload-status');
+
+                try {
+                    statusContainer.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"><span class="sr-only">Uploading...</span></div>';
+                    
+                    const res = await fetch('/api/v1/kyc/verify', {
+                        method: 'POST',
+                        credentials: 'include',
+                        body: formData
+                    });
+
+                    if (res.ok) {
+                        statusContainer.innerHTML = '<div class="alert alert-success mb-0">✓ ID Front uploaded successfully!</div>';
+                        idFrontForm.reset();
+                        await refreshKYCStatus();
+                        updateSubmitButtonState();
+                    } else {
+                        const error = await res.json();
+                        statusContainer.innerHTML = `<div class="alert alert-danger mb-0">✗ ${error.detail || 'Upload failed'}</div>`;
+                    }
+                } catch (err) {
+                    console.error('Error:', err);
+                    statusContainer.innerHTML = '<div class="alert alert-danger mb-0">✗ Error uploading document</div>';
+                }
+            });
+        }
+
+        if (idBackForm) {
+            idBackForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const region = document.getElementById('kyc-region').value;
+                if (!region) {
+                    alert('Please select your region first');
+                    return;
+                }
+
+                const formData = new FormData(idBackForm);
+                formData.append('region', region);
+                const statusContainer = document.getElementById('id-back-upload-status');
+
+                try {
+                    statusContainer.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"><span class="sr-only">Uploading...</span></div>';
+                    
+                    const res = await fetch('/api/v1/kyc/verify', {
+                        method: 'POST',
+                        credentials: 'include',
+                        body: formData
+                    });
+
+                    if (res.ok) {
+                        statusContainer.innerHTML = '<div class="alert alert-success mb-0">✓ ID Back uploaded successfully!</div>';
+                        idBackForm.reset();
+                        await refreshKYCStatus();
+                        updateSubmitButtonState();
+                    } else {
+                        const error = await res.json();
+                        statusContainer.innerHTML = `<div class="alert alert-danger mb-0">✗ ${error.detail || 'Upload failed'}</div>`;
+                    }
+                } catch (err) {
+                    console.error('Error:', err);
+                    statusContainer.innerHTML = '<div class="alert alert-danger mb-0">✗ Error uploading document</div>';
+                }
+            });
+        }
+
+        if (ssnForm) {
+            ssnForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const region = document.getElementById('kyc-region').value;
+                if (!region) {
+                    alert('Please select your region first');
+                    return;
+                }
+
+                const formData = new FormData(ssnForm);
+                formData.append('region', region);
+                const statusContainer = document.getElementById('ssn-upload-status');
+
+                try {
+                    statusContainer.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"><span class="sr-only">Uploading...</span></div>';
+                    
+                    const res = await fetch('/api/v1/kyc/verify', {
+                        method: 'POST',
+                        credentials: 'include',
+                        body: formData
+                    });
+
+                    if (res.ok) {
+                        statusContainer.innerHTML = '<div class="alert alert-success mb-0">✓ SSN/Tax ID uploaded successfully!</div>';
+                        ssnForm.reset();
+                        await refreshKYCStatus();
+                        updateSubmitButtonState();
+                    } else {
+                        const error = await res.json();
+                        statusContainer.innerHTML = `<div class="alert alert-danger mb-0">✗ ${error.detail || 'Upload failed'}</div>`;
+                    }
+                } catch (err) {
+                    console.error('Error:', err);
+                    statusContainer.innerHTML = '<div class="alert alert-danger mb-0">✗ Error uploading document</div>';
+                }
+            });
+        }
+
+        // Helper function to show alerts
+        function showAlert(message, type = 'info') {
+            const alertHtml = `<div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>`;
+            const container = document.querySelector('.container-fluid');
+            const alertDiv = document.createElement('div');
+            alertDiv.innerHTML = alertHtml;
+            container.insertBefore(alertDiv.firstElementChild, container.firstChild);
+            setTimeout(() => {
+                const alert = container.querySelector('.alert');
+                if (alert) alert.remove();
+            }, 5000);
+        }
+
+        // ============================================================
+        // SUBMIT KYC BUTTON HANDLER
+        // ============================================================
+        
+        const submitKYCBtn = document.getElementById('submit-kyc-btn');
+        if (submitKYCBtn) {
+            submitKYCBtn.addEventListener('click', async () => {
+                if (!canSubmitKYC()) {
+                    alert('Please complete all KYC requirements before submitting.');
+                    return;
+                }
+
+                if (!confirm('Are you sure you want to submit your KYC? Once submitted, you cannot make changes until verification is complete.')) {
+                    return;
+                }
+
+                try {
+                    submitKYCBtn.disabled = true;
+                    submitKYCBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Submitting...';
+
+                    // Collect personal details from the form
+                    const personalDetailsForm = document.getElementById('personal-details-form');
+                    const formData = new FormData(personalDetailsForm);
+                    
+                    // Get email, document_type, and document_number from form
+                    const email = formData.get('email');
+                    const document_type = formData.get('document_type');
+                    const document_number = formData.get('document_number');
+                    
+                    // Log what we're sending for debugging
+                    console.log('🔄 Submitting KYC with:', {
+                        email: email,
+                        document_type: document_type,
+                        document_number: document_number
+                    });
+                    
+                    const res = await fetch('/api/v1/kyc/submit', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            email: email,
+                            document_type: document_type,
+                            document_number: document_number
+                        })
+                    });
+
+                    if (res.ok) {
+                        const result = await res.json();
+                        showAlert('KYC submitted successfully! Your application is now under review.', 'success');
+                        
+                        // Refresh status
+                        await refreshKYCStatus();
+                        
+                        // Disable form after submission
+                        const forms = document.querySelectorAll('form');
+                        forms.forEach(form => {
+                            const inputs = form.querySelectorAll('input, textarea, select');
+                            inputs.forEach(input => {
+                                input.disabled = true;
+                            });
+                            const buttons = form.querySelectorAll('button');
+                            buttons.forEach(btn => {
+                                btn.disabled = true;
+                            });
+                        });
+                        
+                        // Show locked message
+                        showAlert('Your KYC has been submitted and is locked for editing until verification is complete.', 'info');
+                        
+                        // Disable submit button
+                        submitKYCBtn.disabled = true;
+                        submitKYCBtn.innerHTML = 'KYC Submitted - Under Review';
+                    } else {
+                        const error = await res.json();
+                        showAlert(`Error: ${error.detail || 'Failed to submit KYC'}`, 'danger');
+                    }
+                } catch (err) {
+                    console.error('Error submitting KYC:', err);
+                    showAlert('Error submitting KYC', 'danger');
+                } finally {
+                    if (!canSubmitKYC()) {
+                        submitKYCBtn.disabled = true;
+                    }
+                    submitKYCBtn.innerHTML = 'Submit KYC Verification';
+                }
+            });
+        }
+
+        // Handle consent checkbox - enable/disable submit button
+        const consentCheckbox = document.getElementById('check-consent');
+        if (consentCheckbox) {
+            consentCheckbox.addEventListener('change', () => {
+                updateSubmitButtonState();
+            });
+        }
+
+        // SECURE Logout handler - Clear all session state
+        document.addEventListener('click', function(e) {
+            if (e.target && e.target.getAttribute('href') === '/logout') {
+                e.preventDefault();
+                if (confirm('Are you sure you want to logout?')) {
+                    // Clear all client-side storage
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    // Navigate to logout endpoint (server clears cookie)
+                    window.location.href = '/logout';
+                }
+            }
+        });
+        
+        // Prevent back button from restoring cached pages
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {  // Page restored from back/forward cache
+                if (!localStorage.getItem('token')) {
+                    window.location.href = '/signin';
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

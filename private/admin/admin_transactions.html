@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transactions Management - Finanza Admin</title>
+    <link href="/static/css/style.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+    <style>
+        body { background: #f8f9fa; }
+        .admin-nav { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .admin-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; }
+        .stat-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .stat-number { font-size: 2rem; font-weight: bold; color: #667eea; }
+        .stat-label { color: #666; font-size: 0.9rem; margin-top: 5px; }
+        .dashboard-section { background: white; border-radius: 10px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 30px; }
+        .chart-container { position: relative; height: 300px; margin-bottom: 20px; }
+        .modal-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .form-control:focus { border-color: #667eea; box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25); }
+        .btn-primary { background: #667eea; border: none; }
+        .btn-primary:hover { background: #5568d3; }
+        .table-responsive { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .status-badge { padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+        .status-completed { background: #d4edda; color: #155724; }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-failed { background: #f8d7da; color: #721c24; }
+        .direction-badge { padding: 5px 10px; border-radius: 5px; font-size: 0.8rem; font-weight: 600; }
+        .direction-debit { background: #f8d7da; color: #721c24; }
+        .direction-credit { background: #d4edda; color: #155724; }
+        .type-badge { display: inline-block; padding: 4px 8px; background: #e3f2fd; color: #1976d2; border-radius: 4px; font-size: 0.85rem; }
+        .amount-positive { color: #28a745; font-weight: 600; }
+        .amount-negative { color: #dc3545; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <nav class="admin-nav navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/user/admin/dashboard"><i class="fas fa-chart-line"></i> Finanza Admin</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarAdmin">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarAdmin">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/dashboard"><i class="fas fa-home"></i> Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2><i class="fas fa-exchange-alt"></i> Transaction Management</h2>
+                <p class="text-muted">Monitor and manage all system transactions</p>
+            </div>
+            <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#createTransactionModal">
+                <i class="fas fa-plus"></i> Create Transaction
+            </button>
+        </div>
+
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-number" id="totalTransactions">0</div>
+                <div class="text-muted">Total</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="completedCount">0</div>
+                <div class="text-muted">Completed</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="pendingCount">0</div>
+                <div class="text-muted">Pending</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="failedCount">0</div>
+                <div class="text-muted">Failed</div>
+            </div>
+        </div>
+
+        <div class="search-bar">
+            <div class="row">
+                <div class="col-md-3">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search by user email or reference...">
+                </div>
+                <div class="col-md-2">
+                    <select id="statusFilter" class="form-control">
+                        <option value="">All Status</option>
+                        <option value="completed">Completed</option>
+                        <option value="pending">Pending</option>
+                        <option value="failed">Failed</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <select id="typeFilter" class="form-control">
+                        <option value="">All Types</option>
+                        <option value="deposit">Deposit</option>
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="admin-nav navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/user/admin/dashboard">
+                <i class="fas fa-chart-line"></i> Finanza Admin
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/dashboard">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-5 mb-5">
+        <!-- Header -->
+        <div class="admin-header">
+            <h1><i class="fas fa-exchange-alt"></i> Transaction Management</h1>
+            <p class="mb-0">Monitor, manage, and track all system transactions including transfers, deposits, and withdrawals</p>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="row g-4 mb-5">
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalTransactions">-</div>
+                    <div class="stat-label">Total Transactions</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card">
+                    <div class="stat-number" id="completedCount">-</div>
+                    <div class="stat-label">Completed (24h)</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card">
+                    <div class="stat-number" id="failedCount">-</div>
+                    <div class="stat-label">Failed (24h)</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalVolume">-</div>
+                    <div class="stat-label">Volume (24h)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row mb-5">
+            <div class="col-lg-6">
+                <div class="dashboard-section">
+                    <h5>Transaction Status Distribution</h5>
+                    <div class="chart-container">
+                        <canvas id="statusChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="dashboard-section">
+                    <h5>Transaction Types (24h)</h5>
+                    <div class="chart-container">
+                        <canvas id="typesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transactions Table -->
+        <div class="dashboard-section">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5><i class="fas fa-list"></i> Recent Transactions</h5>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary btn-sm" onclick="openModal('createTransactionModal')">
+                        <i class="fas fa-plus"></i> New Transaction
+                    </button>
+                    <button class="btn btn-success btn-sm" onclick="exportTransactions()">
+                        <i class="fas fa-download"></i> Export
+                    </button>
+                </div>
+            </div>
+            <div class="mb-3">
+                <div class="row g-2">
+                    <div class="col-md-3">
+                        <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Search by email or reference...">
+                    </div>
+                    <div class="col-md-2">
+                        <select id="statusFilter" class="form-control form-control-sm">
+                            <option value="">All Status</option>
+                            <option value="completed">Completed</option>
+                            <option value="pending">Pending</option>
+                            <option value="failed">Failed</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select id="typeFilter" class="form-control form-control-sm">
+                            <option value="">All Types</option>
+                            <option value="deposit">Deposit</option>
+                            <option value="withdrawal">Withdrawal</option>
+                            <option value="transfer">Transfer</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select id="directionFilter" class="form-control form-control-sm">
+                            <option value="">All Directions</option>
+                            <option value="debit">Debit</option>
+                            <option value="credit">Credit</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-primary btn-sm w-100" onclick="loadTransactions()">
+                            <i class="fas fa-filter"></i> Apply Filters
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>User</th>
+                            <th>Reference</th>
+                            <th>Type</th>
+                            <th>Direction</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Timestamp</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionsTable">
+                        <tr><td colspan="9" class="text-center text-muted">Loading transactions...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Disputes & Returns -->
+        <div class="dashboard-section">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5><i class="fas fa-exclamation-circle"></i> Transaction Disputes</h5>
+                <button class="btn btn-danger btn-sm" onclick="openModal('createDisputeModal')">
+                    <i class="fas fa-plus"></i> New Dispute
+                </button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Dispute ID</th>
+                            <th>Transaction</th>
+                            <th>User</th>
+                            <th>Reason</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Filed Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="disputesTable">
+                        <tr><td colspan="8" class="text-center text-muted">Loading disputes...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Returns & Reversals -->
+        <div class="dashboard-section">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5><i class="fas fa-undo"></i> Returns & Reversals</h5>
+                <button class="btn btn-warning btn-sm" onclick="openModal('createReturnModal')">
+                    <i class="fas fa-plus"></i> New Return
+                </button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Return ID</th>
+                            <th>Original Transaction</th>
+                            <th>Amount</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                            <th>Initiated Date</th>
+                            <th>Completion Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="returnsTable">
+                        <tr><td colspan="8" class="text-center text-muted">Loading returns...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ACH Returns -->
+        <div class="dashboard-section">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5><i class="fas fa-reply"></i> ACH Returns</h5>
+                <button class="btn btn-warning btn-sm" onclick="openModal('createAchReturnModal')">
+                    <i class="fas fa-plus"></i> Log Return
+                </button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Return ID</th>
+                            <th>ACH Entry</th>
+                            <th>Return Code</th>
+                            <th>Reason</th>
+                            <th>Amount</th>
+                            <th>Return Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="achReturnsTable">
+                        <tr><td colspan="8" class="text-center text-muted">Loading ACH returns...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Container -->
+    <div id="alertContainer" style="position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px;"></div>
+
+    <!-- Create Transaction Modal -->
+    <div class="modal fade" id="createTransactionModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create Transaction</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="createTransactionForm" onsubmit="handleCreateTransaction(event)">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">User</label>
+                            <select id="transactionUser" class="form-control" required onchange="loadUserBalance()"></select>
+                        </div>
+                        <div class="mb-3" id="userBalanceContainer" style="display:none;">
+                            <p class="text-muted mb-0">Balance: <strong id="userBalance">$0.00</strong></p>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Type</label>
+                                    <select id="transactionType" class="form-control" required>
+                                        <option value="">Select Type</option>
+                                        <option value="deposit">Deposit</option>
+                                        <option value="withdrawal">Withdrawal</option>
+                                        <option value="transfer">Transfer</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Direction</label>
+                                    <select id="transactionDirection" class="form-control" required>
+                                        <option value="">Select Direction</option>
+                                        <option value="debit">Debit</option>
+                                        <option value="credit">Credit</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Amount</label>
+                                    <input type="number" id="transactionAmount" class="form-control" step="0.01" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Reference ID</label>
+                                    <input type="text" id="transactionRef" class="form-control" placeholder="Optional reference">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <textarea id="transactionDesc" class="form-control" rows="3"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Create Transaction</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Dispute Modal -->
+    <div class="modal fade" id="createDisputeModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">File Transaction Dispute</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="disputeForm" onsubmit="handleCreateDispute(event)">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Transaction ID</label>
+                            <input type="text" id="disputeTransactionId" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Dispute Reason</label>
+                            <select id="disputeReason" class="form-control" required>
+                                <option value="">Select Reason</option>
+                                <option value="unauthorized">Unauthorized Transaction</option>
+                                <option value="duplicate">Duplicate Transaction</option>
+                                <option value="not_received">Payment Not Received</option>
+                                <option value="incomplete">Incomplete Transaction</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <textarea id="disputeDesc" class="form-control" rows="3" required></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger">File Dispute</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Return Modal -->
+    <div class="modal fade" id="createReturnModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Create Transaction Return</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="returnForm" onsubmit="handleCreateReturn(event)">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Original Transaction ID</label>
+                            <input type="text" id="returnTransactionId" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Return Reason</label>
+                            <select id="returnReason" class="form-control" required>
+                                <option value="">Select Reason</option>
+                                <option value="customer_request">Customer Request</option>
+                                <option value="system_error">System Error</option>
+                                <option value="merchant_error">Merchant Error</option>
+                                <option value="nsf">Non-Sufficient Funds</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Notes</label>
+                            <textarea id="returnNotes" class="form-control" rows="3"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-warning">Create Return</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create ACH Return Modal -->
+    <div class="modal fade" id="createAchReturnModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Log ACH Return</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="achReturnForm" onsubmit="handleCreateAchReturn(event)">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">ACH Entry ID</label>
+                            <input type="text" id="achEntryId" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Return Code</label>
+                            <select id="achReturnCode" class="form-control" required>
+                                <option value="">Select Return Code</option>
+                                <option value="R01">R01 - Insufficient Funds</option>
+                                <option value="R02">R02 - Account Closed</option>
+                                <option value="R03">R03 - Route/Transit Number Incorrect</option>
+                                <option value="R04">R04 - Account Number Incorrect</option>
+                                <option value="R05">R05 - Unauthorized Debit</option>
+                                <option value="R06">R06 - Account Frozen</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Return Date</label>
+                            <input type="date" id="achReturnDate" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-warning">Log Return</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/admin_static/js/auth-helper.js"></script>
+    <script src="/admin_static/js/admin-utils.js"></script>
+    <script>
+        const AUTH_HEADER = () => ({ 'Authorization': 'Bearer ' + localStorage.getItem('token'), 'Content-Type': 'application/json' });
+        let statusChart = null;
+        let typesChart = null;
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            await loadTransactionMetrics();
+            await loadTransactions();
+            await loadDisputes();
+            await loadReturns();
+            await loadAchReturns();
+            await loadUsers();
+            initCharts();
+        });
+
+        async function loadTransactionMetrics() {
+            try {
+                const response = await fetchAPI('/api/v1/transactions/metrics');
+                if (!response) return;
+                
+                document.getElementById('totalTransactions').textContent = response.total_transactions || 0;
+                document.getElementById('completedCount').textContent = response.completed_24h || 0;
+                document.getElementById('failedCount').textContent = response.failed_24h || 0;
+                document.getElementById('totalVolume').textContent = formatCurrency(response.volume_24h || 0);
+            } catch (error) {
+                console.error('Error loading metrics:', error);
+            }
+        }
+
+        async function loadTransactions() {
+            try {
+                const statusFilter = document.getElementById('statusFilter').value;
+                const typeFilter = document.getElementById('typeFilter').value;
+                const directionFilter = document.getElementById('directionFilter').value;
+                const search = document.getElementById('searchInput').value;
+                
+                let url = '/api/v1/transactions?limit=50';
+                if (statusFilter) url += '&status=' + statusFilter;
+                if (typeFilter) url += '&type=' + typeFilter;
+                if (directionFilter) url += '&direction=' + directionFilter;
+                if (search) url += '&search=' + search;
+
+                const response = await fetchAPI(url);
+                if (!response || !response.data) return;
+                
+                const tbody = document.getElementById('transactionsTable');
+                tbody.innerHTML = response.data.map(t => `
+                    <tr>
+                        <td>${t.id}</td>
+                        <td>${t.user_email || 'N/A'}</td>
+                        <td><code>${t.reference_number || 'N/A'}</code></td>
+                        <td><span class="type-badge">${t.type}</span></td>
+                        <td><span class="direction-badge direction-${t.direction}">${t.direction.toUpperCase()}</span></td>
+                        <td><span class="${t.direction === 'credit' ? 'amount-positive' : 'amount-negative'}">${formatCurrency(t.amount)}</span></td>
+                        <td><span class="status-badge status-${t.status}">${t.status.toUpperCase()}</span></td>
+                        <td>${formatDate(t.timestamp)}</td>
+                        <td>
+                            <button class="btn btn-sm btn-info" onclick="viewTransaction(${t.id})"><i class="fas fa-eye"></i></button>
+                            ${t.status === 'failed' ? `<button class="btn btn-sm btn-warning" onclick="retryTransaction(${t.id})"><i class="fas fa-redo"></i></button>` : ''}
+                        </td>
+                    </tr>
+                `).join('') || '<tr><td colspan="9" class="text-center text-muted">No transactions found</td></tr>';
+            } catch (error) {
+                console.error('Error loading transactions:', error);
+            }
+        }
+
+        async function loadDisputes() {
+            try {
+                const response = await fetchAPI('/api/v1/transactions/disputes?limit=20');
+                if (!response || !response.data) return;
+                
+                const tbody = document.getElementById('disputesTable');
+                tbody.innerHTML = response.data.map(d => `
+                    <tr>
+                        <td>${d.id}</td>
+                        <td>${d.transaction_id}</td>
+                        <td>${d.user_email}</td>
+                        <td>${d.reason}</td>
+                        <td>${formatCurrency(d.amount)}</td>
+                        <td><span class="status-badge status-${d.status}">${d.status.toUpperCase()}</span></td>
+                        <td>${formatDate(d.filed_date)}</td>
+                        <td><button class="btn btn-sm btn-primary" onclick="viewDispute(${d.id})">View</button></td>
+                    </tr>
+                `).join('') || '<tr><td colspan="8" class="text-center text-muted">No disputes</td></tr>';
+            } catch (error) {
+                console.error('Error loading disputes:', error);
+            }
+        }
+
+        async function loadReturns() {
+            try {
+                const response = await fetchAPI('/api/v1/transactions/returns?limit=20');
+                if (!response || !response.data) return;
+                
+                const tbody = document.getElementById('returnsTable');
+                tbody.innerHTML = response.data.map(r => `
+                    <tr>
+                        <td>${r.id}</td>
+                        <td>${r.original_transaction_id}</td>
+                        <td>${formatCurrency(r.amount)}</td>
+                        <td>${r.reason}</td>
+                        <td><span class="status-badge status-${r.status}">${r.status.toUpperCase()}</span></td>
+                        <td>${formatDate(r.initiated_date)}</td>
+                        <td>${r.completion_date ? formatDate(r.completion_date) : 'Pending'}</td>
+                        <td><button class="btn btn-sm btn-primary" onclick="viewReturn(${r.id})">View</button></td>
+                    </tr>
+                `).join('') || '<tr><td colspan="8" class="text-center text-muted">No returns</td></tr>';
+            } catch (error) {
+                console.error('Error loading returns:', error);
+            }
+        }
+
+        async function loadAchReturns() {
+            try {
+                const response = await fetchAPI('/api/v1/settlement/ach/returns?limit=20');
+                if (!response || !response.data) return;
+                
+                const tbody = document.getElementById('achReturnsTable');
+                tbody.innerHTML = response.data.map(r => `
+                    <tr>
+                        <td>${r.id}</td>
+                        <td>${r.ach_entry_id}</td>
+                        <td><code>${r.return_code}</code></td>
+                        <td>${r.reason}</td>
+                        <td>${formatCurrency(r.amount)}</td>
+                        <td>${formatDate(r.return_date)}</td>
+                        <td><span class="status-badge status-${r.status}">${r.status.toUpperCase()}</span></td>
+                        <td><button class="btn btn-sm btn-primary" onclick="viewAchReturn(${r.id})">View</button></td>
+                    </tr>
+                `).join('') || '<tr><td colspan="8" class="text-center text-muted">No ACH returns</td></tr>';
+            } catch (error) {
+                console.error('Error loading ACH returns:', error);
+            }
+        }
+
+        async function loadUsers() {
+            try {
+                const response = await fetchAPI('/api/v1/users?limit=200');
+                if (!response || !response.data) return;
+                
+                const select = document.getElementById('transactionUser');
+                select.innerHTML = '<option value="">Select User</option>' + response.data.map(u => 
+                    `<option value="${u.id}" data-balance="${u.balance || 0}">${u.email}</option>`
+                ).join('');
+            } catch (error) {
+                console.error('Error loading users:', error);
+            }
+        }
+
+        function loadUserBalance() {
+            const select = document.getElementById('transactionUser');
+            const option = select.options[select.selectedIndex];
+            if (option.value) {
+                document.getElementById('userBalance').textContent = formatCurrency(option.dataset.balance);
+                document.getElementById('userBalanceContainer').style.display = 'block';
+            }
+        }
+
+        function initCharts() {
+            // Status Chart
+            const statusCtx = document.getElementById('statusChart')?.getContext('2d');
+            if (statusCtx) {
+                statusChart = new Chart(statusCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Completed', 'Pending', 'Failed'],
+                        datasets: [{
+                            data: [450, 85, 35],
+                            backgroundColor: ['#28a745', '#ffc107', '#dc3545']
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            }
+
+            // Types Chart
+            const typesCtx = document.getElementById('typesChart')?.getContext('2d');
+            if (typesCtx) {
+                typesChart = new Chart(typesCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Deposits', 'Withdrawals', 'Transfers'],
+                        datasets: [{
+                            label: 'Count',
+                            data: [120, 85, 110],
+                            backgroundColor: ['#28a745', '#dc3545', '#667eea']
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            }
+        }
+
+        async function handleCreateTransaction(event) {
+            event.preventDefault();
+            const data = {
+                user_id: document.getElementById('transactionUser').value,
+                type: document.getElementById('transactionType').value,
+                direction: document.getElementById('transactionDirection').value,
+                amount: parseFloat(document.getElementById('transactionAmount').value),
+                reference_number: document.getElementById('transactionRef').value,
+                description: document.getElementById('transactionDesc').value
+            };
+
+            try {
+                const response = await fetch('/api/v1/transactions', {
+                    method: 'POST',
+                    headers: AUTH_HEADER(),
+                    body: JSON.stringify(data)
+                });
+                if (!response.ok) throw new Error('Failed');
+                showAlert('Transaction created successfully', 'success');
+                closeModal('createTransactionModal');
+                await loadTransactions();
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'danger');
+            }
+        }
+
+        async function handleCreateDispute(event) {
+            event.preventDefault();
+            const data = {
+                transaction_id: document.getElementById('disputeTransactionId').value,
+                reason: document.getElementById('disputeReason').value,
+                description: document.getElementById('disputeDesc').value
+            };
+
+            try {
+                const response = await fetch('/api/v1/transactions/disputes', {
+                    method: 'POST',
+                    headers: AUTH_HEADER(),
+                    body: JSON.stringify(data)
+                });
+                if (!response.ok) throw new Error('Failed');
+                showAlert('Dispute filed successfully', 'success');
+                closeModal('createDisputeModal');
+                await loadDisputes();
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'danger');
+            }
+        }
+
+        async function handleCreateReturn(event) {
+            event.preventDefault();
+            const data = {
+                original_transaction_id: document.getElementById('returnTransactionId').value,
+                reason: document.getElementById('returnReason').value,
+                notes: document.getElementById('returnNotes').value
+            };
+
+            try {
+                const response = await fetch('/api/v1/transactions/returns', {
+                    method: 'POST',
+                    headers: AUTH_HEADER(),
+                    body: JSON.stringify(data)
+                });
+                if (!response.ok) throw new Error('Failed');
+                showAlert('Return created successfully', 'success');
+                closeModal('createReturnModal');
+                await loadReturns();
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'danger');
+            }
+        }
+
+        async function handleCreateAchReturn(event) {
+            event.preventDefault();
+            const data = {
+                ach_entry_id: document.getElementById('achEntryId').value,
+                return_code: document.getElementById('achReturnCode').value,
+                return_date: document.getElementById('achReturnDate').value
+            };
+
+            try {
+                const response = await fetch('/api/v1/settlement/ach/returns', {
+                    method: 'POST',
+                    headers: AUTH_HEADER(),
+                    body: JSON.stringify(data)
+                });
+                if (!response.ok) throw new Error('Failed');
+                showAlert('ACH return logged successfully', 'success');
+                closeModal('createAchReturnModal');
+                await loadAchReturns();
+            } catch (error) {
+                showAlert('Error: ' + error.message, 'danger');
+            }
+        }
+
+        function exportTransactions() {
+            alert('Export functionality would be implemented');
+        }
+
+        function viewTransaction(id) { alert('View transaction ' + id); }
+        function retryTransaction(id) { alert('Retry transaction ' + id); }
+        function viewDispute(id) { alert('View dispute ' + id); }
+        function viewReturn(id) { alert('View return ' + id); }
+        function viewAchReturn(id) { alert('View ACH return ' + id); }
+        
+        function openModal(id) { new bootstrap.Modal(document.getElementById(id)).show(); }
+        function closeModal(id) { bootstrap.Modal.getInstance(document.getElementById(id))?.hide(); }
+        function formatCurrency(amount) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount); }
+        function formatDate(date) { return new Date(date).toLocaleString(); }
+    </script>
+    <script src="/static/js/admin-guard.js"></script>
+</body>
+</html>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

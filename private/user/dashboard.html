@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Dashboard - Finanza Bank</title>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <link href="/img/favicon.ico" rel="icon">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jost:wght@500;600;700&family=Open+Sans:wght@400;500&display=swap" rel="stylesheet">  
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/static/lib/animate/animate.min.css" rel="stylesheet">
+    <link href="/static/lib/owlcarousel/assets/owl.carousel.min.css" rel="stylesheet">
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <div id="spinner" class="show bg-white position-fixed translate-middle w-100 vh-100 top-50 start-50 d-flex align-items-center justify-content-center">
+        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
+    </div>
+    <!-- Navbar Start -->
+    <div class="container-fluid fixed-top px-0 wow fadeIn" data-wow-delay="0.1s">
+        <nav class="navbar navbar-expand-lg navbar-light py-lg-0 px-lg-5 wow fadeIn" data-wow-delay="0.1s">
+            <a href="/user/dashboard" class="navbar-brand ms-4 ms-lg-0">
+                <h5 class="m-0 text-primary"><i class="fa fa-university me-2"></i>Finanza</h5>
+            </a>
+            <button type="button" class="navbar-toggler me-4" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarCollapse">
+                <div class="navbar-nav ms-auto p-4 p-lg-0">
+                    <a href="/user/dashboard" class="nav-item nav-link">Dashboard</a>
+                    <a href="/user/account" class="nav-item nav-link">Account</a>
+                    <a href="/user/kyc_form" class="nav-item nav-link">KYC</a>
+                    <div class="nav-item dropdown">
+                        <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Products</a>
+                        <div class="dropdown-menu border-light m-0">
+                            <a href="/user/cards" class="dropdown-item">Cards</a>
+                            <a href="/user/deposits" class="dropdown-item">Deposits</a>
+                            <a href="/user/loans" class="dropdown-item">Loans</a>
+                            <a href="/user/investments" class="dropdown-item">Investments</a>
+                            <a href="/user/bill_pay" class="dropdown-item">Transfers</a>
+                        </div>
+                    </div>
+                    <div class="nav-item dropdown">
+                        <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Services</a>
+                        <div class="dropdown-menu border-light m-0">
+                            <a href="/user/analytics" class="dropdown-item">Business Analysis</a>
+                            <a href="/user/treasury_portfolio" class="dropdown-item">Financial Planning</a>
+                            <a href="/user/insurance" class="dropdown-item">Insurance</a>
+                            <a href="/user/treasury_portfolio" class="dropdown-item">Projects</a>
+                        </div>
+                    </div>
+                    <div class="nav-item dropdown">
+                        <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">More</a>
+                        <div class="dropdown-menu border-light m-0">
+                            <a href="/user/profile" class="dropdown-item">Profile</a>
+                            <a href="/user/settings" class="dropdown-item">Settings</a>
+                            <a href="/user/notifications" class="dropdown-item">Notifications</a>
+                            <a href="/user/transactions" class="dropdown-item">Transactions</a>
+                            <a href="/user/security" class="dropdown-item">Security</a>
+                            <a href="/user/alerts" class="dropdown-item">Alerts</a>
+                            <a href="/user/contact" class="dropdown-item">Contact/Support</a>
+                            <hr class="m-2">
+                            <a href="/logout" class="dropdown-item text-danger">Logout</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </div>
+    <!-- Navbar End -->
+    <div class="container-fluid page-header mb-5 wow fadeIn" data-wow-delay="0.1s">
+        <div class="container">
+            <h1 class="display-4 pb-3 animated slideInDown">Dashboard</h1>
+            <nav aria-label="breadcrumb animated slideInDown">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a class="text-white" href="/user/dashboard">Home</a></li>
+                    <li class="breadcrumb-item text-primary active" aria-current="page">Dashboard</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+    <div class="container-xxl py-5">
+        <div class="container">
+            <div class="row g-5">
+                <div class="col-lg-12 wow fadeInUp" data-wow-delay="0.1s">
+                    <!-- User Welcome Section -->
+                    <div class="card mb-4 bg-primary bg-gradient text-white">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <h3 class="card-title mb-1">Welcome, <span id="user-full-name">Guest</span>!</h3>
+                                    <p class="card-text mb-2">
+                                        <i class="fas fa-envelope me-2"></i><span id="user-email">—</span>
+                                    </p>
+                                    <p class="card-text mb-0">
+                                        <span id="verification-badge"></span>
+                                    </p>
+                                </div>
+                                <div class="col-md-4 text-md-end">
+                                    <div class="fs-3" id="user-avatar">👤</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- KYC Status Alert -->
+                    <div id="kyc-alert-container" class="mb-4"></div>
+
+                    <!-- Account Summary Cards -->
+                    <div class="row mb-4">
+                        <div class="col-lg-3 col-md-6 mb-3">
+                            <div class="card border-left border-primary">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="card-title text-muted mb-1">Total Balance</h6>
+                                            <h4 class="mb-0" id="user-balance">$0.00</h4>
+                                            <small class="text-muted">Across all accounts</small>
+                                        </div>
+                                        <i class="fas fa-wallet fa-2x text-primary opacity-50"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6 mb-3">
+                            <div class="card border-left border-success">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="card-title text-muted mb-1">Active Investments</h6>
+                                            <h4 class="mb-0" id="user-investments">$0.00</h4>
+                                            <small class="text-muted" id="investment-count">0 accounts</small>
+                                        </div>
+                                        <i class="fas fa-chart-line fa-2x text-success opacity-50"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6 mb-3">
+                            <div class="card border-left border-warning">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="card-title text-muted mb-1">Outstanding Loans</h6>
+                                            <h4 class="mb-0" id="user-loans">$0.00</h4>
+                                            <small class="text-muted" id="loan-count">0 loans</small>
+                                        </div>
+                                        <i class="fas fa-hand-holding-usd fa-2x text-warning opacity-50"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6 mb-3">
+                            <div class="card border-left border-info">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <h6 class="card-title text-muted mb-1">Total Deposits</h6>
+                                            <h4 class="mb-0" id="deposits-total">$0.00</h4>
+                                            <small class="text-muted" id="deposit-count">0 accounts</small>
+                                        </div>
+                                        <i class="fas fa-piggy-bank fa-2x text-info opacity-50"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Accounts Section -->
+                    <div class="card mb-4 shadow-sm">
+                        <div class="card-header bg-primary bg-gradient text-white">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0"><i class="fas fa-university me-2"></i>Your Accounts</h5>
+                                <button class="btn btn-sm btn-light" id="toggle-account-numbers" onclick="toggleAccountNumbers()">
+                                    <i class="fas fa-eye me-1"></i><span id="toggle-text">Show</span> Numbers
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="accounts-container">
+                                <div class="text-center py-5">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <p class="mt-2 text-muted">Loading accounts...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Deposits & Loans Quick View -->
+                    <div class="row mb-4">
+                        <!-- Deposits Section -->
+                        <div class="col-lg-6 mb-4">
+                            <div class="card shadow-sm">
+                                <div class="card-header bg-info bg-gradient text-white">
+                                    <h5 class="mb-0"><i class="fas fa-piggy-bank me-2"></i>Your Deposits</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div id="deposits-list" class="deposits-container">
+                                        <p class="text-muted">No active deposits</p>
+                                    </div>
+                                    <a href="/user/deposits" class="btn btn-sm btn-info mt-3">View All Deposits</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Loans Section -->
+                        <div class="col-lg-6 mb-4">
+                            <div class="card shadow-sm">
+                                <div class="card-header bg-warning bg-gradient text-white">
+                                    <h5 class="mb-0"><i class="fas fa-hand-holding-usd me-2"></i>Your Loans</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div id="loans-list" class="loans-container">
+                                        <p class="text-muted">No active loans</p>
+                                    </div>
+                                    <a href="/user/loans" class="btn btn-sm btn-warning mt-3">View All Loans</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Recent Transactions -->
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-success bg-gradient text-white">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0"><i class="fas fa-exchange-alt me-2"></i>Recent Transactions</h5>
+                                <a href="/user/analytics" class="btn btn-sm btn-light">View All</a>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="transactions-loader" class="text-center py-4">
+                                <div class="spinner-border spinner-border-sm text-success" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <p class="mt-2 text-muted">Loading transactions...</p>
+                            </div>
+                            <table class="table table-sm table-hover mb-0" id="transactions-table" style="display:none;">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Description</th>
+                                        <th class="text-end">Amount</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="transactions-body">
+                                </tbody>
+                            </table>
+                            <div id="no-transactions" class="text-center py-4 text-muted">
+                                <i class="fas fa-inbox fa-3x opacity-25 mb-3"></i>
+                                <p>No transactions yet</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Footer Start -->
+    <div class="container-fluid bg-dark text-light footer mt-5 py-5 wow fadeIn" data-wow-delay="0.1s">
+        <div class="container py-5">
+            <div class="row g-5">
+                <div class="col-lg-3 col-md-6">
+                    <h5 class="text-white mb-4">Address</h5>
+                    <p class="mb-2"><i class="fa fa-map-marker-alt me-3"></i>123 Street, New York, USA</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Footer End -->
+    <a href="#" class="btn btn-lg btn-primary btn-lg-square back-to-top"><i class="bi bi-arrow-up"></i></a>
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/lib/wow/wow.min.js"></script>
+    <script src="/static/lib/easing/easing.min.js"></script>
+    <script src="/static/lib/waypoints/waypoints.min.js"></script>
+    <script src="/static/lib/counterup/counterup.min.js"></script>
+    <script src="/static/lib/owlcarousel/owl.carousel.min.js"></script>
+    <script src="/static/js/main.js"></script>
+    <script src="/static/js/user-guard.js"></script>
+    <script src="/static/js/realtime.js"></script>
+    <script src="/static/js/user-client.js"></script>
+    <script src="/static/js/page-sync.js"></script>
+    <script>
+        // Global state for account number visibility
+        let showAccountNumbers = false;
+        let currentUser = null;
+        let userAccounts = [];
+
+        // Utility: Format currency
+        function formatCurrency(amount) {
+            return `$${parseFloat(amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        }
+
+        // Utility: Format date
+        function formatDate(dateString) {
+            try {
+                const date = new Date(dateString);
+                return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+            } catch (e) {
+                return dateString;
+            }
+        }
+
+        // Utility: Get status badge color
+        function getStatusBadge(status) {
+            const statusMap = {
+                'completed': { color: 'success', text: 'Completed' },
+                'pending': { color: 'warning', text: 'Pending' },
+                'failed': { color: 'danger', text: 'Failed' },
+                'blocked': { color: 'secondary', text: 'Blocked' },
+                'cancelled': { color: 'dark', text: 'Cancelled' }
+            };
+            const s = statusMap[status?.toLowerCase()] || { color: 'secondary', text: status || 'Unknown' };
+            return `<span class="badge bg-${s.color}">${s.text}</span>`;
+        }
+
+        // Toggle account number visibility
+        function toggleAccountNumbers() {
+            showAccountNumbers = !showAccountNumbers;
+            document.getElementById('toggle-text').textContent = showAccountNumbers ? 'Hide' : 'Show';
+            document.getElementById('toggle-account-numbers').innerHTML = `
+                <i class="fas fa-${showAccountNumbers ? 'eye-slash' : 'eye'} me-1"></i><span id="toggle-text">${showAccountNumbers ? 'Hide' : 'Show'}</span> Numbers
+            `;
+            loadAccounts(); // Refresh accounts with new visibility setting
+        }
+
+        // Format account number
+        function formatAccountNumber(accountNumber) {
+            if (!accountNumber) return '••••••••';
+            if (showAccountNumbers) {
+                return accountNumber;
+            } else {
+                const lastFour = accountNumber.substring(accountNumber.length - 4);
+                return '••••' + lastFour;
+            }
+        }
+
+        // Get verification badge
+        function getVerificationBadge(kycStatus) {
+            const badges = {
+                'approved': { color: 'success', text: '✓ Verified', icon: 'check-circle' },
+                'pending': { color: 'warning', text: '⏳ Verification Pending', icon: 'clock' },
+                'rejected': { color: 'danger', text: '✗ Verification Failed', icon: 'times-circle' },
+                'not_started': { color: 'secondary', text: '○ Not Verified', icon: 'circle' }
+            };
+            const badge = badges[kycStatus?.toLowerCase()] || badges['not_started'];
+            return `<span class="badge bg-${badge.color}"><i class="fas fa-${badge.icon} me-1"></i>${badge.text}</span>`;
+        }
+
+        // Load all dashboard data from single endpoint
+        async function loadDashboardData() {
+            try {
+                const response = await fetch('/api/user/dashboard', { credentials: 'include' });
+                if (!response.ok) throw new Error('Failed to load dashboard data');
+                
+                const data = await response.json();
+                
+                // Update user info
+                if (data.user) {
+                    currentUser = data.user;
+                    document.getElementById('user-full-name').textContent = data.user.full_name || 'User';
+                    document.getElementById('user-email').textContent = data.user.email || '—';
+                    
+                    // Display verification badge - need to get kyc_status from profile
+                    loadUserProfile();
+                }
+                
+                // Update balance
+                document.getElementById('user-balance').textContent = formatCurrency(data.balance || 0);
+                
+                // Update accounts
+                if (data.accounts && data.accounts.length > 0) {
+                    userAccounts = data.accounts;
+                    renderAccounts(data.accounts);
+                } else {
+                    document.getElementById('accounts-container').innerHTML = '<p class="text-muted"><i class="fas fa-inbox me-2"></i>No accounts yet</p>';
+                }
+                
+                // Update deposits
+                if (data.deposits) {
+                    document.getElementById('deposits-total').textContent = formatCurrency(data.deposits.total_amount || 0);
+                    document.getElementById('deposit-count').textContent = `${data.deposits.count || 0} account${data.deposits.count !== 1 ? 's' : ''}`;
+                }
+                
+                // Update investments
+                document.getElementById('user-investments').textContent = '$0.00';
+                document.getElementById('investment-count').textContent = `${data.active_investments || 0} account${data.active_investments !== 1 ? 's' : ''}`;
+                
+                // Update loans
+                document.getElementById('user-loans').textContent = '$0.00';
+                document.getElementById('loan-count').textContent = `${data.active_loans || 0} loan${data.active_loans !== 1 ? 's' : ''}`;
+                
+                // Update recent transactions
+                if (data.recent_transactions && data.recent_transactions.length > 0) {
+                    renderTransactions(data.recent_transactions);
+                } else {
+                    document.getElementById('transactions-loader').style.display = 'none';
+                    document.getElementById('no-transactions').style.display = 'block';
+                }
+                
+            } catch (e) {
+                console.error('Error loading dashboard:', e);
+                document.getElementById('accounts-container').innerHTML = '<p class="text-danger"><i class="fas fa-exclamation-circle me-2"></i>Error loading dashboard</p>';
+            }
+        }
+
+        // Load user profile for KYC status
+        async function loadUserProfile() {
+            try {
+                const response = await fetch('/api/user/profile', { credentials: 'include' });
+                if (!response.ok) return;
+                
+                const user = await response.json();
+                currentUser = user;
+                
+                // Update verification badge
+                const badge = getVerificationBadge(user.kyc_status);
+                document.getElementById('verification-badge').innerHTML = badge;
+                
+                // Show KYC alert if needed
+                showKYCAlert(user.kyc_status);
+                
+            } catch (e) {
+                console.warn('Error loading user profile:', e);
+            }
+        }
+
+        // Show KYC status alert
+        function showKYCAlert(kycStatus) {
+            const container = document.getElementById('kyc-alert-container');
+            let html = '';
+            
+            if (kycStatus === 'not_started') {
+                html = `
+                    <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>KYC Verification Pending</strong> - Complete your Know Your Customer verification to unlock all features.
+                        <a href="/user/kyc_form" class="alert-link ms-2">Complete KYC</a>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `;
+            } else if (kycStatus === 'pending') {
+                html = `
+                    <div class="alert alert-info alert-dismissible fade show" role="alert">
+                        <i class="fas fa-clock me-2"></i>
+                        <strong>KYC Under Review</strong> - Your documents are being reviewed. This usually takes 1-2 business days.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `;
+            } else if (kycStatus === 'approved') {
+                html = `
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <strong>KYC Verified!</strong> You have full access to all features.
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `;
+            } else if (kycStatus === 'rejected') {
+                html = `
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="fas fa-times-circle me-2"></i>
+                        <strong>KYC Rejected</strong> - Your submission was rejected. Please resubmit with correct documents.
+                        <a href="/user/kyc_form" class="alert-link ms-2">Resubmit KYC</a>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                `;
+            }
+            
+            if (html) container.innerHTML = html;
+        }
+
+        // Render accounts
+        function renderAccounts(accounts) {
+            const container = document.getElementById('accounts-container');
+            if (!accounts || accounts.length === 0) {
+                container.innerHTML = '<p class="text-muted"><i class="fas fa-inbox me-2"></i>No accounts yet</p>';
+                return;
+            }
+            
+            let html = '<div class="row g-3">';
+            accounts.forEach(acc => {
+                const accountNum = formatAccountNumber(acc.account_number);
+                const verificationStatus = currentUser?.kyc_status === 'approved' 
+                    ? '<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Verified</span>'
+                    : '<span class="badge bg-warning"><i class="fas fa-exclamation-circle me-1"></i>Not Verified</span>';
+                
+                html += `
+                    <div class="col-md-6">
+                        <div class="card border-start border-4 border-primary h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div>
+                                        <h6 class="text-muted mb-1">${acc.account_type?.toUpperCase() || 'Account'}</h6>
+                                        <p class="h5 mb-1">${formatCurrency(acc.balance || 0)}</p>
+                                    </div>
+                                    <span class="badge bg-${acc.status === 'active' ? 'success' : 'warning'}">${acc.status || 'Active'}</span>
+                                </div>
+                                <div class="mb-3">
+                                    <small class="text-muted d-block mb-2">Account Number:</small>
+                                    <code class="user-select-all">${accountNum}</code>
+                                </div>
+                                <div class="mb-0">
+                                    <small class="text-muted d-block mb-2">Account Status:</small>
+                                    ${verificationStatus}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // Render transactions
+        function renderTransactions(transactions) {
+            const loader = document.getElementById('transactions-loader');
+            const table = document.getElementById('transactions-table');
+            const tbody = document.getElementById('transactions-body');
+            const noTxn = document.getElementById('no-transactions');
+            
+            if (!transactions || transactions.length === 0) {
+                loader.style.display = 'none';
+                table.style.display = 'none';
+                noTxn.style.display = 'block';
+                return;
+            }
+            
+            loader.style.display = 'none';
+            noTxn.style.display = 'none';
+            table.style.display = 'table';
+            tbody.innerHTML = '';
+            
+            transactions.slice(0, 10).forEach(txn => {
+                const row = `
+                    <tr>
+                        <td>${formatDate(txn.created_at)}</td>
+                        <td>${txn.type || 'Transaction'}</td>
+                        <td class="text-end fw-bold">${formatCurrency(txn.amount)}</td>
+                        <td>${getStatusBadge(txn.status)}</td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        // Initialize on page load
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadDashboardData);
+        } else {
+            loadDashboardData();
+        }
+
+        // SECURE Logout handler - Clear all session state
+        document.addEventListener('click', function(e) {
+            if (e.target && e.target.getAttribute('href') === '/logout') {
+                e.preventDefault();
+                if (confirm('Are you sure you want to logout?')) {
+                    // Clear all client-side storage
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    // Navigate to logout endpoint (server clears cookie)
+                    window.location.href = '/logout';
+                }
+            }
+        });
+        
+        // Prevent back button from restoring cached pages
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {  // Page restored from back/forward cache
+                if (!localStorage.getItem('token')) {
+                    window.location.href = '/signin';
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

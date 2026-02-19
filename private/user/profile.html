@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Finanza - Profile</title>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jost:wght@500;600;700&family=Open+Sans:wght@400;500&display=swap" rel="stylesheet">  
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css" rel="stylesheet">
+
+    <link href="/static/lib/animate/animate.min.css" rel="stylesheet">
+    <link href="/static/lib/owlcarousel/assets/owl.carousel.min.css" rel="stylesheet">
+    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/css/style.css" rel="stylesheet">
+</head>
+
+<body>
+    <div id="spinner" class="show bg-white position-fixed translate-middle w-100 vh-100 top-50 start-50 d-flex align-items-center justify-content-center">
+        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
+    </div>
+
+    <!-- Navbar Start -->
+    <div class="container-fluid fixed-top px-0 wow fadeIn" data-wow-delay="0.1s">
+        <nav class="navbar navbar-expand-lg navbar-light py-lg-0 px-lg-5 wow fadeIn" data-wow-delay="0.1s">
+            <a href="/user/dashboard" class="navbar-brand ms-4 ms-lg-0">
+                <h5 class="m-0 text-primary"><i class="fa fa-university me-2"></i>Finanza</h5>
+            </a>
+            <button type="button" class="navbar-toggler me-4" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarCollapse">
+                <div class="navbar-nav ms-auto p-4 p-lg-0">
+                    <a href="/user/dashboard" class="nav-item nav-link">Dashboard</a>
+                    <a href="/user/account" class="nav-item nav-link">Account</a>
+                    <a href="/user/kyc_form" class="nav-item nav-link">KYC</a>
+                    <div class="nav-item dropdown">
+                        <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Products</a>
+                        <div class="dropdown-menu border-light m-0">
+                            <a href="/user/cards" class="dropdown-item">Cards</a>
+                            <a href="/user/deposits" class="dropdown-item">Deposits</a>
+                            <a href="/user/loans" class="dropdown-item">Loans</a>
+                            <a href="/user/investments" class="dropdown-item">Investments</a>
+                        </div>
+                    </div>
+                    <div class="nav-item dropdown">
+                        <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Services</a>
+                        <div class="dropdown-menu border-light m-0">
+                            <a href="/user/analytics" class="dropdown-item">Business Analysis</a>
+                            <a href="/user/treasury_portfolio" class="dropdown-item">Financial Planning</a>
+                            <a href="/user/insurance" class="dropdown-item">Insurance</a>
+                            <a href="/user/treasury_portfolio" class="dropdown-item">Projects</a>
+                        </div>
+                    </div>
+                    <div class="nav-item dropdown">
+                        <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">More</a>
+                        <div class="dropdown-menu border-light m-0">
+                            <a href="/user/profile" class="dropdown-item active">Profile</a>
+                            <a href="/user/settings" class="dropdown-item">Settings</a>
+                            <a href="/user/notifications" class="dropdown-item">Notifications</a>
+                            <a href="/user/contact" class="dropdown-item">Contact/Support</a>
+                            <hr class="m-2">
+                            <a href="/logout" class="dropdown-item text-danger">Logout</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </div>
+    <!-- Navbar End -->
+
+    <div class="container-fluid page-header mb-5 wow fadeIn" data-wow-delay="0.1s">
+        <div class="container">
+            <h1 class="display-4 pb-3 animated slideInDown">Profile</h1>
+            <nav aria-label="breadcrumb animated slideInDown">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a class="text-white" href="/user/dashboard">Home</a></li>
+                    <li class="breadcrumb-item text-primary active" aria-current="page">Profile</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="container-xxl py-5">
+        <div class="container">
+            <div class="row g-5">
+                <div class="col-lg-12 wow fadeInUp" data-wow-delay="0.1s">
+                    <h1 class="mb-4">Your Profile</h1>
+                    <p class="mb-5">Manage your personal information, identity documents, and contact details.</p>
+
+                    <div class="row g-4">
+                        <!-- Personal Information Section -->
+                        <div class="col-lg-8">
+                            <div class="card mb-4">
+                                <div class="card-header bg-light">
+                                    <h5 class="mb-0">Personal Information</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Full Legal Name</label>
+                                            <p class="profile-fullname" id="profile-fullname">—</p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Date of Birth</label>
+                                            <p id="profile-dob">—</p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Email Address</label>
+                                            <p id="profile-email">—</p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Phone Number</label>
+                                            <p id="profile-phone">—</p>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Address</label>
+                                            <p id="profile-address">—</p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">City</label>
+                                            <p id="profile-city">—</p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">State/Province</label>
+                                            <p id="profile-state">—</p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Postal Code</label>
+                                            <p id="profile-postal">—</p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Country</label>
+                                            <p id="profile-country">—</p>
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-primary mt-3" id="edit-profile-btn">Edit Profile</button>
+                                </div>
+                            </div>
+
+                            <!-- Employment Information -->
+                            <div class="card mb-4">
+                                <div class="card-header bg-light">
+                                    <h5 class="mb-0">Employment Information</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Employer Name</label>
+                                            <p id="profile-employer">—</p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Job Title</label>
+                                            <p id="profile-jobTitle">—</p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Industry</label>
+                                            <p id="profile-industry">—</p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Annual Income</label>
+                                            <p id="profile-income">—</p>
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-primary mt-3" id="edit-employment-btn">Edit Employment Info</button>
+                                </div>
+                            </div>
+
+                            <!-- Identity & Verification -->
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h5 class="mb-0">Identity & Verification</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="alert alert-info mb-3">
+                                        <i class="bi bi-info-circle me-2"></i>
+                                        Complete your KYC verification to unlock all features.
+                                    </div>
+                                    <div class="row g-3">
+                                        <div class="col-12">
+                                            <label class="form-label">Social Security Number (Masked)</label>
+                                            <p id="profile-ssn">—</p>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">Government ID Type</label>
+                                            <p id="profile-idtype">—</p>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">ID Number (Masked)</label>
+                                            <p id="profile-idnumber">—</p>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label">KYC Verification Status</label>
+                                            <p>
+                                                <span class="badge bg-success" id="kyc-status">Verified</span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <a href="/user/kyc_form" class="btn btn-primary mt-3">Manage KYC Documents</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Profile Picture Sidebar -->
+                        <div class="col-lg-4">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h5 class="mb-0">Profile Picture</h5>
+                                </div>
+                                <div class="card-body text-center">
+                                    <img id="profile-picture" src="/img/default-avatar.png" alt="Profile Picture" class="img-fluid rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">
+                                    <form id="upload-picture-form" enctype="multipart/form-data">
+                                        <div class="mb-3">
+                                            <input type="file" class="form-control" id="profilePicture" name="profilePicture" accept="image/*">
+                                        </div>
+                                        <button type="submit" class="btn btn-primary w-100">Upload Picture</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer Start -->
+    <div class="container-fluid bg-dark text-light footer mt-5 py-3 wow fadeIn" data-wow-delay="0.1s">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">&copy; <a class="border-bottom" href="#">Finanza</a>, All Right Reserved.</div>
+                <div class="col-md-6 text-center text-md-end">Designed By <a class="border-bottom" href="https://htmlcodex.com">HTML Codex</a></div>
+            </div>
+        </div>
+    </div>
+    <!-- Footer End -->
+
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/lib/wow/wow.min.js"></script>
+    <script src="/static/lib/easing/easing.min.js"></script>
+    <script src="/static/lib/waypoints/waypoints.min.js"></script>
+    <script src="/static/lib/owlcarousel/owl.carousel.min.js"></script>
+    <script src="/static/lib/counterup/counterup.min.js"></script>
+    <script src="/static/js/main.js"></script>
+    <script src="/static/js/user-guard.js"></script>
+    <script src="/static/js/realtime.js"></script>
+    <script src="/static/js/page-sync.js"></script>
+    <script>
+        // Load user profile data from /api/user/profile endpoint
+        async function loadProfile() {
+            try {
+                const res = await fetch('/api/user/profile', { credentials: 'include' });
+                if (!res.ok) throw new Error('Failed to load profile');
+                const user = await res.json();
+                
+                // Populate profile fields from actual user data
+                document.getElementById('profile-fullname').textContent = user.full_name || user.email || '—';
+                document.getElementById('profile-email').textContent = user.email || '—';
+                document.getElementById('profile-phone').textContent = user.phone_number || '—';
+                document.getElementById('profile-address').textContent = user.address || '—';
+                document.getElementById('profile-city').textContent = user.city || '—';
+                document.getElementById('profile-state').textContent = user.state || '—';
+                document.getElementById('profile-postal').textContent = user.postal_code || '—';
+                document.getElementById('profile-country').textContent = user.country || 'USA';
+                document.getElementById('profile-dob').textContent = user.date_of_birth ? new Date(user.date_of_birth).toLocaleDateString() : '—';
+                
+                // Masked sensitive information
+                const ssn = user.ssn || user.account_number || '';
+                document.getElementById('profile-ssn').textContent = '***-**-' + ssn.slice(-4);
+                
+                document.getElementById('profile-idtype').textContent = user.id_type || 'National ID';
+                const idNum = user.id_number || '';
+                document.getElementById('profile-idnumber').textContent = '****' + idNum.slice(-4);
+                
+                document.getElementById('profile-employer').textContent = user.employer || '—';
+                document.getElementById('profile-jobTitle').textContent = user.job_title || '—';
+                document.getElementById('profile-industry').textContent = user.industry || '—';
+                document.getElementById('profile-income').textContent = user.annual_income ? '$' + parseFloat(user.annual_income).toLocaleString('en-US') : '—';
+                
+                if (user.profile_picture_url) {
+                    document.getElementById('profile-picture').src = user.profile_picture_url;
+                }
+                
+                if (user.kyc_verified || user.status === 'verified') {
+                    document.getElementById('kyc-status').textContent = 'Verified';
+                    document.getElementById('kyc-status').className = 'badge bg-success';
+                } else {
+                    document.getElementById('kyc-status').textContent = 'Pending';
+                    document.getElementById('kyc-status').className = 'badge bg-warning';
+                }
+            } catch (err) {
+                console.error('Error loading profile:', err);
+                document.getElementById('profile-fullname').textContent = 'Unable to load profile';
+            }
+        }
+
+        // Upload profile picture
+        document.getElementById('upload-picture-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            try {
+                const res = await fetch('/api/user/upload-profile-picture', {
+                    method: 'POST',
+                    credentials: 'include',
+                    body: formData
+                });
+                if (res.ok) {
+                    const result = await res.json();
+                    alert('Profile picture uploaded successfully!');
+                    loadProfile();
+                } else {
+                    alert('Failed to upload profile picture');
+                }
+            } catch (err) {
+                console.error('Upload error:', err);
+                alert('Error uploading picture');
+            }
+        });
+
+        // Edit profile button
+        document.getElementById('edit-profile-btn').addEventListener('click', () => {
+            alert('Edit profile feature coming soon!');
+        });
+
+        document.getElementById('edit-employment-btn').addEventListener('click', () => {
+            alert('Edit employment info feature coming soon!');
+        });
+
+        // Load profile when page ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadProfile);
+        } else {
+            loadProfile();
+        }
+
+        // SECURE Logout handler - Clear all session state
+        document.addEventListener('click', function(e) {
+            if (e.target && e.target.getAttribute('href') === '/logout') {
+                e.preventDefault();
+                if (confirm('Are you sure you want to logout?')) {
+                    // Clear all client-side storage
+                    localStorage.clear();
+                    sessionStorage.clear();
+                    // Navigate to logout endpoint (server clears cookie)
+                    window.location.href = '/logout';
+                }
+            }
+        });
+        
+        // Prevent back button from restoring cached pages
+        window.addEventListener('pageshow', function(event) {
+            if (event.persisted) {  // Page restored from back/forward cache
+                if (!localStorage.getItem('token')) {
+                    window.location.href = '/signin';
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

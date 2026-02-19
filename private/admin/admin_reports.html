@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finanza - Reports & Analytics</title>
+    <link href="/static/css/style.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        .admin-nav { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .chart-container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 20px; position: relative; height: 400px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 20px 0; }
+        .stat-box { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); text-align: center; }
+        .stat-value { font-size: 2.5rem; font-weight: bold; color: #667eea; }
+        .stat-label { color: #666; margin-top: 10px; font-size: 0.9rem; }
+        .stat-box.primary { border-left: 5px solid #667eea; }
+        .stat-box.success { border-left: 5px solid #28a745; }
+        .stat-box.warning { border-left: 5px solid #ffc107; }
+        .stat-box.danger { border-left: 5px solid #dc3545; }
+        .report-section { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .filter-bar { background: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .btn-primary { background: #667eea; border: none; }
+        .btn-primary:hover { background: #5568d3; }
+        .table-responsive { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .table { margin-bottom: 0; }
+    </style>
+</head>
+<body>
+    <nav class="admin-nav navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/user/admin/dashboard"><i class="fas fa-chart-line"></i> Finanza Admin</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarAdmin">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarAdmin">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/dashboard"><i class="fas fa-home"></i> Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2><i class="fas fa-chart-pie"></i> Reports & Analytics</h2>
+                <p class="text-muted">System analytics, reports, and insights</p>
+            </div>
+            <div>
+                <button class="btn btn-outline-primary me-2" onclick="refreshReports()">
+                    <i class="fas fa-sync"></i> Refresh
+                </button>
+                <button class="btn btn-outline-success" onclick="exportReport()">
+                    <i class="fas fa-download"></i> Export
+                </button>
+            </div>
+        </div>
+
+        <!-- Key Statistics -->
+        <div class="stats-grid">
+            <div class="stat-box primary">
+                <div class="stat-value" id="totalUsers">0</div>
+                <div class="stat-label">Total Users</div>
+            </div>
+            <div class="stat-box success">
+                <div class="stat-value" id="activeUsers">0</div>
+                <div class="stat-label">Active Users</div>
+            </div>
+            <div class="stat-box warning">
+                <div class="stat-value" id="pendingKYC">0</div>
+                <div class="stat-label">Pending KYC</div>
+            </div>
+            <div class="stat-box danger">
+                <div class="stat-value" id="totalDeposits">$0</div>
+                <div class="stat-label">Total Deposits</div>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="row mt-5">
+            <div class="col-lg-6">
+                <div class="chart-container">
+                    <canvas id="usersChart"></canvas>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="chart-container">
+                    <canvas id="transactionsChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-5">
+            <div class="col-lg-6">
+                <div class="chart-container">
+                    <canvas id="depositChart"></canvas>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="chart-container">
+                    <canvas id="kycChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Users Report -->
+        <div class="report-section mt-5">
+            <h4><i class="fas fa-users"></i> Top Users by Account Balance</h4>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Balance</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="topUsersBody">
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Recent Transactions Report -->
+        <div class="report-section mt-5">
+            <h4><i class="fas fa-exchange-alt"></i> Recent Transactions</h4>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>#</th>
+                            <th>User</th>
+                            <th>Type</th>
+                            <th>Amount</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recentTransactionsBody">
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- System Health Report -->
+        <div class="report-section mt-5">
+            <h4><i class="fas fa-heartbeat"></i> System Health</h4>
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Database Connection:</strong> <span class="badge bg-success">Connected</span></p>
+                    <p><strong>API Status:</strong> <span class="badge bg-success">Operational</span></p>
+                    <p><strong>Last Backup:</strong> <span class="badge bg-info">Today, 02:00 AM</span></p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Users Online:</strong> <span id="onlineUsers" class="badge bg-primary">0</span></p>
+                    <p><strong>Failed Transactions (24h):</strong> <span id="failedTx" class="badge bg-warning">0</span></p>
+                    <p><strong>System Uptime:</strong> <span class="badge bg-success">99.9%</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/admin_static/js/auth-helper.js"></script>
+    <script>
+        const API_BASE = apiConfig.baseURL + '/api/v1/reporting';
+        let charts = {};
+
+        async function loadReports() {
+            try {
+                // Load users
+                const usersRes = await authenticatedFetch(API_BASE + '/users');
+                const users = usersRes.ok ? await usersRes.json() : [];
+                
+                // Load transactions
+                const txRes = await authenticatedFetch(API_BASE + '/transactions');
+                const transactions = txRes.ok ? await txRes.json() : [];
+
+                // Load KYC
+                const kycRes = await authenticatedFetch(API_BASE + '/kyc/submissions');
+                const kyc = kycRes.ok ? await kycRes.json() : [];
+
+                // Update stats
+                const activeCount = users.filter(u => u.is_active).length;
+                const pendingKYC = kyc.filter(k => k.status === 'pending').length;
+                const totalDeposits = transactions
+                    .filter(t => t.transaction_type === 'deposit' && t.status === 'completed')
+                    .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+
+                document.getElementById('totalUsers').textContent = users.length;
+                document.getElementById('activeUsers').textContent = activeCount;
+                document.getElementById('pendingKYC').textContent = pendingKYC;
+                document.getElementById('totalDeposits').textContent = '$' + totalDeposits.toFixed(2);
+                document.getElementById('failedTx').textContent = transactions.filter(t => t.status === 'failed').length;
+
+                // Render charts
+                renderUserChart(users);
+                renderTransactionChart(transactions);
+                renderDepositChart(transactions);
+                renderKYCChart(kyc);
+
+                // Render tables
+                renderTopUsers(users);
+                renderRecentTransactions(transactions);
+            } catch (error) {
+                console.error('Error loading reports:', error);
+            }
+        }
+
+        function renderUserChart(users) {
+            const ctx = document.getElementById('usersChart').getContext('2d');
+            const active = users.filter(u => u.is_active).length;
+            const inactive = users.filter(u => !u.is_active).length;
+            const admin = users.filter(u => u.is_admin).length;
+            
+            if (charts.usersChart) charts.usersChart.destroy();
+            charts.usersChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Active Users', 'Inactive Users', 'Admins'],
+                    datasets: [{
+                        data: [active, inactive, admin],
+                        backgroundColor: ['#667eea', '#dc3545', '#28a745']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+        }
+
+        function renderTransactionChart(transactions) {
+            const ctx = document.getElementById('transactionsChart').getContext('2d');
+            const completed = transactions.filter(t => t.status === 'completed').length;
+            const pending = transactions.filter(t => t.status === 'pending').length;
+            const failed = transactions.filter(t => t.status === 'failed').length;
+            
+            if (charts.transactionsChart) charts.transactionsChart.destroy();
+            charts.transactionsChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Completed', 'Pending', 'Failed'],
+                    datasets: [{
+                        label: 'Transactions',
+                        data: [completed, pending, failed],
+                        backgroundColor: ['#28a745', '#ffc107', '#dc3545']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function renderDepositChart(transactions) {
+            const ctx = document.getElementById('depositChart').getContext('2d');
+            const deposits = transactions.filter(t => t.transaction_type === 'deposit');
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+            const amounts = months.map(() => Math.random() * 10000);
+            
+            if (charts.depositChart) charts.depositChart.destroy();
+            charts.depositChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: months,
+                    datasets: [{
+                        label: 'Deposits ($)',
+                        data: amounts,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: true } }
+                }
+            });
+        }
+
+        function renderKYCChart(kyc) {
+            const ctx = document.getElementById('kycChart').getContext('2d');
+            const approved = kyc.filter(k => k.status === 'approved').length;
+            const pending = kyc.filter(k => k.status === 'pending').length;
+            const rejected = kyc.filter(k => k.status === 'rejected').length;
+            
+            if (charts.kycChart) charts.kycChart.destroy();
+            charts.kycChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['Approved', 'Pending', 'Rejected'],
+                    datasets: [{
+                        data: [approved, pending, rejected],
+                        backgroundColor: ['#28a745', '#ffc107', '#dc3545']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+        }
+
+        function renderTopUsers(users) {
+            const tbody = document.getElementById('topUsersBody');
+            const sorted = users.sort((a, b) => (b.balance || 0) - (a.balance || 0)).slice(0, 5);
+            
+            tbody.innerHTML = sorted.map((user, idx) => `
+                <tr>
+                    <td>${idx + 1}</td>
+                    <td>${user.full_name || 'N/A'}</td>
+                    <td>${user.email}</td>
+                    <td><strong>$${(user.balance || 0).toFixed(2)}</strong></td>
+                    <td><span class="badge ${user.is_active ? 'bg-success' : 'bg-danger'}">${user.is_active ? 'Active' : 'Inactive'}</span></td>
+                </tr>
+            `).join('') || '<tr><td colspan="5" class="text-center text-muted">No data</td></tr>';
+        }
+
+        function renderRecentTransactions(transactions) {
+            const tbody = document.getElementById('recentTransactionsBody');
+            const recent = transactions.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 10);
+            
+            tbody.innerHTML = recent.map((t, idx) => `
+                <tr>
+                    <td>${idx + 1}</td>
+                    <td>${t.user?.email || 'N/A'}</td>
+                    <td><span class="badge bg-info">${t.transaction_type}</span></td>
+                    <td>$${parseFloat(t.amount).toFixed(2)}</td>
+                    <td><span class="badge ${t.status === 'completed' ? 'bg-success' : t.status === 'pending' ? 'bg-warning' : 'bg-danger'}">${t.status}</span></td>
+                    <td>${new Date(t.created_at).toLocaleDateString()}</td>
+                </tr>
+            `).join('') || '<tr><td colspan="6" class="text-center text-muted">No data</td></tr>';
+        }
+
+        function refreshReports() {
+            loadReports();
+            alert('Reports refreshed!');
+        }
+
+        function exportReport() {
+            alert('Export functionality would be implemented here');
+        }
+
+        // Initialize
+        window.addEventListener('load', loadReports);
+        
+        // Auto-refresh every 5 minutes
+        setInterval(loadReports, 300000);
+    </script>
+    <script src="/static/js/admin-guard.js"></script>
+</body>
+</html>

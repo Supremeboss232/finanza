@@ -1,0 +1,95 @@
+"""
+FastAPI Integration Setup Instructions
+======================================
+
+To integrate the user routing and middleware into your FastAPI app:
+
+1. ADD MIDDLEWARE (in main.py or app/__init__.py):
+
+    from app.middleware import UserAccessControlMiddleware
+    
+    app.add_middleware(UserAccessControlMiddleware)
+
+2. ADD USER ROUTES (in main.py):
+
+    from routers.user_pages import router as user_router
+    
+    app.include_router(user_router, prefix="")
+
+3. ADD JINJA2 TEMPLATES (ensure this is configured):
+
+    from fastapi.templating import Jinja2Templates
+    
+    # In routers/user_pages.py, templates are initialized as:
+    templates = Jinja2Templates(directory="templates")
+
+4. UPDATE main.py with:
+
+    from fastapi import FastAPI
+    from fastapi.staticfiles import StaticFiles
+    from app.middleware import UserAccessControlMiddleware
+    from routers.user_pages import router as user_router
+    
+    app = FastAPI()
+    
+    # Mount static files
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+    app.mount("/css", StaticFiles(directory="css"), name="css")
+    app.mount("/js", StaticFiles(directory="js"), name="js")
+    app.mount("/lib", StaticFiles(directory="lib"), name="lib")
+    app.mount("/img", StaticFiles(directory="img"), name="img")
+    
+    # Add middleware
+    app.add_middleware(UserAccessControlMiddleware)
+    
+    # Include existing routers
+    app.include_router(auth_router)
+    app.include_router(admin_router)
+    
+    # Include user routes
+    app.include_router(user_router)
+
+5. ROUTE STRUCTURE:
+
+    ✓ /user/dashboard       → User dashboard
+    ✓ /user/account         → Profile & account management
+    ✓ /user/kyc             → KYC verification
+    ✓ /user/cards           → Payment cards
+    ✓ /user/deposits        → Deposit management
+    ✓ /user/loans           → Loan management
+    ✓ /user/investments     → Investment portfolio
+    ✓ /user/business_analysis   → Business tools
+    ✓ /user/financial_planning  → Financial tools
+    ✓ /user/insurance       → Insurance products
+    ✓ /user/project         → Projects
+    ✓ /user/settings        → User settings
+    ✓ /user/notifications   → Notifications
+    ✓ /user/contact         → Support contact
+
+6. ACCESS CONTROL:
+
+    The middleware ensures:
+    • Only authenticated users can access /user/* routes
+    • Non-authenticated users trying to access /user/* are redirected to /login
+    • Authenticated users trying to access non-/user routes are redirected to /user/dashboard
+    • Exception routes (whitelist): /, /login, /signup, /logout, /health
+    • Allowed prefixes: /api, /static, /admin, /public
+
+7. DEPENDENCIES:
+
+    The router uses Depends(get_current_user) which should be in app/deps.py:
+    
+    from app.database import get_db
+    from app.models import User
+    
+    async def get_current_user(request: Request, db = Depends(get_db)) -> User:
+        user_id = request.session.get("user_id")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Not authenticated")
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+        return user
+"""
+
+print(__doc__)

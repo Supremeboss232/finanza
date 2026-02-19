@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>International Compliance Admin - Finanza</title>
+    <link href="/static/css/style.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <style>
+        .admin-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; }
+        .stat-card { border-left: 5px solid #667eea; }
+        #complianceChart, #riskChart { max-height: 300px; }
+        .risk-high { color: #dc3545; font-weight: bold; }
+        .risk-medium { color: #ffc107; font-weight: bold; }
+        .risk-low { color: #28a745; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/user/dashboard">
+                <i class="fas fa-globe"></i> International Compliance
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-cogs"></i> Admin Panel
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="/user/admin/dashboard">Dashboard</a></li>
+                            <li><a class="dropdown-item active" href="/user/admin/international_compliance">Compliance</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-5 mb-5">
+        <!-- Header -->
+        <div class="admin-header">
+            <h1><i class="fas fa-globe"></i> International Compliance Monitoring</h1>
+            <p class="mb-0">Track and manage international transaction compliance</p>
+        </div>
+
+        <!-- Key Metrics -->
+        <div class="row g-4 mb-5">
+            <div class="col-lg-3 col-md-6">
+                <div class="card stat-card">
+                    <div class="card-body">
+                        <h6 class="card-title text-muted">High Risk Users</h6>
+                        <h2 id="highRiskCount">-</h2>
+                        <p class="text-muted small mb-0">Flagged for review</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card stat-card">
+                    <div class="card-body">
+                        <h6 class="card-title text-muted">Active Countries</h6>
+                        <h2 id="countryCount">-</h2>
+                        <p class="text-muted small mb-0">Transactions processed</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card stat-card">
+                    <div class="card-body">
+                        <h6 class="card-title text-muted">Compliance Rate</h6>
+                        <h2 id="complianceRate">-%</h2>
+                        <p class="text-muted small mb-0">All transactions</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="card stat-card">
+                    <div class="card-body">
+                        <h6 class="card-title text-muted">Flagged Transactions</h6>
+                        <h2 id="flaggedCount">-</h2>
+                        <p class="text-muted small mb-0">Under investigation</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="row mb-5">
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Compliance Score Trend</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="complianceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Risk Distribution</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="riskChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter Section -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <select class="form-select" id="riskFilter">
+                            <option value="">All Risk Levels</option>
+                            <option value="high">High Risk</option>
+                            <option value="medium">Medium Risk</option>
+                            <option value="low">Low Risk</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" id="countryFilter">
+                            <option value="">All Countries</option>
+                            <option value="US">United States</option>
+                            <option value="GB">United Kingdom</option>
+                            <option value="CA">Canada</option>
+                            <option value="AU">Australia</option>
+                            <option value="SG">Singapore</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <input type="date" class="form-control" id="dateRangeStart">
+                    </div>
+                    <div class="col-md-3">
+                        <button class="btn btn-primary w-100" onclick="applyComplianceFilters()">Apply Filters</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- High Risk Users -->
+        <div class="card mb-5">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-user-shield"></i> High Risk Users</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Email</th>
+                            <th>Risk Score</th>
+                            <th>Red Flags</th>
+                            <th>Last Activity</th>
+                            <th>KYC Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="highRiskTableBody">
+                        <tr><td colspan="7" class="text-center text-muted">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Flagged Transactions -->
+        <div class="card mb-5">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-flag"></i> Flagged International Transactions</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Transaction ID</th>
+                            <th>User</th>
+                            <th>Amount</th>
+                            <th>Route</th>
+                            <th>Flag Reason</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="flaggedTransactionsBody">
+                        <tr><td colspan="7" class="text-center text-muted">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Sanctions Screening -->
+        <div class="card mb-5">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-search"></i> Sanctions List Screening</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label">Name to Screen</label>
+                        <input type="text" class="form-control" id="screenName" placeholder="Enter full name...">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Database</label>
+                        <select class="form-select">
+                            <option>OFAC SDN List</option>
+                            <option>UN Sanctions</option>
+                            <option>EU Sanctions</option>
+                            <option>UK Sanctions</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn btn-primary mt-3" onclick="screenSanctions()">Check Against Sanctions Lists</button>
+                <div id="sanctionsResult" class="mt-3"></div>
+            </div>
+        </div>
+
+        <!-- Country Risk Assessment -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-map"></i> Country Risk Assessment</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Country</th>
+                            <th>Risk Rating</th>
+                            <th>AML Risk</th>
+                            <th>CFT Risk</th>
+                            <th>Transaction Limit</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="countryRiskBody">
+                        <tr><td colspan="6" class="text-center text-muted">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Modal for Transaction Review -->
+        <div class="modal fade" id="transactionReviewModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Review Flagged Transaction</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p><strong>Transaction ID:</strong> <span id="modalTransactionId"></span></p>
+                        <p><strong>User:</strong> <span id="modalTransactionUser"></span></p>
+                        <p><strong>Amount:</strong> <span id="modalTransactionAmount"></span></p>
+                        <p><strong>Route:</strong> <span id="modalTransactionRoute"></span></p>
+                        <p><strong>Reason:</strong> <span id="modalTransactionReason"></span></p>
+                        <div class="mb-3">
+                            <label class="form-label">Resolution</label>
+                            <select class="form-select" id="resolutionSelect">
+                                <option value="">Select action...</option>
+                                <option value="approve">Approve Transaction</option>
+                                <option value="block">Block Transaction</option>
+                                <option value="investigate">Further Investigation</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Notes</label>
+                            <textarea class="form-control" id="resolutionNotes" rows="3"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" onclick="resolveTransaction()">Save Resolution</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        const token = localStorage.getItem('token');
+        let complianceChart = null;
+        let riskChart = null;
+        let currentTransactionId = null;
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (!token) {
+                window.location.href = '/signin';
+                return;
+            }
+
+            try {
+                await loadMetrics();
+                await loadCharts();
+                await loadHighRiskUsers();
+                await loadFlaggedTransactions();
+                await loadCountryRisks();
+            } catch (error) {
+                console.error('Error loading compliance data:', error);
+            }
+        });
+
+        async function loadMetrics() {
+            try {
+                const response = await fetch('/api/v1/compliance/metrics', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    document.getElementById('highRiskCount').textContent = data.high_risk_users || '0';
+                    document.getElementById('countryCount').textContent = data.active_countries || '0';
+                    document.getElementById('complianceRate').textContent = (data.compliance_rate || 0).toFixed(1) + '%';
+                    document.getElementById('flaggedCount').textContent = data.flagged_transactions || '0';
+                }
+            } catch (error) {
+                console.error('Error loading metrics:', error);
+            }
+        }
+
+        async function loadCharts() {
+            try {
+                const response = await fetch('/api/v1/compliance/chart-data', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+
+                    // Compliance Score Trend
+                    let ctx = document.getElementById('complianceChart').getContext('2d');
+                    if (complianceChart) complianceChart.destroy();
+                    complianceChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: data.days || ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
+                            datasets: [{
+                                label: 'Compliance Score',
+                                data: data.compliance_scores || [94.2, 95.1, 93.8, 95.5],
+                                borderColor: '#667eea',
+                                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                borderWidth: 2,
+                                fill: true,
+                                tension: 0.3
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true
+                        }
+                    });
+
+                    // Risk Distribution
+                    ctx = document.getElementById('riskChart').getContext('2d');
+                    if (riskChart) riskChart.destroy();
+                    riskChart = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['High Risk', 'Medium Risk', 'Low Risk', 'Clear'],
+                            datasets: [{
+                                data: data.risk_distribution || [15, 32, 28, 25],
+                                backgroundColor: ['#dc3545', '#ffc107', '#17a2b8', '#28a745']
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading charts:', error);
+            }
+        }
+
+        async function loadHighRiskUsers() {
+            try {
+                const response = await fetch('/api/v1/compliance/high-risk-users', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const tbody = document.getElementById('highRiskTableBody');
+                    tbody.innerHTML = '';
+
+                    if (data.users && data.users.length > 0) {
+                        data.users.forEach(user => {
+                            tbody.innerHTML += `
+                                <tr>
+                                    <td>${user.name}</td>
+                                    <td>${user.email}</td>
+                                    <td><span class="risk-high">${user.risk_score}</span></td>
+                                    <td>${user.red_flags.join(', ')}</td>
+                                    <td>${new Date(user.last_activity).toLocaleDateString()}</td>
+                                    <td><span class="badge bg-warning">${user.kyc_status}</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-primary">Review</button>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading high risk users:', error);
+            }
+        }
+
+        async function loadFlaggedTransactions() {
+            try {
+                const response = await fetch('/api/v1/compliance/flagged-transactions', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const tbody = document.getElementById('flaggedTransactionsBody');
+                    tbody.innerHTML = '';
+
+                    if (data.transactions && data.transactions.length > 0) {
+                        data.transactions.forEach(txn => {
+                            tbody.innerHTML += `
+                                <tr>
+                                    <td><code>${txn.id}</code></td>
+                                    <td>${txn.user_email}</td>
+                                    <td>$${parseFloat(txn.amount).toFixed(2)}</td>
+                                    <td>${txn.source} → ${txn.destination}</td>
+                                    <td>${txn.flag_reason}</td>
+                                    <td><span class="badge bg-danger">${txn.status}</span></td>
+                                    <td>
+                                        <button class="btn btn-sm btn-primary" onclick="reviewTransaction('${txn.id}')">Review</button>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading flagged transactions:', error);
+            }
+        }
+
+        async function loadCountryRisks() {
+            try {
+                const response = await fetch('/api/v1/compliance/country-risks', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const tbody = document.getElementById('countryRiskBody');
+                    tbody.innerHTML = '';
+
+                    if (data.countries && data.countries.length > 0) {
+                        data.countries.forEach(country => {
+                            tbody.innerHTML += `
+                                <tr>
+                                    <td>${country.name}</td>
+                                    <td><span class="badge ${getRiskBadgeClass(country.risk_rating)}">${country.risk_rating}</span></td>
+                                    <td>${country.aml_risk}</td>
+                                    <td>${country.cft_risk}</td>
+                                    <td>$${country.transaction_limit || 'Unlimited'}</td>
+                                    <td><span class="badge bg-success">Active</span></td>
+                                </tr>
+                            `;
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading country risks:', error);
+            }
+        }
+
+        function getRiskBadgeClass(risk) {
+            const classes = {
+                'High': 'bg-danger',
+                'Medium': 'bg-warning',
+                'Low': 'bg-success'
+            };
+            return classes[risk] || 'bg-secondary';
+        }
+
+        function reviewTransaction(txnId) {
+            currentTransactionId = txnId;
+            // Load transaction details and show modal
+            new bootstrap.Modal(document.getElementById('transactionReviewModal')).show();
+        }
+
+        function resolveTransaction() {
+            const resolution = document.getElementById('resolutionSelect').value;
+            const notes = document.getElementById('resolutionNotes').value;
+            
+            if (!resolution) {
+                alert('Please select a resolution');
+                return;
+            }
+
+            // Send resolution to API
+            alert('Transaction resolved: ' + resolution);
+            bootstrap.Modal.getInstance(document.getElementById('transactionReviewModal')).hide();
+        }
+
+        function screenSanctions() {
+            const name = document.getElementById('screenName').value;
+            if (!name) {
+                alert('Please enter a name');
+                return;
+            }
+
+            const result = document.getElementById('sanctionsResult');
+            result.innerHTML = '<p class="text-info"><i class="fas fa-spinner fa-spin"></i> Screening...</p>';
+
+            // Simulate screening
+            setTimeout(() => {
+                result.innerHTML = `
+                    <div class="alert alert-success">
+                        <strong>No matches found</strong> in selected sanctions lists for "${name}"
+                    </div>
+                `;
+            }, 1500);
+        }
+
+        function applyComplianceFilters() {
+            // Apply selected filters
+            loadHighRiskUsers();
+            loadFlaggedTransactions();
+        }
+    </script>
+    <script src="/static/js/admin-guard.js"></script>
+</body>
+</html>

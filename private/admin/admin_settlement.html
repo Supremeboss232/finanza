@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settlement Management - Finanza Admin</title>
+    <link href="/static/css/style.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+    <style>
+        body { background: #f8f9fa; }
+        .admin-nav { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .admin-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; }
+        .stat-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .stat-number { font-size: 2rem; font-weight: bold; color: #667eea; }
+        .stat-label { color: #666; font-size: 0.9rem; margin-top: 5px; }
+        .dashboard-section { background: white; border-radius: 10px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 30px; }
+        .chart-container { position: relative; height: 300px; margin-bottom: 20px; }
+        .modal-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .form-control:focus { border-color: #667eea; box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25); }
+        .btn-primary { background: #667eea; border: none; }
+        .btn-primary:hover { background: #5568d3; }
+        .table-responsive { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .status-badge { padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+        .status-completed { background: #d4edda; color: #155724; }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-failed { background: #f8d7da; color: #721c24; }
+        .settlement-type-badge { display: inline-block; padding: 4px 8px; background: #e3f2fd; color: #1976d2; border-radius: 4px; font-size: 0.85rem; margin: 2px; }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="admin-nav navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/user/admin/dashboard">
+                <i class="fas fa-chart-line"></i> Finanza Admin
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/dashboard">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-5 mb-5">
+        <!-- Header -->
+        <div class="admin-header">
+            <h1><i class="fas fa-handshake"></i> Settlement Management</h1>
+            <p class="mb-0">Manage ACH, wire transfers, RTP, FedNow, and settlement rules configuration</p>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="row g-4 mb-5">
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card">
+                    <div style="font-size: 2rem; color: #667eea; font-weight: bold;">$<span id="pendingValue">-</span>M</div>
+                    <div class="text-muted">Pending Settlements</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card">
+                    <div style="font-size: 2rem; color: #667eea; font-weight: bold;" id="settledToday">-</div>
+                    <div class="text-muted">Settled Today</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card">
+                    <div style="font-size: 2rem; color: #667eea; font-weight: bold;" id="avgTime">-h</div>
+                    <div class="text-muted">Avg Settlement Time</div>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card">
+                    <div style="font-size: 2rem; color: #667eea; font-weight: bold;" id="failureRate">-</div>
+                    <div class="text-muted">Failure Rate</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settlement Network Status -->
+        <div class="row g-4 mb-5">
+            <div class="col-lg-3 col-md-6">
+                <div class="dashboard-section text-center">
+                    <h5><i class="fas fa-code-branch"></i> SWIFT</h5>
+                    <div style="font-size: 3rem; color: #667eea; margin: 15px 0;"><i class="fas fa-check-circle"></i></div>
+                    <span class="badge bg-success">Connected</span>
+                    <p class="mt-2 text-muted small">Pending: <span id="swiftPending">-</span></p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="dashboard-section text-center">
+                    <h5><i class="fas fa-link"></i> ACH</h5>
+                    <div style="font-size: 3rem; color: #667eea; margin: 15px 0;"><i class="fas fa-check-circle"></i></div>
+                    <span class="badge bg-success">Connected</span>
+                    <p class="mt-2 text-muted small">Pending: <span id="achPending">-</span></p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="dashboard-section text-center">
+                    <h5><i class="fas fa-cube"></i> Blockchain</h5>
+                    <div style="font-size: 3rem; color: #667eea; margin: 15px 0;"><i class="fas fa-check-circle"></i></div>
+                    <span class="badge bg-success">Active</span>
+                    <p class="mt-2 text-muted small">Pending: <span id="chainPending">-</span></p>
+                </div>
+            </div>
+            <div class="col-lg-3 col-md-6">
+                <div class="dashboard-section text-center">
+                    <h5><i class="fas fa-exchange-alt"></i> Forex</h5>
+                    <div style="font-size: 3rem; color: #667eea; margin: 15px 0;"><i class="fas fa-check-circle"></i></div>
+                    <span class="badge bg-success">Connected</span>
+                    <p class="mt-2 text-muted small">Pending: <span id="forexPending">-</span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settlement Performance -->
+        <div class="row g-4 mb-5">
+            <div class="col-lg-6">
+                <div class="dashboard-section">
+                    <h5 class="mb-3"><i class="fas fa-chart-bar"></i> Settlement Volume</h5>
+                    <div class="chart-container">
+                        <canvas id="volumeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="dashboard-section">
+                    <h5 class="mb-3"><i class="fas fa-percentage"></i> Settlement Success Rate</h5>
+                    <div class="chart-container">
+                        <canvas id="successChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending Settlements -->
+        <div class="dashboard-section">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4><i class="fas fa-hourglass-half"></i> Pending Settlements</h4>
+                <button class="btn btn-primary btn-sm"><i class="fas fa-sync"></i> Process Batch</button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Settlement ID</th>
+                            <th>Amount</th>
+                            <th>From/To</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Submitted</th>
+                            <th>Next Action</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pendingBody">
+                        <tr>
+                            <td colspan="8" class="text-center text-muted">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Recent Settlements -->
+        <div class="dashboard-section">
+            <h4 class="mb-4"><i class="fas fa-check-circle"></i> Recent Settled Transactions</h4>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Settlement ID</th>
+                            <th>Amount</th>
+                            <th>Type</th>
+                            <th>From/To</th>
+                            <th>Settled Date</th>
+                            <th>Settlement Time</th>
+                            <th>Reference</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recentBody">
+                        <tr>
+                            <td colspan="7" class="text-center text-muted">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Settlement Rules -->
+        <div class="dashboard-section">
+            <h4 class="mb-4"><i class="fas fa-rules"></i> Settlement Rules & Limits</h4>
+            <div class="row mb-4">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Max SWIFT Transaction</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control" id="maxSwift" value="1000000">
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Max ACH Transaction</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" class="form-control" id="maxACH" value="100000">
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">SWIFT Cutoff Time</label>
+                    <input type="time" class="form-control" id="swiftCutoff" value="15:00">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">ACH Cutoff Time</label>
+                    <input type="time" class="form-control" id="achCutoff" value="17:00">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Settlement Confirmation (minutes)</label>
+                    <input type="number" class="form-control" id="confirmTime" value="30">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Retry Attempts</label>
+                    <input type="number" class="form-control" id="retryAttempts" value="3">
+                </div>
+                <div class="col-12 mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="autoRetry" checked>
+                        <label class="form-check-label" for="autoRetry">
+                            Enable Automatic Retry on Failure
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="notifyOnFailure" checked>
+                        <label class="form-check-label" for="notifyOnFailure">
+                            Notify on Settlement Failure
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <button class="btn btn-primary">Save Rules</button>
+        </div>
+
+        <!-- Settlement Logs -->
+        <div class="dashboard-section">
+            <h4 class="mb-4"><i class="fas fa-file-alt"></i> Settlement Audit Log</h4>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Action</th>
+                            <th>Settlement ID</th>
+                            <th>Status Change</th>
+                            <th>User</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody id="auditBody">
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Network Configuration -->
+        <div class="dashboard-section">
+            <h4 class="mb-4"><i class="fas fa-network-wired"></i> Settlement Network Configuration</h4>
+            <div class="row mb-4">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Primary Bank</label>
+                    <input type="text" class="form-control" id="primaryBank" value="JPMorgan Chase">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Secondary Bank</label>
+                    <input type="text" class="form-control" id="secondaryBank" value="Bank of America">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">SWIFT Code</label>
+                    <input type="text" class="form-control" id="swiftCode" value="CHASUS33">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Clearing House</label>
+                    <select class="form-control">
+                        <option>Federal Reserve</option>
+                        <option selected>CHIPS</option>
+                        <option>Fedwire</option>
+                    </select>
+                </div>
+            </div>
+            <button class="btn btn-primary">Test Connection</button>
+            <button class="btn btn-outline-secondary">View Network Status</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        const token = localStorage.getItem('token');
+        let volumeChart, successChart;
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (!token) {
+                window.location.href = '/signin';
+                return;
+            }
+
+            try {
+                await loadSettlementData();
+                await loadPendingSettlements();
+                await loadRecentSettlements();
+                await loadAuditLog();
+                initializeCharts();
+            } catch (error) {
+                console.error('Error loading settlement data:', error);
+            }
+        });
+
+        async function loadSettlementData() {
+            try {
+                const response = await fetch('/api/v1/settlement/dashboard', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    document.getElementById('pendingValue').textContent = (data.pending_value / 1000000).toFixed(1);
+                    document.getElementById('settledToday').textContent = data.settled_today_count || '-';
+                    document.getElementById('avgTime').textContent = data.avg_settlement_hours || '-';
+                    document.getElementById('failureRate').textContent = (data.failure_rate || 0).toFixed(2) + '%';
+
+                    document.getElementById('swiftPending').textContent = data.swift_pending || '0';
+                    document.getElementById('achPending').textContent = data.ach_pending || '0';
+                    document.getElementById('chainPending').textContent = data.blockchain_pending || '0';
+                    document.getElementById('forexPending').textContent = data.forex_pending || '0';
+                }
+            } catch (error) {
+                console.error('Error loading settlement data:', error);
+            }
+        }
+
+        async function loadPendingSettlements() {
+            try {
+                const response = await fetch('/api/v1/settlement/pending?limit=20', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const tbody = document.getElementById('pendingBody');
+                    tbody.innerHTML = '';
+
+                    if (data.settlements && data.settlements.length > 0) {
+                        data.settlements.forEach(settlement => {
+                            const statusBadge = `<span class="badge bg-${settlement.status === 'pending' ? 'warning' : settlement.status === 'processing' ? 'info' : 'danger'}">${settlement.status}</span>`;
+                            tbody.innerHTML += `
+                                <tr>
+                                    <td><strong>${settlement.id}</strong></td>
+                                    <td>$${settlement.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}</td>
+                                    <td>${settlement.from_account} → ${settlement.to_account}</td>
+                                    <td><span class="badge bg-primary">${settlement.type}</span></td>
+                                    <td>${statusBadge}</td>
+                                    <td>${new Date(settlement.submitted).toLocaleString()}</td>
+                                    <td>${settlement.next_action}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-success">Process</button>
+                                        <button class="btn btn-sm btn-danger">Reject</button>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No pending settlements</td></tr>';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading pending settlements:', error);
+            }
+        }
+
+        async function loadRecentSettlements() {
+            try {
+                const response = await fetch('/api/v1/settlement/recent?limit=15', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const tbody = document.getElementById('recentBody');
+                    tbody.innerHTML = '';
+
+                    if (data.settlements && data.settlements.length > 0) {
+                        data.settlements.forEach(settlement => {
+                            tbody.innerHTML += `
+                                <tr>
+                                    <td>${settlement.id}</td>
+                                    <td>$${settlement.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}</td>
+                                    <td><span class="badge bg-primary">${settlement.type}</span></td>
+                                    <td>${settlement.from_account} → ${settlement.to_account}</td>
+                                    <td>${new Date(settlement.settled_date).toLocaleDateString()}</td>
+                                    <td>${settlement.settlement_time_hours}h</td>
+                                    <td><small>${settlement.reference}</small></td>
+                                </tr>
+                            `;
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading recent settlements:', error);
+            }
+        }
+
+        async function loadAuditLog() {
+            try {
+                const response = await fetch('/api/v1/settlement/audit-log?limit=10', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const tbody = document.getElementById('auditBody');
+                    tbody.innerHTML = '';
+
+                    if (data.logs && data.logs.length > 0) {
+                        data.logs.forEach(log => {
+                            tbody.innerHTML += `
+                                <tr>
+                                    <td>${new Date(log.timestamp).toLocaleString()}</td>
+                                    <td>${log.action}</td>
+                                    <td>${log.settlement_id}</td>
+                                    <td><span class="badge bg-info">${log.status_change}</span></td>
+                                    <td>${log.user || 'System'}</td>
+                                    <td><small>${log.details}</small></td>
+                                </tr>
+                            `;
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading audit log:', error);
+            }
+        }
+
+        function initializeCharts() {
+            // Settlement Volume
+            const volumeCtx = document.getElementById('volumeChart').getContext('2d');
+            volumeChart = new Chart(volumeCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['SWIFT', 'ACH', 'Blockchain', 'Forex'],
+                    datasets: [{
+                        label: 'Settlement Volume ($M)',
+                        data: [50, 30, 15, 10],
+                        backgroundColor: ['#667eea', '#764ba2', '#f093fb', '#4facfe']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+
+            // Success Rate
+            const successCtx = document.getElementById('successChart').getContext('2d');
+            successChart = new Chart(successCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Successful', 'Failed', 'Pending'],
+                    datasets: [{
+                        data: [98.5, 0.8, 0.7],
+                        backgroundColor: ['#28a745', '#dc3545', '#ffc107']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        }
+    </script>
+    <script src="/static/js/admin-guard.js"></script>
+</body>
+</html>

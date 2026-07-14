@@ -1,0 +1,73 @@
+[Unit]
+Description=Finanza Banking API (FastAPI + Uvicorn)
+After=network.target
+Wants=network-online.target
+
+[Service]
+# Run as a dedicated user (create with: useradd -r -s /bin/false finanza)
+User=ec2-user
+Group=ec2-user
+
+# Working directory (project root on EC2)
+WorkingDirectory=/home/ec2-user/app
+
+# Load environment variables from .env file
+EnvironmentFile=/home/ec2-user/app/.env
+
+# Start command — 2 workers is good for a t3.small / t3.medium
+# Increase workers for larger instances (cpu_count * 2 + 1 is the common rule)
+ExecStart=/home/ec2-user/app/venv/bin/uvicorn main:app \
+    --host 0.0.0.0 \
+    --port 8000 \
+    --workers 2 \
+    --timeout-keep-alive 65 \
+    --access-log \
+    --log-level info
+
+# Graceful reload (zero-downtime) on SIGHUP
+ExecReload=/bin/kill -HUP $MAINPID
+
+# Restart policy
+Restart=always
+RestartSec=5
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+# Logging to journald
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=finanza
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/home/ec2-user/app/uploads
+
+# Timeout for startup and stop
+TimeoutStartSec=60
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
+
+# ============================================================
+# EC2 Setup Instructions:
+# ============================================================
+# 1. Copy this file:
+#    sudo cp finanza.service /etc/systemd/system/
+#
+# 2. Reload systemd daemon:
+#    sudo systemctl daemon-reload
+#
+# 3. Enable & start the service:
+#    sudo systemctl enable finanza
+#    sudo systemctl start finanza
+#
+# 4. Check status:
+#    sudo systemctl status finanza
+#    sudo journalctl -u finanza -f   # Tail logs
+#
+# 5. Restart after code update:
+#    sudo systemctl restart finanza
+# ============================================================

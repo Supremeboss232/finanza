@@ -31,9 +31,12 @@ ENV/
 *.swp
 *.swo
 
-# Environment files
+# Environment files (SECURITY: never commit real .env with secrets)
+.env
 .env.local
 .env.*.local
+.env.production
+.env.staging
 
 # Database
 *.db
@@ -53,3 +56,19 @@ npm-debug.log
 .pytest_cache/
 htmlcov/
 .coverage
+
+# SSH Keys (SECURITY: never commit private keys)
+*.pem
+*.key
+*.crt
+
+# Log files
+*.log
+server.log
+deployment.log
+
+# Uploads directory (user-uploaded files)
+uploads/
+
+# Alembic dev artifacts
+alembic/versions/__pycache__/

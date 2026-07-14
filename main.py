@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
-from fastapi import Request, Depends, status
+from fastapi import Request, Depends, status, WebSocket, WebSocketDisconnect
 from sqlalchemy import text, select
 import logging
 from datetime import datetime
@@ -11,6 +11,14 @@ from typing import List
 import atexit
 import time
 import asyncio
+
+# Token Cleanup Service & Scheduler
+from token_cleanup_service import TokenCleanupService
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
+# Rate Limiting & MFA
+from rate_limiter_service import get_rate_limiter, get_rate_limit_config
+from mfa_service import MFAService
 
 from auth import get_current_user_from_cookie
 from database import SessionLocal, Base, engine
@@ -28,6 +36,7 @@ from routers.cards import cards_router
 from routers.deposits import deposits_router
 from routers.loans import loans_router
 from routers.investments import investments_router
+from routers.payments import router as payments_router
 from routers.realtime import realtime_router
 from routers.account import router as account_router
 from routers.financial_planning import router as financial_planning_router
@@ -39,12 +48,27 @@ from routers.projects import router as projects_router
 from routers.transfers import router as transfers_router
 from routers.security import router as security_router
 from routers.fund_ledger import fund_router
+from routers.fund_v1_api import fund_v1_router
+from routers.auth_v1_api import auth_v1_router, system_status_router
+from routers.audit_v1_api import audit_v1_router
 from routers.admin_users import admin_users_router
+from routers.admin_transactions_api import admin_transactions_router
+from routers.admin_intervention import router as intervention_router
+from routers.admin_api_v1 import admin_v1_router
+from routers.reporting_api_v1 import reporting_v1_router
 from routers.emails import router as emails_router
 from routers.sns_notifications import router as sns_router
+from routers.dashboard_stubs_api import router as dashboard_stubs_router
+from routers.admin_management import router as admin_management_router
+from routers.admin_full_api import router as admin_full_api_router
+from routers.admin_advanced_operations import router as admin_advanced_router
+from routers.uploads import uploads_router
+from routers.international import international_router
+from routers.mobile_deposits import deposits_router as mobile_deposits_router_new
 from config import settings
 from auth_utils import get_password_hash
 from deps import get_current_user, get_current_admin_user, SessionDep
+from rbac import require_permission
 from schemas import UserCreate, FundUserRequest, Deposit as PydanticDeposit, Transaction, TransactionCreate, PasswordResetRequest, UserProfileUpdateRequest, AccountStatusToggleRequest, AdminAccessToggleRequest, TransactionCreateRequest
 from models import User, Deposit as DBDeposit
 from admin_service import admin_service
@@ -56,66 +80,65 @@ log = logging.getLogger(__name__)
 # SSH Tunnel Management
 ssh_tunnel = None
 db_tables_created = False  # Track if database tables have been initialized
+scheduler = None  # Global scheduler instance for token cleanup
+
+def cleanup_scheduler():
+    """Cleanup scheduler on exit"""
+    global scheduler
+    if scheduler and scheduler.running:
+        try:
+            scheduler.shutdown()
+            log.info("Scheduler shutdown complete")
+        except Exception as e:
+            log.error(f"Error shutting down scheduler: {e}")
 
 def initialize_ssh_tunnel():
-    """Initialize SSH tunnel if configured"""
-    global ssh_tunnel
-    
-    if not settings.USE_SSH_TUNNEL:
-        print("ℹ️  SSH tunnel disabled. Using direct database connection.")
-        return True
-    
-    try:
-        from ssh_tunnel import SSHTunnelManager
-        
-        print("🔐 Setting up SSH tunnel...")
-        ssh_tunnel = SSHTunnelManager(
-            ec2_host=settings.SSH_HOST,
-            key_path=settings.SSH_KEY_PATH,
-            rds_host=settings.RDS_REMOTE_HOST,
-            rds_port=settings.RDS_REMOTE_PORT,
-            local_port=5432
-        )
-        
-        if ssh_tunnel.start():
-            # Register cleanup on exit
-            atexit.register(cleanup_ssh_tunnel)
-            print("✅ SSH tunnel established successfully!")
-            # Give tunnel time to fully establish
-            time.sleep(1)
-            return True
-        else:
-            print("❌ Failed to setup SSH tunnel - proceeding with direct connection")
-            ssh_tunnel = None
-            return False
-            
-    except ImportError:
-        print("⚠️  SSH tunnel not available - proceeding with direct connection")
-        return False
-    except Exception as e:
-        print(f"⚠️  SSH tunnel error: {e}")
-        print("   Proceeding with direct connection")
-        return False
+    """SSH tunneling is deprecated in this deployment. Supabase is used as primary DB.
+
+    This function intentionally does nothing and exists only for backward
+    compatibility with older startup flows that expected an initializer.
+    """
+    return False
 
 def cleanup_ssh_tunnel():
-    """Cleanup SSH tunnel on exit"""
-    global ssh_tunnel
-    if ssh_tunnel:
-        try:
-            ssh_tunnel.stop()
-        except Exception as e:
-            print(f"Error stopping tunnel: {e}")
+    """No-op cleanup for SSH tunnel; kept for compatibility."""
+    return None
 
-# API Configuration served dynamically
-API_CONFIG = {
-    "baseURL": "http://localhost:8000",
-    "timeout": 30000,
-    "headers": {
-        "Content-Type": "application/json"
-    },
-    "retries": 2,
-    "backoffDelay": 1000
-}
+# API Configuration - Generated dynamically based on environment
+def generate_api_config(environment: str = None, api_url: str = None) -> dict:
+    """
+    Generate API configuration based on environment.
+    
+    Args:
+        environment: "development", "staging", or "production"
+        api_url: Optional override for API URL
+        
+    Returns:
+        Configuration dict for frontend clients
+    """
+    env = environment or settings.ENVIRONMENT or "development"
+    
+    # Determine baseURL based on environment
+    if env == "production":
+        base_url = api_url or settings.API_URL or "https://api.example.com"
+    elif env == "staging":
+        base_url = api_url or settings.API_URL or "https://staging-api.example.com"
+    else:  # development
+        base_url = "http://localhost:8000"
+    
+    return {
+        "baseURL": base_url,
+        "timeout": 30000,
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "retries": 2,
+        "backoffDelay": 1000,
+        "environment": env
+    }
+
+# Generate initial API config
+API_CONFIG = generate_api_config()
 
 async def create_db_and_tables():
     """Creates all database tables defined in models.py."""
@@ -148,10 +171,12 @@ async def test_db_connection():
 
 async def create_admin_user():
     """
-    Ensures the default admin user exists with a linked account.
+    Ensures the default SUPER_ADMIN user exists with proper role and linked account.
     
-    ⚠️ CORE RULE (NON-NEGOTIABLE):
-    Admin user must have BOTH User ID and Account ID bound together.
+    ⚠️ CORE RULES:
+    1. Default admin must have admin_role set to "SUPER_ADMIN"
+    2. Admin user must have BOTH User ID and Account ID bound together
+    3. Default admin must have is_admin=True
     """
     from sqlalchemy import select
     from models import Account
@@ -162,13 +187,14 @@ async def create_admin_user():
         admin_user = result.scalars().first()
         
         if not admin_user:
-            # Create a new admin user with an argon2 hashed password if one doesn't exist
+            # Create a new SUPER_ADMIN user with argon2 hashed password
             hashed_password = get_password_hash(settings.ADMIN_PASSWORD)
             new_admin = User(
-                full_name="Admin User",
+                full_name="Super Admin",
                 email=settings.ADMIN_EMAIL,
                 hashed_password=hashed_password,
                 is_admin=True,
+                admin_role="SUPER_ADMIN",  # ✅ SET SUPER_ADMIN ROLE
                 is_active=True,
                 kyc_status='approved'  # Admin is pre-approved
             )
@@ -185,17 +211,23 @@ async def create_admin_user():
                 balance=0.0,
                 currency='USD',
                 created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow()
+                updated_at=datetime.utcnow(),
+                is_admin_account=True  # Mark as admin account
             )
             db.add(admin_account)
             new_admin.account_number = admin_account_number
             
             await db.commit()
-            print("✅ Default admin user and account created successfully.")
+            print(f"✅ SUPER_ADMIN user created: {settings.ADMIN_EMAIL}")
+            print(f"   Role: SUPER_ADMIN (All access)")
             
-        elif not admin_user.is_admin:
-            # If admin user exists but is not marked as admin, update them
-            admin_user.is_admin = True
+        else:
+            # Ensure admin has proper role and account
+            if admin_user.admin_role != "SUPER_ADMIN":
+                admin_user.admin_role = "SUPER_ADMIN"  # ✅ UPGRADE TO SUPER_ADMIN IF NOT
+                
+            if not admin_user.is_admin:
+                admin_user.is_admin = True
             
             # Check if admin has account - if not, create one
             account_check = await db.execute(
@@ -212,37 +244,107 @@ async def create_admin_user():
                     balance=0.0,
                     currency='USD',
                     created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow()
+                    updated_at=datetime.utcnow(),
+                    is_admin_account=True
                 )
                 db.add(admin_account)
                 admin_user.account_number = admin_account_number
             
             await db.commit()
-            print("✅ Admin user updated and account ensured.")
-        else:
-            # Verify admin has an account
-            account_check = await db.execute(
-                select(Account).filter(Account.owner_id == admin_user.id)
-            )
-            if not account_check.scalars().first():
-                import time
-                from datetime import datetime
-                admin_account_number = f"ADMIN{admin_user.id}_{int(time.time() * 1000000) % 1000000}"
+            print(f"✅ SUPER_ADMIN verified: {settings.ADMIN_EMAIL}")
+
+
+async def create_default_admin_roles():
+    """
+    Creates default admin accounts for all 5 role tiers during startup.
+    
+    Purpose: Allow testing/demonstration of each admin role with different permissions:
+    - SUPER_ADMIN: All access (*)
+    - ADMIN: 18 permissions (users, transactions, KYC, deposits, etc.)
+    - TREASURY: Payment settlement, deposits, ledger adjustments
+    - COMPLIANCE: KYC review, audit view
+    - SUPPORT: User view, support tickets
+    """
+    from sqlalchemy import select
+    from models import Account
+    import time
+    from datetime import datetime
+    
+    # Define default admin role accounts
+    DEFAULT_ROLES = {
+        "ADMIN": {
+            "email": "admin@finanza.com",
+            "password": "AdminTest123!",
+            "name": "Admin Officer",
+            "permissions": "18 permissions (users, transactions, KYC, deposits, etc.)"
+        },
+        "TREASURY": {
+            "email": "treasury@finanza.com",
+            "password": "TreasuryTest123!",
+            "name": "Treasury Officer",
+            "permissions": "Payment settlement, deposits, ledger adjustments"
+        },
+        "COMPLIANCE": {
+            "email": "compliance@finanza.com",
+            "password": "ComplianceTest123!",
+            "name": "Compliance Officer",
+            "permissions": "KYC review, audit view"
+        },
+        "SUPPORT": {
+            "email": "support@finanza.com",
+            "password": "SupportTest123!",
+            "name": "Support Agent",
+            "permissions": "User view, support tickets"
+        }
+    }
+    
+    async with SessionLocal() as db:
+        for role, config in DEFAULT_ROLES.items():
+            result = await db.execute(select(User).filter(User.email == config["email"]))
+            user = result.scalars().first()
+            
+            if not user:
+                # Create new role account
+                hashed_password = get_password_hash(config["password"])
+                new_user = User(
+                    full_name=config["name"],
+                    email=config["email"],
+                    hashed_password=hashed_password,
+                    is_admin=True,
+                    admin_role=role,  # ✅ SET PROPER ROLE
+                    is_active=True,
+                    kyc_status='approved'
+                )
+                db.add(new_user)
+                await db.flush()
+                
+                # Create account for role
+                account_number = f"{role.upper()}{new_user.id}_{int(time.time() * 1000000) % 1000000}"
                 admin_account = Account(
-                    owner_id=admin_user.id,
-                    account_number=admin_account_number,
+                    owner_id=new_user.id,
+                    account_number=account_number,
                     account_type='admin',
                     balance=0.0,
                     currency='USD',
                     created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow()
+                    updated_at=datetime.utcnow(),
+                    is_admin_account=True
                 )
                 db.add(admin_account)
-                admin_user.account_number = admin_account_number
+                new_user.account_number = account_number
+                
                 await db.commit()
-                print("✅ Admin account was missing and has been created.")
+                print(f"✅ {role} account created")
+                print(f"   Email: {config['email']}")
+                print(f"   Password: {config['password']}")
+                print(f"   Permissions: {config['permissions']}")
+                
             else:
-                print("✅ Admin user and account already exist.")
+                # Ensure role account has correct role set
+                if user.admin_role != role:
+                    user.admin_role = role
+                    await db.commit()
+                    print(f"✅ {role} account verified (role updated)")
 
 async def create_system_reserve_account():
     """
@@ -372,21 +474,179 @@ async def create_system_reserve_account():
             raise
 
 
+# ============================================================================
+# WEBSOCKET CONNECTION MANAGER FOR FRAUD ALERTS
+# ============================================================================
+class ConnectionManager:
+    """
+    Manages WebSocket connections for real-time fraud alerts.
+    
+    Tracks connected clients and broadcasts fraud alerts to all connected admins.
+    Automatically removes disconnected clients.
+    """
+    
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+    
+    async def connect(self, websocket: WebSocket):
+        """Accept and register a new WebSocket connection"""
+        await websocket.accept()
+        self.active_connections.append(websocket)
+        print(f"✅ WebSocket client connected. Total connections: {len(self.active_connections)}")
+    
+    def disconnect(self, websocket: WebSocket):
+        """Remove a disconnected WebSocket connection"""
+        self.active_connections.remove(websocket)
+        print(f"❌ WebSocket client disconnected. Total connections: {len(self.active_connections)}")
+    
+    async def broadcast(self, alert: dict):
+        """
+        Broadcast a fraud alert to all connected clients.
+        
+        Args:
+            alert (dict): Alert message with keys:
+                - type: 'fraud_alert' (required)
+                - transaction_id: Transaction ID (required)
+                - threat_type: Type of threat detected (required)
+                - risk_score: Risk score 0-100 (required)
+                - description: Optional alert description
+        """
+        disconnected = []
+        
+        for connection in self.active_connections:
+            try:
+                await connection.send_json(alert)
+            except Exception as e:
+                # Connection failed, mark for removal
+                print(f"⚠️  Failed to broadcast alert to client: {e}")
+                disconnected.append(connection)
+        
+        # Remove failed connections
+        for connection in disconnected:
+            self.disconnect(connection)
+
+
+# Global connection manager instance
+fraud_alert_manager = ConnectionManager()
+
+
 app = FastAPI()
-origins = [
-    "http://localhost:8000",  # FastAPI app
-    "http://127.0.0.1:8000", # FastAPI app
-    "http://51.20.190.13:8000",  # EC2 instance
-    "http://51.20.190.13",  # EC2 instance without port
-]
+
+def get_allowed_origins() -> list:
+    """
+    Get allowed CORS origins based on environment.
+    
+    Development: Always allows localhost
+    Staging/Production: Uses API_URL and FRONTEND_URL from settings
+    """
+    origins = [
+        "http://localhost:8000",    # Local development - FastAPI
+        "http://127.0.0.1:8000",    # Local development - FastAPI
+        "http://localhost:3000",    # Local development - frontend
+        "http://127.0.0.1:3000",    # Local development - frontend alternative
+    ]
+    
+    env = settings.ENVIRONMENT or "development"
+    
+    # Add EC2/staging origins
+    if env in ["staging", "production"] and settings.API_URL:
+        origins.append(settings.API_URL)
+    
+    if env in ["staging", "production"] and settings.FRONTEND_URL:
+        origins.append(settings.FRONTEND_URL)
+    
+    # Keep these for backward compatibility / debugging
+    origins.extend([
+        "http://51.20.190.13:8000",  # EC2 instance (legacy)
+        "http://51.20.190.13",        # EC2 instance without port (legacy)
+    ])
+    
+    return list(set(origins))  # Remove duplicates
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=get_allowed_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    """
+    Rate limiting middleware for API endpoints.
+    Applies per-user and per-IP rate limits based on endpoint.
+    """
+    try:
+        # Get rate limiter
+        rate_limiter = get_rate_limiter()
+        
+        # Skip rate limiting for non-API endpoints
+        if not request.url.path.startswith("/api/"):
+            return await call_next(request)
+        
+        # Determine identifier (user ID from token or IP address)
+        identifier = "anonymous"
+        identifier_type = "ip"
+        try:
+            # Try to get user from Authorization header
+            auth_header = request.headers.get("Authorization", "")
+            if auth_header.startswith("Bearer "):
+                identifier = auth_header[7:]  # Use token as identifier
+                identifier_type = "token"
+        except:
+            pass
+        
+        if identifier_type == "ip":
+            identifier = request.client.host if request.client else "unknown"
+        
+        # Determine endpoint for rate limit config
+        endpoint = request.url.path
+        
+        # Get rate limit config from settings
+        from config import settings
+        if "/admin" in endpoint:
+            per_minute = settings.RATE_LIMIT_ADMIN_ENDPOINTS_PER_MIN
+            per_hour = settings.RATE_LIMIT_ADMIN_ENDPOINTS_PER_HOUR
+        elif "/auth" in endpoint or "/login" in endpoint:
+            per_minute = settings.RATE_LIMIT_AUTH_PER_MIN
+            per_hour = settings.RATE_LIMIT_AUTH_PER_HOUR
+        else:
+            per_minute = settings.RATE_LIMIT_API_ENDPOINTS_PER_MIN
+            per_hour = settings.RATE_LIMIT_API_ENDPOINTS_PER_HOUR
+        
+        # Check rate limit
+        is_allowed, info = await rate_limiter.is_allowed(
+            identifier,
+            identifier_type=identifier_type,
+            endpoint=endpoint,
+            requests_per_minute=per_minute,
+            requests_per_hour=per_hour
+        )
+        
+        if not is_allowed:
+            from fastapi.responses import JSONResponse
+            return JSONResponse(
+                status_code=429,
+                content={
+                    "success": False,
+                    "error": "Rate limit exceeded",
+                    "details": info
+                }
+            )
+        
+        response = await call_next(request)
+        
+        # Add rate limit headers
+        response.headers["X-RateLimit-Limit"] = str(per_minute)
+        response.headers["X-RateLimit-Remaining"] = str(max(0, per_minute - info.get("count", 0)))
+        
+        return response
+        
+    except Exception as e:
+        # Don't block requests if rate limiting fails
+        log.warning(f"Rate limiting error: {e}")
+        return await call_next(request)
 
 @app.middleware("http")
 async def ensure_db_tables(request: Request, call_next):
@@ -412,10 +672,10 @@ async def user_jail_middleware(request: Request, call_next):
     under /user/ or exempt paths.
     """
     # Paths that do not require this check
-    # Add explicit signin/signup/forgot-password paths (and .html variants) so public auth pages aren't redirected
+    # Add explicit signin/signup/forgot-password/reset-password paths (and .html variants) so public auth pages aren't redirected
     exempt_paths = [
         "/api", "/auth", "/css", "/js", "/lib", "/img", "/static", "/admin_static",
-        "/docs", "/openapi.json", "/signin", "/signup", "/forgot-password", "/signin.html", "/signup.html", "/logout"
+        "/docs", "/openapi.json", "/signin", "/signup", "/forgot-password", "/reset-password", "/signin.html", "/signup.html", "/logout"
     ]
     is_exempt = any(request.url.path.startswith(p) for p in exempt_paths)
     
@@ -455,14 +715,93 @@ async def startup_event():
         print("[*] Setting up admin and system accounts...")
         await create_admin_user()
         
+        print("[*] Creating default admin role accounts...")
+        await create_default_admin_roles()
+
         print("[*] Creating System Reserve Account...")
         await create_system_reserve_account()
+
+        print("[*] Verifying startup balances...")
+        try:
+            from app.startup_helpers import startup_verification
+            async with SessionLocal() as db:
+                verification = await startup_verification(db)
+                if verification.get("reconciliation", {}).get("invalid", 0):
+                    log.warning("Startup reconciliation found %s inconsistent account(s)", verification["reconciliation"].get("invalid", 0))
+                else:
+                    log.info("Startup reconciliation passed")
+        except Exception as startup_error:
+            log.warning(f"Startup verification failed: {startup_error}")
+        
+        # Initialize token cleanup scheduler
+        print("[*] Initializing token cleanup scheduler...")
+        global scheduler
+        try:
+            scheduler = AsyncIOScheduler()
+            TokenCleanupService.register_cleanup_scheduler(scheduler, interval_minutes=60)
+            
+            # ==================== REAL-TIME SERVICES INITIALIZATION ====================
+            
+            # Initialize Price Feed Service for forex and crypto updates
+            print("[*] Initializing price feed service...")
+            from services.price_feed_service import get_price_feed_service
+            
+            price_feed = await get_price_feed_service(settings.REDIS_URL)
+            
+            # Register forex rate synchronization (every 45 minutes)
+            if settings.FIXER_IO_API_KEY:
+                print("[*] Registering Forex feed task (every 45 minutes)...")
+                scheduler.add_job(
+                    price_feed.sync_forex_rates,
+                    'interval',
+                    minutes=45,
+                    args=[settings.FIXER_IO_API_KEY],
+                    id='forex_sync_task',
+                    replace_existing=True
+                )
+                print("[OK] Forex sync scheduled")
+            else:
+                print("[WARN] FIXER_IO_API_KEY not configured - forex rates will not sync")
+            
+            # Register cryptocurrency WebSocket feed (continuous background task)
+            print("[*] Registering Crypto WebSocket feed (continuous)...")
+            scheduler.add_job(
+                price_feed.connect_crypto_feed,
+                'interval',
+                seconds=0,  # Run once, continues internally with reconnect
+                id='crypto_websocket_task',
+                replace_existing=True
+            )
+            print("[OK] Crypto feed registered")
+            
+            # Start scheduler
+            scheduler.start()
+            atexit.register(cleanup_scheduler)
+            print("[OK] Scheduler started with all background tasks")
+        except Exception as scheduler_error:
+            log.warning(f"[WARN] Background services failed to start: {scheduler_error}")
+            log.warning("       Token cleanup and realtime services may not be available")
         
         print("[OK] Application ready")
         
     except Exception as e:
         print(f"[WARN] Startup issue: {e}")
         print("[WARN] Application will continue in limited mode")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Cleanup on application shutdown"""
+    try:
+        # Stop price feed service (closes Redis connection)
+        from services.price_feed_service import price_feed_service
+        if price_feed_service:
+            await price_feed_service.disconnect()
+        
+        cleanup_scheduler()
+        cleanup_ssh_tunnel()
+        print("[OK] Application shutdown complete")
+    except Exception as e:
+        log.error(f"Error during shutdown: {e}")
 
 # --- Static Files & Routers ---
 
@@ -479,6 +818,9 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Include API routers
 app.include_router(auth_router, prefix="/auth")
+app.include_router(auth_v1_router)  # Auth v1 API (already has /api/v1/auth prefix)
+app.include_router(system_status_router)  # System status API (already has /api/v1/system prefix)
+app.include_router(audit_v1_router)  # Audit v1 API (already has /api/v1/audit prefix)
 app.include_router(private_router, prefix="/user") # Handles authenticated UI routes under /user/* and /user/admin/*
 app.include_router(users_router, prefix="/api/v1/users")
 if admin_router:
@@ -490,6 +832,7 @@ app.include_router(cards_router, prefix="/api/v1")
 app.include_router(deposits_router, prefix="/api/v1")
 app.include_router(loans_router, prefix="/api/v1")
 app.include_router(investments_router, prefix="/api/v1")
+app.include_router(payments_router, prefix="/api/v1")
 # Account router (uploads, profile updates)
 app.include_router(account_router, prefix="/api/v1")
 # Feature routers
@@ -503,23 +846,57 @@ app.include_router(transfers_router)  # Transfers and bill pay
 app.include_router(security_router)  # Security endpoints
 # Fund management router
 app.include_router(fund_router)
+# Fund operations API v1 (with rate limiting and WebSocket support)
+app.include_router(fund_v1_router)
 # Admin user data retrieval router
 app.include_router(admin_users_router)
+# Admin transactions metrics, disputes, returns
+app.include_router(admin_transactions_router)
+# Admin intervention tools (balance adjustment, holds, sessions, KYC docs)
+app.include_router(intervention_router)
+# Admin settings and configuration API v1
+app.include_router(admin_v1_router)
+# Admin reporting and business intelligence API v1
+app.include_router(reporting_v1_router)
 # Email service router
 app.include_router(emails_router)
 # SNS notification router
 app.include_router(sns_router)
+# Dashboard stubs for missing 404 endpoints
+app.include_router(dashboard_stubs_router)
+# Admin management endpoints (holds, frozen accounts, credit scores, devices)
+app.include_router(admin_management_router)
+# Comprehensive admin API (analytics, fraud, KYC, ledger export)
+app.include_router(admin_full_api_router)
+# Advanced admin operations (MFA, bulk ops, admin management, audit logging)
+app.include_router(admin_advanced_router)
 # Realtime WebSocket router
 app.include_router(realtime_router)
+# Real-Time Webhook Receiver - Landing spot for all real-time data
+try:
+    from routers.realtime_webhooks_receiver import router as realtime_webhooks_router
+    app.include_router(realtime_webhooks_router)
+    log.info("✅ Real-Time Webhook Receiver registered - Ready to receive payments, KYC, email events")
+except Exception as e:
+    log.warning(f"Real-Time Webhook Receiver not available: {e}")
 
 # PHASE 1: NEW PAYMENT, CREDIT, COMPLIANCE ROUTERS - COMPLIANCE DISABLED (Priority 3 used instead)
 try:
-    from routers.payments_api import router as payments_router
+    # NOTE: imported as payments_api_router to avoid conflict with root-level payments_router (line 835)
+    from routers.payments_api import router as payments_api_router
     from routers.credit_api import router as credit_router
+    from routers.sandbox_payments import router as sandbox_payments_router
+    from routers.loan_origination_api import router as loan_origination_router
+    from routers.investment_portfolio_api import router as investment_portfolio_router
+    from routers.card_processing_api import router as card_processing_router
     # from routers.compliance_api import router as compliance_router  # Disabled - Priority 3 compliance_priority3_api used instead
     
-    app.include_router(payments_router, prefix="/api/v1")
+    app.include_router(payments_api_router, prefix="/api/v1")  # ACH/Wire/RTP/FedNow payment rails
     app.include_router(credit_router, prefix="/api/v1")
+    app.include_router(sandbox_payments_router, prefix="/api/v1")
+    app.include_router(loan_origination_router, prefix="/api/v1")
+    app.include_router(investment_portfolio_router, prefix="/api/v1")
+    app.include_router(card_processing_router, prefix="/api/v1")
     # app.include_router(compliance_router, prefix="/api/v1")  # Disabled - Priority 3 version active
     log.info("Phase 1 Payment and Credit routers registered (Compliance uses Priority 3)")
 except Exception as e:
@@ -598,6 +975,7 @@ except ImportError as e:
     log.warning(f"Phase 3C routers not available: {e}")
 
 # PHASE 4: ENTERPRISE FEATURES - FRAUD DETECTION, BLOCKCHAIN, REPORTING, TREASURY, SETTLEMENT
+# PHASE 4A: Core Enterprise Features (Fraud, Blockchain, Reporting, Treasury, Settlement)
 try:
     from routers.fraud_detection_api import router as fraud_detection_router
     from routers.blockchain_api import router as blockchain_router
@@ -607,21 +985,112 @@ try:
     
     app.include_router(fraud_detection_router)  # Prefix defined in router as /api/v1/fraud
     app.include_router(blockchain_router)  # Prefix defined in router as /api/v1/blockchain
-    app.include_router(reporting_router)  # Prefix defined in router as /api/v1/reporting
+    app.include_router(reporting_router)  # Prefix defined in router as /api/v1/reports
     app.include_router(treasury_router)  # Prefix defined in router as /api/v1/treasury
     app.include_router(settlement_router)  # Prefix defined in router as /api/v1/settlement
-    log.info("Phase 4 Enterprise Features routers registered (Fraud Detection, Blockchain, Reporting, Treasury, Settlement)")
+    log.info("✅ Phase 4A routers registered (Fraud Detection, Blockchain, Reporting, Treasury, Settlement)")
 except (ImportError, ModuleNotFoundError, AttributeError) as e:
-    log.warning(f"Phase 4 routers not available: {e}")
+    log.warning(f"⚠️  Phase 4A routers not available: {e}")
 except Exception as e:
-    log.warning(f"Phase 4 routers not available (optional): {e}")
+    log.warning(f"⚠️  Phase 4A routers not available (optional): {e}")
 
-# Include user-facing pages (prefix defined in router as /user)
-app.include_router(user_router)
+# PHASE 4B: Optional Enterprise Features (Bill Pay, Mobile Deposit)
+try:
+    from routers.bill_pay_api import router as bill_pay_router
+    from routers.mobile_deposit_admin import router as mobile_deposit_router
+    
+    app.include_router(bill_pay_router)  # Prefix defined in router as /api/v1/bill-pay
+    app.include_router(mobile_deposit_router)  # Prefix defined in router as /api/v1/mobile-deposit
+    log.info("✅ Phase 4B routers registered (Bill Pay, Mobile Deposit)")
+except (ImportError, ModuleNotFoundError, AttributeError) as e:
+    log.warning(f"⚠️  Phase 4B routers not available (optional): {e}")
+except Exception as e:
+    log.warning(f"⚠️  Phase 4B routers not available (optional): {e}")
+
+# WAVE 3: FILE UPLOADS, INTERNATIONAL TRANSFERS, ENHANCED MOBILE DEPOSITS
+try:
+    app.include_router(uploads_router)  # /api/uploads/* endpoints
+    app.include_router(international_router)  # /api/international/* endpoints
+    app.include_router(mobile_deposits_router_new, prefix="/api")  # /api/deposits/* endpoints (enhanced)
+    log.info("✅ Wave 3 routers registered (File Uploads, International Transfers, Mobile Deposits)")
+except Exception as e:
+    log.warning(f"⚠️  Wave 3 routers not available: {e}")
+
+# SUPPLEMENTAL ROUTERS: Alerts, Recipients
+try:
+    from routers.alerts import router as alerts_router
+    from routers.recipients import router as recipients_router
+    app.include_router(alerts_router)   # /api/v1/alerts
+    app.include_router(recipients_router)  # /api/v1/recipients
+    log.info("✅ Supplemental routers registered (Alerts, Recipients)")
+except Exception as e:
+    log.warning(f"Supplemental routers not available: {e}")
+
+# SUPPLEMENTAL ROUTERS: Admin Settings, Business Analysis, Forms, Mobile Deposit API
+try:
+    from routers.admin_settings_api import admin_settings_router, config_router
+    app.include_router(admin_settings_router)  # /api/v1/admin/settings
+    app.include_router(config_router)           # /api/v1/config (public config endpoint)
+    log.info("✅ Admin Settings API registered")
+except Exception as e:
+    log.warning(f"Admin Settings API not available: {e}")
+
+try:
+    from routers.business_analysis import router as business_analysis_router
+    app.include_router(business_analysis_router)  # /api/user/analysis
+    log.info("✅ Business Analysis router registered")
+except Exception as e:
+    log.warning(f"Business Analysis router not available: {e}")
+
+try:
+    from routers.forms import forms_router
+    app.include_router(forms_router, prefix="/api/v1")  # /api/v1/forms
+    log.info("✅ Forms router registered")
+except Exception as e:
+    log.warning(f"Forms router not available: {e}")
+
+try:
+    from routers.mobile_deposit_api import router as mobile_deposit_api_router
+    app.include_router(mobile_deposit_api_router)  # /api/v1/mobile-deposit (user-facing)
+    log.info("✅ Mobile Deposit API (user-facing) registered")
+except Exception as e:
+    log.warning(f"Mobile Deposit API not available: {e}")
+
+# NOTE: user_router is NOT registered here to avoid route conflicts with private_router.
+# All /user/* routes are served by private_router which includes proper admin/user checks.
+# user_pages.py is kept for reference but not registered.
+
+# ── Health Check Endpoint (public, no auth required) ──────────────────────────
+# Used by Docker HEALTHCHECK, nginx upstream checks, and load balancers
+@app.get("/health", tags=["System"])
+async def health_check():
+    """Public health check endpoint. Returns DB connectivity and app status."""
+    try:
+        async with SessionLocal() as db:
+            await db.execute(text("SELECT 1"))
+        return {
+            "status": "healthy",
+            "database": "connected",
+            "environment": settings.ENVIRONMENT or "development",
+            "timestamp": datetime.utcnow().isoformat() + "Z"
+        }
+    except Exception as e:
+        return {
+            "status": "degraded",
+            "database": "unavailable",
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat() + "Z"
+        }
 
 # --- Admin Data Endpoints (Python-only, no JSON) ---
 @app.get("/api/admin/data/users")
-async def fetch_admin_users(db: SessionDep, current_admin: User = Depends(get_current_admin_user), skip: int = 0, limit: int = 100):
+async def fetch_admin_users(
+    db: SessionDep,
+    current_admin: User = Depends(get_current_admin_user),
+    _perm=Depends(require_permission("users:view")),
+    skip: int = 0,
+    limit: int = 100
+):
     """Fetch all users for admin dashboard"""
     try:
         users = await admin_service.get_all_users(db, skip=skip, limit=limit)
@@ -632,7 +1101,14 @@ async def fetch_admin_users(db: SessionDep, current_admin: User = Depends(get_cu
 
 
 @app.get("/api/admin/transactions")
-async def get_admin_transactions(db: SessionDep, current_admin: User = Depends(get_current_admin_user), skip: int = 0, limit: int = 100, status: str = None):
+async def get_admin_transactions(
+    db: SessionDep,
+    current_admin: User = Depends(get_current_admin_user),
+    _perm=Depends(require_permission("transactions:view")),
+    skip: int = 0,
+    limit: int = 100,
+    status: str = None
+):
     """
     Get transactions for admin dashboard.
     
@@ -658,7 +1134,13 @@ async def get_admin_transactions(db: SessionDep, current_admin: User = Depends(g
 
 
 @app.get("/api/admin/kyc")
-async def get_admin_kyc(db: SessionDep, current_admin: User = Depends(get_current_admin_user), skip: int = 0, limit: int = 100):
+async def get_admin_kyc(
+    db: SessionDep,
+    current_admin: User = Depends(get_current_admin_user),
+    _perm=Depends(require_permission("kyc:review")),
+    skip: int = 0,
+    limit: int = 100
+):
     """Get KYC submissions for admin dashboard with complete document information"""
     try:
         result = await db.execute(
@@ -699,7 +1181,13 @@ async def get_admin_kyc(db: SessionDep, current_admin: User = Depends(get_curren
 
 
 @app.get("/api/admin/deposits")
-async def get_admin_deposits(db: SessionDep, current_admin: User = Depends(get_current_admin_user), skip: int = 0, limit: int = 100):
+async def get_admin_deposits(
+    db: SessionDep,
+    current_admin: User = Depends(get_current_admin_user),
+    _perm=Depends(require_permission("deposits:view")),
+    skip: int = 0,
+    limit: int = 100
+):
     """Get deposits for admin dashboard"""
     try:
         result = await db.execute(
@@ -730,7 +1218,8 @@ async def get_admin_deposits(db: SessionDep, current_admin: User = Depends(get_c
 async def create_admin_transaction(
     request: TransactionCreateRequest,
     db: SessionDep, 
-    current_admin: User = Depends(get_current_admin_user)
+    current_admin: User = Depends(get_current_admin_user),
+    _perm=Depends(require_permission("transactions:create"))
 ):
     """Create a transaction for a user (admin only)"""
     try:
@@ -784,7 +1273,14 @@ async def create_admin_transaction(
 
 
 @app.get("/api/admin/data/transactions")
-async def fetch_admin_transactions(db: SessionDep, current_admin: User = Depends(get_current_admin_user), skip: int = 0, limit: int = 100, status: str = None):
+async def fetch_admin_transactions(
+    db: SessionDep,
+    current_admin: User = Depends(get_current_admin_user),
+    _perm=Depends(require_permission("transactions:view")),
+    skip: int = 0,
+    limit: int = 100,
+    status: str = None
+):
     """Fetch transactions for admin dashboard with optional status filtering"""
     try:
         status_filter = 'pending_or_blocked' if status == 'held' else status
@@ -801,7 +1297,13 @@ async def fetch_admin_transactions(db: SessionDep, current_admin: User = Depends
 
 
 @app.get("/api/admin/data/deposits")
-async def fetch_admin_deposits_data(db: SessionDep, current_admin: User = Depends(get_current_admin_user), skip: int = 0, limit: int = 100):
+async def fetch_admin_deposits_data(
+    db: SessionDep,
+    current_admin: User = Depends(get_current_admin_user),
+    _perm=Depends(require_permission("deposits:view")),
+    skip: int = 0,
+    limit: int = 100
+):
     """Fetch deposits for admin dashboard (data endpoint)"""
     try:
         result = await db.execute(
@@ -830,7 +1332,13 @@ async def fetch_admin_deposits_data(db: SessionDep, current_admin: User = Depend
 
 
 @app.get("/api/admin/data/investments")
-async def fetch_admin_investments(db: SessionDep, current_admin: User = Depends(get_current_admin_user), skip: int = 0, limit: int = 100):
+async def fetch_admin_investments(
+    db: SessionDep,
+    current_admin: User = Depends(get_current_admin_user),
+    _perm=Depends(require_permission("investments:view")),
+    skip: int = 0,
+    limit: int = 100
+):
     """Fetch all investments for admin dashboard"""
     try:
         result = await db.execute(
@@ -846,7 +1354,13 @@ async def fetch_admin_investments(db: SessionDep, current_admin: User = Depends(
 
 
 @app.get("/api/admin/data/cards")
-async def fetch_admin_cards(db: SessionDep, current_admin: User = Depends(get_current_admin_user), skip: int = 0, limit: int = 100):
+async def fetch_admin_cards(
+    db: SessionDep,
+    current_admin: User = Depends(get_current_admin_user),
+    _perm=Depends(require_permission("cards:view")),
+    skip: int = 0,
+    limit: int = 100
+):
     """Fetch all cards for admin dashboard"""
     try:
         result = await db.execute(
@@ -914,6 +1428,7 @@ async def admin_update_deposit(
     deposit_id: int,
     db: SessionDep,
     current_admin: User = Depends(get_current_admin_user),
+    _perm=Depends(require_permission("deposits:approve")),
     status: str = None,
     interest_rate: float = None,
     current_balance: float = None
@@ -949,6 +1464,7 @@ async def admin_update_investment(
     investment_id: int,
     db: SessionDep,
     current_admin: User = Depends(get_current_admin_user),
+    _perm=Depends(require_permission("investments:manage")),
     status: str = None,
     current_value: float = None,
     interest_earned: float = None,
@@ -983,7 +1499,13 @@ async def admin_update_investment(
 
 
 @app.get("/api/admin/data/kyc")
-async def fetch_admin_kyc(db: SessionDep, current_admin: User = Depends(get_current_admin_user), skip: int = 0, limit: int = 100):
+async def fetch_admin_kyc(
+    db: SessionDep,
+    current_admin: User = Depends(get_current_admin_user),
+    _perm=Depends(require_permission("kyc:review")),
+    skip: int = 0,
+    limit: int = 100
+):
     """Fetch KYC submissions for admin dashboard"""
     try:
         result = await db.execute(
@@ -1012,7 +1534,11 @@ async def fetch_admin_kyc(db: SessionDep, current_admin: User = Depends(get_curr
 
 
 @app.get("/api/admin/data/metrics")
-async def fetch_admin_metrics(db: SessionDep, current_admin: User = Depends(get_current_admin_user)):
+async def fetch_admin_metrics(
+    db: SessionDep,
+    current_admin: User = Depends(get_current_admin_user),
+    _perm=Depends(require_permission("reporting:view"))
+):
     """Fetch dashboard metrics"""
     try:
         metrics = await admin_service.get_dashboard_metrics(db)
@@ -1023,7 +1549,11 @@ async def fetch_admin_metrics(db: SessionDep, current_admin: User = Depends(get_
 
 
 @app.get("/api/admin/data/reports")
-async def fetch_admin_reports(db: SessionDep, current_admin: User = Depends(get_current_admin_user)):
+async def fetch_admin_reports(
+    db: SessionDep,
+    current_admin: User = Depends(get_current_admin_user),
+    _perm=Depends(require_permission("reporting:view"))
+):
     """Fetch admin reports"""
     try:
         reports = await admin_service.get_admin_reports(db)
@@ -1034,7 +1564,11 @@ async def fetch_admin_reports(db: SessionDep, current_admin: User = Depends(get_
 
 
 @app.get("/api/admin/data/health")
-async def fetch_system_health(db: SessionDep, current_admin: User = Depends(get_current_admin_user)):
+async def fetch_system_health(
+    db: SessionDep,
+    current_admin: User = Depends(get_current_admin_user),
+    _perm=Depends(require_permission("audit:view"))
+):
     """Get system health status"""
     try:
         health = await admin_service.get_system_health(db)
@@ -1542,18 +2076,16 @@ async def activate_approved_loan(
 async def get_api_config():
     """
     Serves the API configuration to clients.
-    Dynamically sets baseURL based on current host.
+    Dynamically sets baseURL based on environment and settings.
+    
+    Returns:
+        Configuration object with:
+        - baseURL: API endpoint URL
+        - timeout: Request timeout in ms
+        - environment: Current environment (development/staging/production)
+        - headers: Default HTTP headers
     """
-    config = API_CONFIG.copy()
-    
-    # Update baseURL based on the request origin
-    if settings.ENVIRONMENT == "production":
-        config["baseURL"] = settings.API_URL or "https://api.example.com"
-    else:
-        # For development, use the current domain
-        config["baseURL"] = "http://localhost:8000"
-    
-    return config
+    return generate_api_config(settings.ENVIRONMENT, settings.API_URL)
 
 @app.get("/signin")
 async def signin_page(request: Request, db_session: SessionDep):
@@ -1631,7 +2163,33 @@ async def forgot_password_page(request: Request, db_session: SessionDep):
         pass
     
     # User not logged in, serve forgot password page
-    return FileResponse("forgot_password.html")
+    return FileResponse("static/forgot_password.html")
+
+@app.get("/reset-password")
+async def reset_password_page(request: Request, db_session: SessionDep):
+    """Password reset page - user receives this after clicking email link."""
+    # Check if user is already logged in
+    try:
+        token = request.cookies.get("access_token")
+        if token:
+            # Token exists, verify it's valid
+            email = auth_utils.decode_access_token(token)
+            if email:
+                # Valid token - user is logged in, redirect to dashboard
+                # Determine if user is admin
+                result = await db_session.execute(select(User).filter(User.email == email))
+                user = result.scalar_one_or_none()
+                if user:
+                    if user.is_admin:
+                        return RedirectResponse(url="/user/admin/dashboard", status_code=status.HTTP_302_FOUND)
+                    else:
+                        return RedirectResponse(url="/user/dashboard", status_code=status.HTTP_302_FOUND)
+    except Exception:
+        # Token invalid, user not logged in - fall through to serve reset password page
+        pass
+    
+    # User not logged in, serve reset password page
+    return FileResponse("static/reset_password.html")
 
 @app.get("/logout")
 async def logout_page(request: Request):
@@ -1827,6 +2385,159 @@ async def get_admin_fund_summary(
     except Exception as e:
         log.error(f"Error fetching fund summary: {e}")
         return {"success": False, "error": str(e)}, 500
+
+
+# ============================================================================
+# WEBSOCKET ENDPOINT FOR REAL-TIME FRAUD ALERTS
+# ============================================================================
+@app.websocket("/ws/fraud-alerts")
+async def websocket_fraud_alerts(websocket: WebSocket):
+    """
+    WebSocket endpoint for real-time fraud alert streaming.
+    
+    Accepts client connections and broadcasts fraud alerts to all connected clients.
+    
+    Connection Protocol:
+    1. Client connects to ws://localhost:8000/ws/fraud-alerts
+    2. Client sends authentication message: {"type": "auth", "token": "jwt_token"}
+    3. Server validates JWT token and maintains connection
+    4. Server broadcasts fraud alerts as they occur
+    5. Client receives messages in format:
+       {
+           "type": "fraud_alert",
+           "transaction_id": "txn_abc123",
+           "threat_type": "suspicious_activity",
+           "risk_score": 92,
+           "description": "Multiple failed login attempts"
+       }
+    6. Client can disconnect anytime
+    
+    Expected Message Format (from server):
+    {
+        "type": "fraud_alert",
+        "transaction_id": "txn_12345",
+        "threat_type": "high_value_transaction|unusual_location|velocity_check|device_mismatch|suspicious_activity",
+        "risk_score": 0-100,  # 0-30: Low, 31-70: Medium, 71-100: High
+        "description": "Brief description of the threat"
+    }
+    
+    Error Handling:
+    - Invalid JWT: Connection rejected
+    - Client disconnect: Automatically removed from connection pool
+    - Broadcast failure: Client is disconnected and removed
+    """
+    
+    await fraud_alert_manager.connect(websocket)
+    
+    try:
+        while True:
+            # Keep connection alive and receive messages
+            data = await websocket.receive_json()
+            
+            # Example: Handle authentication message
+            if data.get("type") == "auth":
+                token = data.get("token")
+                # TODO: Validate JWT token here
+                # For now, just acknowledge connection
+                await websocket.send_json({
+                    "type": "auth_success",
+                    "message": "Connected to fraud alert stream"
+                })
+            
+            # Handle other message types as needed
+            
+    except WebSocketDisconnect:
+        fraud_alert_manager.disconnect(websocket)
+        print("🔌 WebSocket client disconnected gracefully")
+    except Exception as e:
+        print(f"❌ WebSocket error: {e}")
+        try:
+            fraud_alert_manager.disconnect(websocket)
+        except:
+            pass
+
+
+# Function to broadcast fraud alerts from anywhere in the application
+async def broadcast_fraud_alert(alert: dict):
+    """
+    Broadcast a fraud alert to all connected WebSocket clients.
+    
+    Usage:
+        await broadcast_fraud_alert({
+            "type": "fraud_alert",
+            "transaction_id": "txn_abc123",
+            "threat_type": "suspicious_activity",
+            "risk_score": 92,
+            "description": "Multiple failed attempts detected"
+        })
+    
+    Args:
+        alert (dict): Alert message with required keys:
+            - type: Must be "fraud_alert"
+            - transaction_id: Unique transaction identifier
+            - threat_type: Category of threat detected
+            - risk_score: Risk level 0-100
+            - description: Human-readable description
+    """
+    await fraud_alert_manager.broadcast(alert)
+
+
+# ==================== FUND UPDATES WEBSOCKET ====================
+
+@app.websocket("/ws/fund-updates")
+async def websocket_fund_updates(websocket: WebSocket):
+    """
+    WebSocket endpoint for real-time fund management updates.
+    
+    Broadcasts:
+    - balance_updated: User balance changed
+    - approval_needed: Operation requires second admin approval
+    - approval_completed: Approval decision made (approved/rejected)
+    - fund_completed: Funding operation completed
+    - transaction_ref: Transaction reference for audit trail
+    
+    Connection Protocol:
+    1. Client connects to ws://localhost:8000/ws/fund-updates
+    2. Client subscribes to channels: {"type": "subscribe", "channels": ["user:123", "approval", "balance"]}
+    3. Server broadcasts updates matching subscription
+    4. Client receives messages
+    
+    Expected Message Format:
+    {
+        "type": "balance_updated",
+        "user_id": 123,
+        "new_balance": 5000.50,
+        "transaction_ref": "TXN-ABC123",
+        "timestamp": "2026-04-07T14:30:00Z"
+    }
+    """
+    from ws_manager import manager as ws_manager
+    
+    user_id = None
+    device_id = None
+    
+    try:
+        await ws_manager.connect(websocket, user_id, device_id)
+        
+        while True:
+            data = await websocket.receive_json()
+            
+            if data.get("type") == "subscribe":
+                channels = data.get("channels", [])
+                for channel in channels:
+                    await ws_manager.subscribe(websocket, channel)
+            
+            elif data.get("type") == "ping":
+                await websocket.send_json({"type": "pong", "timestamp": datetime.utcnow().isoformat()})
+            
+    except WebSocketDisconnect:
+        await ws_manager.disconnect(websocket)
+    except Exception as e:
+        log.error(f"WebSocket error: {e}")
+        try:
+            await ws_manager.disconnect(websocket)
+        except:
+            pass
 
 
 # --- Static Files Mount ---

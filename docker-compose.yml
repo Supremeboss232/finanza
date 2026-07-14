@@ -1,0 +1,127 @@
+version: "3.9"
+
+# =========================================================
+# Finanza Banking App — Docker Compose
+# Services: app (FastAPI) + redis (caching)
+# Usage:
+#   docker compose up           # Start all services
+#   docker compose up --build   # Rebuild and start
+#   docker compose down         # Stop all services
+#   docker compose logs -f app  # Tail app logs
+# =========================================================
+
+services:
+  # ── FastAPI Application ────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: finanza_app
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      # Database
+      DATABASE_URL: ${DATABASE_URL}
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_ANON_KEY: ${SUPABASE_ANON_KEY:-}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+
+      # Auth
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: ${ALGORITHM:-HS256}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+
+      # Admin
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+
+      # Environment
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      API_URL: ${API_URL:-}
+      FRONTEND_URL: ${FRONTEND_URL:-}
+
+      # Email
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Finanza Bank}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_SERVER: ${MAIL_SERVER:-smtp.gmail.com}
+      MAIL_STARTTLS: ${MAIL_STARTTLS:-True}
+      MAIL_SSL_TLS: ${MAIL_SSL_TLS:-False}
+      EMAIL_PROVIDER: ${EMAIL_PROVIDER:-gmail}
+
+      # Redis (connect to the redis service below)
+      REDIS_URL: redis://redis:6379
+
+      # Payment Rails
+      PAYRAIL_API_URL: ${PAYRAIL_API_URL:-https://payrail-rbb59a.fly.dev}
+      PAYRAIL_API_KEY: ${PAYRAIL_API_KEY:-}
+
+      # AWS (optional)
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+
+      # Forex (optional)
+      FIXER_IO_API_KEY: ${FIXER_IO_API_KEY:-}
+    volumes:
+      # Persist user uploads outside the container
+      - uploads_data:/app/uploads
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - finanza_net
+
+  # ── Redis Cache ───────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: finanza_redis
+    restart: unless-stopped
+    command: ["redis-server", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - finanza_net
+
+  # ── Nginx Reverse Proxy (optional, for local HTTPS testing) ──
+  # Uncomment to add nginx in front of the app
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: finanza_nginx
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
+  #     - ./ssl:/etc/nginx/ssl:ro
+  #   depends_on:
+  #     - app
+  #   networks:
+  #     - finanza_net
+
+# ── Named Volumes ─────────────────────────────────────
+volumes:
+  uploads_data:
+    driver: local
+  redis_data:
+    driver: local
+
+# ── Networks ──────────────────────────────────────────
+networks:
+  finanza_net:
+    driver: bridge

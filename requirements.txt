@@ -1,6 +1,6 @@
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
-sqlalchemy==2.0.23
+sqlalchemy==2.0.35
 asyncpg==0.29.0
 psycopg2-binary==2.9.9
 pydantic-settings==2.0.3
@@ -18,3 +18,25 @@ requests==2.31.0
 slowapi==0.1.9
 pytest==7.4.0
 pytest-asyncio==0.21.0
+
+# Scheduler (CRITICAL - app crashes on import without this)
+apscheduler>=3.10.4
+
+# SQLAlchemy async support
+greenlet>=3.0.0
+
+# MFA - Time-based One-Time Passwords + QR codes
+pyotp>=2.9.0
+qrcode[pil]>=7.4.2
+
+# Image processing (mobile check deposits)
+Pillow>=10.0.0
+
+# Redis (price feed caching, rate limiting)
+redis>=5.0.0
+
+# Local development env loading
+python-dotenv>=1.0.0
+
+# Async HTTP client (tests + integrations)
+httpx>=0.25.0

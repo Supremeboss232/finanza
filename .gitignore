@@ -72,3 +72,6 @@ uploads/
 
 # Alembic dev artifacts
 alembic/versions/__pycache__/
+
+# Do not ignore frontend library assets
+!static/lib/

@@ -30,9 +30,10 @@ parts = urlsplit(SQLALCHEMY_DATABASE_URL)
 if parts.query:
     qs = dict(parse_qsl(parts.query))
     sslmode = qs.pop("sslmode", None)
+    qs.pop("pgbouncer", None)  # asyncpg does not accept pgbouncer query parameter
     if sslmode and sslmode.lower() in ("require", "verify-full", "verify-ca"):
         _ssl_required = True
-    # Rebuild URL without sslmode
+    # Rebuild URL without sslmode and pgbouncer
     if qs:
         new_query = urlencode(qs)
     else:

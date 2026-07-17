@@ -105,12 +105,17 @@ class PriceFeedService:
                     
                     # Store in Redis with 45-minute TTL
                     if self.redis_client:
-                        await self.redis_client.setex(
-                            f"forex_rates:{base_currency}",
-                            2700,  # 45 minutes
-                            json.dumps({k: str(v) for k, v in self.forex_rates.items()})
-                        )
-                        logger.info(f"Forex rates updated and cached: {len(rates)} currencies")
+                        try:
+                            await self.redis_client.setex(
+                                f"forex_rates:{base_currency}",
+                                2700,  # 45 minutes
+                                json.dumps({k: str(v) for k, v in self.forex_rates.items()})
+                            )
+                            logger.info(f"Forex rates updated and cached: {len(rates)} currencies")
+                        except Exception as redis_err:
+                            logger.warning(f"Failed to cache forex rates in Redis: {redis_err}. Disabling Redis caching.")
+                            self.redis_client = None
+                            logger.info(f"Forex rates updated (fallback to in-memory): {len(rates)} currencies")
                     else:
                         logger.info(f"Forex rates updated (no Redis): {len(rates)} currencies")
                     
@@ -205,16 +210,20 @@ class PriceFeedService:
                         
                         # Store in Redis with 10-second TTL (live updates)
                         if self.redis_client:
-                            await self.redis_client.setex(
-                                f"crypto_price:{symbol}",
-                                10,
-                                json.dumps({
-                                    'price': str(price),
-                                    'bid': str(stream_data.get('b', 0)),
-                                    'ask': str(stream_data.get('a', 0)),
-                                    'timestamp': datetime.utcnow().isoformat()
-                                })
-                            )
+                            try:
+                                await self.redis_client.setex(
+                                    f"crypto_price:{symbol}",
+                                    10,
+                                    json.dumps({
+                                        'price': str(price),
+                                        'bid': str(stream_data.get('b', 0)),
+                                        'ask': str(stream_data.get('a', 0)),
+                                        'timestamp': datetime.utcnow().isoformat()
+                                    })
+                                )
+                            except Exception as redis_err:
+                                logger.warning(f"Failed to cache crypto price in Redis: {redis_err}. Disabling Redis caching.")
+                                self.redis_client = None
                 
                 except asyncio.TimeoutError:
                     logger.warning("WebSocket timeout (reconnecting)")

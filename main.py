@@ -762,16 +762,10 @@ async def startup_event():
             else:
                 print("[WARN] FIXER_IO_API_KEY not configured - forex rates will not sync")
             
-            # Register cryptocurrency WebSocket feed (continuous background task)
-            print("[*] Registering Crypto WebSocket feed (continuous)...")
-            scheduler.add_job(
-                price_feed.connect_crypto_feed,
-                'interval',
-                seconds=0,  # Run once, continues internally with reconnect
-                id='crypto_websocket_task',
-                replace_existing=True
-            )
-            print("[OK] Crypto feed registered")
+            # Start cryptocurrency WebSocket feed (continuous background task)
+            print("[*] Starting Crypto WebSocket feed (continuous)...")
+            asyncio.create_task(price_feed.connect_crypto_feed())
+            print("[OK] Crypto feed started")
             
             # Start scheduler
             scheduler.start()

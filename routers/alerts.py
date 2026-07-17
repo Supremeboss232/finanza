@@ -5,9 +5,9 @@ from typing import List
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.deps import get_current_user
-from app.database import get_session
-from app.models import User
+from deps import get_current_user
+from database import get_db as get_session
+from models import User
 
 router = APIRouter(
     prefix="/api/alerts",

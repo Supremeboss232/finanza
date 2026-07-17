@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
+from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -776,6 +777,130 @@ async def get_notification_preferences(
             "marketing_emails": False
         }
     }
+
+
+# ===== DASHBOARD SUPPORT ENDPOINTS =====
+
+@router.get("/balance")
+async def get_user_balance(
+    db_session: SessionDep,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get user's total balance across all accounts.
+    
+    Returns:
+        - total_balance: Sum of all account balances
+        - currency: Account currency
+        - account_count: Number of active accounts
+        - last_updated: Timestamp of last balance update
+    """
+    try:
+        import logging
+        logging.info(f"Fetching balance for user {current_user.id}")
+        
+        # Get all accounts for current user
+        result = await db_session.execute(
+            select(Account).filter(Account.owner_id == current_user.id)
+        )
+        user_accounts = result.scalars().all()
+        logging.info(f"Found {len(user_accounts)} accounts for user {current_user.id}")
+        
+        total_balance = 0.0
+        for account in user_accounts:
+            # Ensure balance is never null and convert to float
+            account_balance = float(account.balance) if account.balance is not None else 0.0
+            logging.info(f"Account {account.id}: balance={account_balance}")
+            total_balance += account_balance
+        
+        response = {
+            "total_balance": round(total_balance, 2),
+            "currency": "USD",
+            "account_count": len(user_accounts),
+            "last_updated": datetime.utcnow().isoformat()
+        }
+        logging.info(f"Balance response: {response}")
+        return response
+    except Exception as e:
+        import logging
+        import traceback
+        logging.error(f"Error fetching balance: {e}")
+        logging.error(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch balance: {str(e)}")
+
+
+@router.get("/accounts")
+async def get_user_accounts(
+    db_session: SessionDep,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get all user accounts with details.
+    
+    Returns:
+        - accounts: List of account objects
+        - total: Total number of accounts
+    """
+    try:
+        # Get all accounts for current user
+        result = await db_session.execute(
+            select(Account).filter(Account.owner_id == current_user.id)
+        )
+        user_accounts = result.scalars().all()
+        
+        accounts_list = []
+        for account in user_accounts:
+            account_balance = account.balance if account.balance is not None else 0.0
+            accounts_list.append({
+                "id": account.id,
+                "account_number": account.account_number,
+                "account_type": account.account_type or "savings",
+                "balance": account_balance,
+                "currency": account.currency or "USD",
+                "status": getattr(account, 'status', 'active'),
+                "created_at": account.created_at.isoformat() if account.created_at else None
+            })
+        
+        return {
+            "accounts": accounts_list,
+            "total": len(accounts_list)
+        }
+    except Exception as e:
+        import logging
+        logging.error(f"Error fetching accounts: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch accounts")
+
+
+@router.get("/account-status")
+async def get_user_account_status(
+    db_session: SessionDep,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get user's account status (suspension, freezes, etc).
+    
+    Returns:
+        - is_suspended: Whether account is suspended
+        - suspension_reason: Reason for suspension if applicable
+        - is_frozen: Whether account is frozen
+        - freeze_reason: Reason for freeze if applicable
+        - is_active: Whether account is active
+    """
+    try:
+        is_suspended = not current_user.is_active if hasattr(current_user, 'is_active') else False
+        is_frozen = getattr(current_user, 'is_frozen', False)
+        
+        return {
+            "is_suspended": is_suspended,
+            "suspension_reason": getattr(current_user, 'suspension_reason', None),
+            "is_frozen": is_frozen,
+            "freeze_reason": getattr(current_user, 'freeze_reason', None),
+            "is_active": current_user.is_active if hasattr(current_user, 'is_active') else True
+        }
+    except Exception as e:
+        import logging
+        logging.error(f"Error fetching account status: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch account status")
 
 
 @router.put("/notification-preferences")

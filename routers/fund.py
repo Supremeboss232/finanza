@@ -213,7 +213,9 @@ async def fund_user_transfer(
                 account_number=account_number,
                 owner_id=user_id,
                 account_type=account_type,
-                balance=0.0
+                balance=0.0,
+                currency="USD",
+                status="active"
             )
             db_session.add(account)
             await db_session.flush()
@@ -338,16 +340,20 @@ async def bulk_fund_users(
                 account = result.scalar_one_or_none()
                 
                 if not account:
+                    import time
+                    account_number = f"ACC-{user.id}-{int(time.time() * 1000) % 1000000}"
                     account = DBAccount(
-                        user_id=user.id,
+                        account_number=account_number,
+                        owner_id=user.id,
                         account_type=account_type,
-                        balance=0.0
+                        balance=0.0,
+                        currency="USD",
+                        status="active"
                     )
                     db_session.add(account)
                     await db_session.flush()
                 
-                # Update balance
-                account.balance = float(account.balance) + amount
+                # Note: Account balance is calculated from ledger, not manually updated
                 
                 # Create fund transfer
                 transfer = DBFundTransfer(
@@ -456,9 +462,7 @@ async def retry_failed_transfer(transfer_id: int, db_session: SessionDep):
         )
         account = result.scalar_one_or_none()
         
-        if account:
-            account.balance = float(account.balance) + float(transfer.amount)
-        
+        # Note: Account balance is calculated from ledger, not manually updated
         transfer.status = "completed"
         await db_session.commit()
         

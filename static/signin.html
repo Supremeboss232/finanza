@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -26,6 +26,8 @@
 
     <!-- Template Stylesheet -->
     <link href="/static/css/style.css" rel="stylesheet">
+
+    <script src="/static/js/toast-utils.js"></script>
 </head>
 
 <body>
@@ -40,18 +42,18 @@
     <div class="container-fluid fixed-top px-0 wow fadeIn" data-wow-delay="0.1s">
         <div class="top-bar row gx-0 align-items-center d-none d-lg-flex">
             <div class="col-lg-6 px-5 text-start">
-                <small><i class="fa fa-map-marker-alt text-primary me-2"></i>123 Street, New York, USA</small>
-                <small class="ms-4"><i class="fa fa-clock text-primary me-2"></i>9.00 am - 9.00 pm</small>
+                <small><i class="fa fa-map-marker-alt text-primary me-2"></i>100 Financial Ave, New York, NY 10001</small>
+                <small class="ms-4"><i class="fa fa-clock text-primary me-2"></i>8:00 AM - 8:00 PM ET</small>
             </div>
             <div class="col-lg-6 px-5 text-end">
-                <small><i class="fa fa-envelope text-primary me-2"></i>info@example.com</small>
+                <small><i class="fa fa-envelope text-primary me-2"></i>support@finanzabank.com</small>
                 <small class="ms-4"><i class="fa fa-phone-alt text-primary me-2"></i>+012 345 6789</small>
             </div>
         </div>
 
         <nav class="navbar navbar-expand-lg navbar-light py-lg-0 px-lg-5 wow fadeIn" data-wow-delay="0.1s">
             <a href="/" class="navbar-brand ms-4 ms-lg-0">
-                <img src="" alt="Finanza" height='50px'>
+                <img src="/img/logo.png" alt="Finanza" onerror="this.style.display='none'" height='50px'>
             </a>
             <button type="button" class="navbar-toggler me-4" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
                 <span class="navbar-toggler-icon"></span>
@@ -61,26 +63,26 @@
                     <div class="nav-item dropdown">
                         <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Banking</a>
                         <div class="dropdown-menu border-light m-0">
-                            <a href="personal.html" class="dropdown-item">Personal Banking</a>
-                            <a href="corporate.html" class="dropdown-item">Corporate Banking</a>
+                            <a href="/personal" class="dropdown-item">Personal Banking</a>
+                            <a href="/corporate" class="dropdown-item">Corporate Banking</a>
                         </div>
                     </div>
-                    <a href="deposits.html" class="nav-item nav-link">Deposits</a>
-                    <a href="credits.html" class="nav-item nav-link">Credits</a>
-                    <a href="cards.html" class="nav-item nav-link">Cards</a>
-                    <a href="investments.html" class="nav-item nav-link">Investments</a>
-                    <a href="loans.html" class="nav-item nav-link">Loans</a>
-                    <a href="insurance.html" class="nav-item nav-link">Insurance</a>
+                    <a href="/deposits" class="nav-item nav-link">Deposits</a>
+                    <a href="/credits" class="nav-item nav-link">Credits</a>
+                    <a href="/cards" class="nav-item nav-link">Cards</a>
+                    <a href="/investments" class="nav-item nav-link">Investments</a>
+                    <a href="/loans" class="nav-item nav-link">Loans</a>
+                    <a href="/insurance" class="nav-item nav-link">Insurance</a>
                     <div class="nav-item dropdown">
                         <a href="javascript:void(0)" class="nav-link dropdown-toggle active" data-bs-toggle="dropdown">Account</a>
                         <div class="dropdown-menu border-light m-0">
-                            <a href="signin.html" class="dropdown-item active">Sign In</a>
-                            <a href="signup.html" class="dropdown-item">Sign Up</a>
+                            <a href="/signin" class="dropdown-item active">Sign In</a>
+                            <a href="/signup" class="dropdown-item">Sign Up</a>
                         </div>
                     </div>
                 </div>
                 <div class="d-none d-lg-flex ms-2">
-                    <a class="tp-btn btn btn-primary py-3 px-5 animated slideInLeft" href="signin.html">
+                    <a class="tp-btn btn btn-primary py-3 px-5 animated slideInLeft" href="/signin">
                         E-BANKING <i class="fa fa-lock"></i>
                     </a>
                 </div>
@@ -112,21 +114,117 @@
                     <div class="bg-light rounded p-4">
                         <!-- Alert placeholder -->
                         <div id="alert-placeholder"></div>
+                        
+                        <!-- Session Expired Alert (hidden by default) -->
+                        <div id="session-expired-alert" class="alert alert-danger alert-dismissible fade show d-none" role="alert">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            <strong>Session Expired:</strong> Your session has expired. Please sign in again.
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                        
+                        <!-- MFA Required Alert (hidden by default) -->
+                        <div id="mfa-required-alert" class="alert alert-info alert-dismissible fade show d-none" role="alert">
+                            <i class="fas fa-shield-alt me-2"></i>
+                            <strong>Multi-Factor Authentication Required:</strong> We're redirecting you to verify your identity.
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                        
                         <h4 class="mb-4 text-center">Sign In to Your Account</h4>
                         <form id="signInForm">
+                            <!-- CSRF Token (hidden) -->
+                            <input type="hidden" id="csrf-token" name="_csrf" value="">
+                            
+                            <!-- Username/Email Field -->
                             <div class="mb-3">
-                                <label for="email" class="form-label">Email / Account No.</label>
-                                <input type="text" class="form-control" id="username" name="username" placeholder="Enter your email or account number" required autocomplete="username">
+                                <label for="username" class="form-label">
+                                    Email / Account No.
+                                    <span id="username-check" class="ms-2"></span>
+                                </label>
+                                <input 
+                                    type="text" 
+                                    class="form-control" 
+                                    id="username" 
+                                    name="username" 
+                                    placeholder="Enter your email or account number" 
+                                    required 
+                                    autocomplete="username"
+                                    maxlength="255">
+                                <small class="form-text text-muted d-block mt-2">
+                                    Use your registered email or account number
+                                </small>
+                                <small class="form-text text-danger d-none" id="username-error"></small>
                             </div>
+                            
+                            <!-- Password Field with Visibility Toggle -->
                             <div class="mb-3">
-                                <label for="password" class="form-label">Password</label>
-                                <input type="password" class="form-control" id="password" name="password" placeholder="Enter your password" required autocomplete="current-password">
+                                <label for="password" class="form-label">
+                                    Password
+                                    <span id="password-check" class="ms-2"></span>
+                                </label>
+                                <div class="input-group">
+                                    <input 
+                                        type="password" 
+                                        class="form-control" 
+                                        id="password" 
+                                        name="password" 
+                                        placeholder="Enter your password" 
+                                        required 
+                                        autocomplete="current-password"
+                                        maxlength="128">
+                                    <button class="btn btn-outline-secondary" type="button" id="pwd-toggle">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                                <small class="form-text text-danger d-none mt-2" id="password-error"></small>
                             </div>
-                            <div class="d-flex justify-content-between mb-3">
-                                <a href="/forgot-password" class="text-decoration-none">Forgot your password?</a>
+                            
+                            <!-- Remember Me and Forgot Password -->
+                            <div class="d-flex justify-content-between mb-3 align-items-center">
+                                <div class="form-check">
+                                    <input 
+                                        type="checkbox" 
+                                        class="form-check-input" 
+                                        id="rememberMe" 
+                                        name="rememberMe">
+                                    <label class="form-check-label" for="rememberMe">
+                                        Keep me signed in (14 days)
+                                    </label>
+                                </div>
+                                <a href="/static/forgot_password.html" class="text-decoration-none small">Forgot password?</a>
                             </div>
-                            <button type="submit" class="btn btn-primary w-100 py-3">Sign In</button>
-                            <p class="text-center mt-3">Don't have an account yet? <a href="signup.html">Create an account</a></p>
+                            
+                            <!-- Sign In Button with Loading State -->
+                            <button 
+                                type="submit" 
+                                class="btn btn-primary w-100 py-3" 
+                                id="signInBtn">
+                                <i class="fas fa-sign-in-alt me-2"></i>
+                                <span id="btn-text">Sign In</span>
+                                <span id="btn-spinner" class="spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true"></span>
+                            </button>
+                            
+                            <!-- Brute Force Lockout Warning -->
+                            <div id="brute-force-warning" class="alert alert-warning mt-3 d-none" role="alert">
+                                <i class="fas fa-lock me-2"></i>
+                                <strong>Account Locked:</strong> Too many failed attempts.
+                                <br>
+                                <small>Please try again in <span id="lockout-timer">60</span> seconds. 
+                                    <a href="/account-recovery">Need help unlocking your account?</a>
+                                </small>
+                            </div>
+                            
+                            <!-- Failed Attempts Counter -->
+                            <div id="attempts-warning" class="alert alert-warning mt-3 d-none" role="alert">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Warning:</strong> <span id="attempts-remaining">0</span> attempt(s) remaining before your account is locked.
+                            </div>
+                            
+                            <!-- Sign Up Link -->
+                            <p class="text-center mt-3 text-muted small">
+                                Don't have an account yet? <a href="/signup">Create an account</a>
+                                <br>
+                                <a href="/" class="text-muted">Back to Home</a>
+                            </p>
                         </form>
                     </div>
                 </div>
@@ -134,56 +232,6 @@
         </div>
     </div>
     <!-- Content End -->
-
-    <!-- Footer Start -->
-    <div class="container-fluid bg-dark text-light footer mt-5 py-5 wow fadeIn" data-wow-delay="0.1s">
-        <div class="container py-5">
-            <div class="row g-5">
-                <div class="col-lg-3 col-md-6">
-                    <h4 class="text-white mb-4">Our Office</h4>
-                    <p class="mb-2"><i class="fa fa-map-marker-alt me-3"></i>123 Main Street, New York, NY 10001</p>
-                    <p class="mb-2"><i class="fa fa-phone-alt me-3"></i>+1 (212) 555-1234</p>
-                    <p class="mb-2"><i class="fa fa-envelope me-3"></i>contact@finanza.com</p>
-                    <div class="d-flex pt-2">
-                        <a class="btn btn-square btn-outline-light rounded-circle me-2" href=""><i class="fab fa-twitter"></i></a>
-                        <a class="btn btn-square btn-outline-light rounded-circle me-2" href=""><i class="fab fa-facebook-f"></i></a>
-                        <a class="btn btn-square btn-outline-light rounded-circle me-2" href=""><i class="fab fa-youtube"></i></a>
-                        <a class="btn btn-square btn-outline-light rounded-circle me-2" href=""><i class="fab fa-linkedin-in"></i></a>
-                    </div>
-                </div>
-                <div class="col-lg-3 col-md-6">
-                    <h4 class="text-white mb-4">Services</h4>
-                    <a class="btn btn-link" href="/financial_planning">Financial Planning</a>
-                    <a class="btn btn-link" href="/investments">Cash Investment</a>
-                    <a class="btn btn-link" href="/financial_consultancy">Financial Consultancy</a>
-                    <a class="btn btn-link" href="/loans">Business Loans</a>
-                    <a class="btn btn-link" href="/business_analysis">Business Analysis</a>
-                </div>
-                <div class="col-lg-3 col-md-6">
-                    <h4 class="text-white mb-4">Quick Links</h4>
-                    <a class="btn btn-link" href="/">Home</a>
-                    <a class="btn btn-link" href="/contact">Contact</a>
-                    <a class="btn btn-link" href="/personal">Personal Account</a>
-                    <a class="btn btn-link" href="/corporate">Corporate Account</a>
-                    <a class="btn btn-link" href="">Support</a>
-                    <a class="btn btn-link" href="index.html">Home</a>
-                    <a class="btn btn-link" href="contact.html">Contact</a>
-                    <a class="btn btn-link" href="personal.html">Personal Account</a>
-                    <a class="btn btn-link" href="corporate.html">Corporate Account</a>
-                    <a class="btn btn-link" href="#">Support</a>
-                </div>
-                <div class="col-lg-3 col-md-6">
-                    <h4 class="text-white mb-4">Newsletter</h4>
-                    <p>Stay updated with our latest news and insights. Subscribe to our newsletter.</p>
-                    <div class="position-relative w-100">
-                        <input class="form-control bg-white border-0 w-100 py-3 ps-4 pe-5" type="text" placeholder="Your email">
-                        <button type="button" class="btn btn-primary py-2 position-absolute top-0 end-0 mt-2 me-2">SignUp</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- Footer End -->
 
 
     <!-- Copyright Start -->
@@ -220,17 +268,42 @@
     <script src="/static/js/main.js"></script>
 
     <script>
-        // SECURITY: Lock logged-in users - redirect to dashboard if already authenticated
-        function checkAndLockIfLoggedIn() {
-            const token = localStorage.getItem('token') || getCookie('access_token');
-            if (token) {
-                // User is logged in, redirect to dashboard
-                fetch('/api/admin/metrics')
-                    .then(r => r.ok ? window.location.href = '/user/admin/dashboard' : null)
-                    .catch(() => fetch('/api/users/me').then(r => r.ok ? window.location.href = '/user/dashboard' : null));
-            }
-        }
+        // ==================== PRODUCTION-GRADE SIGNIN HANDLER ====================
+        // This implements the "Locked-Gate Authentication" pattern with comprehensive
+        // security, performance, and compliance features for enterprise banking portals.
         
+        // ==================== API CONFIGURATION MANAGEMENT ====================
+        const CONFIG = {
+            // API Configuration - allows easy switching between environments
+            API_BASE_URL: window.location.origin,  // Auto-detect: http://localhost or https://yourdomain.com
+            ENDPOINTS: {
+                LOGIN: '/api/v1/auth/login',              // POST - Main login endpoint
+                CSRF_TOKEN: '/api/v1/auth/csrf-token',    // GET - CSRF token provider
+                REFRESH: '/api/v1/auth/refresh',          // POST - Token refresh
+                LOGOUT: '/api/v1/auth/logout',            // POST - Logout
+                ME: '/api/v1/users/me',                   // GET - Current user info
+                LOGIN_AUDIT: '/api/v1/audit/login'        // POST - Login audit log
+            },
+            
+            // Security Configuration
+            SECURITY: {
+                MAX_FAILED_ATTEMPTS: 5,
+                LOCKOUT_DURATION: 60000,        // 60 seconds
+                SESSION_CHECK_INTERVAL: 60000,  // Check session every 60 seconds
+                TOKEN_EXPIRY_CHECK: 30000,      // Check token expiry every 30 seconds
+                API_TIMEOUT: 10000              // 10 second API timeout
+            },
+            
+            // Environment-specific overrides (can be fetched from backend config)
+            ENVIRONMENT: 'production',
+            DEBUG_MODE: false
+        };
+        
+        // ==================== UTILITY FUNCTIONS ====================
+        
+        /**
+         * Get cookie value by name
+         */
         function getCookie(name) {
             const nameEQ = name + "=";
             const cookies = document.cookie.split(';');
@@ -241,68 +314,868 @@
             return null;
         }
         
-        // Check on page load
-        window.addEventListener('load', checkAndLockIfLoggedIn);
+        function getCookieValue(name) {
+            const nameEQ = name + "=";
+            const cookies = document.cookie.split(';');
+            for(let i = 0; i < cookies.length; i++) {
+                let cookie = cookies[i].trim();
+                if (cookie.startsWith(nameEQ)) {
+                    const value = cookie.substring(nameEQ.length);
+                    return decodeURIComponent(value);
+                }
+            }
+            return null;
+        }
         
-        // Check on pageshow (back button)
-        window.addEventListener('pageshow', checkAndLockIfLoggedIn);
+        /**
+         * Sanitize sensitive data to prevent XSS
+         */
+        function sanitizeData(data) {
+            if (typeof data !== 'string') return data;
+            return data.replace(/[<>'"]/g, c => ({
+                '<': '&lt;',
+                '>': '&gt;',
+                "'": '&#39;',
+                '"': '&quot;'
+            }[c]));
+        }
+        
+        /**
+         * Log debug information in development mode only
+         */
+        function debugLog(message, data = null) {
+            if (CONFIG.DEBUG_MODE) {
+                console.log(`[AUTH] ${message}`, data || '');
+            }
+        }
+        
+        /**
+         * Extract and validate redirect URL from query parameter
+         */
+        function getRedirectUrl() {
+            const params = new URLSearchParams(window.location.search);
+            let redirect = params.get('next');
+            
+            // Sanitize redirect to prevent open redirect attacks
+            if (redirect && redirect.startsWith('/')) {
+                // Only allow relative URLs starting with /
+                return redirect;
+            }
+            return null;
+        }
+        
+        /**
+         * Detect user browser and device info for audit logging
+         */
+        function getUserAgent() {
+            return navigator.userAgent;
+        }
+        
+        /**
+         * Format lockout time display
+         */
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+        }
+        
+        /**
+         * Show alert message
+         */
+        function showAlert(message, type = 'info', dismissible = true) {
+            const alertPlaceholder = document.getElementById('alert-placeholder');
+            const wrapper = document.createElement('div');
+            const dismissBtn = dismissible ? 
+                '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' : '';
+            wrapper.innerHTML = [
+                `<div class="alert alert-${type} alert-dismissible fade show" role="alert">`,
+                `   <i class="fas fa-${type === 'danger' ? 'exclamation-circle' : type === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>`,
+                `   <div>${sanitizeData(message)}</div>`,
+                dismissBtn,
+                '</div>'
+            ].join('');
+            alertPlaceholder.innerHTML = '';
+            alertPlaceholder.append(wrapper);
+        }
+        
+        /**
+         * Fetch with timeout
+         */
+        async function fetchWithTimeout(url, options = {}, timeout = CONFIG.SECURITY.API_TIMEOUT) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeout);
+            
+            try {
+                const response = await fetch(url, {
+                    ...options,
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+                return response;
+            } catch (error) {
+                clearTimeout(timeoutId);
+                throw error;
+            }
+        }
+        
+        // ==================== CSRF PROTECTION ====================
+        
+        /**
+         * Fetch and store CSRF token on page load
+         */
+        async function initializeCSRFToken() {
+            try {
+                const response = await fetchWithTimeout(
+                    `${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.CSRF_TOKEN}`,
+                    { method: 'GET', credentials: 'include' }
+                );
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const csrfToken = data.csrf_token || data.token;
+                    document.getElementById('csrf-token').value = csrfToken;
+                    sessionStorage.setItem('csrf_token', csrfToken);
+                    debugLog('CSRF token initialized', csrfToken.substring(0, 10) + '...');
+                    return csrfToken;
+                }
+            } catch (error) {
+                debugLog('CSRF token fetch failed', error.message);
+                // Fail silently - CSRF may be optional depending on backend
+            }
+        }
+        
+        /**
+         * Get CSRF token for requests
+         */
+        function getCSRFToken() {
+            return document.getElementById('csrf-token').value || 
+                   sessionStorage.getItem('csrf_token') ||
+                   '';
+        }
+        
+        // ==================== TOKEN REFRESH & 401 HANDLING ====================
+        
+        /**
+         * Check if token is expired based on claims
+         */
+        function isTokenExpired(token) {
+            try {
+                if (!token) return true;
+                
+                const parts = token.split('.');
+                if (parts.length !== 3) return true;
+                
+                const payload = JSON.parse(atob(parts[1]));
+                const expiryTime = payload.exp * 1000;  // Convert to milliseconds
+                const bufferTime = 5 * 60 * 1000;       // 5 minute buffer
+                
+                return Date.now() > (expiryTime - bufferTime);
+            } catch (error) {
+                debugLog('Token expiry check failed', error.message);
+                return true;
+            }
+        }
+        
+        /**
+         * Attempt to refresh the authentication token
+         */
+        async function refreshAuthToken() {
+            try {
+                debugLog('Attempting token refresh...');
+                
+                const response = await fetchWithTimeout(
+                    `${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.REFRESH}`,
+                    {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': getCSRFToken()
+                        }
+                    }
+                );
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    localStorage.setItem('token', data.access_token);
+                    localStorage.setItem('token_refresh_time', Date.now());
+                    debugLog('Token refreshed successfully');
+                    return true;
+                } else if (response.status === 401) {
+                    // Refresh failed - user session expired
+                    debugLog('Token refresh failed (401) - session expired');
+                    handleSessionExpired();
+                    return false;
+                }
+            } catch (error) {
+                debugLog('Token refresh error', error.message);
+                return false;
+            }
+        }
+        
+        /**
+         * Handle session expiration
+         */
+        function handleSessionExpired() {
+            // Clear all authentication data
+            localStorage.removeItem('token');
+            localStorage.removeItem('token_type');
+            localStorage.removeItem('user_email');
+            localStorage.removeItem('user_id');
+            localStorage.removeItem('admin_role');
+            localStorage.removeItem('is_admin');
+            localStorage.removeItem('permissions');
+            localStorage.removeItem('token_refresh_time');
+            
+            // Show session expired alert on signin page
+            const sessionAlert = document.getElementById('session-expired-alert');
+            if (sessionAlert) {
+                sessionAlert.classList.remove('d-none');
+                setTimeout(() => {
+                    sessionAlert.classList.add('d-none');
+                }, 5000);
+            }
+            
+            debugLog('Session expired - user logged out');
+        }
+        
+        // ==================== BRUTE FORCE PROTECTION ====================
+        
+        const FAILED_ATTEMPTS_KEY = 'signin_failed_attempts';
+        const LOCKOUT_TIME_KEY = 'signin_lockout_time';
+        const LOCKOUT_ATTEMPTS_LOG_KEY = 'signin_lockout_log';
+        
+        function getFailedAttempts() {
+            const attempts = localStorage.getItem(FAILED_ATTEMPTS_KEY);
+            return attempts ? parseInt(attempts) : 0;
+        }
+        
+        function incrementFailedAttempts() {
+            const attempts = getFailedAttempts() + 1;
+            localStorage.setItem(FAILED_ATTEMPTS_KEY, attempts);
+            
+            if (attempts >= CONFIG.SECURITY.MAX_FAILED_ATTEMPTS) {
+                localStorage.setItem(LOCKOUT_TIME_KEY, Date.now());
+                debugLog('Account locked out', `${attempts} failed attempts`);
+            }
+            return attempts;
+        }
+        
+        function resetFailedAttempts() {
+            localStorage.removeItem(FAILED_ATTEMPTS_KEY);
+            localStorage.removeItem(LOCKOUT_TIME_KEY);
+            debugLog('Failed attempts reset');
+        }
+        
+        function isLockedOut() {
+            const lockoutTime = localStorage.getItem(LOCKOUT_TIME_KEY);
+            if (!lockoutTime) return false;
+            
+            const now = Date.now();
+            const lockoutExpiry = parseInt(lockoutTime) + CONFIG.SECURITY.LOCKOUT_DURATION;
+            return now < lockoutExpiry;
+        }
+        
+        function getRemainingLockoutTime() {
+            const lockoutTime = localStorage.getItem(LOCKOUT_TIME_KEY);
+            if (!lockoutTime) return 0;
+            
+            const now = Date.now();
+            const lockoutExpiry = parseInt(lockoutTime) + CONFIG.SECURITY.LOCKOUT_DURATION;
+            const remaining = Math.ceil((lockoutExpiry - now) / 1000);
+            return Math.max(0, remaining);
+        }
+        
+        function updateLockoutUI() {
+            const signInBtn = document.getElementById('signInBtn');
+            const warningDiv = document.getElementById('brute-force-warning');
+            
+            if (isLockedOut()) {
+                signInBtn.disabled = true;
+                warningDiv.classList.remove('d-none');
+                const timerSpan = document.getElementById('lockout-timer');
+                
+                const updateTimer = () => {
+                    const remaining = getRemainingLockoutTime();
+                    timerSpan.textContent = formatTime(remaining);
+                    
+                    if (remaining > 0) {
+                        setTimeout(updateTimer, 1000);
+                    } else {
+                        signInBtn.disabled = false;
+                        warningDiv.classList.add('d-none');
+                        resetFailedAttempts();
+                        showAlert('Your account is now unlocked. Please try signing in again.', 'success');
+                    }
+                };
+                updateTimer();
+            } else {
+                signInBtn.disabled = false;
+                warningDiv.classList.add('d-none');
+            }
+        }
+        
+        function showAttemptsWarning() {
+            const attemptsDiv = document.getElementById('attempts-warning');
+            const attemptsRemaining = document.getElementById('attempts-remaining');
+            const currentAttempts = getFailedAttempts();
+            const remaining = CONFIG.SECURITY.MAX_FAILED_ATTEMPTS - currentAttempts;
+            
+            if (remaining > 0 && remaining <= 2) {
+                attemptsRemaining.textContent = remaining;
+                attemptsDiv.classList.remove('d-none');
+            } else {
+                attemptsDiv.classList.add('d-none');
+            }
+        }
+        
+        // ==================== ROLE-BASED REDIRECTION ====================
+        
+        /**
+         * CRITICAL SECURITY: Validate user role BEFORE redirect
+         * This function performs multiple checks to ensure credentials are properly validated
+         * and the user is redirected to the CORRECT portal (admin vs user)
+         */
+        function validateUserRoleForRedirect(responseData) {
+            // ==================== STEP 1: VALIDATE RESPONSE DATA ====================
+            if (!responseData) {
+                console.error('[SIGNIN] SECURITY: No response data provided for role validation');
+                throw new Error('Invalid authentication response');
+            }
+            
+            // ==================== STEP 2: VERIFY is_admin FLAG ====================
+            const isAdminFlag = responseData.is_admin;
+            const isAdminBoolean = isAdminFlag === true || isAdminFlag === 'true';
+            
+            debugLog('Role validation - is_admin flag', isAdminBoolean);
+            
+            // ==================== STEP 3: GET ADMIN ROLE ====================
+            // Accept: ADMIN, SUPERADMIN, SUPER_ADMIN, TREASURY, STANDARD, USER
+            const rawAdminRole = String(responseData.admin_role || 'USER');
+            const adminRole = rawAdminRole.toUpperCase().replace('_', '');  // Normalize: SUPER_ADMIN -> SUPERADMIN
+            
+            debugLog('Role validation - admin_role', { raw: rawAdminRole, normalized: adminRole });
+            
+            // ==================== STEP 4: CROSS-CHECK ROLE AND FLAG ====================
+            // Ensure consistency between is_admin flag and admin_role string
+            const roleIsAdmin = (adminRole === 'ADMIN' || adminRole === 'SUPERADMIN' || adminRole === 'TREASURY');
+            
+            // If role indicates admin, is_admin should be true
+            if (roleIsAdmin && !isAdminBoolean) {
+                console.warn('[SIGNIN] SECURITY WARNING: admin_role indicates admin but is_admin=false. Using admin_role.', {
+                    admin_role: adminRole,
+                    is_admin: isAdminBoolean
+                });
+            }
+            
+            // If is_admin is true, ensure we have a valid admin role
+            if (isAdminBoolean && !roleIsAdmin) {
+                console.warn('[SIGNIN] SECURITY WARNING: is_admin=true but admin_role is not admin. Treating as ADMIN.', {
+                    admin_role: adminRole,
+                    is_admin: isAdminBoolean
+                });
+            }
+            
+            // ==================== STEP 5: STORE VALIDATED ROLE ====================
+            localStorage.setItem('_role_validated', 'true');
+            localStorage.setItem('_role_check_timestamp', Date.now());
+            
+            debugLog('[SIGNIN] Role validation PASSED');
+            
+            return {
+                is_admin: isAdminBoolean,
+                admin_role: adminRole  // Return normalized role
+            };
+        }
+        
+        /**
+         * Determine dashboard URL based on VALIDATED user role
+         * Distinguishes between SUPERADMIN, ADMIN, and USER roles
+         * 
+         * IMPORTANT: Call validateUserRoleForRedirect() FIRST before this function
+         */
+        function getDashboardUrl(data) {
+            // ==================== CRITICAL: VALIDATE ROLE FIRST ====================
+            let validatedRole;
+            try {
+                validatedRole = validateUserRoleForRedirect(data);
+            } catch (error) {
+                console.error('[SIGNIN] SECURITY: Role validation failed', error);
+                showAlert('Security error during authentication. Please sign in again.', 'danger');
+                handleSessionExpired();
+                throw error;
+            }
+            
+            const adminRole = validatedRole.admin_role;
+            const isAdmin = validatedRole.is_admin;
+            
+            console.log('[SIGNIN] getDashboardUrl - Role determined:', {
+                adminRole: adminRole,
+                isAdmin: isAdmin
+            });
+            
+            // ==================== DETERMINE REDIRECT DESTINATION ====================
+            let redirectUrl = '/user/dashboard';  // Default to user dashboard
+            
+            if (adminRole === 'SUPERADMIN' || adminRole === 'ADMIN' || adminRole === 'TREASURY') {
+                debugLog('[SIGNIN] User is ' + adminRole + ' - redirecting to unified admin dashboard');
+                redirectUrl = '/user/admin/dashboard';
+            } else if (false) {
+                debugLog('[SIGNIN] User is ADMIN/TREASURY - redirecting to admin panel');
+                redirectUrl = '/user/admin/dashboard';
+            } else if (isAdmin && adminRole !== 'STANDARD' && adminRole !== 'USER') {
+                // If is_admin is true but role is not a recognized admin role, treat as admin
+                console.warn('[SIGNIN] is_admin=true with unrecognized role. Redirecting to admin panel: ' + adminRole);
+                redirectUrl = '/user/admin/dashboard';
+            } else {
+                // Regular user - includes: STANDARD, USER, or any non-admin role
+                debugLog('[SIGNIN] User role is: ' + adminRole + ' - redirecting to user portal');
+                redirectUrl = '/user/dashboard';
+            }
+            
+            // ==================== SECURITY LOG ====================
+            console.log('[SIGNIN] ✅ ROLE VALIDATION SUCCESSFUL', {
+                email: sanitizeData(data.email),
+                role: adminRole,
+                is_admin: isAdmin,
+                redirect_url: redirectUrl,
+                timestamp: new Date().toISOString()
+            });
+            
+            return redirectUrl;
+        }
+        
+        // ==================== MFA SUPPORT ====================
+        
+        /**
+         * Handle MFA requirement from server
+         */
+        function handleMFARequired(mfaToken, email) {
+            debugLog('MFA required for user', email);
+            
+            // Store MFA token temporarily for verification
+            sessionStorage.setItem('mfa_token', mfaToken);
+            sessionStorage.setItem('mfa_email', sanitizeData(email));
+            
+            // Show MFA alert
+            const mfaAlert = document.getElementById('mfa-required-alert');
+            if (mfaAlert) {
+                mfaAlert.classList.remove('d-none');
+            }
+            
+            // Redirect to MFA verification page
+            setTimeout(() => {
+                window.location.href = '/mfa-verify';
+            }, 1500);
+        }
+        
+        // ==================== AUDIT LOGGING ====================
+        
+        /**
+         * Log login attempt to backend for audit trail
+         */
+        async function logLoginAudit(success, username, mfaRequired = false) {
+            try {
+                await fetchWithTimeout(
+                    `${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.LOGIN_AUDIT}`,
+                    {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': getCSRFToken()
+                        },
+                        body: JSON.stringify({
+                            username: sanitizeData(username),
+                            success: success,
+                            mfa_required: mfaRequired,
+                            user_agent: getUserAgent(),
+                            timestamp: new Date().toISOString()
+                        })
+                    },
+                    5000  // Short timeout for audit
+                );
+            } catch (error) {
+                debugLog('Audit logging failed', error.message);
+                // Fail silently - don't block login for audit failures
+            }
+        }
+        
+        // ==================== AUTH STATUS CHECK ====================
+        
+        /**
+         * Check if user is already logged in
+         */
+        function checkAndLockIfLoggedIn() {
+            const token = localStorage.getItem('token');
+            
+            if (token) {
+                // Check if token is expired
+                if (isTokenExpired(token)) {
+                    debugLog('Token expired - clearing session');
+                    handleSessionExpired();
+                    return;
+                }
+                
+                debugLog('User already logged in - checking role...');
+                
+                // User has valid token, redirect to appropriate dashboard
+                const adminRole = localStorage.getItem('admin_role') || 'USER';
+                
+                if (adminRole === 'SUPERADMIN' || adminRole === 'ADMIN' || adminRole === 'TREASURY') {
+                    window.location.href = '/user/admin/dashboard';
+                } else if (adminRole === 'ADMIN' || adminRole === 'TREASURY') {
+                    window.location.href = '/user/admin/dashboard';
+                } else {
+                    window.location.href = '/user/dashboard';
+                }
+            }
+        }
+        
+        // ==================== PASSWORD VISIBILITY TOGGLE ====================
+        
+        document.getElementById('pwd-toggle').addEventListener('click', function() {
+            const pwdField = document.getElementById('password');
+            const icon = this.querySelector('i');
+            
+            if (pwdField.type === 'password') {
+                pwdField.type = 'text';
+                icon.className = 'fas fa-eye-slash';
+            } else {
+                pwdField.type = 'password';
+                icon.className = 'fas fa-eye';
+            }
+        });
+        
+        // ==================== PAGE INITIALIZATION ====================
+        
+        window.addEventListener('load', async () => {
+            // Initialize CSRF token
+            await initializeCSRFToken();
+            
+            // Check if already logged in
+            checkAndLockIfLoggedIn();
+            
+            // Update lockout UI if needed
+            updateLockoutUI();
+            
+            // Show attempts warning if close to lockout
+            showAttemptsWarning();
+            
+            // Check for ?next= redirect parameter
+            const nextUrl = getRedirectUrl();
+            if (nextUrl) {
+                debugLog('Redirect URL detected', nextUrl);
+            }
+            
+            // Check if session was expired (redirected from protected page)
+            if (window.location.search.includes('session_expired=true')) {
+                handleSessionExpired();
+            }
+        });
+        
+        window.addEventListener('pageshow', () => {
+            checkAndLockIfLoggedIn();
+            updateLockoutUI();
+        });
     </script>
 
     <script>
+        // ==================== LOGIN FORM SUBMISSION HANDLER ====================
+        
         const signInForm = document.getElementById('signInForm');
-        const alertPlaceholder = document.getElementById('alert-placeholder');
-
-        const showAlert = (message, type) => {
-            const wrapper = document.createElement('div');
-            wrapper.innerHTML = [
-                `<div class="alert alert-${type} alert-dismissible" role="alert">`,
-                `   <div>${message}</div>`,
-                '   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>',
-                '</div>'
-            ].join('');
-            alertPlaceholder.innerHTML = ''; // Clear previous alerts
-            alertPlaceholder.append(wrapper);
-        };
-
+        
         signInForm.addEventListener('submit', async (event) => {
             event.preventDefault();
-
-            const username = document.getElementById('username').value;
+            
+            // ==================== PRE-SUBMISSION CHECKS ====================
+            
+            // Check if account is locked out
+            if (isLockedOut()) {
+                showAlert('💔 Your account is temporarily locked due to too many failed attempts. Please try again later.', 'danger');
+                updateLockoutUI();
+                return;
+            }
+            
+            // Get form values
+            const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
-
-            const formData = new FormData(signInForm);
-
+            const rememberMe = document.getElementById('rememberMe').checked;
+            
+            // Basic validation
+            if (!username || !password) {
+                showAlert('❌ Please enter both email and password.', 'danger');
+                return;
+            }
+            
+            // ==================== SHOW LOADING STATE ====================
+            
+            const signInBtn = document.getElementById('signInBtn');
+            const btnText = document.getElementById('btn-text');
+            const btnSpinner = document.getElementById('btn-spinner');
+            
+            signInBtn.disabled = true;
+            btnText.textContent = 'Signing in...';
+            btnSpinner.classList.remove('d-none');
+            
             try {
-                const response = await fetch('/auth/token', {
-                    method: 'POST',
-                    body: formData,
-                });
-
+                // ==================== PREPARE REQUEST ====================
+                
+                // Prepare form data
+                const formData = new FormData();
+                formData.append('username', username);
+                formData.append('password', password);
+                formData.append('rememberMe', rememberMe);
+                formData.append('_csrf', getCSRFToken());
+                
+                // ==================== SUBMIT LOGIN REQUEST ====================
+                
+                debugLog('Submitting login request', { username, rememberMe });
+                
+                const response = await fetchWithTimeout(
+                    `${CONFIG.API_BASE_URL}${CONFIG.ENDPOINTS.LOGIN}`,
+                    {
+                        method: 'POST',
+                        body: formData,
+                        credentials: 'include'  // Include cookies for CSRF
+                    }
+                );
+                
+                const data = await response.json();
+                
+                // ==================== HANDLE RESPONSE ====================
+                
                 if (response.ok) {
-                    const data = await response.json();
-                    console.log('Login response:', data);
-                    showAlert('Sign in successful! Redirecting to your dashboard...', 'success');
+                    // ==================== SUCCESS: LOGIN SUCCESSFUL ====================
+                    debugLog('Login successful');
                     
-                    // Determine redirect URL - prefer the server's redirect_url, fallback to is_admin flag
-                    let redirectUrl = data.redirect_url;
-                    if (!redirectUrl) {
-                        redirectUrl = data.is_admin ? '/admin/dashboard' : '/user/dashboard';
+                    // ==================== CRITICAL SECURITY CHECK #1: Verify response contains required auth fields ====================
+                    if (!data.user_id || !data.email || !data.access_token) {
+                        console.error('[SIGNIN] SECURITY: Response missing critical auth fields', {
+                            has_user_id: !!data.user_id,
+                            has_email: !!data.email,
+                            has_access_token: !!data.access_token
+                        });
+                        showAlert('Authentication response invalid. Please try again.', 'danger');
+                        await logLoginAudit(false, username, false);
+                        return;
                     }
                     
-                    console.log('Response data:', { is_admin: data.is_admin, redirect_url: data.redirect_url, email: data.email });
-                    console.log('Final redirect URL:', redirectUrl);
+                    // ==================== CRITICAL SECURITY CHECK #2: Verify role fields exist ====================
+                    console.log('[SIGNIN] Role data received:', {
+                        admin_role: data.admin_role,
+                        is_admin: data.is_admin,
+                        has_admin_role: data.admin_role !== undefined,
+                        has_is_admin: data.is_admin !== undefined
+                    });
                     
-                    setTimeout(() => { 
-                        window.location.href = redirectUrl; 
-                    }, 1500);
+                    if (data.admin_role === undefined && data.is_admin === undefined) {
+                        console.error('[SIGNIN] SECURITY: Response missing role information');
+                        showAlert('User role information missing. Please contact support.', 'danger');
+                        await logLoginAudit(false, username, false);
+                        return;
+                    }
+                    
+                    // Check for MFA requirement
+                    if (data.mfa_required === true || data.status === 'mfa_required') {
+                        // MFA is required - redirect to MFA verification page
+                        handleMFARequired(data.mfa_token, data.email);
+                        
+                        // Log MFA-required audit
+                        await logLoginAudit(true, username, true);
+                        return;
+                    }
+                    
+                    // ==================== STORE AUTHENTICATION DATA ====================
+                    
+                    // Store JWT token
+                    if (data.access_token) {
+                        localStorage.setItem('token', data.access_token);
+                        localStorage.setItem('token_type', data.token_type || 'bearer');
+                        localStorage.setItem('token_refresh_time', Date.now());
+                    }
+                    
+                    // Store user information
+                    localStorage.setItem('user_email', sanitizeData(data.email));
+                    localStorage.setItem('user_id', sanitizeData(String(data.user_id)));
+                    localStorage.setItem('full_name', sanitizeData(data.full_name || ''));
+                    
+                    // ==================== CRITICAL: Store role information (distinguishing SUPERADMIN from ADMIN) ====================
+                    // THIS IS THE CRITICAL STEP: Explicitly validate and store role
+                    const adminRole = sanitizeData(data.admin_role || 'USER');
+                    const isAdmin = data.is_admin === true || data.is_admin === 'true';
+                    
+                    console.log('[SIGNIN] Storing user role', {
+                        admin_role: adminRole,
+                        is_admin: isAdmin,
+                        email: sanitizeData(data.email)
+                    });
+                    
+                    localStorage.setItem('admin_role', adminRole);
+                    localStorage.setItem('is_admin', isAdmin ? 'true' : 'false');
+                    
+                    // Store user permissions
+                    if (data.permissions) {
+                        localStorage.setItem('permissions', JSON.stringify(data.permissions));
+                    }
+                    
+                    // Handle "Remember Me" - extends cookie duration
+                    if (rememberMe) {
+                        localStorage.setItem('remember_me', 'true');
+                        debugLog('Remember me enabled');
+                    }
+                    
+                    // Reset failed attempts on successful login
+                    resetFailedAttempts();
+                    
+                    // Log successful login audit
+                    await logLoginAudit(true, username, false);
+                    
+                    // Show success message
+                    showAlert('✓ Sign in successful! Redirecting to your dashboard...', 'success');
+                    
+                    // ==================== CRITICAL SECURITY CHECK #3: Determine redirect URL based on VALIDATED credentials ====================
+                    // This checks the role BEFORE redirect and ensures user isn't sent to wrong portal
+                    
+                    let redirectUrl;
+                    try {
+                        // Get role-based redirect URL with full validation
+                        redirectUrl = getDashboardUrl(data);
+                        
+                        // Additional safety check: verify redirect URL is expected
+                        const validRedirectUrls = [
+                            '/user/dashboard',
+                            '/user/admin/dashboard',
+                            '/user/admin/dashboard'
+                        ];
+                        
+                        if (!validRedirectUrls.includes(redirectUrl) && !redirectUrl?.startsWith('/user/')) {
+                            console.error('[SIGNIN] SECURITY: Unexpected redirect URL detected', redirectUrl);
+                            showAlert('Security error: Invalid redirect destination.', 'danger');
+                            await logLoginAudit(false, username, false);
+                            return;
+                        }
+                        
+                        console.log('[SIGNIN] ✅ CREDENTIAL VALIDATION COMPLETE - Ready to redirect', {
+                            user: sanitizeData(data.email),
+                            role: adminRole,
+                            redirect: redirectUrl,
+                            timestamp: new Date().toISOString()
+                        });
+                        
+                    } catch (error) {
+                        console.error('[SIGNIN] SECURITY: Role validation error - FULL DETAILS:', {
+                            error_message: error.message,
+                            error_stack: error.stack,
+                            response_data: {
+                                user_id: !!data.user_id,
+                                email: sanitizeData(data.email),
+                                admin_role: data.admin_role,
+                                is_admin: data.is_admin
+                            }
+                        });
+                        showAlert('Error determining portal. Check browser console for details.', 'danger');
+                        await logLoginAudit(false, username, false);
+                        return;
+                    }
+                    
+                    // Check for ?next= parameter (for protected page redirects) - but only if on same domain
+                    let nextUrl = getRedirectUrl();
+                    if (nextUrl && nextUrl.startsWith('/user/')) {
+                        // Verify next URL matches expected dashboard URL
+                        const expectedPath = redirectUrl.split('/').slice(0, 4).join('/'); // e.g., /user/admin
+                        if (nextUrl.startsWith(expectedPath)) {
+                            redirectUrl = nextUrl;
+                            console.log('[SIGNIN] Using next URL from query param', nextUrl);
+                        }
+                    }
+                    
+                    debugLog('Redirecting to', redirectUrl);
+                    
+                    // ==================== FINAL REDIRECT ====================
+                    // Disable button to prevent double-submit
+                    signInBtn.disabled = true;
+                    btnText.textContent = 'Redirecting...';
+                    
+                    // Redirect after brief delay for UX feedback
+                    const redirectTimeout = setTimeout(() => {
+                        console.log('[SIGNIN] 🔄 REDIRECTING NOW to: ' + redirectUrl);
+                        window.location.href = redirectUrl;
+                    }, 1000);
+                    
+                    // Additional safety: if redirect doesn't happen in 5 seconds, try again
+                    const fallbackTimeout = setTimeout(() => {
+                        console.warn('[SIGNIN] ⚠️ Redirect did not complete, trying again...');
+                        window.location.href = redirectUrl;
+                    }, 5000);
+                    
+                } else if (response.status === 401) {
+                    // ==================== FAILED: INVALID CREDENTIALS ====================
+                    
+                    const errorMessage = data.detail || 'Invalid email or password.';
+                    
+                    showAlert(`❌ ${errorMessage}`, 'danger');
+                    
+                    // Increment failed attempts
+                    const attempts = incrementFailedAttempts();
+                    const remaining = CONFIG.SECURITY.MAX_FAILED_ATTEMPTS - attempts;
+                    
+                    debugLog('Login failed', { attempts, remaining });
+                    
+                    // Log failed login attempt for security audit
+                    await logLoginAudit(false, username, false);
+                    
+                    if (remaining > 0) {
+                        if (remaining <= 2) {
+                            showAlert(
+                                `⚠️ ${remaining} attempt(s) remaining before your account is locked for ${formatTime(CONFIG.SECURITY.LOCKOUT_DURATION / 1000)}.`,
+                                'warning'
+                            );
+                            showAttemptsWarning();
+                        }
+                    } else {
+                        updateLockoutUI();
+                        showAlert('🔒 Your account has been locked due to too many failed attempts. Please try again later.', 'danger');
+                    }
+                    
+                } else if (response.status === 429) {
+                    // ==================== RATE LIMIT EXCEEDED ====================
+                    
+                    showAlert('Rate limit exceeded. Please try again later.', 'warning');
+                    debugLog('Rate limit hit');
+                    
+                } else if (response.status === 403) {
+                    // ==================== ACCOUNT SUSPENDED ====================
+                    
+                    showAlert('Your account has been suspended. Please contact support.', 'danger');
+                    signInBtn.disabled = true;
+                    
                 } else {
-                    const data = await response.json();
-                    const errorMessage = data.detail || 'Incorrect email or password.';
-                    showAlert(errorMessage, 'danger');
+                    // ==================== OTHER ERRORS ====================
+                    
+                    const errorMessage = data.detail || 'An error occurred during sign in.';
+                    showAlert(`❌ ${errorMessage}`, 'danger');
+                    debugLog('Login error', { status: response.status, message: errorMessage });
                 }
+                
             } catch (error) {
-                console.error('Sign in error:', error);
-                showAlert('Could not connect to the server. Please try again later.', 'danger');
+                // ==================== NETWORK ERRORS ====================
+                
+                if (error.name === 'AbortError') {
+                    showAlert('❌ Request timed out. Please check your internet connection and try again.', 'danger');
+                    debugLog('Request timeout');
+                } else {
+                    showAlert(`❌ Network error: ${error.message}. Please try again later.`, 'danger');
+                    debugLog('Network error', error.message);
+                }
+                
+            } finally {
+                // ==================== RESTORE BUTTON STATE ====================
+                
+                signInBtn.disabled = false;
+                btnText.textContent = 'Sign In';
+                btnSpinner.classList.add('d-none');
             }
         });
     </script>

@@ -32,6 +32,12 @@ async def get_current_user_from_cookie(request: Request):
         if not token:
             return None
 
+        # Check if token is revoked
+        is_revoked = await auth_utils.is_token_revoked(token)
+        if is_revoked:
+            log.warning("Attempt to use revoked token")
+            return None
+
         email = auth_utils.decode_access_token(token)
         if not email:
             return None
@@ -87,6 +93,7 @@ async def login_for_access_token(
     # Ensure the configured admin email ALWAYS has admin rights upon login.
     if user.email == settings.ADMIN_EMAIL and not user.is_admin:
         user.is_admin = True
+        user.admin_role = "SUPER_ADMIN"
         await db_session.commit()
         # Refresh the user object from the database to ensure is_admin is properly set
         await db_session.refresh(user)
@@ -101,63 +108,54 @@ async def login_for_access_token(
         data={"sub": user.email}, expires_delta=access_token_expires
     )
 
-    # Determine redirect URL - admin email always goes to admin dashboard
+    # Determine if admin
     is_admin = user.email == settings.ADMIN_EMAIL or user.is_admin
-    redirect_url = "/user/admin/dashboard" if is_admin else "/user/dashboard"
+    
+    # UNIFIED REDIRECT: Both users and admins go to /user/dashboard
+    # The /user/dashboard route checks is_admin and serves appropriate content (no 302 redirect)
+    redirect_url = "/user/dashboard"
 
+    # Get admin role and calculate permissions based on role
+    admin_role = getattr(user, 'admin_role', 'STANDARD') or 'STANDARD'
+    
+    # Role-based permissions
+    permissions = []
+    if admin_role == 'SUPER_ADMIN':
+        permissions = [
+            "view_reports", "manage_funds", "edit_settings", "audit_logs",
+            "manage_users", "approve_transactions", "manage_treasury", "manage_compliance"
+        ]
+    elif admin_role == 'TREASURY':
+        permissions = [
+            "view_reports", "manage_funds", "approve_transactions", "manage_treasury"
+        ]
+    elif admin_role == 'ADMIN' or is_admin:
+        permissions = [
+            "view_reports", "manage_users", "audit_logs"
+        ]
+    
     # For a JavaScript frontend, it's better to return JSON.
     # The frontend can then handle the redirect.
     response = JSONResponse(content={
         "redirect_url": redirect_url,
         "is_admin": is_admin,
+        "admin_role": admin_role,
+        "permissions": permissions,
         "email": user.email,
-        "admin_email": settings.ADMIN_EMAIL
+        "user_id": user.id,
+        "full_name": user.full_name,
+        "token_type": "bearer",
+        "access_token": access_token
     })
     response.set_cookie(
         key="access_token",
         value=access_token,
-        httponly=True,
+        httponly=False,  # Allow JavaScript to read and backup token to localStorage
         max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
         samesite="Lax",
         path="/",
     )
     return response
-
-@auth_router.post("/forgot-password")
-async def forgot_password(email: Annotated[str, Query()], db_session: SessionDep):
-    """
-    Forgot password request - sends password reset request to admin.
-    User provides their email, system creates a reset request.
-    """
-    email = email.strip().lower()
-    
-    # Find user by email
-    user = await crud.get_user_by_email(db_session, email=email)
-    if not user:
-        # Don't reveal if email exists or not for security
-        return {
-            "success": True,
-            "message": "If an account exists with this email, a password reset request has been sent to our admin team."
-        }
-    
-    # Create a form submission to notify admin
-    try:
-        reset_request = FormSubmissionCreate(
-            form_type="password_reset_request",
-            data=f"User: {user.full_name} ({user.email}) - Account Number: {user.account_number or 'N/A'}"
-        )
-        await create_form_submission(db_session, submission=reset_request, user_id=user.id)
-        
-        return {
-            "success": True,
-            "message": "Password reset request submitted. Please check your email or contact admin support."
-        }
-    except Exception as e:
-        log.error(f"Error creating password reset request: {e}")
-        return {
-            "success": False,
-            "message": "An error occurred. Please try again later."
-        }
 
 @auth_router.get("/me")
 async def get_current_user_info(current_user: CurrentUserDep):

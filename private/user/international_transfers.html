@@ -1,8 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="International transfers - send money abroad safely and efficiently with Finanza Bank">
     <title>International Transfers - Finanza</title>
     <link href="/static/css/style.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -16,6 +17,8 @@
         .timeline-step.completed::before { background: #28a745; }
         .timeline-step.completed .step-title { color: #28a745; font-weight: 600; }
     </style>
+
+    <script src="/static/js/toast-utils.js"></script>
 </head>
 <body>
     <!-- Navigation -->
@@ -206,6 +209,8 @@
                         </div>
                     </div>
 
+                    <div id="transferError" class="alert alert-danger d-none mt-2" role="alert"></div>
+                    <div id="transferSuccess" class="alert alert-success d-none mt-2" role="alert"></div>
                     <button type="submit" class="btn btn-primary btn-lg"><i class="fas fa-paper-plane"></i> Send Transfer</button>
                 </form>
             </div>
@@ -288,56 +293,43 @@
         });
 
         async function loadTransferStats() {
-            try {
-                const response = await fetch('/api/v1/international_transfers/stats', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    
-                    document.getElementById('monthlyLimit').textContent = '$' + (data.monthly_limit || 50000).toLocaleString();
-                    const used = data.monthly_used || 0;
-                    const percent = (used / (data.monthly_limit || 50000)) * 100;
-                    document.getElementById('limitBar').style.width = percent + '%';
-                    document.getElementById('limitUsed').textContent = '$' + used.toLocaleString() + ' used';
-                    
-                    document.getElementById('countriesCount').textContent = data.countries_served || '150+';
-                    document.getElementById('thisMonthTransfers').textContent = data.transfers_this_month || '0';
-                    document.getElementById('thisMonthAmount').textContent = '$' + (data.amount_this_month || 0).toLocaleString();
-                    document.getElementById('recipientCount').textContent = data.saved_recipients || '0';
-                }
-            } catch (error) {
-                console.error('Error loading stats:', error);
-            }
+            // Stats endpoint not available — show placeholder values
+            document.getElementById('monthlyLimit').textContent = '$--';
+            document.getElementById('limitBar').style.width = '0%';
+            document.getElementById('limitUsed').textContent = '$0 used';
+            document.getElementById('countriesCount').textContent = '--';
+            document.getElementById('thisMonthTransfers').textContent = '--';
+            document.getElementById('thisMonthAmount').textContent = '$--';
+            document.getElementById('recipientCount').textContent = '--';
         }
 
         async function loadInProgressTransfers() {
+            const container = document.getElementById('inProgressTransfers');
             try {
-                const response = await fetch('/api/v1/international_transfers/in-progress', {
+                const response = await fetch('/api/international/transfers?status=pending', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
                 if (response.ok) {
                     const data = await response.json();
-                    const container = document.getElementById('inProgressTransfers');
                     container.innerHTML = '';
 
-                    if (data.transfers && data.transfers.length > 0) {
-                        data.transfers.forEach(transfer => {
+                    const transfers = data.transfers || data;
+                    if (Array.isArray(transfers) && transfers.length > 0) {
+                        transfers.forEach(transfer => {
                             container.innerHTML += `
                                 <div class="mb-4">
                                     <div class="d-flex justify-content-between align-items-start mb-3">
                                         <div>
-                                            <h6>${transfer.recipient}</h6>
-                                            <p class="text-muted small">${transfer.country}</p>
+                                            <h6>${transfer.recipient_name || transfer.recipient || '--'}</h6>
+                                            <p class="text-muted small">${transfer.recipient_country || transfer.country || '--'}</p>
                                         </div>
-                                        <h5>$${transfer.amount.toLocaleString()}</h5>
+                                        <h5>$${(transfer.amount || 0).toLocaleString()}</h5>
                                     </div>
                                     <div class="transfer-timeline">
                                         <div class="timeline-step ${transfer.step_1_completed ? 'completed' : ''}">
                                             <p class="step-title mb-1">Submitted</p>
-                                            <p class="small text-muted">${transfer.submitted_date}</p>
+                                            <p class="small text-muted">${transfer.submitted_date || transfer.created_at || '--'}</p>
                                         </div>
                                         <div class="timeline-step ${transfer.step_2_completed ? 'completed' : ''}">
                                             <p class="step-title mb-1">Processing</p>
@@ -349,7 +341,7 @@
                                         </div>
                                         <div class="timeline-step">
                                             <p class="step-title mb-1">Delivered</p>
-                                            <p class="small text-muted">Estimated: ${transfer.estimated_delivery}</p>
+                                            <p class="small text-muted">Estimated: ${transfer.estimated_delivery || '1-3 business days'}</p>
                                         </div>
                                     </div>
                                 </div>
@@ -359,79 +351,60 @@
                     } else {
                         container.innerHTML = '<div class="text-center text-muted">No transfers in progress</div>';
                     }
+                } else {
+                    console.error('Failed to load in-progress transfers, status:', response.status);
+                    container.innerHTML = '<div class="text-center text-muted">Unable to load in-progress transfers.</div>';
                 }
             } catch (error) {
                 console.error('Error loading in-progress transfers:', error);
+                container.innerHTML = '<div class="text-center text-muted">Unable to load in-progress transfers.</div>';
             }
         }
 
         async function loadCompletedTransfers() {
+            const tbody = document.getElementById('completedTransfersBody');
             try {
-                const response = await fetch('/api/v1/international_transfers/completed', {
+                const response = await fetch('/api/international/transfers?status=completed', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
                 if (response.ok) {
                     const data = await response.json();
-                    const tbody = document.getElementById('completedTransfersBody');
                     tbody.innerHTML = '';
 
-                    if (data.transfers && data.transfers.length > 0) {
-                        data.transfers.forEach(transfer => {
+                    const transfers = data.transfers || data;
+                    if (Array.isArray(transfers) && transfers.length > 0) {
+                        transfers.forEach(transfer => {
+                            const date = transfer.date || transfer.completed_at || transfer.created_at || '';
                             tbody.innerHTML += `
                                 <tr>
-                                    <td>${new Date(transfer.date).toLocaleDateString()}</td>
-                                    <td>${transfer.recipient}</td>
-                                    <td>${transfer.country}</td>
-                                    <td>$${transfer.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}</td>
-                                    <td>${transfer.currency}</td>
-                                    <td><span class="badge bg-success">${transfer.status}</span></td>
-                                    <td><code>${transfer.reference}</code></td>
+                                    <td>${date ? new Date(date).toLocaleDateString() : '--'}</td>
+                                    <td>${transfer.recipient_name || transfer.recipient || '--'}</td>
+                                    <td>${transfer.recipient_country || transfer.country || '--'}</td>
+                                    <td>$${(transfer.amount || 0).toLocaleString('en-US', {maximumFractionDigits: 2})}</td>
+                                    <td>${transfer.currency || '--'}</td>
+                                    <td><span class="badge bg-success">${transfer.status || 'Completed'}</span></td>
+                                    <td><code>${transfer.reference || transfer.id || '--'}</code></td>
                                 </tr>
                             `;
                         });
                     } else {
                         tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No completed transfers</td></tr>';
                     }
+                } else {
+                    console.error('Failed to load completed transfers, status:', response.status);
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Unable to load completed transfers.</td></tr>';
                 }
             } catch (error) {
                 console.error('Error loading completed transfers:', error);
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Unable to load completed transfers.</td></tr>';
             }
         }
 
         async function loadSavedRecipients() {
-            try {
-                const response = await fetch('/api/v1/international_transfers/recipients', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    const container = document.getElementById('savedRecipients');
-                    container.innerHTML = '';
-
-                    if (data.recipients && data.recipients.length > 0) {
-                        data.recipients.forEach(recipient => {
-                            container.innerHTML += `
-                                <div class="col-md-6 col-lg-4">
-                                    <div class="card">
-                                        <div class="card-body">
-                                            <h6 class="card-title">${recipient.name}</h6>
-                                            <p class="text-muted small">${recipient.country} · ${recipient.bank}</p>
-                                            <p class="text-muted small mb-2">Account: ${recipient.account_number}</p>
-                                            <button class="btn btn-sm btn-primary w-100" onclick="transferToRecipient('${recipient.id}')">Send to ${recipient.name.split(' ')[0]}</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            `;
-                        });
-                    } else {
-                        container.innerHTML = '<div class="col-12 text-center text-muted">No saved recipients. Add one when creating your first transfer.</div>';
-                    }
-                }
-            } catch (error) {
-                console.error('Error loading recipients:', error);
-            }
+            // No /recipients endpoint exists in the international router — show empty state
+            const container = document.getElementById('savedRecipients');
+            container.innerHTML = '<div class="col-12 text-center text-muted">No saved recipients. Add one when creating your first transfer.</div>';
         }
 
         function updateFeeEstimate() {
@@ -443,46 +416,49 @@
         async function handleNewTransfer(e) {
             e.preventDefault();
 
-            const transfer = {
+            const errorEl = document.getElementById('transferError');
+            const successEl = document.getElementById('transferSuccess');
+            errorEl.classList.add('d-none');
+            successEl.classList.add('d-none');
+
+            // Build query params to match /api/international/transfer endpoint signature
+            const params = new URLSearchParams({
                 recipient_country: document.getElementById('recipientCountry').value,
-                recipient_type: document.getElementById('recipientType').value,
                 recipient_name: document.getElementById('recipientName').value,
-                recipient_email: document.getElementById('recipientEmail').value,
-                bank_name: document.getElementById('bankName').value,
-                account_number: document.getElementById('accountNumber').value,
-                swift_code: document.getElementById('swiftCode').value,
-                currency: document.getElementById('transferCurrency').value,
+                recipient_account: document.getElementById('accountNumber').value,
                 amount: parseFloat(document.getElementById('amount').value),
-                purpose: document.getElementById('purpose').value,
-                instructions: document.getElementById('instructions').value
-            };
+                purpose: document.getElementById('purpose').value
+            });
 
             try {
-                const response = await fetch('/api/v1/international_transfers/send', {
+                const response = await fetch(`/api/international/transfer?${params.toString()}`, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(transfer)
+                        'Authorization': `Bearer ${token}`
+                    }
                 });
 
                 if (response.ok) {
-                    alert('Transfer sent successfully!');
+                    successEl.textContent = 'Transfer submitted successfully! It is pending review.';
+                    successEl.classList.remove('d-none');
                     document.getElementById('transferForm').reset();
                     await loadTransferStats();
                     await loadInProgressTransfers();
                 } else {
-                    alert('Error sending transfer');
+                    const errData = await response.json().catch(() => ({}));
+                    errorEl.textContent = errData.detail || 'Error sending transfer. Please try again.';
+                    errorEl.classList.remove('d-none');
+                    console.error('Transfer error:', response.status, errData);
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('Error sending transfer');
+                errorEl.textContent = 'Network error. Please check your connection and try again.';
+                errorEl.classList.remove('d-none');
             }
         }
 
         function transferToRecipient(recipientId) {
-            alert('Transfer to recipient: ' + recipientId);
+            console.error('transferToRecipient called with id:', recipientId, '— no recipients API available');
         }
     </script>
 </body>

@@ -59,10 +59,11 @@ async def login_for_access_token(
     response.set_cookie(
         key="access_token",
         value=access_token,
-        httponly=True,
+        httponly=False,  # Allow JavaScript to read and backup token to localStorage
         secure=False,  # Set to True in production with HTTPS
         samesite="lax",
-        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        path="/"  # Ensure cookie is sent to all paths
     )
     return response
 

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -29,6 +29,8 @@
 
     <!-- Template Stylesheet -->
     <link href="/static/css/style.css" rel="stylesheet"> 
+
+    <script src="/static/js/toast-utils.js"></script>
 </head>
 
 <body>
@@ -43,11 +45,11 @@
     <div class="container-fluid fixed-top px-0 wow fadeIn" data-wow-delay="0.1s">
         <div class="top-bar row gx-0 align-items-center d-none d-lg-flex">
             <div class="col-lg-6 px-5 text-start">
-                <small><i class="fa fa-map-marker-alt text-primary me-2"></i>123 Street, New York, USA</small>
-                <small class="ms-4"><i class="fa fa-clock text-primary me-2"></i>9.00 am - 9.00 pm</small>
+                <small><i class="fa fa-map-marker-alt text-primary me-2"></i>100 Financial Ave, New York, NY 10001</small>
+                <small class="ms-4"><i class="fa fa-clock text-primary me-2"></i>8:00 AM - 8:00 PM ET</small>
             </div>
             <div class="col-lg-6 px-5 text-end">
-                <small><i class="fa fa-envelope text-primary me-2"></i>info@example.com</small>
+                <small><i class="fa fa-envelope text-primary me-2"></i>support@finanzabank.com</small>
                 <small class="ms-4"><i class="fa fa-phone-alt text-primary me-2"></i>+012 345 6789</small>
             </div>
         </div>
@@ -64,26 +66,26 @@
                     <div class="nav-item dropdown">
                         <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Banking</a>
                         <div class="dropdown-menu border-light m-0">
-                            <a href="personal.html" class="dropdown-item">Personal Banking</a>
-                            <a href="corporate.html" class="dropdown-item">Corporate Banking</a>
+                            <a href="/personal" class="dropdown-item">Personal Banking</a>
+                            <a href="/corporate" class="dropdown-item">Corporate Banking</a>
                         </div>
                     </div>
-                    <a href="deposits.html" class="nav-item nav-link">Deposits</a>
-                    <a href="credits.html" class="nav-item nav-link">Credits</a>
-                    <a href="cards.html" class="nav-item nav-link">Cards</a>
-                    <a href="investments.html" class="nav-item nav-link">Investments</a>
-                    <a href="loans.html" class="nav-item nav-link">Loans</a>
-                    <a href="insurance.html" class="nav-item nav-link">Insurance</a>
+                    <a href="/deposits" class="nav-item nav-link">Deposits</a>
+                    <a href="/credits" class="nav-item nav-link">Credits</a>
+                    <a href="/cards" class="nav-item nav-link">Cards</a>
+                    <a href="/investments" class="nav-item nav-link">Investments</a>
+                    <a href="/loans" class="nav-item nav-link">Loans</a>
+                    <a href="/insurance" class="nav-item nav-link">Insurance</a>
                     <div class="nav-item dropdown">
                         <a href="javascript:void(0)" class="nav-link dropdown-toggle active" data-bs-toggle="dropdown">Account</a>
                         <div class="dropdown-menu border-light m-0">
-                            <a href="signin.html" class="dropdown-item">Sign In</a>
-                            <a href="signup.html" class="dropdown-item active">Sign Up</a>
+                            <a href="/signin" class="dropdown-item">Sign In</a>
+                            <a href="/signup" class="dropdown-item active">Sign Up</a>
                         </div>
                     </div>
                 </div>
                 <div class="d-none d-lg-flex ms-2">
-                    <a class="tp-btn btn btn-primary py-3 px-5 animated slideInLeft" href="signin.html">
+                    <a class="tp-btn btn btn-primary py-3 px-5 animated slideInLeft" href="/signin">
                         E-BANKING <i class="fa fa-lock"></i>
                     </a>
                 </div>
@@ -113,30 +115,181 @@
             <div class="row g-5 justify-content-center">
                 <div class="col-lg-6 wow fadeInUp" data-wow-delay="0.1s">
                     <div class="bg-light rounded p-4">
+                        <!-- Registration Closed Alert -->
+                        <div id="registration-closed-alert" class="alert alert-warning d-none" role="alert">
+                            <i class="fas fa-info-circle"></i> <strong>Registrations Closed:</strong> New account creation is currently disabled. Please check back later.
+                        </div>
+
                         <!-- Alert placeholder -->
                         <div id="alert-placeholder"></div>
+                        
                         <h4 class="mb-4 text-center">Create Your Finanza Account</h4>
+                        <p class="text-center text-muted small mb-4">
+                            <i class="fas fa-lock"></i> Your information is protected with industry-standard encryption
+                        </p>
+
                         <form id="signUpForm">
                             <h5 class="mb-3">Authentication</h5>
+                            
+                            <!-- Full Name Field with Real-time Validation -->
                             <div class="mb-3">
-                                <label for="full_name" class="form-label">Full Name</label>
-                                <input type="text" class="form-control" id="full_name" name="full_name" placeholder="Enter your full name" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="email" class="form-label">Email</label>
-                                <input type="email" class="form-control" id="email" name="email" placeholder="Enter your email address" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="password" class="form-label">Password</label>
-                                <input type="password" class="form-control" id="password" name="password" placeholder="Create a password" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="confirm-password" class="form-label">Confirm Password</label>
-                                <input type="password" class="form-control" id="confirm-password" name="confirm_password" placeholder="Confirm your password" required>
+                                <label for="full_name" class="form-label">
+                                    Full Name 
+                                    <span id="full-name-check" class="ms-2"></span>
+                                </label>
+                                <input 
+                                    type="text" 
+                                    class="form-control" 
+                                    id="full_name" 
+                                    name="full_name" 
+                                    placeholder="Enter your full name" 
+                                    required
+                                    autocomplete="name"
+                                    minlength="2"
+                                    maxlength="100">
+                                <small class="form-text text-muted d-block mt-2" id="full-name-help">
+                                    Enter your legal full name (2-100 characters)
+                                </small>
+                                <small class="form-text text-danger d-none" id="full-name-error"></small>
                             </div>
 
-                            <button type="submit" class="btn btn-primary w-100 py-3">Register Account</button>
-                            <p class="text-center mt-3">Already have an account? <a href="signin.html">Sign In</a></p>
+                            <!-- Email Field with Real-time Validation -->
+                            <div class="mb-3">
+                                <label for="email" class="form-label">
+                                    Email Address 
+                                    <span id="email-check" class="ms-2"></span>
+                                </label>
+                                <input 
+                                    type="email" 
+                                    class="form-control" 
+                                    id="email" 
+                                    name="email" 
+                                    placeholder="Enter your email address" 
+                                    required
+                                    autocomplete="email"
+                                    maxlength="255">
+                                <small class="form-text text-muted d-block mt-2" id="email-help">
+                                    We'll send a verification link to this email
+                                </small>
+                                <small class="form-text text-danger d-none" id="email-error"></small>
+                            </div>
+
+                            <!-- Password Field with Real-time Validation -->
+                            <div class="mb-3">
+                                <label for="password" class="form-label">
+                                    Password 
+                                    <span id="pwd-strength" class="badge ms-2"></span>
+                                </label>
+                                <div class="input-group">
+                                    <input 
+                                        type="password" 
+                                        class="form-control" 
+                                        id="password" 
+                                        name="password" 
+                                        placeholder="Create a strong password" 
+                                        required
+                                        autocomplete="new-password"
+                                        minlength="8"
+                                        maxlength="128">
+                                    <button class="btn btn-outline-secondary" type="button" id="pwd-toggle">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                                <div class="mt-2" id="pwd-requirements">
+                                    <small class="form-text d-block">
+                                        <span id="pwd-uppercase" class="text-danger"><i class="fas fa-times"></i> Uppercase (A-Z)</span>
+                                    </small>
+                                    <small class="form-text d-block">
+                                        <span id="pwd-number" class="text-danger"><i class="fas fa-times"></i> Number (0-9)</span>
+                                    </small>
+                                    <small class="form-text d-block">
+                                        <span id="pwd-special" class="text-danger"><i class="fas fa-times"></i> Special (!@#$%^&*)</span>
+                                    </small>
+                                    <small class="form-text d-block">
+                                        <span id="pwd-length" class="text-danger"><i class="fas fa-times"></i> 8+ characters</span>
+                                    </small>
+                                </div>
+                                <small class="form-text text-danger d-none mt-2" id="pwd-error"></small>
+                            </div>
+
+                            <!-- Confirm Password Field -->
+                            <div class="mb-3">
+                                <label for="confirm-password" class="form-label">
+                                    Confirm Password 
+                                    <span id="confirm-pwd-check" class="ms-2"></span>
+                                </label>
+                                <input 
+                                    type="password" 
+                                    class="form-control" 
+                                    id="confirm-password" 
+                                    name="confirm_password" 
+                                    placeholder="Confirm your password" 
+                                    required
+                                    autocomplete="new-password"
+                                    minlength="8"
+                                    maxlength="128">
+                                <small class="form-text text-danger d-none" id="confirm-pwd-error"></small>
+                            </div>
+
+                            <hr class="my-4">
+
+                            <!-- Legal & Compliance Section -->
+                            <h5 class="mb-3">Legal & Compliance</h5>
+
+                            <div class="mb-3 form-check">
+                                <input 
+                                    type="checkbox" 
+                                    class="form-check-input" 
+                                    id="terms-check" 
+                                    name="terms_accepted" 
+                                    required>
+                                <label class="form-check-label" for="terms-check">
+                                    I have read and agree to the <a href="/terms" target="_blank">Terms of Service</a> 
+                                    and <a href="/privacy" target="_blank">Privacy Policy</a>
+                                    <span id="terms-check-error" class="text-danger d-none ms-2">✗ Required</span>
+                                </label>
+                            </div>
+
+                            <div class="mb-3 form-check">
+                                <input 
+                                    type="checkbox" 
+                                    class="form-check-input" 
+                                    id="data-check" 
+                                    name="data_processing_accepted" 
+                                    required>
+                                <label class="form-check-label" for="data-check">
+                                    I consent to Finanza processing my personal data for account management 
+                                    and AML/KYC compliance
+                                    <span id="data-check-error" class="text-danger d-none ms-2">✗ Required</span>
+                                </label>
+                            </div>
+
+                            <!-- CAPTCHA Placeholder -->
+                            <div class="mb-3 p-3 bg-white border rounded" id="captcha-container">
+                                <div class="g-recaptcha" data-sitekey="your-site-key-here" style="display:flex; justify-content:center;"></div>
+                                <small class="form-text text-muted d-block mt-2 text-center">
+                                    This site is protected by reCAPTCHA and the Google
+                                    <a href="https://policies.google.com/privacy" target="_blank">Privacy Policy</a> and
+                                    <a href="https://policies.google.com/terms" target="_blank">Terms of Service</a> apply.
+                                </small>
+                            </div>
+
+                            <!-- Submit Button -->
+                            <button 
+                                type="submit" 
+                                class="btn btn-primary w-100 py-3" 
+                                id="signUpBtn" 
+                                disabled>
+                                <i class="fas fa-check-circle me-2"></i>
+                                <span id="btn-text">Create Account</span>
+                                <span id="btn-spinner" class="spinner-border spinner-border-sm ms-2 d-none" role="status" aria-hidden="true"></span>
+                            </button>
+
+                            <!-- Form Footer -->
+                            <p class="text-center mt-3 text-muted small">
+                                Already have an account? <a href="/signin">Sign In</a> | 
+                                <a href="/" class="ms-2">Back to Home</a>
+                            </p>
                         </form>
                     </div>
                 </div>
@@ -145,53 +298,7 @@
     </div>
     <!-- Content End -->
 
-    <!-- Footer Start -->
-    <div class="container-fluid bg-dark text-light footer mt-5 py-5 wow fadeIn" data-wow-delay="0.1s">
-        <div class="container py-5">
-            <div class="row g-5">
-                <div class="col-lg-3 col-md-6">
-                    <h4 class="text-white mb-4">Our Office</h4>
-                    <p class="mb-2"><i class="fa fa-map-marker-alt me-3"></i>123 Main Street, New York, NY 10001</p>
-                    <p class="mb-2"><i class="fa fa-phone-alt me-3"></i>+1 (212) 555-1234</p>
-                    <p class="mb-2"><i class="fa fa-envelope me-3"></i>contact@finanza.com</p>
-                    <div class="d-flex pt-2">
-                        <a class="btn btn-square btn-outline-light rounded-circle me-2" href=""><i class="fab fa-twitter"></i></a>
-                        <a class="btn btn-square btn-outline-light rounded-circle me-2" href=""><i class="fab fa-facebook-f"></i></a>
-                        <a class="btn btn-square btn-outline-light rounded-circle me-2" href=""><i class="fab fa-youtube"></i></a>
-                        <a class="btn btn-square btn-outline-light rounded-circle me-2" href=""><i class="fab fa-linkedin-in"></i></a>
-                    </div>
-                </div>
-                <div class="col-lg-3 col-md-6">
-                    <h4 class="text-white mb-4">Services</h4>
-                    <a class="btn btn-link" href="financial_planning.html">Financial Planning</a>
-                    <a class="btn btn-link" href="investments.html">Cash Investment</a>
-                    <a class="btn btn-link" href="financial_consultancy.html">Financial Consultancy</a>
-                    <a class="btn btn-link" href="loans.html">Business Loans</a>
-                    <a class="btn btn-link" href="business_analysis.html">Business Analysis</a>
-                </div>
-                <div class="col-lg-3 col-md-6">
-                    <h4 class="text-white mb-4">Quick Links</h4>
-                    <a class="btn btn-link" href="/">Home</a> 
-                    <a class="btn btn-link" href="/">Home</a> 
-                    <a class="btn btn-link" href="/contact">Contact</a> 
-                    <a class="btn btn-link" href="/personal">Personal Account</a> 
-                    <a class="btn btn-link" href="/corporate">Corporate Account</a> 
-                    <a class="btn btn-link" href="#">Support</a> 
-                    <a class="btn btn-link" href="#">Support</a> 
-                </div>
-                <div class="col-lg-3 col-md-6">
-                    <h4 class="text-white mb-4">Newsletter</h4>
-                    <p>Stay updated with our latest news and insights. Subscribe to our newsletter.</p>
-                    <div class="position-relative w-100">
-                        <input class="form-control bg-white border-0 w-100 py-3 ps-4 pe-5" type="text" placeholder="Your email">
-                        <button type="button" class="btn btn-primary py-2 position-absolute top-0 end-0 mt-2 me-2">SignUp</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- Footer End -->
-
+   
 
     <!-- Copyright Start -->
     <div class="container-fluid copyright py-4">
@@ -227,17 +334,7 @@
     <script src="/static/js/main.js"></script>
 
     <script>
-        // SECURITY: Lock logged-in users - redirect to dashboard if already authenticated
-        function checkAndLockIfLoggedIn() {
-            const token = localStorage.getItem('token') || getCookie('access_token');
-            if (token) {
-                // User is logged in, redirect to dashboard
-                fetch('/api/admin/metrics')
-                    .then(r => r.ok ? window.location.href = '/user/admin/dashboard' : null)
-                    .catch(() => fetch('/api/users/me').then(r => r.ok ? window.location.href = '/user/dashboard' : null));
-            }
-        }
-        
+        // ==================== UTILITY FUNCTIONS ====================
         function getCookie(name) {
             const nameEQ = name + "=";
             const cookies = document.cookie.split(';');
@@ -248,66 +345,657 @@
             return null;
         }
         
-        // Check on page load
-        window.addEventListener('load', checkAndLockIfLoggedIn);
+        function getCookieValue(name) {
+            const nameEQ = name + "=";
+            const cookies = document.cookie.split(';');
+            for(let i = 0; i < cookies.length; i++) {
+                let cookie = cookies[i].trim();
+                if (cookie.startsWith(nameEQ)) {
+                    const value = cookie.substring(nameEQ.length);
+                    return decodeURIComponent(value);
+                }
+            }
+            return null;
+        }
+
+        // ==================== PRODUCTION SIGNUP HANDLER ====================
+        // CONSTANTS & CONFIGURATION
+        const CONFIG = {
+            API_TIMEOUT: 12000,         // 12 second timeout
+            CSRF_HEADER: 'X-CSRF-Token',
+            MAX_RETRIES: 3,
+            RETRY_DELAY: 1000
+        };
+
+        // VALIDATION RULES (Production-Grade)
+        const VALIDATION_RULES = {
+            email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+            fullName: /^[a-zA-Z\s'-]{2,100}$/,
+            password: {
+                minLength: 8,
+                hasUppercase: /[A-Z]/,
+                hasNumber: /[0-9]/,
+                hasSpecial: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/
+            }
+        };
+
+        // RATE LIMITING STATE
+        let rateLimitState = {
+            attempts: 0,
+            lastAttemptTime: 0,
+            cooldownUntil: 0
+        };
+
+        // ==================== UTILITY FUNCTIONS ====================
+        function sanitizeInput(input) {
+            return input.trim().replace(/[<>"/]/g, '');
+        }
+
+        function setFieldError(fieldId, message) {
+            const field = document.getElementById(fieldId);
+            const errorEl = document.getElementById(`${fieldId}-error`);
+            const checkEl = document.getElementById(`${fieldId}-check`);
+            
+            if (field) {
+                field.classList.add('is-invalid');
+                field.classList.remove('is-valid');
+            }
+            if (errorEl) {
+                errorEl.textContent = message;
+                errorEl.classList.remove('d-none');
+            }
+            if (checkEl) {
+                checkEl.innerHTML = '<i class="fas fa-times text-danger"></i>';
+            }
+        }
+
+        function clearFieldError(fieldId) {
+            const field = document.getElementById(fieldId);
+            const errorEl = document.getElementById(`${fieldId}-error`);
+            const checkEl = document.getElementById(`${fieldId}-check`);
+            
+            if (field) {
+                field.classList.remove('is-invalid');
+            }
+            if (errorEl) {
+                errorEl.textContent = '';
+                errorEl.classList.add('d-none');
+            }
+            if (checkEl) {
+                checkEl.innerHTML = '<i class="fas fa-check text-success"></i>';
+            }
+        }
+
+        function showAlert(message, type = 'info') {
+            const alertPlaceholder = document.getElementById('alert-placeholder');
+            const wrapper = document.createElement('div');
+            wrapper.innerHTML = [
+                `<div class="alert alert-${type} alert-dismissible fade show" role="alert" style="animation: slideDown 0.3s ease-out;">`,
+                `   <div><i class="fas fa-${type === 'danger' ? 'exclamation-circle' : type === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>${message}</div>`,
+                '   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>',
+                '</div>'
+            ].join('');
+            alertPlaceholder.innerHTML = '';
+            alertPlaceholder.append(wrapper);
+            
+            // Auto-hide success alerts after 5 seconds
+            if (type === 'success') {
+                setTimeout(() => {
+                    const alert = alertPlaceholder.querySelector('.alert');
+                    if (alert) alert.remove();
+                }, 5000);
+            }
+        }
+
+        function withTimeout(promise, ms) {
+            return Promise.race([
+                promise,
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Request timeout')), ms)
+                )
+            ]);
+        }
+
+        async function rateLimitCheck() {
+            const now = Date.now();
+            
+            // Reset counters if cooldown expired
+            if (now > rateLimitState.cooldownUntil) {
+                rateLimitState.attempts = 0;
+                rateLimitState.cooldownUntil = 0;
+                return { allowed: true };
+            }
+            
+            rateLimitState.attempts++;
+            
+            if (rateLimitState.attempts > CONFIG.MAX_RETRIES) {
+                const waitSeconds = Math.ceil((rateLimitState.cooldownUntil - now) / 1000);
+                return { 
+                    allowed: false, 
+                    message: `Too many attempts. Please wait ${waitSeconds} seconds.`,
+                    waitSeconds 
+                };
+            }
+            
+            return { allowed: true };
+        }
+
+        // ==================== PASSWORD VALIDATION ====================
+        function validatePassword(password) {
+            return {
+                length: password.length >= VALIDATION_RULES.password.minLength,
+                uppercase: VALIDATION_RULES.password.hasUppercase.test(password),
+                number: VALIDATION_RULES.password.hasNumber.test(password),
+                special: VALIDATION_RULES.password.hasSpecial.test(password)
+            };
+        }
+
+        function isPasswordValid(password) {
+            const validation = validatePassword(password);
+            return validation.length && validation.uppercase && validation.number && validation.special;
+        }
+
+        function updatePasswordValidationUI(password) {
+            const validation = validatePassword(password);
+            
+            const updateIndicator = (id, isValid) => {
+                const el = document.getElementById(id);
+                if (el) {
+                    if (isValid) {
+                        el.classList.remove('text-danger');
+                        el.classList.add('text-success');
+                        el.querySelector('i').className = 'fas fa-check';
+                    } else {
+                        el.classList.remove('text-success');
+                        el.classList.add('text-danger');
+                        el.querySelector('i').className = 'fas fa-times';
+                    }
+                }
+            };
+            
+            updateIndicator('pwd-uppercase', validation.uppercase);
+            updateIndicator('pwd-number', validation.number);
+            updateIndicator('pwd-special', validation.special);
+            updateIndicator('pwd-length', validation.length);
+            
+            // Update password strength badge
+            const strength = Object.values(validation).filter(Boolean).length;
+            const strengthEl = document.getElementById('pwd-strength');
+            if (strengthEl) {
+                if (strength === 4) {
+                    strengthEl.textContent = 'Strong';
+                    strengthEl.className = 'badge ms-2 bg-success';
+                } else if (strength >= 3) {
+                    strengthEl.textContent = 'Good';
+                    strengthEl.className = 'badge ms-2 bg-info';
+                } else if (strength >= 2) {
+                    strengthEl.textContent = 'Fair';
+                    strengthEl.className = 'badge ms-2 bg-warning';
+                } else {
+                    strengthEl.textContent = 'Weak';
+                    strengthEl.className = 'badge ms-2 bg-danger';
+                }
+            }
+            
+            return isPasswordValid(password);
+        }
+
+        // ==================== EMAIL VALIDATION ====================
+        function isEmailFormatValid(email) {
+            return VALIDATION_RULES.email.test(email);
+        }
+
+        async function validateEmailFormat() {
+            const emailField = document.getElementById('email');
+            const email = sanitizeInput(emailField.value);
+            
+            if (!email) {
+                clearFieldError('email');
+                return true;
+            }
+            
+            if (!isEmailFormatValid(email)) {
+                setFieldError('email', 'Please enter a valid email address (example: user@example.com)');
+                return false;
+            }
+            
+            try {
+                // Check if email already exists - real-time validation
+                const response = await withTimeout(
+                    fetch(`/api/v1/auth/check-email?email=${encodeURIComponent(email)}`),
+                    5000
+                );
+                
+                if (response.status === 409) {
+                    setFieldError('email', 'This email is already registered. Please sign in or use a different email.');
+                    return false;
+                }
+                
+                clearFieldError('email');
+                return true;
+            } catch (error) {
+                // Don't block on error - let backend handle validation
+                clearFieldError('email');
+                return true;
+            }
+        }
+
+        // ==================== FULL NAME VALIDATION ====================
+        function isFullNameValid(name) {
+            return VALIDATION_RULES.fullName.test(name);
+        }
+
+        function validateFullName() {
+            const fullNameField = document.getElementById('full_name');
+            const name = sanitizeInput(fullNameField.value);
+            
+            if (!name) {
+                clearFieldError('full_name');
+                return true;
+            }
+            
+            if (!isFullNameValid(name)) {
+                setFieldError('full_name', 'Please enter your full name (2-100 characters, letters, spaces, hyphens, and apostrophes only)');
+                return false;
+            }
+            
+            clearFieldError('full_name');
+            return true;
+        }
+
+        // ==================== CONFIRM PASSWORD VALIDATION ====================
+        function validatePasswordMatch() {
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+            
+            if (!confirmPassword) {
+                clearFieldError('confirm-password');
+                return true;
+            }
+            
+            if (password !== confirmPassword) {
+                setFieldError('confirm-password', 'Passwords do not match');
+                return false;
+            }
+            
+            clearFieldError('confirm-password');
+            return true;
+        }
+
+        // ==================== CHECKBOX VALIDATION ====================
+        function validateCheckboxes() {
+            const termsCheck = document.getElementById('terms-check').checked;
+            const dataCheck = document.getElementById('data-check').checked;
+            
+            const termsError = document.getElementById('terms-check-error');
+            const dataError = document.getElementById('data-check-error');
+            
+            if (!termsCheck && termsError) {
+                termsError.classList.remove('d-none');
+            } else if (termsError) {
+                termsError.classList.add('d-none');
+            }
+            
+            if (!dataCheck && dataError) {
+                dataError.classList.remove('d-none');
+            } else if (dataError) {
+                dataError.classList.add('d-none');
+            }
+            
+            return termsCheck && dataCheck;
+        }
+
+        // ==================== OVERALL FORM VALIDATION ====================
+        function updateButtonState() {
+            const fullName = document.getElementById('full_name').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+            const termsAccepted = document.getElementById('terms-check').checked;
+            const dataAccepted = document.getElementById('data-check').checked;
+            
+            const passwordsMatch = password === confirmPassword && password.length > 0;
+            const isValid = fullName && 
+                          email && 
+                          isPasswordValid(password) && 
+                          passwordsMatch && 
+                          termsAccepted && 
+                          dataAccepted;
+            
+            const signUpBtn = document.getElementById('signUpBtn');
+            signUpBtn.disabled = !isValid;
+        }
+
+        // ==================== REAL-TIME FIELD VALIDATION ====================
+        document.getElementById('full_name').addEventListener('blur', validateFullName);
+        document.getElementById('full_name').addEventListener('input', () => {
+            validateFullName();
+            updateButtonState();
+        });
+
+        document.getElementById('email').addEventListener('blur', validateEmailFormat);
+        document.getElementById('email').addEventListener('input', () => {
+            updateButtonState();
+        });
+
+        document.getElementById('password').addEventListener('input', () => {
+            updatePasswordValidationUI(document.getElementById('password').value);
+            validatePasswordMatch();
+            updateButtonState();
+        });
+
+        document.getElementById('confirm-password').addEventListener('input', () => {
+            validatePasswordMatch();
+            updateButtonState();
+        });
+
+        document.getElementById('terms-check').addEventListener('change', () => {
+            validateCheckboxes();
+            updateButtonState();
+        });
+
+        document.getElementById('data-check').addEventListener('change', () => {
+            validateCheckboxes();
+            updateButtonState();
+        });
+
+        // Password visibility toggle
+        document.getElementById('pwd-toggle').addEventListener('click', function() {
+            const pwdField = document.getElementById('password');
+            const icon = this.querySelector('i');
+            
+            if (pwdField.type === 'password') {
+                pwdField.type = 'text';
+                icon.className = 'fas fa-eye-slash';
+            } else {
+                pwdField.type = 'password';
+                icon.className = 'fas fa-eye';
+            }
+        });
+
+        // ==================== AUTH STATUS CHECK ====================
+        async function checkAndLockIfLoggedIn() {
+            const token = localStorage.getItem('token') || getCookie('access_token');
+            if (token) {
+                try {
+                    // Check if admin user
+                    const adminResp = await withTimeout(
+                        fetch('/user/admin/user-info', { 
+                            credentials: 'include',
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        }),
+                        5000
+                    );
+                    if (adminResp.ok) {
+                        const data = await adminResp.json();
+                        if (data.success && data.user && data.user.is_admin) {
+                            window.location.href = '/user/admin/dashboard';
+                            return;
+                        }
+                    }
+                } catch (error) {
+                    // Not an admin or not logged in
+                }
+                
+                // Try regular user profile
+                try {
+                    const response = await withTimeout(
+                        fetch('/api/user/profile', { 
+                            credentials: 'include',
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        }),
+                        5000
+                    );
+                    if (response.ok) {
+                        window.location.href = '/user/dashboard';
+                    }
+                } catch (error) {
+                    // Not authenticated
+                }
+            }
+        }
+
+        // ==================== SYSTEM CONFIG CHECK ====================
+        async function checkRegistrationStatus() {
+            // Signups are enabled by default.
+            // To disable, set a server-side flag — currently no /api/v1/config endpoint exists.
+            return true;
+        }
+
+        // ==================== PAGE LOAD ====================
+        window.addEventListener('load', async () => {
+            // Check auth status
+            checkAndLockIfLoggedIn();
+            
+            // Check system registration status
+            const signupsAllowed = await checkRegistrationStatus();
+            
+            // Initialize validation UI
+            updateButtonState();
+        });
         
-        // Check on pageshow (back button)
         window.addEventListener('pageshow', checkAndLockIfLoggedIn);
     </script>
 
     <script>
+        // ==================== SIGNUP FORM SUBMISSION HANDLER ====================
         const signUpForm = document.getElementById('signUpForm');
-        const alertPlaceholder = document.getElementById('alert-placeholder');
-
-        const showAlert = (message, type) => {
-            const wrapper = document.createElement('div');
-            wrapper.innerHTML = [
-                `<div class="alert alert-${type} alert-dismissible" role="alert">`,
-                `   <div>${message}</div>`,
-                '   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>',
-                '</div>'
-            ].join('');
-            alertPlaceholder.innerHTML = ''; // Clear previous alerts
-            alertPlaceholder.append(wrapper);
-        };
 
         signUpForm.addEventListener('submit', async (event) => {
             event.preventDefault();
 
-            const fullName = document.getElementById('full_name').value;
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const confirmPassword = document.getElementById('confirm-password').value;
-
-            if (password !== confirmPassword) {
-                showAlert('Passwords do not match.', 'danger');
+            // Rate limit check
+            const rateCheck = await rateLimitCheck();
+            if (!rateCheck.allowed) {
+                showAlert(`⏱️ ${rateCheck.message}`, 'warning');
                 return;
             }
 
-            const userData = {
-                full_name: fullName,
-                email: email,
-                password: password,
-            };
+            // Collect form data
+            const fullName = sanitizeInput(document.getElementById('full_name').value);
+            const email = sanitizeInput(document.getElementById('email').value);
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+            const termsAccepted = document.getElementById('terms-check').checked;
+            const dataAccepted = document.getElementById('data-check').checked;
 
-            try {
-                const response = await fetch('/auth/register', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(userData),
-                });
+            // ==================== CLIENT-SIDE VALIDATION ====================
+            
+            // Validate full name
+            if (!fullName) {
+                setFieldError('full_name', 'Full name is required');
+                showAlert('Please enter your full name', 'danger');
+                return;
+            }
+            if (!isFullNameValid(fullName)) {
+                setFieldError('full_name', 'Invalid name format');
+                showAlert('Full name must contain only letters, spaces, hyphens, and apostrophes', 'danger');
+                return;
+            }
 
-                const data = await response.json();
+            // Validate email
+            if (!email) {
+                setFieldError('email', 'Email is required');
+                showAlert('Please enter your email address', 'danger');
+                return;
+            }
+            if (!isEmailFormatValid(email)) {
+                setFieldError('email', 'Invalid email format');
+                showAlert('Please enter a valid email address', 'danger');
+                return;
+            }
 
-                if (response.ok) {
-                    showAlert('Registration successful! Redirecting...', 'success');
-                    const redirect = data.redirect_url || '/signin';
-                    setTimeout(() => { window.location.href = redirect; }, 1200);
-                } else {
-                    showAlert(data.detail || 'An error occurred during registration.', 'danger');
+            // Validate password
+            if (!password) {
+                setFieldError('password', 'Password is required');
+                showAlert('Please enter a password', 'danger');
+                return;
+            }
+            if (!isPasswordValid(password)) {
+                setFieldError('password', 'Password does not meet complexity requirements');
+                showAlert('Password must contain uppercase, number, special character, and be 8+ characters', 'danger');
+                return;
+            }
+
+            // Validate password match
+            if (password !== confirmPassword) {
+                setFieldError('confirm-password', 'Passwords do not match');
+                showAlert('Passwords do not match. Please try again.', 'danger');
+                return;
+            }
+
+            // Validate compliance checkboxes
+            if (!termsAccepted || !dataAccepted) {
+                showAlert('You must accept both the Terms of Service and Data Processing policies', 'danger');
+                return;
+            }
+
+            // ==================== RENDER LOADING STATE ====================
+            const btn = document.getElementById('signUpBtn');
+            const btnText = document.getElementById('btn-text');
+            const btnSpinner = document.getElementById('btn-spinner');
+            btn.disabled = true;
+            btnText.textContent = 'Creating account...';
+            btnSpinner.classList.remove('d-none');
+
+            // ==================== BACKEND REGISTRATION ====================
+            let retryCount = 0;
+            let lastError = null;
+
+            while (retryCount < CONFIG.MAX_RETRIES) {
+                try {
+                    // Prepare registration payload
+                    const registrationPayload = {
+                        full_name: fullName,
+                        email: email,
+                        password: password,
+                        terms_accepted: true,
+                        data_processing_accepted: true,
+                        role: 'user'  // CRITICAL: Always default to 'user' role
+                    };
+
+                    // Call registration API with timeout
+                    const response = await withTimeout(
+                        fetch('/api/v1/auth/register', {
+                            method: 'POST',
+                            headers: { 
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(registrationPayload),
+                            credentials: 'include'
+                        }),
+                        CONFIG.API_TIMEOUT
+                    );
+
+                    const data = await response.json();
+
+                    // ==================== SUCCESS PATH ====================
+                    if (response.ok) {
+                        // Store authentication data
+                        if (data.access_token) {
+                            localStorage.setItem('token', data.access_token);
+                            localStorage.setItem('token_type', data.token_type || 'bearer');
+                            localStorage.setItem('user_email', data.email);
+                            localStorage.setItem('user_id', data.user_id);
+                            localStorage.setItem('full_name', data.full_name);
+                            localStorage.setItem('admin_role', data.admin_role || 'USER');
+                            if (data.permissions) {
+                                localStorage.setItem('permissions', JSON.stringify(data.permissions));
+                            }
+                        }
+
+                        // Log compliance event
+                        console.log('Account created - TeC accepted on:', new Date().toISOString());
+
+                        showAlert('✓ Account created successfully! Redirecting to email verification...', 'success');
+
+                        // Redirect to deferred verification page
+                        const redirectUrl = data.redirect_url || '/verify-email';
+                        setTimeout(() => {
+                            window.location.href = redirectUrl;
+                        }, 1500);
+
+                        return;
+                    }
+
+                    // ==================== ERROR PATH ====================
+                    if (response.status === 409) {
+                        // Email already exists
+                        setFieldError('email', 'This email is already registered');
+                        showAlert('✗ This email is already registered. Please sign in or use a different email.', 'danger');
+                        break; // Don't retry on 409
+                    }
+
+                    if (response.status === 422) {
+                        // Validation error - detailed
+                        const detail = data.detail || 'Validation error';
+                        if (typeof detail === 'string') {
+                            // Extract field-specific errors if available
+                            if (detail.includes('email')) setFieldError('email', detail);
+                            else if (detail.includes('password')) setFieldError('password', detail);
+                            else if (detail.includes('name')) setFieldError('full_name', detail);
+                        }
+                        showAlert(`✗ Validation error: ${detail}`, 'danger');
+                        break; // Don't retry on validation errors
+                    }
+
+                    if (response.status === 503) {
+                        // Service unavailable - retry
+                        lastError = 'Service temporarily unavailable. Retrying...';
+                        retryCount++;
+                        if (retryCount < CONFIG.MAX_RETRIES) {
+                            await new Promise(resolve => setTimeout(resolve, CONFIG.RETRY_DELAY * retryCount));
+                            continue;
+                        }
+                    }
+
+                    if (response.status >= 500) {
+                        // Server error - retry
+                        lastError = 'Server error. Please try again.';
+                        retryCount++;
+                        if (retryCount < CONFIG.MAX_RETRIES) {
+                            await new Promise(resolve => setTimeout(resolve, CONFIG.RETRY_DELAY * retryCount));
+                            continue;
+                        }
+                    }
+
+                    // Other error
+                    lastError = data.detail || 'An error occurred during registration';
+                    showAlert(`✗ ${lastError}`, 'danger');
+                    break;
+
+                } catch (error) {
+                    // Network error or timeout
+                    lastError = error.message || 'Network error';
+
+                    if (error.message === 'Request timeout') {
+                        showAlert('✗ Request timed out. The server took too long to respond. Please try again.', 'danger');
+                        break; // Don't retry on timeout to prevent long waits
+                    }
+
+                    // Retry on network errors
+                    retryCount++;
+                    if (retryCount < CONFIG.MAX_RETRIES) {
+                        showAlert(`⏳ Retrying... (Attempt ${retryCount}/${CONFIG.MAX_RETRIES})`, 'info');
+                        await new Promise(resolve => setTimeout(resolve, CONFIG.RETRY_DELAY * retryCount));
+                        continue;
+                    }
+
+                    showAlert(`✗ Could not connect to the server. Please check your internet connection and try again. Error: ${lastError}`, 'danger');
                 }
-            } catch (error) {
-                showAlert('Could not connect to the server. Please try again later.', 'danger');
+
+                break; // Exit retry loop
+            }
+
+            // ==================== RESTORE BUTTON ====================
+            btn.disabled = false;
+            btnText.textContent = 'Create Account';
+            btnSpinner.classList.add('d-none');
+
+            // Increment rate limiting attempts
+            rateLimitState.attempts++;
+            if (rateLimitState.attempts > CONFIG.MAX_RETRIES) {
+                rateLimitState.cooldownUntil = Date.now() + 30000; // 30 second cooldown
             }
         });
     </script>

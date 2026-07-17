@@ -1,0 +1,322 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Finanza Real-Time KYC Event Dispatcher - Coordinates KYC validation events across services
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues:
+      - dev
+      - staging
+      - production
+    Description: Deployment environment
+
+Globals:
+  Function:
+    Timeout: 30  # Increased from 3 to 30 for DB operations
+    MemorySize: 512  # Increased from 128 to 512 for processing
+    EphemeralStorage:
+      Size: 512
+    LoggingConfig:
+      LogFormat: JSON
+      LogGroup: !Sub '/aws/lambda/finanza-kyc-dispatcher-${Environment}'
+    Tracing: Active  # Enabled for X-Ray
+    RuntimeManagementConfig:
+      UpdateRuntimeOn: Auto
+
+Resources:
+  # ==================== Lambda Execution Role ====================
+  FinanzaKycDispatcherRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole
+        - arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy
+        - arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess
+      Policies:
+        - PolicyName: RDSAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - rds-db:connect
+                Resource: !Sub 'arn:aws:rds-db:${AWS::Region}:${AWS::AccountId}:dbuser:*/iamdb'
+        - PolicyName: SecretsManagerAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - secretsmanager:GetSecretValue
+                Resource: !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:finanza/*'
+        - PolicyName: LambdaInvoke
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                Resource:
+                  - !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:finanza-fraud-detector'
+                  - !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:finanza-settlement-processor'
+        - PolicyName: SNSPublish
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - sns:Publish
+                Resource: !Sub 'arn:aws:sns:${AWS::Region}:${AWS::AccountId}:finanza-*'
+        - PolicyName: SESEmail
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ses:SendEmail
+                  - ses:SendRawEmail
+                Resource: '*'
+        - PolicyName: CloudWatchLogs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*'
+
+  # ==================== KYC Dispatcher Lambda Function ====================
+  FinanzaKycDispatcher:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'finanza-kyc-dispatcher-${Environment}'
+      CodeUri: ./src
+      Description: Coordinates KYC validation events from providers and routes to appropriate processors
+      Handler: lambda_kyc_dispatcher.lambda_handler
+      Runtime: python3.12
+      Architectures:
+        - x86_64
+      PackageType: Zip
+      SnapStart:
+        ApplyOn: None
+      RecursiveLoop: Terminate
+      Role: !GetAtt FinanzaKycDispatcherRole.Arn
+      VpcConfig:
+        SecurityGroupIds:
+          - !Ref DispatcherSecurityGroup
+        SubnetIds:
+          - !Ref PrivateSubnet1
+          - !Ref PrivateSubnet2
+          - !Ref PrivateSubnet3
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref Environment
+          RDS_ENDPOINT: !Sub 'database-1.cf2w2gwcmvc8.eu-north-1.rds.amazonaws.com'
+          RDS_PORT: '5432'
+          RDS_DATABASE: 'Finanza'
+          RDS_USERNAME: 'postgres'
+          LAMBDA_FRAUD_DETECTOR: !Sub 'finanza-fraud-detector-${Environment}'
+          LAMBDA_SETTLEMENT_PROCESSOR: !Sub 'finanza-settlement-processor-${Environment}'
+          SNS_KYC_TOPIC: !Ref KycEventsTopic
+          SES_SENDER_EMAIL: 'noreply@finanzabank.com'
+          SES_REGION: !Ref AWS::Region
+          LOG_LEVEL: INFO
+          ENABLE_XRAY: 'true'
+      Tags:
+        Environment: !Ref Environment
+        Service: finanza-realtime
+        Component: kyc-dispatcher
+      Layers:
+        - !Ref FinanzaDependenciesLayer
+
+  # ==================== Lambda Layer for Dependencies ====================
+  FinanzaDependenciesLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      LayerName: !Sub 'finanza-dependencies-${Environment}'
+      Description: Shared dependencies for Finanza Lambda functions
+      ContentUri: ./layers/dependencies
+      CompatibleRuntimes:
+        - python3.12
+      RetentionPolicy: Delete
+
+  # ==================== CloudWatch Alarms ====================
+  DispatcherErrorAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub 'finanza-kyc-dispatcher-errors-${Environment}'
+      AlarmDescription: Alert when KYC dispatcher has errors
+      MetricName: Errors
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 300  # 5 minutes
+      EvaluationPeriods: 1
+      Threshold: 5
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref FinanzaKycDispatcher
+      AlarmActions:
+        - !Ref AlertsTopic
+
+  DispatcherThrottlingAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub 'finanza-kyc-dispatcher-throttling-${Environment}'
+      AlarmDescription: Alert when KYC dispatcher is throttling
+      MetricName: Throttles
+      Namespace: AWS/Lambda
+      Statistic: Sum
+      Period: 60
+      EvaluationPeriods: 1
+      Threshold: 1
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref FinanzaKycDispatcher
+      AlarmActions:
+        - !Ref AlertsTopic
+
+  DispatcherDurationAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmName: !Sub 'finanza-kyc-dispatcher-duration-${Environment}'
+      AlarmDescription: Alert when KYC dispatcher execution takes too long
+      MetricName: Duration
+      Namespace: AWS/Lambda
+      Statistic: Average
+      Period: 300
+      EvaluationPeriods: 2
+      Threshold: 25000  # 25 seconds out of 30 second timeout
+      ComparisonOperator: GreaterThanThreshold
+      Dimensions:
+        - Name: FunctionName
+          Value: !Ref FinanzaKycDispatcher
+      AlarmActions:
+        - !Ref AlertsTopic
+
+  # ==================== SNS Topics ====================
+  KycEventsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub 'finanza-kyc-events-${Environment}'
+      DisplayName: KYC Validation Events
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+
+  AlertsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub 'finanza-alerts-${Environment}'
+      DisplayName: Finanza Alerts
+      Tags:
+        - Key: Environment
+          Value: !Ref Environment
+
+  # ==================== Security Group ====================
+  DispatcherSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for KYC dispatcher Lambda
+      VpcId: !Ref VPC
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          CidrIp: 10.0.0.0/16  # Internal VPC CIDR
+          Description: RDS PostgreSQL
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          Description: HTTPS for AWS services
+      Tags:
+        - Key: Name
+          Value: !Sub 'finanza-kyc-dispatcher-sg-${Environment}'
+        - Key: Environment
+          Value: !Ref Environment
+
+  # ==================== VPC References (Placeholders) ====================
+  # Replace these with your actual VPC resources
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Sub 'finanza-vpc-${Environment}'
+
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: !Select [0, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: !Sub 'finanza-private-subnet-1-${Environment}'
+
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.2.0/24
+      AvailabilityZone: !Select [1, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: !Sub 'finanza-private-subnet-2-${Environment}'
+
+  PrivateSubnet3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref VPC
+      CidrBlock: 10.0.3.0/24
+      AvailabilityZone: !Select [2, !GetAZs '']
+      Tags:
+        - Key: Name
+          Value: !Sub 'finanza-private-subnet-3-${Environment}'
+
+Outputs:
+  DispatcherFunctionArn:
+    Description: ARN of the KYC Dispatcher Lambda function
+    Value: !GetAtt FinanzaKycDispatcher.Arn
+    Export:
+      Name: !Sub 'finanza-kyc-dispatcher-arn-${Environment}'
+
+  DispatcherFunctionName:
+    Description: Name of the KYC Dispatcher Lambda function
+    Value: !Ref FinanzaKycDispatcher
+    Export:
+      Name: !Sub 'finanza-kyc-dispatcher-name-${Environment}'
+
+  KycEventsTopicArn:
+    Description: ARN of KYC Events SNS topic
+    Value: !Ref KycEventsTopic
+    Export:
+      Name: !Sub 'finanza-kyc-events-topic-${Environment}'
+
+  DispatcherRoleArn:
+    Description: ARN of dispatcher execution role
+    Value: !GetAtt FinanzaKycDispatcherRole.Arn
+    Export:
+      Name: !Sub 'finanza-kyc-dispatcher-role-${Environment}'
+
+  SecurityGroupId:
+    Description: Security group for Lambda
+    Value: !Ref DispatcherSecurityGroup
+    Export:
+      Name: !Sub 'finanza-kyc-dispatcher-sg-${Environment}'

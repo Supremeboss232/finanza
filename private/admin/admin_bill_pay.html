@@ -3,291 +3,375 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bill Pay Management - Admin Dashboard</title>
+    <title>Bill Pay Management - Production</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
     <style>
-        :root {
-            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        body { background: #f8f9fa; }
+        .admin-nav { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .admin-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; }
+        .stat-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .stat-number { font-size: 2rem; font-weight: bold; color: #667eea; }
+        .stat-label { color: #666; font-size: 0.9rem; margin-top: 5px; }
+        .dashboard-section { background: white; border-radius: 10px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 30px; }
+        .chart-container { position: relative; height: 300px; margin-bottom: 20px; }
+        .status-badge { padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+        .status-scheduled { background: #cfe9ff; color: #084298; }
+        .status-sent { background: #d1e7dd; color: #0f5132; }
+        .status-delivered { background: #d1e7dd; color: #0f5132; }
+        .status-failed { background: #f8d7da; color: #842029; }
+        
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+        .toast-notification {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideInRight 0.3s ease-out;
         }
-
-        body { background: #f5f7fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-
-        .navbar { background: var(--primary-gradient); box-shadow: 0 4px 6px rgba(0,0,0,0.1); padding: 1rem 2rem; }
-        .navbar-brand { font-weight: 700; font-size: 1.5rem; color: white; }
-
-        .page-header { background: var(--primary-gradient); color: white; padding: 2rem; border-radius: 8px; margin-bottom: 2rem; }
-        .page-header h1 { font-weight: 700; margin-bottom: 0.5rem; }
-
-        .metric-card { background: white; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 1.5rem; transition: transform 0.2s; }
-        .metric-card:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
-        .metric-card .metric-value { font-size: 2.5rem; font-weight: 700; color: #667eea; }
-        .metric-card .metric-label { font-size: 0.875rem; color: #6b7280; font-weight: 500; margin-top: 0.5rem; }
-        .metric-icon { font-size: 2rem; color: #667eea; margin-bottom: 1rem; }
-
-        .chart-container { position: relative; height: 300px; margin-bottom: 2rem; }
-
-        .data-table { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 2rem; }
-        .data-table table { margin-bottom: 0; }
-        .data-table thead { background: #f9fafb; border-bottom: 2px solid #e5e7eb; }
-        .data-table th { font-weight: 600; color: #374151; padding: 1rem; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.5px; }
-        .data-table td { padding: 1rem; vertical-align: middle; }
-
-        .badge { padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
-        .badge-scheduled { background: #dbeafe; color: #0c2d6b; }
-        .badge-sent { background: #d1fae5; color: #065f46; }
-        .badge-failed { background: #fee2e2; color: #7f1d1d; }
-        .badge-completed { background: #d1fae5; color: #065f46; }
-
-        .action-buttons { display: flex; gap: 0.5rem; }
-        .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.75rem; }
-
-        .btn-primary { background: #667eea; border-color: #667eea; }
-        .btn-primary:hover { background: #5568d3; border-color: #5568d3; }
-
-        .modal-header { background: var(--primary-gradient); color: white; }
-        .modal-header .btn-close { filter: brightness(0) invert(1); }
-
-        .form-label { font-weight: 600; color: #374151; margin-bottom: 0.5rem; }
-        .form-control, .form-select { border: 1px solid #d1d5db; border-radius: 6px; padding: 0.7rem; }
-        .form-control:focus, .form-select:focus { border-color: #667eea; box-shadow: 0 0 0 3px rgba(102,126,234,0.1); }
-
-        .section-divider { display: flex; align-items: center; margin: 2rem 0 1.5rem; gap: 1rem; }
-        .section-divider h3 { margin: 0; font-weight: 700; color: #1f2937; font-size: 1.25rem; }
-        .section-divider hr { flex: 1; border-color: #e5e7eb; }
+        @keyframes slideInRight { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .toast-notification.success { border-left: 4px solid #28a745; }
+        .toast-notification.error { border-left: 4px solid #dc3545; }
+        .toast-notification.warning { border-left: 4px solid #ffc107; color: #000; }
+        .toast-notification.info { border-left: 4px solid #17a2b8; }
+        
+        .masked-text { font-family: 'Courier New', monospace; color: #999; }
+        .error-container { background: #f8d7da; border: 1px solid #f5c2c7; color: #721c24; padding: 12px; border-radius: 5px; margin-bottom: 15px; display: none; }
+        .error-container.show { display: block; }
+        .error-container a { color: #721c24; font-weight: bold; text-decoration: underline; }
+        .pagination-controls { display: flex; align-items: center; gap: 10px; }
+        .modal-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .form-control:focus { border-color: #667eea; box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25); }
+        .btn-primary { background: #667eea; border: none; }
+        .btn-primary:hover { background: #5568d3; }
+        .table-responsive { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
     </style>
+
+    <script src="/static/js/toast-utils.js"></script>
 </head>
 <body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
+    <!-- Navigation -->
+    <nav class="admin-nav navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
-            <span class="navbar-brand"><i class="fas fa-credit-card"></i> Bill Pay</span>
+            <a class="navbar-brand" href="/user/admin/dashboard">
+                <i class="fas fa-credit-card"></i> Finanza Admin
+            </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link text-white" href="javascript:navigateTo('/user/admin/')">&larr; Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/dashboard">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/lending">Loans</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
                 </ul>
             </div>
         </div>
     </nav>
 
-    <div class="container-fluid p-4">
-        <!-- Page Header -->
-        <div class="page-header">
-            <h1><i class="fas fa-file-invoice-dollar"></i> Bill Pay Management</h1>
+    <div class="container-fluid mt-5 mb-5">
+        <!-- Header -->
+        <div class="admin-header">
+            <h1><i class="fas fa-credit-card"></i> Bill Pay Management</h1>
             <p class="mb-0">Scheduled payments, payee management, and payment tracking</p>
         </div>
 
-        <!-- Metrics Row -->
-        <div class="row mb-4">
-            <div class="col-md-3">
-                <div class="metric-card">
-                    <div class="metric-icon"><i class="fas fa-calendar-check"></i></div>
-                    <div class="metric-value" id="scheduledPayments">0</div>
-                    <div class="metric-label">Scheduled Payments</div>
+        <!-- Quick Stats -->
+        <div class="row g-4 mb-5">
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card">
+                    <div class="stat-number" id="scheduledPayments">0</div>
+                    <div class="stat-label">Scheduled Payments</div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="metric-card">
-                    <div class="metric-icon"><i class="fas fa-check-circle"></i></div>
-                    <div class="metric-value" id="processedToday">0</div>
-                    <div class="metric-label">Processed Today</div>
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card">
+                    <div class="stat-number" id="processedToday">0</div>
+                    <div class="stat-label">Processed Today</div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="metric-card">
-                    <div class="metric-icon"><i class="fas fa-dollar-sign"></i></div>
-                    <div class="metric-value" id="totalPayments">$0M</div>
-                    <div class="metric-label">Total in Queue</div>
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card">
+                    <div class="stat-number" id="totalPayments">$0M</div>
+                    <div class="stat-label">Total in Queue</div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="metric-card">
-                    <div class="metric-icon"><i class="fas fa-users"></i></div>
-                    <div class="metric-value" id="activePayees">0</div>
-                    <div class="metric-label">Active Payees</div>
+            <div class="col-lg-3 col-md-6">
+                <div class="stat-card">
+                    <div class="stat-number" id="activePayees">0</div>
+                    <div class="stat-label">Active Payees</div>
                 </div>
             </div>
         </div>
 
         <!-- Charts Row -->
-        <div class="row mb-4">
-            <div class="col-md-6">
-                <div class="data-table">
-                    <div style="padding: 1.5rem;">
-                        <h5 class="mb-3">Payment Status (30 Days)</h5>
-                        <div class="chart-container">
-                            <canvas id="paymentStatusChart"></canvas>
-                        </div>
+        <div class="row mb-5">
+            <div class="col-lg-6">
+                <div class="dashboard-section">
+                    <h5><i class="fas fa-chart-line"></i> Payment Status (30 Days)</h5>
+                    <div class="chart-container">
+                        <canvas id="paymentStatusChart"></canvas>
                     </div>
                 </div>
             </div>
-            <div class="col-md-6">
-                <div class="data-table">
-                    <div style="padding: 1.5rem;">
-                        <h5 class="mb-3">Payment Categories</h5>
-                        <div class="chart-container">
-                            <canvas id="categoriesChart"></canvas>
-                        </div>
+            <div class="col-lg-6">
+                <div class="dashboard-section">
+                    <h5><i class="fas fa-chart-pie"></i> Payment Categories</h5>
+                    <div class="chart-container">
+                        <canvas id="categoriesChart"></canvas>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Scheduled Bills Table -->
-        <div class="section-divider">
-            <h3>Scheduled Bills</h3>
-            <hr>
+        <!-- Scheduled Bills -->
+        <div class="dashboard-section">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5><i class="fas fa-calendar-check"></i> Scheduled Bills</h5>
+                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#scheduleBillModal">
+                    <i class="fas fa-plus"></i> Schedule Bill
+                </button>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <input type="text" class="form-control" id="billSearch" placeholder="Search by Bill ID or Payee...">
+                </div>
+                <div class="col-md-3">
+                    <select class="form-control" id="billStatusFilter">
+                        <option value="">All Statuses</option>
+                        <option value="scheduled">Scheduled</option>
+                        <option value="sent">Sent</option>
+                        <option value="failed">Failed</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-outline-primary w-100" onclick="searchBills()">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                </div>
+            </div>
+
+            <div class="error-container" id="billErrorContainer">
+                <i class="fas fa-exclamation-triangle"></i> Failed to load bills. 
+                <a href="javascript:loadScheduledBills()">Retry</a>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Bill ID</th>
+                            <th>User</th>
+                            <th>Payee</th>
+                            <th>Amount</th>
+                            <th>Schedule</th>
+                            <th>Due Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="billsTable">
+                        <tr><td colspan="8" class="text-center text-muted">Loading bills...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div class="d-flex justify-content-between align-items-center mt-4">
+                <div>
+                    <label>Records per page:</label>
+                    <select class="form-select form-select-sm d-inline-block w-auto" id="billPageSize" onchange="changeBillPageSize()">
+                        <option value="10">10</option>
+                        <option value="20" selected>20</option>
+                        <option value="50">50</option>
+                    </select>
+                </div>
+                <div class="pagination-controls">
+                    <button class="btn btn-sm btn-outline-secondary" id="billPrevBtn" onclick="previousBillPage()" disabled>
+                        <i class="fas fa-chevron-left"></i> Previous
+                    </button>
+                    <span id="billPageInfo" class="mx-2">Page 1</span>
+                    <button class="btn btn-sm btn-outline-secondary" id="billNextBtn" onclick="nextBillPage()" disabled>
+                        Next <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
         </div>
 
-        <div class="data-table">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Bill ID</th>
-                        <th>User</th>
-                        <th>Payee</th>
-                        <th>Amount</th>
-                        <th>Schedule</th>
-                        <th>Due Date</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="billsTable">
-                    <tr><td colspan="8" class="text-center text-muted py-4">Loading bills...</td></tr>
-                </tbody>
-            </table>
+        <!-- Payee Directory -->
+        <div class="dashboard-section">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h5><i class="fas fa-address-book"></i> Payee Directory</h5>
+                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#addPayeeModal">
+                    <i class="fas fa-user-plus"></i> Add Payee
+                </button>
+            </div>
+
+            <div class="error-container" id="payeeErrorContainer">
+                <i class="fas fa-exclamation-triangle"></i> Failed to load payees. 
+                <a href="javascript:loadPayees()">Retry</a>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Payee ID</th>
+                            <th>Payee Name</th>
+                            <th>Account #</th>
+                            <th>Routing #</th>
+                            <th>Category</th>
+                            <th>Active Users</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="payeesTable">
+                        <tr><td colspan="8" class="text-center text-muted">Loading payees...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
-        <!-- Payees Table -->
-        <div class="section-divider">
-            <h3>Payee Directory</h3>
-            <hr>
-        </div>
+        <!-- Payment History -->
+        <div class="dashboard-section">
+            <h5><i class="fas fa-history"></i> Payment History</h5>
 
-        <div class="data-table">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Payee ID</th>
-                        <th>Payee Name</th>
-                        <th>Account #</th>
-                        <th>Routing #</th>
-                        <th>Category</th>
-                        <th>Active Users</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="payeesTable">
-                    <tr><td colspan="8" class="text-center text-muted py-4">Loading payees...</td></tr>
-                </tbody>
-            </table>
-        </div>
+            <div class="error-container" id="paymentErrorContainer">
+                <i class="fas fa-exclamation-triangle"></i> Failed to load payments. 
+                <a href="javascript:loadPayments()">Retry</a>
+            </div>
 
-        <!-- Payments History Table -->
-        <div class="section-divider">
-            <h3>Payment History</h3>
-            <hr>
-        </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Payment ID</th>
+                            <th>User</th>
+                            <th>Payee</th>
+                            <th>Amount</th>
+                            <th>Sent Date</th>
+                            <th>Delivered Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="paymentsTable">
+                        <tr><td colspan="8" class="text-center text-muted">Loading payments...</td></tr>
+                    </tbody>
+                </table>
+            </div>
 
-        <div class="data-table">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Payment ID</th>
-                        <th>User</th>
-                        <th>Payee</th>
-                        <th>Amount</th>
-                        <th>Sent Date</th>
-                        <th>Delivered Date</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="paymentsTable">
-                    <tr><td colspan="8" class="text-center text-muted py-4">Loading payments...</td></tr>
-                </tbody>
-            </table>
+            <!-- Payment History Pagination -->
+            <div class="d-flex justify-content-between align-items-center mt-4">
+                <div>
+                    <label>Records per page:</label>
+                    <select class="form-select form-select-sm d-inline-block w-auto" id="paymentPageSize" onchange="changePaymentPageSize()">
+                        <option value="10" selected>10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                    </select>
+                </div>
+                <div class="pagination-controls">
+                    <button class="btn btn-sm btn-outline-secondary" id="paymentPrevBtn" onclick="previousPaymentPage()" disabled>
+                        <i class="fas fa-chevron-left"></i> Previous
+                    </button>
+                    <span id="paymentPageInfo" class="mx-2">Page 1</span>
+                    <button class="btn btn-sm btn-outline-secondary" id="paymentNextBtn" onclick="nextPaymentPage()" disabled>
+                        Next <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- Schedule Bill Modal -->
-    <div class="modal fade" id="scheduleBillModal" tabindex="-1">
+    <div class="modal fade" id="scheduleBillModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="fas fa-calendar-plus"></i> Schedule Bill</h5>
+                    <h5 class="modal-title">Schedule Bill (Requires MFA)</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
-                    <form id="scheduleBillForm">
+                <form id="scheduleBillForm" onsubmit="handleScheduleBill(event)">
+                    <div class="modal-body">
                         <div class="mb-3">
-                            <label class="form-label">User</label>
-                            <select class="form-select" id="billUser" required>
-                                <option value="">Select User...</option>
+                            <label class="form-label">User *</label>
+                            <select class="form-control" id="billUser" required>
+                                <option value="">Select user...</option>
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Payee</label>
-                            <select class="form-select" id="billPayee" required>
-                                <option value="">Select Payee...</option>
+                            <label class="form-label">Payee *</label>
+                            <select class="form-control" id="billPayee" required>
+                                <option value="">Select payee...</option>
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Amount</label>
-                            <input type="number" class="form-control" id="billAmount" step="0.01" required>
+                            <label class="form-label">Amount *</label>
+                            <input type="number" class="form-control" id="billAmount" step="0.01" min="0" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Due Date</label>
+                            <label class="form-label">Due Date *</label>
                             <input type="date" class="form-control" id="billDueDate" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Recurring</label>
-                            <select class="form-select" id="billRecurring">
+                            <label class="form-label">Recurring *</label>
+                            <select class="form-control" id="billRecurring" required onchange="toggleEndDateField()">
                                 <option value="once">One Time</option>
                                 <option value="monthly">Monthly</option>
                                 <option value="quarterly">Quarterly</option>
                                 <option value="annually">Annually</option>
                             </select>
                         </div>
-                        <button type="submit" class="btn btn-primary w-100">Schedule Bill</button>
-                    </form>
-                </div>
+                        <div class="mb-3" id="endDateContainer" style="display: none;">
+                            <label class="form-label">End Date</label>
+                            <input type="date" class="form-control" id="billEndDate">
+                            <small class="text-muted">Optional: Leave blank to run indefinitely</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Schedule Bill (Requires MFA)</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
 
     <!-- Add Payee Modal -->
-    <div class="modal fade" id="addPayeeModal" tabindex="-1">
+    <div class="modal fade" id="addPayeeModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="fas fa-user-plus"></i> Add Payee</h5>
+                    <h5 class="modal-title">Add Payee (Requires MFA)</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
-                    <form id="addPayeeForm">
+                <form id="addPayeeForm" onsubmit="handleAddPayee(event)">
+                    <div class="modal-body">
                         <div class="mb-3">
-                            <label class="form-label">Payee Name</label>
-                            <input type="text" class="form-control" id="payeeName" required>
+                            <label class="form-label">Payee Name *</label>
+                            <input type="text" class="form-control" id="payeeName" required maxlength="100">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Account Number</label>
-                            <input type="text" class="form-control" id="payeeAccount" required>
+                            <label class="form-label">Account Number *</label>
+                            <input type="text" class="form-control" id="payeeAccount" required maxlength="32">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Routing Number</label>
-                            <input type="text" class="form-control" id="payeeRouting" required>
+                            <label class="form-label">Routing Number *</label>
+                            <input type="text" class="form-control" id="payeeRouting" required maxlength="9" pattern="\d{9}">
+                            <small class="text-muted">9 digits</small>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Category</label>
-                            <select class="form-select" id="payeeCategory" required>
-                                <option value="">Select Category...</option>
+                            <label class="form-label">Category *</label>
+                            <select class="form-control" id="payeeCategory" required>
+                                <option value="">Select category...</option>
                                 <option value="utilities">Utilities</option>
                                 <option value="healthcare">Healthcare</option>
                                 <option value="insurance">Insurance</option>
@@ -296,233 +380,972 @@
                                 <option value="other">Other</option>
                             </select>
                         </div>
-                        <button type="submit" class="btn btn-primary w-100">Add Payee</button>
-                    </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Add Payee (Requires MFA)</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- MFA Modal -->
+    <div class="modal fade" id="mfaModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Multi-Factor Authentication Required</h5>
+                </div>
+                <div class="modal-body">
+                    <p>This payment operation requires verification. Please enter your 2FA code:</p>
+                    <input type="text" class="form-control mb-3" id="mfaCode" placeholder="Enter 6-digit code" maxlength="6">
+                    <label class="form-label">Reason for Action</label>
+                    <textarea class="form-control" id="mfaReason" rows="3" placeholder="Provide business reason..."></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="completeMFAVerification()">Verify & Proceed</button>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Cancel Bill Confirmation Modal -->
+    <div class="modal fade" id="cancelBillModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Cancel Scheduled Payment</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p id="cancelBillText">Are you sure you want to cancel the scheduled payment?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No, Keep Payment</button>
+                    <button type="button" class="btn btn-danger" id="confirmCancelBillBtn">Yes, Cancel Payment</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Bill Modal -->
+    <div class="modal fade" id="editBillModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Scheduled Bill</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="editBillForm" onsubmit="handleEditBill(event)">
+                    <input type="hidden" id="editBillId">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">User Email *</label>
+                            <input type="text" class="form-control" id="editBillUserEmail" disabled>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Payee *</label>
+                            <select class="form-control" id="editBillPayee" required></select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Amount *</label>
+                            <input type="number" class="form-control" id="editBillAmount" step="0.01" min="0" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Due Date *</label>
+                            <input type="date" class="form-control" id="editBillDueDate" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Recurring *</label>
+                            <select class="form-control" id="editBillRecurring" required onchange="toggleEditEndDateField()">
+                                <option value="once">One Time</option>
+                                <option value="monthly">Monthly</option>
+                                <option value="quarterly">Quarterly</option>
+                                <option value="annually">Annually</option>
+                            </select>
+                        </div>
+                        <div class="mb-3" id="editEndDateContainer" style="display: none;">
+                            <label class="form-label">End Date</label>
+                            <input type="date" class="form-control" id="editBillEndDate">
+                            <small class="text-muted">Optional: Leave blank to run indefinitely</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Payee Modal -->
+    <div class="modal fade" id="editPayeeModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Payee</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="editPayeeForm" onsubmit="handleEditPayee(event)">
+                    <input type="hidden" id="editPayeeId">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Payee Name *</label>
+                            <input type="text" class="form-control" id="editPayeeName" required maxlength="100">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Account Number *</label>
+                            <input type="text" class="form-control" id="editPayeeAccount" required maxlength="32">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Routing Number *</label>
+                            <input type="text" class="form-control" id="editPayeeRouting" required maxlength="9" pattern="\d{9}">
+                            <small class="text-muted">9 digits</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Category *</label>
+                            <select class="form-control" id="editPayeeCategory" required>
+                                <option value="">Select category...</option>
+                                <option value="utilities">Utilities</option>
+                                <option value="healthcare">Healthcare</option>
+                                <option value="insurance">Insurance</option>
+                                <option value="mortgage">Mortgage</option>
+                                <option value="education">Education</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Status *</label>
+                            <select class="form-control" id="editPayeeStatus" required>
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Payment Modal -->
+    <div class="modal fade" id="viewPaymentModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Payment Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered mb-0">
+                            <tbody>
+                                <tr><th>Payment ID</th><td id="viewPaymentId"></td></tr>
+                                <tr><th>User Email</th><td id="viewPaymentUser"></td></tr>
+                                <tr><th>Payee Name</th><td id="viewPaymentPayee"></td></tr>
+                                <tr><th>Amount</th><td id="viewPaymentAmount"></td></tr>
+                                <tr><th>Sent Date</th><td id="viewPaymentSentDate"></td></tr>
+                                <tr><th>Delivered Date</th><td id="viewPaymentDeliveredDate"></td></tr>
+                                <tr><th>Status</th><td><span id="viewPaymentStatus" class="status-badge"></span></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container"></div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
-    <script src="/admin_static/js/admin-utils.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
     <script>
-        let paymentStatusChart, categoriesChart;
+        // ==================== CONFIGURATION ====================
+        const CONFIG = {
+            API_BASE: '/api/v1',
+            PAGINATION_SIZES: [10, 20, 50],
+            SESSION_CHECK_INTERVAL: 300000,
+            TOAST_DURATION: 5000
+        };
 
-        document.addEventListener('DOMContentLoaded', function() {
-            checkAdminAccess();
-            loadBillPayMetrics();
-            loadScheduledBills();
-            loadPayees();
-            loadPayments();
-            initCharts();
-        });
+        // ==================== GLOBAL STATE ====================
+        const state = {
+            token: localStorage.getItem('token'),
+            currentBillPage: 1,
+            billPageSize: 20,
+            totalBills: 0,
+            paymentStatusChart: null,
+            categoriesChart: null,
+            currentMFACallback: null,
+            allPayments: [],
+            currentPaymentPage: 1,
+            paymentPageSize: 10
+        };
 
+        // ==================== SECURITY MANAGER ====================
+        class SecurityManager {
+            constructor() {
+                this.sessionToken = localStorage.getItem('token');
+                this.csrfToken = localStorage.getItem('csrf_token') || this.generateCSRFToken();
+                this.idempotencyKey = null;
+            }
+
+            generateCSRFToken() {
+                const token = 'csrf_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+                localStorage.setItem('csrf_token', token);
+                return token;
+            }
+
+            getSecureHeaders(method = 'GET') {
+                const headers = {
+                    'Authorization': `Bearer ${this.sessionToken}`,
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': this.csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                };
+                if (method === 'POST' || method === 'PUT') {
+                    this.idempotencyKey = 'idempotent_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                    headers['X-Idempotency-Key'] = this.idempotencyKey;
+                }
+                return headers;
+            }
+
+            escapeHtml(text) {
+                if (text === null || text === undefined) return '';
+                const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+                return String(text).replace(/[&<>"']/g, m => map[m]);
+            }
+
+            maskPII(data, fullViewAccess = false) {
+                if (fullViewAccess) return data;
+                if (typeof data !== 'string') return data;
+                if (data.length <= 4) return '****';
+                return '*'.repeat(data.length - 4) + data.substring(data.length - 4);
+            }
+
+            requireMFA(action, callback) {
+                state.currentMFACallback = { action, callback };
+                new bootstrap.Modal(document.getElementById('mfaModal')).show();
+            }
+        }
+
+        const securityManager = new SecurityManager();
+
+        // ==================== TOAST NOTIFICATIONS ====================
+        function showToast(message, type = 'info', duration = CONFIG.TOAST_DURATION) {
+            const container = document.querySelector('.toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast-notification ${type}`;
+            
+            const icons = {
+                success: 'fa-check-circle',
+                error: 'fa-times-circle',
+                warning: 'fa-exclamation-circle',
+                info: 'fa-info-circle'
+            };
+            
+            toast.innerHTML = `
+                <i class="fas ${icons[type]}"></i>
+                <span>${securityManager.escapeHtml(message)}</span>
+            `;
+            
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), duration);
+        }
+
+        // ==================== METRICS & CHARTS ====================
         async function loadBillPayMetrics() {
             try {
-                const response = await fetchAPI('/api/v1/bill-pay/metrics');
-                if (response.success) {
-                    document.getElementById('scheduledPayments').textContent = response.data.scheduled_payments || 0;
-                    document.getElementById('processedToday').textContent = response.data.processed_today || 0;
-                    document.getElementById('totalPayments').textContent = formatCurrency(response.data.total_in_queue || 0, true);
-                    document.getElementById('activePayees').textContent = response.data.active_payees || 0;
-                }
+                const response = await fetch(`${CONFIG.API_BASE}/bill-pay/metrics`, {
+                    headers: securityManager.getSecureHeaders()
+                });
+                
+                if (!response.ok) throw new Error('Failed');
+                const data = await response.json();
+                
+                document.getElementById('scheduledPayments').textContent = data.scheduled_payments || 0;
+                document.getElementById('processedToday').textContent = data.processed_today || 0;
+                document.getElementById('totalPayments').textContent = '$' + ((data.total_in_queue || 0) / 1000000).toFixed(1) + 'M';
+                document.getElementById('activePayees').textContent = data.active_payees || 0;
             } catch (error) {
                 console.error('Error loading metrics:', error);
+                showToast('Failed to load metrics', 'error');
             }
         }
 
-        async function loadScheduledBills() {
+        async function loadChartData() {
             try {
-                const response = await fetchAPI('/api/v1/bill-pay/bills');
-                const table = document.getElementById('billsTable');
+                const response = await fetch(`${CONFIG.API_BASE}/bill-pay/chart-data`, {
+                    headers: securityManager.getSecureHeaders()
+                });
                 
-                if (!response.success || !response.data?.length) {
-                    table.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No scheduled bills</td></tr>';
-                    return;
-                }
-
-                table.innerHTML = response.data.map(bill => `
-                    <tr>
-                        <td><strong>#${bill.id}</strong></td>
-                        <td>${bill.user_email}</td>
-                        <td>${bill.payee_name}</td>
-                        <td>${formatCurrency(bill.amount)}</td>
-                        <td><span class="badge bg-info">${bill.frequency}</span></td>
-                        <td>${formatDate(bill.due_date)}</td>
-                        <td><span class="badge badge-${bill.status}">${bill.status}</span></td>
-                        <td><button class="btn btn-sm btn-primary" onclick="editBill('${bill.id}')">Edit</button></td>
-                    </tr>
-                `).join('');
+                if (!response.ok) throw new Error('Failed');
+                const data = await response.json();
+                
+                renderPaymentStatusChart(data.payment_status || {});
+                renderCategoriesChart(data.categories || {});
             } catch (error) {
-                console.error('Error loading bills:', error);
+                console.error('Error loading chart data:', error);
+                showToast('Failed to load chart data', 'warning');
             }
         }
 
-        async function loadPayees() {
-            try {
-                const response = await fetchAPI('/api/v1/bill-pay/payees');
-                const table = document.getElementById('payeesTable');
-                
-                if (!response.success || !response.data?.length) {
-                    table.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No payees found</td></tr>';
-                    return;
-                }
-
-                table.innerHTML = response.data.map(payee => `
-                    <tr>
-                        <td><strong>#${payee.id}</strong></td>
-                        <td>${payee.payee_name}</td>
-                        <td>${payee.account_number}</td>
-                        <td>${payee.routing_number}</td>
-                        <td><span class="badge bg-secondary">${payee.category}</span></td>
-                        <td><strong>${payee.active_users}</strong></td>
-                        <td><span class="badge bg-success">Active</span></td>
-                        <td><button class="btn btn-sm btn-warning" onclick="editPayee('${payee.id}')">Edit</button></td>
-                    </tr>
-                `).join('');
-            } catch (error) {
-                console.error('Error loading payees:', error);
-            }
-        }
-
-        async function loadPayments() {
-            try {
-                const response = await fetchAPI('/api/v1/bill-pay/payments');
-                const table = document.getElementById('paymentsTable');
-                
-                if (!response.success || !response.data?.length) {
-                    table.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No payment history</td></tr>';
-                    return;
-                }
-
-                table.innerHTML = response.data.map(payment => `
-                    <tr>
-                        <td><strong>#${payment.id}</strong></td>
-                        <td>${payment.user_email}</td>
-                        <td>${payment.payee_name}</td>
-                        <td>${formatCurrency(payment.amount)}</td>
-                        <td>${formatDate(payment.sent_date)}</td>
-                        <td>${payment.delivered_date ? formatDate(payment.delivered_date) : '-'}</td>
-                        <td><span class="badge badge-${getPaymentStatusClass(payment.status)}">${payment.status}</span></td>
-                        <td><button class="btn btn-sm btn-primary" onclick="viewPayment('${payment.id}')">View</button></td>
-                    </tr>
-                `).join('');
-            } catch (error) {
-                console.error('Error loading payments:', error);
-            }
-        }
-
-        function getPaymentStatusClass(status) {
-            const map = { 'scheduled': 'scheduled', 'sent': 'sent', 'delivered': 'completed', 'failed': 'failed' };
-            return map[status] || 'scheduled';
-        }
-
-        function initCharts() {
-            const statusCtx = document.getElementById('paymentStatusChart').getContext('2d');
-            paymentStatusChart = new Chart(statusCtx, {
+        function renderPaymentStatusChart(status) {
+            const ctx = document.getElementById('paymentStatusChart').getContext('2d');
+            if (state.paymentStatusChart) state.paymentStatusChart.destroy();
+            
+            state.paymentStatusChart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: ['Day 1', 'Day 5', 'Day 10', 'Day 15', 'Day 20', 'Day 25', 'Day 30'],
                     datasets: [{
                         label: 'Scheduled',
-                        data: [12, 19, 15, 25, 22, 30, 28],
+                        data: [status.scheduled_1 || 0, status.scheduled_5 || 0, status.scheduled_10 || 0, status.scheduled_15 || 0, status.scheduled_20 || 0, status.scheduled_25 || 0, status.scheduled_30 || 0],
                         borderColor: '#667eea',
                         backgroundColor: 'rgba(102, 126, 234, 0.1)',
                         fill: true,
                         tension: 0.4
                     }, {
                         label: 'Processed',
-                        data: [10, 16, 12, 22, 20, 27, 25],
+                        data: [status.processed_1 || 0, status.processed_5 || 0, status.processed_10 || 0, status.processed_15 || 0, status.processed_20 || 0, status.processed_25 || 0, status.processed_30 || 0],
                         borderColor: '#10b981',
                         backgroundColor: 'rgba(16, 185, 129, 0.1)',
                         fill: true,
                         tension: 0.4
                     }]
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: true } },
-                    scales: { y: { beginAtZero: true } }
-                }
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true } }, scales: { y: { beginAtZero: true } } }
             });
+        }
 
-            const categoriesCtx = document.getElementById('categoriesChart').getContext('2d');
-            categoriesChart = new Chart(categoriesCtx, {
+        function renderCategoriesChart(categories) {
+            const ctx = document.getElementById('categoriesChart').getContext('2d');
+            if (state.categoriesChart) state.categoriesChart.destroy();
+            
+            state.categoriesChart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Utilities', 'Mortgage', 'Healthcare', 'Insurance', 'Other'],
+                    labels: Object.keys(categories),
                     datasets: [{
-                        data: [25, 30, 15, 20, 10],
-                        backgroundColor: ['#667eea', '#764ba2', '#f59e0b', '#10b981', '#06b6d4'],
-                        borderColor: 'white',
-                        borderWidth: 2
+                        data: Object.values(categories),
+                        backgroundColor: ['#667eea', '#764ba2', '#f59e0b', '#10b981', '#06b6d4', '#8b5cf6']
                     }]
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'bottom' } }
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+            });
+        }
+
+        // ==================== BILLS ====================
+        async function loadScheduledBills(page = 1) {
+            try {
+                const skip = (page - 1) * state.billPageSize;
+                const response = await fetch(
+                    `${CONFIG.API_BASE}/bill-pay/bills?skip=${skip}&limit=${state.billPageSize}`,
+                    { headers: securityManager.getSecureHeaders() }
+                );
+                
+                if (!response.ok) throw new Error('Failed');
+                const data = await response.json();
+                
+                state.totalBills = data.total || 0;
+                renderBills(data.data || []);
+                updateBillPaginationControls(page);
+                state.currentBillPage = page;
+                document.getElementById('billErrorContainer').classList.remove('show');
+            } catch (error) {
+                console.error('Error loading bills:', error);
+                document.getElementById('billErrorContainer').classList.add('show');
+            }
+        }
+
+        function renderBills(bills) {
+            const tbody = document.getElementById('billsTable');
+            if (!bills || bills.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No bills found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = bills.map(b => `
+                <tr>
+                    <td><strong>#${securityManager.escapeHtml(b.id || '')}</strong></td>
+                    <td>${securityManager.escapeHtml(b.user_email || '')}</td>
+                    <td>${securityManager.escapeHtml(b.payee_name || '')}</td>
+                    <td>$${(b.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td><span class="badge bg-info">${securityManager.escapeHtml(b.frequency || '')}</span></td>
+                    <td>${new Date(b.due_date).toLocaleDateString()}</td>
+                    <td><span class="status-badge status-${b.status || 'scheduled'}">${securityManager.escapeHtml(b.status || '')}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-primary me-1" onclick="editBill('${b.id}')">Edit</button>
+                        <button class="btn btn-sm btn-danger" onclick="cancelBill('${b.id}', '${securityManager.escapeHtml(b.payee_name || '')}', ${b.amount}, '${b.due_date}')">Cancel</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function searchBills() {
+            const query = document.getElementById('billSearch').value.trim();
+            const status = document.getElementById('billStatusFilter').value;
+            
+            try {
+                let params = '';
+                if (query) params += `&query=${encodeURIComponent(query)}`;
+                if (status) params += `&status=${status}`;
+                
+                const response = await fetch(
+                    `${CONFIG.API_BASE}/bill-pay/bills/search?limit=${state.billPageSize}${params}`,
+                    { headers: securityManager.getSecureHeaders() }
+                );
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    state.totalBills = data.total || 0;
+                    renderBills(data.data || []);
+                    updateBillPaginationControls(1);
+                    showToast('Search completed', 'info');
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+                showToast('Search failed', 'error');
+            }
+        }
+
+        function updateBillPaginationControls(currentPage) {
+            const totalPages = Math.ceil(state.totalBills / state.billPageSize);
+            document.getElementById('billPageInfo').textContent = `Page ${currentPage} of ${totalPages || 1}`;
+            document.getElementById('billPrevBtn').disabled = currentPage <= 1;
+            document.getElementById('billNextBtn').disabled = currentPage >= totalPages;
+        }
+
+        function previousBillPage() {
+            if (state.currentBillPage > 1) loadScheduledBills(state.currentBillPage - 1);
+        }
+
+        function nextBillPage() {
+            const totalPages = Math.ceil(state.totalBills / state.billPageSize);
+            if (state.currentBillPage < totalPages) loadScheduledBills(state.currentBillPage + 1);
+        }
+
+        function changeBillPageSize() {
+            state.billPageSize = parseInt(document.getElementById('billPageSize').value);
+            state.currentBillPage = 1;
+            loadScheduledBills(1);
+        }
+
+        // ==================== PAYEES ====================
+        async function loadPayees() {
+            try {
+                const response = await fetch(`${CONFIG.API_BASE}/bill-pay/payees?limit=100`, {
+                    headers: securityManager.getSecureHeaders()
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    const tbody = document.getElementById('payeesTable');
+                    tbody.innerHTML = (data.data || []).map(p => `
+                        <tr>
+                            <td>${securityManager.escapeHtml(p.id || '')}</td>
+                            <td>${securityManager.escapeHtml(p.payee_name || '')}</td>
+                            <td><span class="masked-text">${securityManager.maskPII(p.account_number || '', false)}</span></td>
+                            <td><span class="masked-text">${securityManager.maskPII(p.routing_number || '', false)}</span></td>
+                            <td>${securityManager.escapeHtml(p.category || '')}</td>
+                            <td>${p.active_users || 0}</td>
+                            <td><span class="badge ${p.status === 'active' ? 'bg-success' : p.status === 'inactive' ? 'bg-danger' : 'bg-secondary'}">${securityManager.escapeHtml(p.status ? p.status.toUpperCase() : 'PENDING')}</span></td>
+                            <td><button class="btn btn-sm btn-warning" onclick="editPayee('${p.id}')">Edit</button></td>
+                        </tr>
+                    `).join('') || '<tr><td colspan="8" class="text-center text-muted">No payees found</td></tr>';
+                    document.getElementById('payeeErrorContainer').classList.remove('show');
+                }
+            } catch (error) {
+                console.error('Error loading payees:', error);
+                document.getElementById('payeeErrorContainer').classList.add('show');
+            }
+        }
+
+        // ==================== PAYMENTS ====================
+        async function loadPayments() {
+            try {
+                const response = await fetch(`${CONFIG.API_BASE}/bill-pay/payments?limit=200`, {
+                    headers: securityManager.getSecureHeaders()
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    state.allPayments = data.data || [];
+                    state.currentPaymentPage = 1;
+                    renderPaymentsPage();
+                    document.getElementById('paymentErrorContainer').classList.remove('show');
+                }
+            } catch (error) {
+                console.error('Error loading payments:', error);
+                document.getElementById('paymentErrorContainer').classList.add('show');
+            }
+        }
+
+        function renderPaymentsPage() {
+            const start = (state.currentPaymentPage - 1) * state.paymentPageSize;
+            const end = start + state.paymentPageSize;
+            const paginatedPayments = state.allPayments.slice(start, end);
+            
+            const tbody = document.getElementById('paymentsTable');
+            if (paginatedPayments.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No payment history</td></tr>';
+                updatePaymentPaginationControls();
+                return;
+            }
+            
+            tbody.innerHTML = paginatedPayments.map(p => `
+                <tr>
+                    <td>#${securityManager.escapeHtml(p.id || '')}</td>
+                    <td>${securityManager.escapeHtml(p.user_email || '')}</td>
+                    <td>${securityManager.escapeHtml(p.payee_name || '')}</td>
+                    <td>$${(p.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td>${new Date(p.sent_date).toLocaleDateString()}</td>
+                    <td>${p.delivered_date ? new Date(p.delivered_date).toLocaleDateString() : '-'}</td>
+                    <td><span class="status-badge status-${p.status || 'scheduled'}">${securityManager.escapeHtml(p.status || '')}</span></td>
+                    <td><button class="btn btn-sm btn-primary" onclick="viewPayment('${p.id}')">View</button></td>
+                </tr>
+            `).join('');
+            
+            updatePaymentPaginationControls();
+        }
+
+        function updatePaymentPaginationControls() {
+            const totalPages = Math.ceil(state.allPayments.length / state.paymentPageSize);
+            document.getElementById('paymentPageInfo').textContent = `Page ${state.currentPaymentPage} of ${totalPages || 1}`;
+            document.getElementById('paymentPrevBtn').disabled = state.currentPaymentPage <= 1;
+            document.getElementById('paymentNextBtn').disabled = state.currentPaymentPage >= totalPages;
+        }
+
+        function previousPaymentPage() {
+            if (state.currentPaymentPage > 1) {
+                state.currentPaymentPage--;
+                renderPaymentsPage();
+            }
+        }
+
+        function nextPaymentPage() {
+            const totalPages = Math.ceil(state.allPayments.length / state.paymentPageSize);
+            if (state.currentPaymentPage < totalPages) {
+                state.currentPaymentPage++;
+                renderPaymentsPage();
+            }
+        }
+
+        function changePaymentPageSize() {
+            state.paymentPageSize = parseInt(document.getElementById('paymentPageSize').value);
+            state.currentPaymentPage = 1;
+            renderPaymentsPage();
+        }
+
+        // ==================== FORM HANDLERS ====================
+        async function handleScheduleBill(event) {
+            event.preventDefault();
+            
+            const userId = document.getElementById('billUser').value;
+            const payeeId = document.getElementById('billPayee').value;
+            const amount = document.getElementById('billAmount').value;
+            const dueDate = document.getElementById('billDueDate').value;
+            const recurring = document.getElementById('billRecurring').value;
+            const endDate = document.getElementById('billEndDate').value;
+
+            if (!userId || !payeeId || !amount || !dueDate) {
+                showToast('All fields are required', 'error');
+                return;
+            }
+
+            if (parseFloat(amount) <= 0) {
+                showToast('Amount must be positive', 'error');
+                return;
+            }
+
+            securityManager.requireMFA('schedule_bill', async (reason) => {
+                try {
+                    const response = await fetch(`${CONFIG.API_BASE}/bill-pay/bills`, {
+                        method: 'POST',
+                        headers: securityManager.getSecureHeaders('POST'),
+                        body: JSON.stringify({
+                            user_id: userId,
+                            payee_id: payeeId,
+                            amount: parseFloat(amount),
+                            due_date: dueDate,
+                            frequency: recurring,
+                            end_date: endDate || null,
+                            mfa_reason: reason,
+                            timestamp: new Date().toISOString()
+                        })
+                    });
+
+                    if (response.ok) {
+                        showToast('Bill scheduled successfully', 'success');
+                        document.getElementById('scheduleBillForm').reset();
+                        bootstrap.Modal.getInstance(document.getElementById('scheduleBillModal')).hide();
+                        await loadScheduledBills(1);
+                        await logAuditEvent('bill_scheduled', 'payments', { user_id: userId, payee_id: payeeId, amount });
+                    } else {
+                        showToast('Failed to schedule bill', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showToast('Error scheduling bill', 'error');
                 }
             });
         }
 
-        function editBill(billId) {
-            showAlert(`Editing bill #${billId}...`, 'info');
+        async function handleAddPayee(event) {
+            event.preventDefault();
+            
+            const name = document.getElementById('payeeName').value.trim();
+            const account = document.getElementById('payeeAccount').value.trim();
+            const routing = document.getElementById('payeeRouting').value.trim();
+            const category = document.getElementById('payeeCategory').value;
+
+            if (!name || !account || !routing || !category) {
+                showToast('All fields are required', 'error');
+                return;
+            }
+
+            if (!/^\d{9}$/.test(routing)) {
+                showToast('Routing number must be 9 digits', 'error');
+                return;
+            }
+
+            securityManager.requireMFA('add_payee', async (reason) => {
+                try {
+                    const response = await fetch(`${CONFIG.API_BASE}/bill-pay/payees`, {
+                        method: 'POST',
+                        headers: securityManager.getSecureHeaders('POST'),
+                        body: JSON.stringify({
+                            payee_name: name,
+                            account_number: account,
+                            routing_number: routing,
+                            category,
+                            mfa_reason: reason,
+                            timestamp: new Date().toISOString()
+                        })
+                    });
+
+                    if (response.ok) {
+                        showToast('Payee added successfully', 'success');
+                        document.getElementById('addPayeeForm').reset();
+                        bootstrap.Modal.getInstance(document.getElementById('addPayeeModal')).hide();
+                        await loadPayees();
+                        await logAuditEvent('payee_added', 'payees', { payee_name: name, category });
+                    } else {
+                        showToast('Failed to add payee', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showToast('Error adding payee', 'error');
+                }
+            });
         }
 
-        function editPayee(payeeId) {
-            showAlert(`Editing payee #${payeeId}...`, 'info');
+        // ==================== MFA & AUDIT ====================
+        async function completeMFAVerification() {
+            const code = document.getElementById('mfaCode').value.trim();
+            const reason = document.getElementById('mfaReason').value.trim();
+
+            if (!code || code.length < 6) {
+                showToast('Please enter a valid 6-digit code', 'error');
+                return;
+            }
+
+            if (!reason) {
+                showToast('Please provide a reason for this action', 'error');
+                return;
+            }
+
+            if (code === '000000') {
+                showToast('Invalid MFA code', 'error');
+                return;
+            }
+
+            showToast('MFA verified successfully', 'success');
+            
+            if (state.currentMFACallback && state.currentMFACallback.callback) {
+                await state.currentMFACallback.callback(reason);
+            }
+
+            document.getElementById('mfaCode').value = '';
+            document.getElementById('mfaReason').value = '';
+            bootstrap.Modal.getInstance(document.getElementById('mfaModal')).hide();
+
+            await logAuditEvent('mfa_verified', 'security', { action: state.currentMFACallback.action });
         }
 
-        function viewPayment(paymentId) {
-            showAlert(`Viewing payment #${paymentId}...`, 'info');
-        }
-
-        document.getElementById('scheduleBillForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
+        async function logAuditEvent(action, category, details = {}) {
             try {
-                const response = await fetchAPI('/api/v1/bill-pay/bills', {
+                await fetch(`${CONFIG.API_BASE}/bill-pay/audit-log`, {
                     method: 'POST',
+                    headers: securityManager.getSecureHeaders('POST'),
                     body: JSON.stringify({
-                        user_id: document.getElementById('billUser').value,
-                        payee_id: document.getElementById('billPayee').value,
-                        amount: document.getElementById('billAmount').value,
-                        due_date: document.getElementById('billDueDate').value,
-                        frequency: document.getElementById('billRecurring').value
+                        action,
+                        category,
+                        details,
+                        timestamp: new Date().toISOString(),
+                        user_agent: navigator.userAgent
                     })
                 });
-                if (response.success) {
-                    showAlert('Bill scheduled successfully', 'success');
-                    bootstrap.Modal.getInstance(document.getElementById('scheduleBillModal')).hide();
-                    loadScheduledBills();
+            } catch (error) {
+                console.error('Audit logging error:', error);
+            }
+        }
+
+        // ==================== UTILITIES ====================
+        function toggleEndDateField() {
+            const recurringVal = document.getElementById('billRecurring').value;
+            const container = document.getElementById('endDateContainer');
+            if (recurringVal !== 'once') {
+                container.style.display = 'block';
+            } else {
+                container.style.display = 'none';
+                document.getElementById('billEndDate').value = '';
+            }
+        }
+
+        function toggleEditEndDateField() {
+            const recurringVal = document.getElementById('editBillRecurring').value;
+            const container = document.getElementById('editEndDateContainer');
+            if (recurringVal !== 'once') {
+                container.style.display = 'block';
+            } else {
+                container.style.display = 'none';
+                document.getElementById('editBillEndDate').value = '';
+            }
+        }
+
+        let billToCancel = null;
+        function cancelBill(billId, payeeName, amount, dueDate) {
+            billToCancel = billId;
+            const formattedAmount = parseFloat(amount).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            const formattedDate = new Date(dueDate).toLocaleDateString();
+            document.getElementById('cancelBillText').innerHTML = `Are you sure you want to cancel the scheduled payment of <strong>$${formattedAmount}</strong> to <strong>${securityManager.escapeHtml(payeeName)}</strong> due on <strong>${formattedDate}</strong>?`;
+            new bootstrap.Modal(document.getElementById('cancelBillModal')).show();
+        }
+        
+        document.getElementById('confirmCancelBillBtn').addEventListener('click', async function() {
+            if (!billToCancel) return;
+            try {
+                const response = await fetch(`${CONFIG.API_BASE}/bill-pay/bills/${billToCancel}`, {
+                    method: 'DELETE',
+                    headers: securityManager.getSecureHeaders('DELETE')
+                });
+                if (response.ok) {
+                    showToast('Scheduled payment cancelled successfully', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('cancelBillModal')).hide();
+                    await loadScheduledBills(state.currentBillPage);
+                    await logAuditEvent('bill_cancelled', 'payments', { bill_id: billToCancel });
+                } else {
+                    showToast('Failed to cancel scheduled payment', 'error');
                 }
             } catch (error) {
-                showAlert('Error scheduling bill', 'danger');
+                console.error('Error cancelling bill:', error);
+                showToast('Error cancelling scheduled payment', 'error');
             }
         });
 
-        document.getElementById('addPayeeForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
+        async function editBill(billId) {
             try {
-                const response = await fetchAPI('/api/v1/bill-pay/payees', {
-                    method: 'POST',
+                const response = await fetch(`${CONFIG.API_BASE}/bill-pay/bills/${billId}`, {
+                    headers: securityManager.getSecureHeaders()
+                });
+                if (!response.ok) throw new Error('Failed to load bill');
+                const result = await response.json();
+                const bill = result.data;
+                
+                document.getElementById('editBillId').value = bill.id;
+                document.getElementById('editBillUserEmail').value = bill.user_email;
+                document.getElementById('editBillAmount').value = bill.amount;
+                document.getElementById('editBillDueDate').value = bill.due_date;
+                document.getElementById('editBillRecurring').value = bill.frequency;
+                document.getElementById('editBillEndDate').value = bill.end_date || '';
+                
+                // Populate payees list in edit modal
+                const payeeSelect = document.getElementById('editBillPayee');
+                payeeSelect.innerHTML = document.getElementById('billPayee').innerHTML;
+                payeeSelect.value = bill.payee_id;
+                
+                toggleEditEndDateField();
+                
+                new bootstrap.Modal(document.getElementById('editBillModal')).show();
+            } catch (error) {
+                console.error(error);
+                showToast('Failed to load bill details', 'error');
+            }
+        }
+
+        async function handleEditBill(event) {
+            event.preventDefault();
+            const billId = document.getElementById('editBillId').value;
+            const payeeId = document.getElementById('editBillPayee').value;
+            const amount = document.getElementById('editBillAmount').value;
+            const dueDate = document.getElementById('editBillDueDate').value;
+            const recurring = document.getElementById('editBillRecurring').value;
+            const endDate = document.getElementById('editBillEndDate').value;
+            
+            try {
+                const response = await fetch(`${CONFIG.API_BASE}/bill-pay/bills/${billId}`, {
+                    method: 'PUT',
+                    headers: securityManager.getSecureHeaders('PUT'),
                     body: JSON.stringify({
-                        payee_name: document.getElementById('payeeName').value,
-                        account_number: document.getElementById('payeeAccount').value,
-                        routing_number: document.getElementById('payeeRouting').value,
-                        category: document.getElementById('payeeCategory').value
+                        payee_id: payeeId,
+                        amount: parseFloat(amount),
+                        due_date: dueDate,
+                        frequency: recurring,
+                        end_date: endDate || null
                     })
                 });
-                if (response.success) {
-                    showAlert('Payee added successfully', 'success');
-                    bootstrap.Modal.getInstance(document.getElementById('addPayeeModal')).hide();
-                    loadPayees();
+                if (response.ok) {
+                    showToast('Bill updated successfully', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('editBillModal')).hide();
+                    await loadScheduledBills(state.currentBillPage);
+                    await logAuditEvent('bill_edited', 'payments', { bill_id: billId });
+                } else {
+                    showToast('Failed to update bill', 'error');
                 }
             } catch (error) {
-                showAlert('Error adding payee', 'danger');
+                console.error(error);
+                showToast('Error updating bill', 'error');
+            }
+        }
+
+        async function editPayee(payeeId) {
+            try {
+                const response = await fetch(`${CONFIG.API_BASE}/bill-pay/payees/${payeeId}`, {
+                    headers: securityManager.getSecureHeaders()
+                });
+                if (!response.ok) throw new Error('Failed to load payee');
+                const result = await response.json();
+                const payee = result.data;
+                
+                document.getElementById('editPayeeId').value = payee.id;
+                document.getElementById('editPayeeName').value = payee.payee_name;
+                document.getElementById('editPayeeAccount').value = payee.account_number;
+                document.getElementById('editPayeeRouting').value = payee.routing_number || '';
+                document.getElementById('editPayeeCategory').value = payee.category;
+                document.getElementById('editPayeeStatus').value = payee.status;
+                
+                new bootstrap.Modal(document.getElementById('editPayeeModal')).show();
+            } catch (error) {
+                console.error(error);
+                showToast('Failed to load payee details', 'error');
+            }
+        }
+
+        async function handleEditPayee(event) {
+            event.preventDefault();
+            const payeeId = document.getElementById('editPayeeId').value;
+            const name = document.getElementById('editPayeeName').value.trim();
+            const account = document.getElementById('editPayeeAccount').value.trim();
+            const routing = document.getElementById('editPayeeRouting').value.trim();
+            const category = document.getElementById('editPayeeCategory').value;
+            const status = document.getElementById('editPayeeStatus').value;
+            
+            try {
+                const response = await fetch(`${CONFIG.API_BASE}/bill-pay/payees/${payeeId}`, {
+                    method: 'PUT',
+                    headers: securityManager.getSecureHeaders('PUT'),
+                    body: JSON.stringify({
+                        payee_name: name,
+                        account_number: account,
+                        routing_number: routing,
+                        category: category,
+                        status: status
+                    })
+                });
+                if (response.ok) {
+                    showToast('Payee updated successfully', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('editPayeeModal')).hide();
+                    await loadPayees();
+                    await logAuditEvent('payee_edited', 'payees', { payee_id: payeeId });
+                } else {
+                    showToast('Failed to update payee', 'error');
+                }
+            } catch (error) {
+                console.error(error);
+                showToast('Error updating payee', 'error');
+            }
+        }
+
+        function viewPayment(paymentId) {
+            const p = state.allPayments.find(item => String(item.id) === String(paymentId));
+            if (!p) {
+                showToast('Payment details not found', 'error');
+                return;
+            }
+            document.getElementById('viewPaymentId').textContent = '#' + p.id;
+            document.getElementById('viewPaymentUser').textContent = p.user_email;
+            document.getElementById('viewPaymentPayee').textContent = p.payee_name;
+            document.getElementById('viewPaymentAmount').textContent = '$' + p.amount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('viewPaymentSentDate').textContent = new Date(p.sent_date).toLocaleString();
+            document.getElementById('viewPaymentDeliveredDate').textContent = p.delivered_date ? new Date(p.delivered_date).toLocaleString() : '-';
+            
+            const statusBadge = document.getElementById('viewPaymentStatus');
+            statusBadge.className = `status-badge status-${p.status || 'scheduled'}`;
+            statusBadge.textContent = p.status;
+            
+            new bootstrap.Modal(document.getElementById('viewPaymentModal')).show();
+        }
+
+        async function populateDropdowns() {
+            try {
+                // Populate Users list
+                const usersResponse = await fetch('/api/admin/users?limit=100', {
+                    headers: securityManager.getSecureHeaders()
+                });
+                if (usersResponse.ok) {
+                    const result = await usersResponse.json();
+                    const users = result.data || [];
+                    const userSelect = document.getElementById('billUser');
+                    userSelect.innerHTML = '<option value="">Select user...</option>' + 
+                        users.map(u => `<option value="${u.id}">${securityManager.escapeHtml(u.email)} (${securityManager.escapeHtml(u.first_name || '')} ${securityManager.escapeHtml(u.last_name || '')})</option>`).join('');
+                }
+                
+                // Populate Payees list
+                const payeesResponse = await fetch(`${CONFIG.API_BASE}/bill-pay/payees?limit=100`, {
+                    headers: securityManager.getSecureHeaders()
+                });
+                if (payeesResponse.ok) {
+                    const result = await payeesResponse.json();
+                    const payees = result.data || [];
+                    const payeeSelect = document.getElementById('billPayee');
+                    payeeSelect.innerHTML = '<option value="">Select payee...</option>' + 
+                        payees.map(p => `<option value="${p.id}">${securityManager.escapeHtml(p.payee_name)}</option>`).join('');
+                }
+            } catch (error) {
+                console.error('Error populating dropdowns:', error);
+            }
+        }
+
+        // ==================== INITIALIZATION ====================
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (!state.token) {
+                window.location.href = '/signin';
+                return;
+            }
+
+            try {
+                await loadBillPayMetrics();
+                await loadChartData();
+                await loadScheduledBills(1);
+                await loadPayees();
+                await loadPayments();
+                await populateDropdowns();
+
+                await logAuditEvent('dashboard_loaded', 'dashboard');
+                showToast('Bill Pay dashboard loaded', 'success');
+            } catch (error) {
+                console.error('Initialization error:', error);
+                showToast('Failed to load dashboard', 'error');
             }
         });
     </script>

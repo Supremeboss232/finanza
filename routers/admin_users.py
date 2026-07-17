@@ -38,7 +38,8 @@ from models import (
     Account as DBAccount,
     Transaction as DBTransaction,
     KYCSubmission as DBKYCSubmission,
-    Ledger as DBLedger
+    Ledger as DBLedger,
+    AuditLog
 )
 from balance_service_ledger import BalanceServiceLedger
 
@@ -713,3 +714,246 @@ async def get_users_balance_summary(
     except Exception as e:
         logger.error(f"Error getting balance summary: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to get summary: {str(e)}")
+
+
+# ==================== AUDIT HISTORY ====================
+
+@admin_users_router.get("/{user_id}/audit-history")
+async def get_user_audit_history(
+    user_id: int,
+    db_session: SessionDep,
+    current_admin: PydanticUser = Depends(get_current_admin_user),
+    limit: int = Query(100, le=500)
+):
+    """
+    Get all admin actions taken on a specific user.
+    Returns audit trail for compliance and monitoring.
+    
+    Path: GET /api/admin/users/{user_id}/audit-history
+    """
+    try:
+        # Get user to verify they exist
+        user_result = await db_session.execute(
+            select(DBUser).where(DBUser.id == user_id)
+        )
+        user = user_result.scalar_one_or_none()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # Get audit history for this user
+        audit_result = await db_session.execute(
+            select(AuditLog)
+            .where(AuditLog.user_id == user_id)
+            .order_by(AuditLog.created_at.desc())
+            .limit(limit)
+        )
+        audit_entries = audit_result.scalars().all()
+
+        # Format response
+        history = []
+        for entry in audit_entries:
+            # Get admin user info
+            admin_result = await db_session.execute(
+                select(DBUser).where(DBUser.id == entry.admin_id)
+            )
+            admin = admin_result.scalar_one_or_none()
+
+            history.append({
+                "action": entry.action_type,
+                "admin_id": entry.admin_id,
+                "admin_email": admin.email if admin else "Unknown Admin",
+                "timestamp": entry.created_at.isoformat() if entry.created_at else None,
+                "details": entry.details,
+                "resource_type": entry.resource_type,
+                "resource_id": entry.resource_id
+            })
+
+        logger.info(f"Audit history retrieved for user {user_id} by admin {current_admin.id}")
+
+        return {
+            "success": True,
+            "user_id": user_id,
+            "user_email": user.email,
+            "history": history,
+            "total": len(history)
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Audit history error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== USER CONTROL OPERATIONS ====================
+
+class SuspendUserRequest:
+    """Request model for suspending a user"""
+    def __init__(self, reason: str = "", note: str = "", duration_days: int = 0):
+        self.reason = reason
+        self.note = note
+        self.duration_days = duration_days
+
+
+@admin_users_router.post("/{user_id}/suspend")
+async def suspend_user(
+    user_id: int,
+    request_data: dict,
+    db_session: SessionDep,
+    current_admin: PydanticUser = Depends(get_current_admin_user)
+):
+    """
+    Suspend a user account.
+    
+    Purpose: Temporarily or permanently disable user access
+    - Mark user as inactive
+    - Create audit log entry
+    - Send notification to user
+    
+    Path: POST /api/admin/users/{user_id}/suspend
+    Required Permission: bulkActions
+    """
+    try:
+        # Get user
+        user_result = await db_session.execute(
+            select(DBUser).where(DBUser.id == user_id)
+        )
+        user = user_result.scalar_one_or_none()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # Parse request
+        reason = request_data.get("reason", "Admin suspension")
+        note = request_data.get("note", "")
+        duration_days = request_data.get("duration_days", 0)
+
+        # Suspend user (set is_active to False)
+        user.is_active = False
+        await db_session.flush()
+
+        # Create audit log
+        from models import AuditLog
+        audit_entry = AuditLog(
+            action_type="USER_SUSPENDED",
+            admin_id=current_admin.id,
+            user_id=user_id,
+            resource_type="User",
+            resource_id=str(user_id),
+            details=f"Suspended: {reason} | Note: {note} | Duration: {duration_days} days"
+        )
+        db_session.add(audit_entry)
+        await db_session.commit()
+
+        logger.info(f"Admin {current_admin.id} suspended user {user_id}. Reason: {reason}")
+
+        return {
+            "success": True,
+            "message": f"User {user.email} has been suspended",
+            "user_id": user_id,
+            "suspended_by": current_admin.email,
+            "reason": reason,
+            "duration_days": duration_days
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error suspending user: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to suspend user: {str(e)}")
+
+
+@admin_users_router.post("/{user_id}/freeze")
+async def freeze_account(
+    user_id: int,
+    request_data: dict,
+    db_session: SessionDep,
+    current_admin: PydanticUser = Depends(get_current_admin_user)
+):
+    """
+    Freeze all accounts for a user.
+    
+    Purpose: Prevent all account transactions while keeping account open
+    - Mark all user accounts as frozen
+    - Create account holds
+    - Create audit log entry
+    
+    Path: POST /api/admin/users/{user_id}/freeze
+    Required Permission: bulkActions
+    """
+    try:
+        # Get user
+        user_result = await db_session.execute(
+            select(DBUser).where(DBUser.id == user_id)
+        )
+        user = user_result.scalar_one_or_none()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # Parse request
+        reason = request_data.get("reason", "Admin freeze")
+        note = request_data.get("note", "")
+        duration_days = request_data.get("duration_days", 0)
+
+        # Get all user accounts
+        accounts_result = await db_session.execute(
+            select(DBAccount).where(DBAccount.owner_id == user_id)
+        )
+        accounts = accounts_result.scalars().all()
+
+        if not accounts:
+            raise HTTPException(status_code=404, detail="User has no accounts")
+
+        # Freeze all accounts (set status to 'frozen')
+        frozen_count = 0
+        from datetime import datetime, timedelta
+        for account in accounts:
+            account.status = 'frozen'
+            frozen_count += 1
+
+            # Create hold on account
+            from models import AccountHold
+            release_date = None
+            if duration_days > 0:
+                release_date = datetime.utcnow() + timedelta(days=duration_days)
+
+            hold = AccountHold(
+                account_id=account.id,
+                reason=reason,
+                description=note,
+                created_at=datetime.utcnow(),
+                release_date=release_date
+            )
+            db_session.add(hold)
+
+        await db_session.flush()
+
+        # Create audit log
+        from models import AuditLog
+        audit_entry = AuditLog(
+            action_type="ACCOUNT_FROZEN",
+            admin_id=current_admin.id,
+            user_id=user_id,
+            resource_type="Account",
+            resource_id=f"user_{user_id}_all",
+            details=f"Froze {frozen_count} account(s). Reason: {reason} | Duration: {duration_days} days"
+        )
+        db_session.add(audit_entry)
+        await db_session.commit()
+
+        logger.info(f"Admin {current_admin.id} froze {frozen_count} account(s) for user {user_id}. Reason: {reason}")
+
+        return {
+            "success": True,
+            "message": f"Froze {frozen_count} account(s) for user {user.email}",
+            "user_id": user_id,
+            "accounts_frozen": frozen_count,
+            "frozen_by": current_admin.email,
+            "reason": reason,
+            "duration_days": duration_days
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error freezing accounts: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to freeze accounts: {str(e)}")

@@ -4,6 +4,7 @@ Endpoints for managing webhooks, event subscriptions, and delivery tracking
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
@@ -11,7 +12,7 @@ import logging
 import secrets
 from pydantic import BaseModel, HttpUrl, Field
 
-from deps import get_db, get_current_user
+from deps import get_db, get_current_user, SessionDep
 from models import User
 from models_priority_3 import Webhook, WebhookDelivery
 from services_priority_3 import WebhooksService
@@ -201,10 +202,10 @@ async def register_webhook(
     description="Get list of all registered webhooks for the current user"
 )
 async def list_webhooks(
+    db: SessionDep,
+    current_user: User = Depends(get_current_user),
     active_only: bool = Query(False, description="Filter to active webhooks only"),
     event_type: Optional[str] = Query(None, description="Filter by specific event type"),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
 ) -> List[WebhookResponse]:
     """
     Get list of webhooks for the current user.
@@ -243,8 +244,8 @@ async def list_webhooks(
 )
 async def get_webhook(
     webhook_id: int,
+    db: SessionDep,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
 ) -> WebhookResponse:
     """
     Get details of a specific webhook.
@@ -259,7 +260,9 @@ async def get_webhook(
     - 404 Not Found if webhook doesn't exist
     """
     try:
-        webhook = db.query(Webhook).filter(Webhook.id == webhook_id).first()
+        stmt = select(Webhook).where(Webhook.id == webhook_id)
+        result = await db.execute(stmt)
+        webhook = result.scalars().first()
         
         if not webhook:
             raise HTTPException(
@@ -295,8 +298,8 @@ async def get_webhook(
 async def update_webhook(
     webhook_id: int,
     request: WebhookUpdate,
+    db: SessionDep,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
 ) -> WebhookResponse:
     """
     Update webhook configuration.
@@ -315,7 +318,9 @@ async def update_webhook(
     - 404 Not Found if webhook doesn't exist
     """
     try:
-        webhook = db.query(Webhook).filter(Webhook.id == webhook_id).first()
+        stmt = select(Webhook).where(Webhook.id == webhook_id)
+        result = await db.execute(stmt)
+        webhook = result.scalars().first()
         
         if not webhook:
             raise HTTPException(
@@ -349,7 +354,9 @@ async def update_webhook(
         
         webhook.updated_at = datetime.utcnow()
         
-        db.commit()
+        db.add(webhook)
+        await db.commit()
+        await db.refresh(webhook)
         
         log.info(f"Webhook {webhook_id} updated by user {current_user.id}")
         
@@ -358,7 +365,7 @@ async def update_webhook(
     except HTTPException:
         raise
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         log.error(f"Error updating webhook {webhook_id}: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -374,8 +381,8 @@ async def update_webhook(
 )
 async def delete_webhook(
     webhook_id: int,
+    db: SessionDep,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
 ):
     """
     Delete a webhook.
@@ -394,7 +401,9 @@ async def delete_webhook(
     - 404 Not Found if webhook doesn't exist
     """
     try:
-        webhook = db.query(Webhook).filter(Webhook.id == webhook_id).first()
+        stmt = select(Webhook).where(Webhook.id == webhook_id)
+        result = await db.execute(stmt)
+        webhook = result.scalars().first()
         
         if not webhook:
             raise HTTPException(
@@ -410,20 +419,24 @@ async def delete_webhook(
             )
         
         # Delete associated deliveries
-        db.query(WebhookDelivery).filter(
+        del_stmt = select(WebhookDelivery).where(
             WebhookDelivery.webhook_id == webhook_id
-        ).delete()
+        )
+        del_result = await db.execute(del_stmt)
+        deliveries = del_result.scalars().all()
+        for delivery in deliveries:
+            db.delete(delivery)
         
         # Delete webhook
         db.delete(webhook)
-        db.commit()
+        await db.commit()
         
         log.info(f"Webhook {webhook_id} deleted by user {current_user.id}")
     
     except HTTPException:
         raise
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         log.error(f"Error deleting webhook {webhook_id}: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -439,11 +452,11 @@ async def delete_webhook(
 )
 async def get_webhook_deliveries(
     webhook_id: int,
+    db: SessionDep,
+    current_user: User = Depends(get_current_user),
     status_filter: Optional[str] = Query(None, description="Filter by status (success, failed, pending, retrying)"),
     limit: int = Query(50, ge=1, le=1000, description="Number of records to return"),
     offset: int = Query(0, ge=0, description="Pagination offset"),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
 ) -> List[WebhookDeliveryResponse]:
     """
     Get delivery history for a webhook.
@@ -463,7 +476,9 @@ async def get_webhook_deliveries(
     - 404 Not Found if webhook doesn't exist
     """
     try:
-        webhook = db.query(Webhook).filter(Webhook.id == webhook_id).first()
+        stmt = select(Webhook).where(Webhook.id == webhook_id)
+        result = await db.execute(stmt)
+        webhook = result.scalars().first()
         
         if not webhook:
             raise HTTPException(
@@ -479,16 +494,19 @@ async def get_webhook_deliveries(
             )
         
         # Get deliveries
-        query = db.query(WebhookDelivery).filter(
+        stmt = select(WebhookDelivery).where(
             WebhookDelivery.webhook_id == webhook_id
         )
         
         if status_filter:
-            query = query.filter(WebhookDelivery.status == status_filter)
+            stmt = stmt.where(WebhookDelivery.status == status_filter)
         
-        deliveries = query.order_by(
+        stmt = stmt.order_by(
             WebhookDelivery.created_at.desc()
-        ).offset(offset).limit(limit).all()
+        ).offset(offset).limit(limit)
+        
+        result = await db.execute(stmt)
+        deliveries = result.scalars().all()
         
         return [WebhookDeliveryResponse.from_orm(d) for d in deliveries]
     
@@ -510,8 +528,8 @@ async def get_webhook_deliveries(
 )
 async def get_webhook_statistics(
     webhook_id: int,
+    db: SessionDep,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
 ) -> WebhookDeliveryStats:
     """
     Get delivery statistics for a webhook.
@@ -526,7 +544,9 @@ async def get_webhook_statistics(
     - 404 Not Found if webhook doesn't exist
     """
     try:
-        webhook = db.query(Webhook).filter(Webhook.id == webhook_id).first()
+        stmt = select(Webhook).where(Webhook.id == webhook_id)
+        result = await db.execute(stmt)
+        webhook = result.scalars().first()
         
         if not webhook:
             raise HTTPException(
@@ -566,7 +586,7 @@ async def test_webhook(
     webhook_id: int,
     request: WebhookTestRequest,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: SessionDep = None,
 ):
     """
     Send a test event to a webhook.
@@ -585,7 +605,9 @@ async def test_webhook(
     - Check delivery history to see test results
     """
     try:
-        webhook = db.query(Webhook).filter(Webhook.id == webhook_id).first()
+        stmt = select(Webhook).where(Webhook.id == webhook_id)
+        result = await db.execute(stmt)
+        webhook = result.scalars().first()
         
         if not webhook:
             raise HTTPException(

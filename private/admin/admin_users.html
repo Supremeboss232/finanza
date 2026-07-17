@@ -1,49 +1,56 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Users Management - Finanza Admin</title>
+    <title>Admin Intervention Control Center - Finanza</title>
     <link href="/static/css/style.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
     <style>
-        body { background: #f8f9fa; }
-        .admin-nav { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        body { background: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .admin-nav { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         .admin-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; }
-        .stat-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .stat-number { font-size: 2rem; font-weight: bold; color: #667eea; }
+        .stat-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); transition: transform 0.2s; }
+        .stat-card:hover { transform: translateY(-2px); }
+        .stat-number { font-size: 2.5rem; font-weight: bold; color: #667eea; }
         .stat-label { color: #666; font-size: 0.9rem; margin-top: 5px; }
         .dashboard-section { background: white; border-radius: 10px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 30px; }
-        .chart-container { position: relative; height: 300px; margin-bottom: 20px; }
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #e9ecef; padding-bottom: 15px; }
         .modal-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
-        .form-control:focus { border-color: #667eea; box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25); }
         .btn-primary { background: #667eea; border: none; }
         .btn-primary:hover { background: #5568d3; }
-        .table-responsive { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .status-badge { padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+        .table-responsive { background: white; border-radius: 10px; overflow: auto; }
+        .status-badge { padding: 5px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; display: inline-block; }
         .status-active { background: #d4edda; color: #155724; }
         .status-inactive { background: #f8d7da; color: #721c24; }
-        .kyc-badge { padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+        .kyc-badge { padding: 5px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
         .kyc-verified { background: #d4edda; color: #155724; }
         .kyc-pending { background: #fff3cd; color: #856404; }
         .kyc-rejected { background: #f8d7da; color: #721c24; }
-        .hold-badge { display: inline-block; padding: 4px 8px; background: #f5c2c7; color: #721c24; border-radius: 4px; font-size: 0.85rem; margin: 2px; }
-        .credit-score { padding: 8px 12px; border-radius: 6px; background: #e3f2fd; color: #1976d2; font-weight: 600; }
+        .credit-score { padding: 8px 14px; border-radius: 6px; background: #e3f2fd; color: #1976d2; font-weight: 600; min-width: 50px; text-align: center; }
+        .activity-feed { background: #f8f9fa; border-radius: 8px; padding: 15px; max-height: 400px; overflow-y: auto; }
+        .feed-item { border-bottom: 1px solid #e9ecef; padding: 12px 0; }
+        .feed-item:last-child { border-bottom: none; }
+        .feed-time { color: #999; font-size: 0.85rem; }
+        .feed-badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; margin-right: 5px; }
+        .intervention-modal .modal-dialog { max-width: 700px; }
+        .search-results { background: white; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; max-height: 300px; overflow-y: auto; }
+        .search-result-item { padding: 10px; border-bottom: 1px solid #f0f0f0; cursor: pointer; }
+        .search-result-item:hover { background: #f8f9fa; }
     </style>
+
+    <script src="/static/js/toast-utils.js"></script>
 </head>
 <body>
     <!-- Navigation -->
     <nav class="admin-nav navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="/user/admin/dashboard">
-                <i class="fas fa-chart-line"></i> Finanza Admin
+                <i class="fas fa-shield-alt"></i> Admin Control Center
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
+            <div class="collapse navbar-collapse">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item"><a class="nav-link" href="/user/admin/dashboard">Dashboard</a></li>
                     <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
@@ -52,11 +59,21 @@
         </div>
     </nav>
 
+    <!-- Alert Container -->
+    <div id="alertContainer" style="position: fixed; top: 20px; right: 20px; z-index: 9999;"></div>
+
     <div class="container-fluid mt-5 mb-5">
         <!-- Header -->
         <div class="admin-header">
-            <h1><i class="fas fa-users"></i> User Management</h1>
-            <p class="mb-0">Manage user accounts, KYC status, holds, credit scoring, and device fingerprinting</p>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1><i class="fas fa-users"></i> User Management &amp; Intervention</h1>
+                    <p class="mb-0">Real-time monitoring and active intervention tools</p>
+                </div>
+                <button class="btn btn-light" onclick="refreshAllData()" id="refreshBtn">
+                    <i class="fas fa-sync"></i> Refresh
+                </button>
+            </div>
         </div>
 
         <!-- Quick Stats -->
@@ -82,69 +99,47 @@
             <div class="col-lg-3 col-md-6">
                 <div class="stat-card">
                     <div class="stat-number" id="accountHolds">-</div>
-                    <div class="stat-label">Account Holds</div>
+                    <div class="stat-label">Active Holds</div>
                 </div>
             </div>
         </div>
 
-        <!-- Charts Row -->
+        <!-- Real-Time Activity & Global Search -->
         <div class="row mb-5">
             <div class="col-lg-6">
                 <div class="dashboard-section">
-                    <h5>User Status Distribution</h5>
-                    <div class="chart-container">
-                        <canvas id="statusChart"></canvas>
+                    <div class="section-header">
+                        <h5><i class="fas fa-stream"></i> Real-Time Activity Feed</h5>
+                    </div>
+                    <div class="activity-feed" id="activityFeed">
+                        <div class="text-center text-muted"><i class="fas fa-spinner fa-spin"></i> Loading...</div>
                     </div>
                 </div>
             </div>
             <div class="col-lg-6">
                 <div class="dashboard-section">
-                    <h5>Credit Score Distribution</h5>
-                    <div class="chart-container">
-                        <canvas id="creditChart"></canvas>
+                    <div class="section-header">
+                        <h5><i class="fas fa-search"></i> Global Search</h5>
                     </div>
+                    <div class="input-group mb-3">
+                        <input type="text" id="globalSearchInput" class="form-control" placeholder="Email, Phone, Account #...">
+                        <button class="btn btn-primary" onclick="performGlobalSearch()"><i class="fas fa-search"></i></button>
+                    </div>
+                    <div id="searchResults" class="search-results" style="display: none;"></div>
                 </div>
             </div>
         </div>
 
         <!-- Users Table -->
         <div class="dashboard-section">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h5><i class="fas fa-list"></i> Users</h5>
-                <button class="btn btn-primary btn-sm" onclick="openModal('createUserModal')">
-                    <i class="fas fa-plus"></i> New User
+            <div class="section-header">
+                <h5><i class="fas fa-list"></i> Users Directory</h5>
+                <button class="btn btn-sm btn-primary" onclick="openModal('bulkEmailModal')" data-require-role="bulkActions">
+                    <i class="fas fa-envelope"></i> Bulk Email
                 </button>
             </div>
-            <div class="mb-3">
-                <div class="row g-2">
-                    <div class="col-md-3">
-                        <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Search by email or name...">
-                    </div>
-                    <div class="col-md-2">
-                        <select id="statusFilter" class="form-control form-control-sm">
-                            <option value="">All Status</option>
-                            <option value="active">Active</option>
-                            <option value="inactive">Inactive</option>
-                            <option value="frozen">Frozen</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <select id="kycFilter" class="form-control form-control-sm">
-                            <option value="">All KYC</option>
-                            <option value="verified">Verified</option>
-                            <option value="pending">Pending</option>
-                            <option value="rejected">Rejected</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <button class="btn btn-primary btn-sm w-100" onclick="loadUsers()">
-                            <i class="fas fa-filter"></i> Apply Filters
-                        </button>
-                    </div>
-                </div>
-            </div>
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
+                <table class="table table-hover table-striped mb-0">
                     <thead class="table-light">
                         <tr>
                             <th>ID</th>
@@ -152,174 +147,214 @@
                             <th>Name</th>
                             <th>Status</th>
                             <th>KYC</th>
-                            <th>Credit Score</th>
+                            <th>Credit</th>
                             <th>Holds</th>
-                            <th>Registered</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="usersTable">
-                        <tr><td colspan="9" class="text-center text-muted">Loading users...</td></tr>
+                        <tr><td colspan="8" class="text-center text-muted"><i class="fas fa-spinner fa-spin"></i> Loading users...</td></tr>
                     </tbody>
                 </table>
             </div>
+            <div id="usersPagination"></div>
         </div>
 
-        <!-- Account Holds -->
+        <!-- Holds Management -->
         <div class="dashboard-section">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h5><i class="fas fa-lock"></i> Account Holds</h5>
-                <button class="btn btn-warning btn-sm" onclick="openModal('createHoldModal')">
-                    <i class="fas fa-plus"></i> New Hold
+            <div class="section-header">
+                <h5><i class="fas fa-lock"></i> Account Holds & Release Control</h5>
+                <button class="btn btn-sm btn-warning" onclick="openModal('createHoldModal')" data-require-role="bulkActions">
+                    <i class="fas fa-plus"></i> Create Hold
                 </button>
             </div>
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
+                <table class="table table-hover table-striped mb-0">
                     <thead class="table-light">
                         <tr>
                             <th>Hold ID</th>
                             <th>User</th>
-                            <th>Hold Type</th>
+                            <th>Type</th>
                             <th>Reason</th>
-                            <th>Amount (if applicable)</th>
                             <th>Created</th>
-                            <th>Status</th>
+                            <th>Release Date</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="holdsTable">
-                        <tr><td colspan="8" class="text-center text-muted">Loading holds...</td></tr>
+                        <tr><td colspan="7" class="text-center text-muted">Loading holds...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
 
-        <!-- Frozen Accounts -->
+        <!-- Devices & Sessions -->
         <div class="dashboard-section">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h5><i class="fas fa-snowflake"></i> Frozen Accounts</h5>
+            <div class="section-header">
+                <h5><i class="fas fa-fingerprint"></i> Device Fingerprinting & Session Management</h5>
             </div>
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
+                <table class="table table-hover table-striped mb-0">
                     <thead class="table-light">
                         <tr>
                             <th>User</th>
-                            <th>Email</th>
-                            <th>Freeze Date</th>
-                            <th>Reason</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="frozenTable">
-                        <tr><td colspan="6" class="text-center text-muted">No frozen accounts</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Credit Scoring -->
-        <div class="dashboard-section">
-            <h5><i class="fas fa-credit-card"></i> Recent Credit Scores</h5>
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>User</th>
-                            <th>Email</th>
-                            <th>Current Score</th>
-                            <th>Previous Score</th>
-                            <th>Change</th>
-                            <th>Last Update</th>
-                            <th>Data Source</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="creditsTable">
-                        <tr><td colspan="8" class="text-center text-muted">Loading credit scores...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Device Fingerprinting -->
-        <div class="dashboard-section">
-            <h5><i class="fas fa-fingerprint"></i> Device Fingerprinting & Security</h5>
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>User</th>
-                            <th>Device ID</th>
                             <th>Device Type</th>
                             <th>IP Address</th>
                             <th>Browser</th>
-                            <th>First Seen</th>
                             <th>Last Active</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="devicesTable">
-                        <tr><td colspan="8" class="text-center text-muted">Loading device data...</td></tr>
+                        <tr><td colspan="6" class="text-center text-muted">Loading devices...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
 
-    <!-- Alert Container -->
-    <div id="alertContainer" style="position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px;"></div>
-
-    <!-- Create User Modal -->
-    <div class="modal fade" id="createUserModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
+    <!-- Financial Intervention Modal -->
+    <div class="modal fade" id="balanceAdjustmentModal" tabindex="-1">
+        <div class="modal-dialog intervention-modal">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Create New User</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <h5 class="modal-title"><i class="fas fa-money-bill"></i> Manual Balance Adjustment</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <form id="createUserForm" onsubmit="handleCreateUser(event)">
+                <form id="balanceAdjustmentForm" onsubmit="handleBalanceAdjustment(event)">
                     <div class="modal-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">First Name</label>
-                                    <input type="text" id="firstName" class="form-control" required>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Last Name</label>
-                                    <input type="text" id="lastName" class="form-control" required>
-                                </div>
-                            </div>
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> All adjustments are logged for compliance and audit trails
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Email</label>
-                            <input type="email" id="userEmail" class="form-control" required>
+                            <label class="form-label">User</label>
+                            <input type="text" id="balanceUser" class="form-control" readonly>
+                            <input type="hidden" id="balanceUserId">
                         </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Phone</label>
-                                    <input type="tel" id="userPhone" class="form-control">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Date of Birth</label>
-                                    <input type="date" id="userDob" class="form-control">
-                                </div>
-                            </div>
+                        <div class="mb-3">
+                            <label class="form-label">Current Balance</label>
+                            <input type="text" id="currentBalance" class="form-control" readonly>
                         </div>
-                        <div class="mb-3 form-check">
-                            <input type="checkbox" class="form-check-input" id="userActive" checked>
-                            <label class="form-check-label" for="userActive">Active</label>
+                        <div class="mb-3">
+                            <label class="form-label">Adjustment Amount</label>
+                            <input type="number" id="adjustmentAmount" class="form-control" step="0.01" required>
+                            <small class="text-muted">Positive = Credit, Negative = Debit</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Reason Code</label>
+                            <select id="reasonCode" class="form-control" required>
+                                <option value="">Select...</option>
+                                <option value="DISPUTE_SETTLEMENT">Dispute Settlement</option>
+                                <option value="SYSTEM_ERROR">System Error</option>
+                                <option value="REFUND">Refund</option>
+                                <option value="PROMOTION">Promotion</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <textarea id="adjustmentDescription" class="form-control" rows="3" required placeholder="Detailed reason for this adjustment..."></textarea>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Create User</button>
+                        <button type="submit" class="btn btn-danger">Confirm Adjustment</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- KYC Reviewer Modal -->
+    <div class="modal fade" id="kycReviewerModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-id-card"></i> KYC Document Reviewer</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h6>KYC Documents (Signed URLs - 5 min expiry)</h6>
+                            <div id="kycDocuments" style="min-height: 300px;">
+                                <p class="text-muted">Loading documents...</p>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <h6>User & Status Info</h6>
+                            <div id="kycUserInfo" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                                <p class="text-muted">Loading...</p>
+                            </div>
+                            <hr>
+                            <div id="kycActionButtons">
+                                <button class="btn btn-success btn-sm w-100 mb-2" onclick="approveKYC()" data-require-role="kycApproval">
+                                    <i class="fas fa-check"></i> Approve KYC
+                                </button>
+                                <button class="btn btn-danger btn-sm w-100" onclick="rejectKYC()" data-require-role="kycApproval">
+                                    <i class="fas fa-times"></i> Reject KYC
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Release Hold Modal -->
+    <div class="modal fade" id="releaseHoldModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-unlock"></i> Release Hold</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="releaseHoldForm" onsubmit="handleReleaseHold(event)">
+                    <div class="modal-body">
+                        <p><strong>Hold ID:</strong> <span id="holdIdDisplay"></span></p>
+                        <p><strong>Reason:</strong> <span id="holdReasonDisplay"></span></p>
+                        <div class="mb-3">
+                            <label class="form-label">Approval Notes</label>
+                            <textarea id="releaseNotes" class="form-control" rows="3" required></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success">Release Hold</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Revoke Session Modal -->
+    <div class="modal fade" id="revokeSessionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-power-off"></i> Revoke Session</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="revokeSessionForm" onsubmit="handleRevokeSession(event)">
+                    <div class="modal-body">
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle"></i> This will immediately terminate the session.
+                        </div>
+                        <p><strong>IP Address:</strong> <span id="deviceIpDisplay"></span></p>
+                        <div class="mb-3">
+                            <label class="form-label">Reason</label>
+                            <select id="revocationReason" class="form-control" required>
+                                <option value="">Select...</option>
+                                <option value="suspicious_activity">Suspicious Activity</option>
+                                <option value="high_risk_location">High-Risk Location</option>
+                                <option value="device_compromised">Device Compromised</option>
+                                <option value="fraud_investigation">Fraud Investigation</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger">Revoke Session</button>
                     </div>
                 </form>
             </div>
@@ -331,26 +366,26 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Create Account Hold</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <h5 class="modal-title"><i class="fas fa-lock"></i> Create Hold</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <form id="holdForm" onsubmit="handleCreateHold(event)">
+                <form id="createHoldForm" onsubmit="handleCreateHold(event)">
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label class="form-label">User</label>
-                            <select id="holdUser" class="form-control" required>
-                                <option value="">Select User</option>
-                            </select>
+                            <label class="form-label">User Email</label>
+                            <input type="text" id="holdUserInput" class="form-control" placeholder="Search user by email..." autocomplete="off">
+                            <div id="holdUserDropdown" class="search-results mt-2" style="display: none;"></div>
+                            <input type="hidden" id="selectedHoldUserId">
+                            <small class="text-muted d-block mt-2">Start typing to search users</small>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Hold Type</label>
                             <select id="holdType" class="form-control" required>
-                                <option value="">Select Type</option>
+                                <option value="">Select...</option>
                                 <option value="compliance">Compliance Hold</option>
                                 <option value="fraud">Fraud Investigation</option>
-                                <option value="dispute">Chargeback Dispute</option>
-                                <option value="regulatory">Regulatory Hold</option>
-                                <option value="manual">Manual Review</option>
+                                <option value="dispute">Chargeback</option>
+                                <option value="regulatory">Regulatory</option>
                             </select>
                         </div>
                         <div class="mb-3">
@@ -358,8 +393,8 @@
                             <textarea id="holdReason" class="form-control" rows="3" required></textarea>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Amount (Optional)</label>
-                            <input type="number" id="holdAmount" class="form-control" step="0.01" placeholder="Leave blank for full account hold">
+                            <label class="form-label">Duration (days)</label>
+                            <input type="number" id="holdDuration" class="form-control" value="30" min="1" required>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -371,281 +406,1188 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/admin_static/js/auth-helper.js"></script>
-    <script src="/admin_static/js/admin-utils.js"></script>
-    <script>
-        const AUTH_HEADER = () => ({ 'Authorization': 'Bearer ' + localStorage.getItem('token'), 'Content-Type': 'application/json' });
-        let statusChart = null;
-        let creditChart = null;
+    <!-- Bulk Email Modal -->
+    <div class="modal fade" id="bulkEmailModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-envelope"></i> Bulk Email</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="bulkEmailForm" onsubmit="handleBulkEmail(event)">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Target Users</label>
+                            <select id="emailFilter" class="form-control" required>
+                                <option value="">Select...</option>
+                                <option value="pending_kyc">Pending KYC</option>
+                                <option value="rejected_kyc">Rejected KYC</option>
+                                <option value="all">All Users</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Template</label>
+                            <select id="emailTemplate" class="form-control" required>
+                                <option value="">Select...</option>
+                                <option value="kyc_reminder">KYC Reminder</option>
+                                <option value="kyc_urgent">KYC Urgent</option>
+                                <option value="security_alert">Security Alert</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Subject</label>
+                            <input type="text" id="emailSubject" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Send</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
-        document.addEventListener('DOMContentLoaded', async function() {
-            await loadUserMetrics();
-            await loadUsers();
-            await loadHolds();
-            await loadFrozenAccounts();
-            await loadCreditScores();
-            await loadDeviceFingerprints();
-            await populateUserSelects();
-            initCharts();
+    <!-- User Detail Modal (with Audit History) - Will be created dynamically -->
+    <!-- Template shown here for reference -->
+
+    <!-- Suspend User Modal -->
+    <div class="modal fade" id="suspendModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-ban"></i> <span id="suspendActionText">Suspend User</span></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="suspendForm" onsubmit="handleSuspendUser(event)">
+                    <div class="modal-body">
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> This action will <span id="suspendWarningText">suspend</span> the user account.
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">User</label>
+                            <input type="text" id="suspendUserEmail" class="form-control" readonly>
+                            <input type="hidden" id="suspendUserId">
+                        </div>
+                        <div class="mb-3" id="suspendReasonDiv" style="display: none;">
+                            <label class="form-label">Reason for Suspension</label>
+                            <select id="suspendReason" class="form-control" required>
+                                <option value="">Select...</option>
+                                <option value="kyc_failed">KYC Failed</option>
+                                <option value="fraud_detected">Fraud Detected</option>
+                                <option value="compliance_violation">Compliance Violation</option>
+                                <option value="terms_violation">Terms of Service Violation</option>
+                                <option value="admin_request">Admin Request</option>
+                            </select>
+                        </div>
+                        <div class="mb-3" id="suspendNoteDiv" style="display: none;">
+                            <label class="form-label">Notes</label>
+                            <textarea id="suspendNote" class="form-control" rows="3" placeholder="Add notes about this suspension..."></textarea>
+                        </div>
+                        <div class="mb-3" id="suspendDurationDiv" style="display: none;">
+                            <label class="form-label">Duration (days, 0 = permanent)</label>
+                            <input type="number" id="suspendDuration" class="form-control" value="0" min="0">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-warning" id="suspendSubmitBtn">Suspend Account</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Freeze Account Modal -->
+    <div class="modal fade" id="freezeModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-snowflake"></i> <span id="freezeActionText">Freeze Account</span></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="freezeForm" onsubmit="handleFreezeAccount(event)">
+                    <div class="modal-body">
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle"></i> This action will <span id="freezeWarningText">freeze</span> all accounts for this user.
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">User</label>
+                            <input type="text" id="freezeUserEmail" class="form-control" readonly>
+                            <input type="hidden" id="freezeUserId">
+                        </div>
+                        <div class="mb-3" id="freezeReasonDiv" style="display: none;">
+                            <label class="form-label">Reason for Freeze</label>
+                            <select id="freezeReason" class="form-control" required>
+                                <option value="">Select...</option>
+                                <option value="fraud_investigation">Fraud Investigation</option>
+                                <option value="chargeback">Chargeback</option>
+                                <option value="regulatory">Regulatory Action</option>
+                                <option value="security_breach">Security Breach</option>
+                                <option value="admin_hold">Admin Hold</option>
+                            </select>
+                        </div>
+                        <div class="mb-3" id="freezeNoteDiv" style="display: none;">
+                            <label class="form-label">Notes</label>
+                            <textarea id="freezeNote" class="form-control" rows="3" placeholder="Add notes about this freeze..."></textarea>
+                        </div>
+                        <div class="mb-3" id="freezeDurationDiv" style="display: none;">
+                            <label class="form-label">Duration (days, 0 = permanent)</label>
+                            <input type="number" id="freezeDuration" class="form-control" value="0" min="0">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger" id="freezeSubmitBtn">Freeze Account</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="userDetailModal" tabindex="-1" style="display: none;">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-user"></i> User Details & Audit History</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>User Information</h6>
+                            <div id="userDetailInfo">Loading...</div>
+                        </div>
+                        <div class="col-md-6" id="userAuditHistory">
+                            <h6>Audit History</h6>
+                            <div class="activity-feed">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // ============================================================
+        // UNIFIED FETCH API WRAPPER - Production-Ready Token Management
+        // ============================================================
+        
+        /**
+         * Enhanced fetch wrapper with:
+         * - Automatic token injection from JWT
+         * - 401 Unauthorized handling
+         * - Token expiration detection
+         * - Admin user info extraction
+         */
+        class AdminAPI {
+            constructor() {
+                this.adminInfo = this.extractAdminInfo();
+                this.isInitialized = !!this.adminInfo;
+            }
+
+            // Extract admin ID and role from JWT token
+            extractAdminInfo() {
+                const token = localStorage.getItem('token');
+                if (!token) return null;
+
+                try {
+                    const base64Url = token.split('.')[1];
+                    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                    const jsonPayload = decodeURIComponent(
+                        atob(base64).split('').map(c => 
+                            '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+                        ).join('')
+                    );
+                    const decoded = JSON.parse(jsonPayload);
+                    
+                    return {
+                        user_id: decoded.user_id || decoded.sub,
+                        email: decoded.email,
+                        admin_role: decoded.admin_role || localStorage.getItem('admin_role'),
+                        is_superadmin: (decoded.admin_role || '').includes('SUPER'),
+                        permissions: decoded.permissions || []
+                    };
+                } catch (e) {
+                    console.error('Token decode error:', e);
+                    return null;
+                }
+            }
+
+            // Unified fetch with token injection
+            async fetch(url, options = {}) {
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    window.location.href = '/signin?reason=no_token';
+                    throw new Error('No authentication token');
+                }
+
+                const headers = options.headers || {};
+                headers['Authorization'] = 'Bearer ' + token;
+                if (options.body && typeof options.body === 'object') {
+                    headers['Content-Type'] = 'application/json';
+                    options.body = JSON.stringify(options.body);
+                }
+
+                try {
+                    const response = await fetch(url, { ...options, headers });
+
+                    // Handle 401 Unauthorized - token expired or invalid
+                    if (response.status === 401) {
+                        localStorage.clear();
+                        window.location.href = '/signin?reason=session_expired';
+                        throw new Error('Session expired');
+                    }
+
+                    // Handle rate limiting
+                    if (response.status === 429) {
+                        this.showToast('Too many requests. Please slow down.', 'warning', 3000);
+                        throw new Error('Rate limited');
+                    }
+
+                    // Handle server errors
+                    if (response.status >= 500) {
+                        this.showToast('Server error. Please try again.', 'danger', 5000);
+                        throw new Error(`Server error: ${response.status}`);
+                    }
+
+                    return response;
+                } catch (error) {
+                    console.error('API fetch error:', error);
+                    throw error;
+                }
+            }
+
+            // Show toast notification (replaces alert)
+            showToast(message, type = 'info', duration = 3000) {
+                const container = document.getElementById('alertContainer') || this.createAlertContainer();
+                const toastEl = document.createElement('div');
+                toastEl.className = `alert alert-${type} alert-dismissible fade show`;
+                toastEl.style.cssText = 'min-width: 300px; animation: slideIn 0.3s ease-in;';
+                toastEl.innerHTML = `
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                container.appendChild(toastEl);
+
+                if (duration > 0) {
+                    setTimeout(() => toastEl.remove(), duration);
+                }
+            }
+
+            createAlertContainer() {
+                const container = document.createElement('div');
+                container.id = 'alertContainer';
+                container.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; max-width: 500px;';
+                document.body.appendChild(container);
+                return container;
+            }
+
+            // Check if user has permission
+            hasPermission(permission) {
+                return this.adminInfo && 
+                       (this.adminInfo.is_superadmin || 
+                        this.adminInfo.permissions.includes(permission));
+            }
+
+            // Restrict action to superadmins
+            requireSuperAdmin() {
+                if (!this.adminInfo?.is_superadmin) {
+                    this.showToast('This action requires Superadmin privileges', 'danger');
+                    return false;
+                }
+                return true;
+            }
+        }
+
+        const api = new AdminAPI();
+
+        // ============================================================
+        // ROLE-BASED VISIBILITY SYSTEM
+        // ============================================================
+
+        const VisibilityRules = {
+            // Show phone numbers only to Treasury+ admins
+            phoneNumber: () => ['TREASURY', 'SUPER_ADMIN'].includes(api.adminInfo?.admin_role),
+            // Show balances only to Treasury+ admins
+            balance: () => ['TREASURY', 'SUPER_ADMIN'].includes(api.adminInfo?.admin_role),
+            // Delete buttons only to Superadmins
+            deleteUser: () => api.adminInfo?.is_superadmin,
+            // KYC approval to KYC roles
+            kycApproval: () => api.adminInfo?.permissions?.includes('kyc:approve'),
+            // Fund transfers to Treasury
+            fundTransfer: () => api.adminInfo?.permissions?.includes('fund:transfer'),
+            // Bulk actions to Admins+
+            bulkActions: () => ['ADMIN', 'TREASURY', 'SUPER_ADMIN'].includes(api.adminInfo?.admin_role)
+        };
+
+        // Hide elements based on role
+        function applyRoleBasedVisibility() {
+            document.querySelectorAll('[data-require-role]').forEach(el => {
+                const requirement = el.getAttribute('data-require-role');
+                const ruleFunc = VisibilityRules[requirement];
+                if (ruleFunc && !ruleFunc()) {
+                    el.style.display = 'none';
+                    el.disabled = true;
+                }
+            });
+        }
+
+        // ============================================================
+        // PAGINATION SYSTEM
+        // ============================================================
+
+        const Pagination = {
+            currentPage: 1,
+            pageSize: 20,
+            totalPages: 1,
+
+            renderControls(containerId, onPageChange) {
+                const container = document.getElementById(containerId);
+                if (this.totalPages <= 1) {
+                    container.innerHTML = '';
+                    return;
+                }
+
+                const prevDisabled = this.currentPage <= 1;
+                const nextDisabled = this.currentPage >= this.totalPages;
+
+                container.innerHTML = `
+                    <nav aria-label="Page navigation" class="mt-3">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item ${prevDisabled ? 'disabled' : ''}">
+                                <button class="page-link" onclick="Pagination.goToPage(${this.currentPage - 1}, '${onPageChange}')">
+                                    <i class="fas fa-chevron-left"></i> Previous
+                                </button>
+                            </li>
+                            <li class="page-item active">
+                                <span class="page-link">Page ${this.currentPage} of ${this.totalPages}</span>
+                            </li>
+                            <li class="page-item ${nextDisabled ? 'disabled' : ''}">
+                                <button class="page-link" onclick="Pagination.goToPage(${this.currentPage + 1}, '${onPageChange}')">
+                                    Next <i class="fas fa-chevron-right"></i>
+                                </button>
+                            </li>
+                        </ul>
+                    </nav>
+                `;
+            },
+
+            goToPage(page, callback) {
+                if (page < 1 || page > this.totalPages) return;
+                this.currentPage = page;
+                if (callback && typeof window[callback] === 'function') {
+                    window[callback]();
+                }
+            }
+        };
+
+        // ============================================================
+        // AUDIT LOGGING
+        // ============================================================
+
+        class AuditLogger {
+            async logAction(action, targetUserId, details) {
+                if (!api.adminInfo) return;
+
+                const auditData = {
+                    admin_id: api.adminInfo.user_id,
+                    admin_email: api.adminInfo.email,
+                    action: action,
+                    target_user_id: targetUserId,
+                    details: details,
+                    timestamp: new Date().toISOString(),
+                    ip_address: 'browser'
+                };
+
+                try {
+                    // Log to backend if endpoint exists
+                    await api.fetch('/api/admin/audit/log', {
+                        method: 'POST',
+                        body: auditData
+                    });
+                } catch (e) {
+                    console.warn('Audit logging failed:', e);
+                }
+            }
+        }
+
+        const auditLogger = new AuditLogger();
+
+        // ============================================================
+        // INITIALIZATION & DATA LOADING
+        // ============================================================
+
+        window.addEventListener('DOMContentLoaded', function() {
+            if (!api.isInitialized) {
+                window.location.href = '/signin?reason=auth_failed';
+                return;
+            }
+
+            // Apply role-based visibility
+            applyRoleBasedVisibility();
+
+            // Initial load
+            loadAllData();
+
+            // Auto-refresh every 30 seconds
+            setInterval(loadAllData, 30000);
+
+            // Add CSS for animations
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes slideIn {
+                    from { transform: translateX(400px); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+                .btn-xs {
+                    padding: 0.25rem 0.5rem;
+                    font-size: 0.75rem;
+                }
+            `;
+            document.head.appendChild(style);
         });
 
-        async function loadUserMetrics() {
+        function openModal(id) {
+            new bootstrap.Modal(document.getElementById(id)).show();
+        }
+
+        async function loadAllData() {
             try {
-                const response = await fetchAPI('/api/v1/users/metrics');
-                if (!response) return;
+                await Promise.all([
+                    loadMetrics(),
+                    loadUsers(),
+                    loadHolds(),
+                    loadDevices(),
+                    loadActivityFeed()
+                ]);
+            } catch (e) {
+                api.showToast('Failed to load data: ' + e.message, 'danger');
+            }
+        }
+
+        async function loadMetrics() {
+            try {
+                const r = await api.fetch('/api/admin/metrics');
+                if (!r.ok) throw new Error(`HTTP ${r.status}`);
                 
-                document.getElementById('totalUsers').textContent = response.total_users || 0;
-                document.getElementById('activeUsers').textContent = response.active_users || 0;
-                document.getElementById('kycVerified').textContent = response.kyc_verified || 0;
-                document.getElementById('accountHolds').textContent = response.account_holds || 0;
-            } catch (error) {
-                console.error('Error loading metrics:', error);
+                const d = await r.json();
+                document.getElementById('totalUsers').textContent = d.total_users || 0;
+                document.getElementById('activeUsers').textContent = d.active_users || 0;
+                document.getElementById('kycVerified').textContent = d.kyc_verified || 0;
+                document.getElementById('accountHolds').textContent = d.account_holds || 0;
+            } catch (e) {
+                console.error('Metrics load failed:', e);
+                document.getElementById('totalUsers').textContent = '--';
+                document.getElementById('activeUsers').textContent = '--';
+                document.getElementById('kycVerified').textContent = '--';
+                document.getElementById('accountHolds').textContent = '--';
             }
         }
 
         async function loadUsers() {
             try {
-                const statusFilter = document.getElementById('statusFilter').value;
-                const kycFilter = document.getElementById('kycFilter').value;
-                const search = document.getElementById('searchInput').value;
-                
-                let url = '/api/v1/users?limit=50';
-                if (statusFilter) url += '&status=' + statusFilter;
-                if (kycFilter) url += '&kyc_status=' + kycFilter;
-                if (search) url += '&search=' + search;
+                const skip = (Pagination.currentPage - 1) * Pagination.pageSize;
+                const r = await api.fetch(
+                    `/api/admin/users?skip=${skip}&limit=${Pagination.pageSize}`
+                );
+                if (!r.ok) throw new Error(`HTTP ${r.status}`);
 
-                const response = await fetchAPI(url);
-                if (!response || !response.data) return;
-                
+                const d = await r.json();
+                // Backend returns: { data: [...], total: int, skip: int, limit: int }
+                // Calculate total pages from total count and page size
+                const total = d.total || 0;
+                Pagination.totalPages = Math.ceil(total / Pagination.pageSize) || 1;
+
                 const tbody = document.getElementById('usersTable');
-                tbody.innerHTML = response.data.map(u => `
-                    <tr>
-                        <td>${u.id}</td>
-                        <td>${u.email}</td>
-                        <td>${u.full_name || 'N/A'}</td>
-                        <td><span class="status-badge status-${u.is_active ? 'active' : 'inactive'}">${u.is_active ? 'Active' : 'Inactive'}</span></td>
-                        <td><span class="kyc-badge kyc-${u.kyc_status || 'pending'}">${(u.kyc_status || 'pending').toUpperCase()}</span></td>
-                        <td>${u.credit_score ? `<span class="credit-score">${u.credit_score}</span>` : 'N/A'}</td>
-                        <td>${u.account_holds_count || 0}</td>
-                        <td>${formatDate(u.created_at)}</td>
-                        <td>
-                            <button class="btn btn-sm btn-info" onclick="viewUser(${u.id})"><i class="fas fa-eye"></i></button>
-                            <button class="btn btn-sm btn-warning" onclick="editUser(${u.id})"><i class="fas fa-edit"></i></button>
-                            ${u.account_holds_count > 0 ? `<button class="btn btn-sm btn-danger" onclick="viewHolds(${u.id})"><i class="fas fa-lock"></i></button>` : ''}
-                        </td>
-                    </tr>
-                `).join('') || '<tr><td colspan="9" class="text-center text-muted">No users found</td></tr>';
-            } catch (error) {
-                console.error('Error loading users:', error);
+                if (!d.data || !d.data.length) {
+                    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No users found</td></tr>';
+                    Pagination.renderControls('usersPagination', 'loadUsers');
+                    return;
+                }
+
+                tbody.innerHTML = d.data.map(u => {
+                    const phoneDisplay = VisibilityRules.phoneNumber() 
+                        ? (u.phone_number || '-') 
+                        : '••••••••';
+
+                    return `
+                        <tr>
+                            <td>#${u.id}</td>
+                            <td>
+                                <a href="javascript:void(0)" onclick="openUserDetailModal(${u.id})" style="cursor: pointer; color: #667eea; text-decoration: underline;">
+                                    ${u.email}
+                                </a>
+                            </td>
+                            <td>${u.full_name || '-'}</td>
+                            <td><span class="status-badge status-${u.is_active ? 'active' : 'inactive'}">${u.is_active ? 'Active' : 'Inactive'}</span></td>
+                            <td><span class="kyc-badge kyc-${(u.kyc_status||'pending').toLowerCase()}">${(u.kyc_status||'PENDING').toUpperCase()}</span></td>
+                            <td>${u.credit_score ? `<span class="credit-score">${u.credit_score}</span>` : '-'}</td>
+                            <td><span class="badge bg-warning">${u.account_holds_count || 0}</span></td>
+                            <td>
+                                <button class="btn btn-xs btn-primary" onclick="openBalanceModal(${u.id}, '${u.email}')" data-require-role="balance" title="Balance Adjustment">
+                                    <i class="fas fa-money-bill"></i> Balance
+                                </button>
+                                <button class="btn btn-xs btn-info" onclick="openKYCReviewer(${u.id})" data-require-role="kycApproval" title="KYC Review">
+                                    <i class="fas fa-id-card"></i> KYC
+                                </button>
+                                <button class="btn btn-xs btn-warning" onclick="openSuspendModal(${u.id}, '${u.email}')" data-require-role="bulkActions" title="Suspend/Unsuspend User">
+                                    <i class="fas fa-ban"></i> Suspend
+                                </button>
+                                <button class="btn btn-xs btn-secondary" onclick="openFreezeModal(${u.id}, '${u.email}')" data-require-role="bulkActions" title="Freeze/Unfreeze Account">
+                                    <i class="fas fa-snowflake"></i> Freeze
+                                </button>
+                                <button class="btn btn-xs btn-danger" onclick="requestDeleteUser(${u.id})" data-require-role="deleteUser" title="Delete User">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                // Reapply visibility to new buttons
+                applyRoleBasedVisibility();
+                Pagination.renderControls('usersPagination', 'loadUsers');
+            } catch (e) {
+                console.error(e);
+                api.showToast('Failed to load users', 'danger');
             }
         }
 
         async function loadHolds() {
             try {
-                const response = await fetchAPI('/api/v1/users/holds?limit=20');
-                if (!response || !response.data) return;
-                
+                const r = await api.fetch('/api/admin/holds?limit=20');
+                if (!r.ok) throw new Error(`HTTP ${r.status}`);
+
+                const d = await r.json();
                 const tbody = document.getElementById('holdsTable');
-                tbody.innerHTML = response.data.map(h => `
+                if (!d.data || !d.data.length) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No active holds</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = d.data.map(h => `
                     <tr>
                         <td>${h.id}</td>
-                        <td>${h.user_email}</td>
-                        <td><span class="hold-badge">${h.hold_type}</span></td>
-                        <td>${h.reason}</td>
-                        <td>${h.hold_amount ? formatCurrency(h.hold_amount) : 'Full Account'}</td>
-                        <td>${formatDate(h.created_at)}</td>
-                        <td><span class="status-badge status-${h.is_active ? 'active' : 'inactive'}">${h.is_active ? 'Active' : 'Removed'}</span></td>
+                        <td>${h.user_email || h.email || '-'}</td>
+                        <td><span class="badge bg-danger">${h.hold_type || 'UNKNOWN'}</span></td>
+                        <td>${h.reason || '-'}</td>
+                        <td>${h.created_at ? new Date(h.created_at).toLocaleDateString() : '-'}</td>
+                        <td>${h.released_at ? new Date(h.released_at).toLocaleDateString() : 'TBD'}</td>
                         <td>
-                            <button class="btn btn-sm btn-success" onclick="removeHold(${h.id})"><i class="fas fa-check"></i> Remove</button>
+                            <button class="btn btn-xs btn-success" onclick="openReleaseModal(${h.id}, '${h.reason}')"><i class="fas fa-unlock"></i></button>
                         </td>
                     </tr>
-                `).join('') || '<tr><td colspan="8" class="text-center text-muted">No holds</td></tr>';
-            } catch (error) {
-                console.error('Error loading holds:', error);
+                `).join('');
+            } catch (e) {
+                console.error(e);
+                api.showToast('Failed to load holds', 'danger');
             }
         }
 
-        async function loadFrozenAccounts() {
+        async function loadDevices() {
             try {
-                const response = await fetchAPI('/api/v1/users/frozen?limit=20');
-                if (!response || !response.data) return;
-                
-                const tbody = document.getElementById('frozenTable');
-                tbody.innerHTML = response.data.map(f => `
-                    <tr>
-                        <td>${f.full_name}</td>
-                        <td>${f.email}</td>
-                        <td>${formatDate(f.frozen_date)}</td>
-                        <td>${f.freeze_reason}</td>
-                        <td><span class="status-badge status-${f.is_frozen ? 'active' : 'inactive'}">${f.is_frozen ? 'Frozen' : 'Unfrozen'}</span></td>
-                        <td>
-                            ${f.is_frozen ? `<button class="btn btn-sm btn-success" onclick="unfreezeAccount(${f.id})"><i class="fas fa-unlock"></i> Unfreeze</button>` : ''}
-                        </td>
-                    </tr>
-                `).join('') || '<tr><td colspan="6" class="text-center text-muted">No frozen accounts</td></tr>';
-            } catch (error) {
-                console.error('Error loading frozen accounts:', error);
-            }
-        }
+                const r = await api.fetch('/api/admin/devices?limit=20');
+                if (!r.ok) throw new Error(`HTTP ${r.status}`);
 
-        async function loadCreditScores() {
-            try {
-                const response = await fetchAPI('/api/v1/users/credit-scores?limit=20');
-                if (!response || !response.data) return;
-                
-                const tbody = document.getElementById('creditsTable');
-                tbody.innerHTML = response.data.map(c => `
-                    <tr>
-                        <td>${c.full_name}</td>
-                        <td>${c.email}</td>
-                        <td><span class="credit-score">${c.current_score}</span></td>
-                        <td>${c.previous_score || 'N/A'}</td>
-                        <td>${c.score_change ? (c.score_change > 0 ? '+' : '') + c.score_change : 'N/A'}</td>
-                        <td>${formatDate(c.last_updated)}</td>
-                        <td>${c.data_source}</td>
-                        <td><button class="btn btn-sm btn-primary" onclick="updateCreditScore(${c.user_id})">Refresh</button></td>
-                    </tr>
-                `).join('') || '<tr><td colspan="8" class="text-center text-muted">No credit scores</td></tr>';
-            } catch (error) {
-                console.error('Error loading credit scores:', error);
-            }
-        }
-
-        async function loadDeviceFingerprints() {
-            try {
-                const response = await fetchAPI('/api/v1/users/devices?limit=20');
-                if (!response || !response.data) return;
-                
+                const d = await r.json();
                 const tbody = document.getElementById('devicesTable');
-                tbody.innerHTML = response.data.map(d => `
+                if (!d.data || !d.data.length) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No sessions to display</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = d.data.map(dev => `
                     <tr>
-                        <td>${d.user_email}</td>
-                        <td><code style="font-size: 0.75rem;">${d.device_id.substring(0, 20)}...</code></td>
-                        <td>${d.device_type}</td>
-                        <td>${d.ip_address}</td>
-                        <td>${d.browser_info}</td>
-                        <td>${formatDate(d.first_seen)}</td>
-                        <td>${formatDate(d.last_active)}</td>
-                        <td><button class="btn btn-sm btn-primary" onclick="viewDevice(${d.id})">View</button></td>
+                        <td>${dev.email || dev.user_email || '-'}</td>
+                        <td>${dev.device_type || '-'}</td>
+                        <td><code>${dev.ip_address || '-'}</code></td>
+                        <td>${dev.browser || dev.browser_info || '-'}</td>
+                        <td>${dev.last_active ? new Date(dev.last_active).toLocaleDateString() : '-'}</td>
+                        <td>
+                            <button class="btn btn-xs btn-danger" onclick="openRevokeModal(${dev.device_id || dev.id}, '${dev.ip_address}')">
+                                <i class="fas fa-power-off"></i>
+                            </button>
+                        </td>
                     </tr>
-                `).join('') || '<tr><td colspan="8" class="text-center text-muted">No device data</td></tr>';
-            } catch (error) {
-                console.error('Error loading device fingerprints:', error);
+                `).join('');
+            } catch (e) {
+                console.error(e);
+                api.showToast('Failed to load devices', 'danger');
             }
         }
 
-        async function populateUserSelects() {
+        async function loadActivityFeed() {
             try {
-                const response = await fetchAPI('/api/v1/users?limit=200');
-                if (!response || !response.data) return;
+                const r = await api.fetch(
+                    '/api/admin/intervention/activity-feed?limit=15&hours_back=24'
+                );
+                if (!r.ok) throw new Error(`HTTP ${r.status}`);
+
+                const d = await r.json();
+                const container = document.getElementById('activityFeed');
+                if (!d.feed_items || !d.feed_items.length) {
+                    container.innerHTML = '<p class="text-muted">No recent activity</p>';
+                    return;
+                }
+                container.innerHTML = d.feed_items.map(item => `
+                    <div class="feed-item">
+                        <span class="feed-badge" style="background: ${item.type === 'transaction' ? '#e7f3ff' : '#fff3cd'}; color: ${item.type === 'transaction' ? '#0066cc' : '#856404'};">
+                            <i class="fas fa-${item.type === 'transaction' ? 'exchange-alt' : 'lock'}"></i> ${item.type.toUpperCase()}
+                        </span>
+                        <span class="feed-time">${new Date(item.timestamp).toLocaleTimeString()}</span>
+                        <br>
+                        <small>${item.description || ''}</small>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        // ============================================================
+        // USER DETAIL MODAL - View Audit History
+        // ============================================================
+
+        async function openUserDetailModal(userId) {
+            try {
+                // Load user details
+                const r = await api.fetch(`/api/admin/users/${userId}`);
+                if (!r.ok) throw new Error(`HTTP ${r.status}`);
                 
-                const select = document.getElementById('holdUser');
-                select.innerHTML = '<option value="">Select User</option>' + response.data.map(u => 
-                    `<option value="${u.id}">${u.email}</option>`
-                ).join('');
-            } catch (error) {
-                console.error('Error populating user selects:', error);
+                const user = await r.json();
+
+                // Load audit history for this user
+                const auditR = await api.fetch(`/api/admin/users/${userId}/audit-history`);
+                let auditHistory = [];
+                if (auditR.ok) {
+                    const auditData = await auditR.json();
+                    auditHistory = auditData.history || [];
+                }
+
+                // Create modal content
+                const auditHTML = auditHistory.length > 0 
+                    ? auditHistory.map(ah => `
+                        <div class="feed-item">
+                            <strong>${ah.action}</strong> by ${ah.admin_email}<br>
+                            <small class="text-muted">${new Date(ah.timestamp).toLocaleString()}</small><br>
+                            <code>${ah.details || 'No details'}</code>
+                        </div>
+                    `).join('')
+                    : '<p class="text-muted">No audit history</p>';
+
+                // Show detailed modal
+                const modal = document.getElementById('userDetailModal');
+                if (!modal) {
+                    createUserDetailModal();
+                }
+
+                document.getElementById('userDetailInfo').innerHTML = `
+                    <p><strong>Email:</strong> ${user.email}</p>
+                    <p><strong>Name:</strong> ${user.full_name || '-'}</p>
+                    <p><strong>Status:</strong> ${user.is_active ? 'Active' : 'Inactive'}</p>
+                    <p><strong>KYC Status:</strong> ${user.kyc_status || 'PENDING'}</p>
+                    <p><strong>Last Login:</strong> ${user.last_login ? new Date(user.last_login).toLocaleString() : 'Never'}</p>
+                `;
+
+                document.getElementById('userAuditHistory').innerHTML = `
+                    <h6>Audit History</h6>
+                    <div class="activity-feed" style="max-height: 300px;">
+                        ${auditHTML}
+                    </div>
+                `;
+
+                window.currentDetailUserId = userId;
+                openModal('userDetailModal');
+            } catch (e) {
+                api.showToast('Failed to load user details: ' + e.message, 'danger');
             }
         }
 
-        function initCharts() {
-            // Status Chart
-            const statusCtx = document.getElementById('statusChart')?.getContext('2d');
-            if (statusCtx) {
-                statusChart = new Chart(statusCtx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Active', 'Inactive', 'Frozen'],
-                        datasets: [{
-                            data: [850, 120, 30],
-                            backgroundColor: ['#28a745', '#ffc107', '#dc3545']
-                        }]
-                    },
-                    options: { responsive: true, maintainAspectRatio: false }
-                });
-            }
-
-            // Credit Score Chart
-            const creditCtx = document.getElementById('creditChart')?.getContext('2d');
-            if (creditCtx) {
-                creditChart = new Chart(creditCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: ['600-650', '650-700', '700-750', '750-800', '800+'],
-                        datasets: [{
-                            label: 'Users',
-                            data: [85, 120, 180, 250, 215],
-                            backgroundColor: ['#dc3545', '#ffc107', '#17a2b8', '#28a745', '#667eea']
-                        }]
-                    },
-                    options: { responsive: true, maintainAspectRatio: false }
-                });
-            }
+        function createUserDetailModal() {
+            const modalHTML = `
+                <div class="modal fade" id="userDetailModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title"><i class="fas fa-user"></i> User Details & Audit History</h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6>User Information</h6>
+                                        <div id="userDetailInfo"></div>
+                                    </div>
+                                    <div class="col-md-6" id="userAuditHistory"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
         }
 
-        async function handleCreateUser(event) {
+        // ============================================================
+        // INTERVENTION FUNCTIONS - PRODUCTION READY
+        // ============================================================
+
+        async function openBalanceModal(userId, userEmail) {
+            document.getElementById('balanceUserId').value = userId;
+            document.getElementById('balanceUser').value = userEmail;
+            try {
+                const r = await api.fetch(`/api/admin/users/${userId}/balance`);
+                if (r.ok) {
+                    const d = await r.json();
+                    document.getElementById('currentBalance').value = '$' + parseFloat(d.balance || 0).toFixed(2);
+                } else {
+                    document.getElementById('currentBalance').value = 'Unable to load';
+                }
+            } catch (e) {
+                document.getElementById('currentBalance').value = 'Error';
+            }
+            openModal('balanceAdjustmentModal');
+        }
+
+        async function handleBalanceAdjustment(event) {
             event.preventDefault();
+            const userId = parseInt(document.getElementById('balanceUserId').value);
+            const amount = parseFloat(document.getElementById('adjustmentAmount').value);
+
+            if (!api.adminInfo?.user_id) {
+                api.showToast('Admin info not available', 'danger');
+                return;
+            }
+
             const data = {
-                email: document.getElementById('userEmail').value,
-                full_name: document.getElementById('firstName').value + ' ' + document.getElementById('lastName').value,
-                phone: document.getElementById('userPhone').value,
-                date_of_birth: document.getElementById('userDob').value,
-                is_active: document.getElementById('userActive').checked
+                user_id: userId,
+                amount: amount,
+                reason_code: document.getElementById('reasonCode').value,
+                description: document.getElementById('adjustmentDescription').value,
+                created_by: api.adminInfo.user_id  // Use actual admin ID from JWT
             };
 
             try {
-                const response = await fetch('/api/v1/users', {
+                const r = await api.fetch('/api/admin/intervention/balance/adjust', {
                     method: 'POST',
-                    headers: AUTH_HEADER(),
-                    body: JSON.stringify(data)
+                    body: data
                 });
-                if (!response.ok) throw new Error('Failed');
-                showAlert('User created successfully', 'success');
-                closeModal('createUserModal');
-                await loadUsers();
-            } catch (error) {
-                showAlert('Error: ' + error.message, 'danger');
+                
+                if (r.ok) {
+                    api.showToast('Balance adjusted successfully', 'success');
+                    await auditLogger.logAction('BALANCE_ADJUSTMENT', userId, 
+                        `Amount: $${amount}, Reason: ${data.reason_code}`);
+                    bootstrap.Modal.getInstance(document.getElementById('balanceAdjustmentModal')).hide();
+                    loadAllData();
+                } else {
+                    const error = await r.json();
+                    api.showToast(error.detail || 'Failed to adjust balance', 'danger');
+                }
+            } catch (e) {
+                api.showToast('Error: ' + e.message, 'danger');
+            }
+        }
+
+        async function openKYCReviewer(userId) {
+            try {
+                const r = await api.fetch(`/api/admin/intervention/kyc/${userId}/documents`);
+                if (!r.ok) throw new Error(`HTTP ${r.status}`);
+
+                const d = await r.json();
+                if (d.success) {
+                    // Display signed URLs (5 minute expiry)
+                    const idFrontUrl = d.documents.id_front || '';
+                    const selfieUrl = d.documents.selfie || '';
+
+                    document.getElementById('kycDocuments').innerHTML = `
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>ID Document</h6>
+                                ${idFrontUrl ? `
+                                    <img src="${idFrontUrl}" style="max-width: 100%; max-height: 300px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                    <small class="text-muted d-block mt-2">Expires in 5 minutes</small>
+                                ` : '<p class="text-muted">Not uploaded</p>'}
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Selfie/Liveness</h6>
+                                ${selfieUrl ? `
+                                    <img src="${selfieUrl}" style="max-width: 100%; max-height: 300px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                                    <small class="text-muted d-block mt-2">Expires in 5 minutes</small>
+                                ` : '<p class="text-muted">Not uploaded</p>'}
+                            </div>
+                        </div>
+                    `;
+
+                    document.getElementById('kycUserInfo').innerHTML = `
+                        <p><strong>Status:</strong> <span class="kyc-badge kyc-${(d.status||'pending').toLowerCase()}">${(d.status||'PENDING').toUpperCase()}</span></p>
+                        <p><strong>Document Type:</strong> ${d.user_info?.document_type || '-'}</p>
+                        <p><strong>Submitted:</strong> ${d.user_info?.submitted_at ? new Date(d.user_info.submitted_at).toLocaleDateString() : '-'}</p>
+                    `;
+                    
+                    window.currentKYCUserId = userId;
+                    openModal('kycReviewerModal');
+                } else {
+                    throw new Error(d.message || 'Failed to load KYC documents');
+                }
+            } catch (e) {
+                api.showToast('Error loading KYC: ' + e.message, 'danger');
+            }
+        }
+
+        async function approveKYC() {
+            if (!api.adminInfo?.permissions?.includes('kyc:approve')) {
+                api.showToast('You do not have KYC approval permissions', 'danger');
+                return;
+            }
+
+            try {
+                const r = await api.fetch(`/api/admin/kyc/${window.currentKYCUserId}/approve`, {
+                    method: 'POST',
+                    body: { approved_by: api.adminInfo.user_id }
+                });
+
+                if (r.ok) {
+                    api.showToast('KYC approved successfully', 'success');
+                    await auditLogger.logAction('KYC_APPROVAL', window.currentKYCUserId, 'Status changed to APPROVED');
+                    bootstrap.Modal.getInstance(document.getElementById('kycReviewerModal')).hide();
+                    loadAllData();
+                } else {
+                    const error = await r.json();
+                    api.showToast(error.detail || 'Failed to approve KYC', 'danger');
+                }
+            } catch (e) {
+                api.showToast('Error: ' + e.message, 'danger');
+            }
+        }
+
+        async function rejectKYC() {
+            if (!api.adminInfo?.permissions?.includes('kyc:approve')) {
+                api.showToast('You do not have KYC rejection permissions', 'danger');
+                return;
+            }
+
+            const reason = prompt('Rejection reason (shown to user):');
+            if (!reason) return;
+
+            try {
+                const r = await api.fetch(`/api/admin/kyc/${window.currentKYCUserId}/reject`, {
+                    method: 'POST',
+                    body: { 
+                        rejection_reason: reason,
+                        rejected_by: api.adminInfo.user_id
+                    }
+                });
+
+                if (r.ok) {
+                    api.showToast('KYC rejected and user notified', 'info');
+                    await auditLogger.logAction('KYC_REJECTION', window.currentKYCUserId, `Reason: ${reason}`);
+                    bootstrap.Modal.getInstance(document.getElementById('kycReviewerModal')).hide();
+                    loadAllData();
+                } else {
+                    const error = await r.json();
+                    api.showToast(error.detail || 'Failed to reject KYC', 'danger');
+                }
+            } catch (e) {
+                api.showToast('Error: ' + e.message, 'danger');
+            }
+        }
+
+        function openReleaseModal(holdId, reason) {
+            document.getElementById('holdIdDisplay').textContent = holdId;
+            document.getElementById('holdReasonDisplay').textContent = reason;
+            window.currentHoldId = holdId;
+            openModal('releaseHoldModal');
+        }
+
+        async function handleReleaseHold(event) {
+            event.preventDefault();
+            const data = {
+                hold_id: parseInt(window.currentHoldId),
+                approval_notes: document.getElementById('releaseNotes').value,
+                approved_by: api.adminInfo.user_id
+            };
+
+            try {
+                const r = await api.fetch('/api/admin/intervention/holds/release', {
+                    method: 'POST',
+                    body: data
+                });
+
+                if (r.ok) {
+                    api.showToast('Hold released successfully', 'success');
+                    await auditLogger.logAction('HOLD_RELEASE', null, `Hold ${window.currentHoldId} released`);
+                    bootstrap.Modal.getInstance(document.getElementById('releaseHoldModal')).hide();
+                    loadHolds();
+                } else {
+                    const error = await r.json();
+                    api.showToast(error.detail || 'Failed to release hold', 'danger');
+                }
+            } catch (e) {
+                api.showToast('Error: ' + e.message, 'danger');
+            }
+        }
+
+        function openRevokeModal(deviceId, ip) {
+            document.getElementById('deviceIpDisplay').textContent = ip;
+            window.currentDeviceId = deviceId;
+            openModal('revokeSessionModal');
+        }
+
+        async function handleRevokeSession(event) {
+            event.preventDefault();
+            const data = {
+                device_id: parseInt(window.currentDeviceId),
+                reason: document.getElementById('revocationReason').value,
+                revoked_by: api.adminInfo.user_id
+            };
+
+            try {
+                const r = await api.fetch('/api/admin/intervention/sessions/revoke', {
+                    method: 'POST',
+                    body: data
+                });
+
+                if (r.ok) {
+                    api.showToast('Session revoked successfully', 'success');
+                    await auditLogger.logAction('SESSION_REVOKE', null, `Device ${window.currentDeviceId} revoked`);
+                    bootstrap.Modal.getInstance(document.getElementById('revokeSessionModal')).hide();
+                    loadDevices();
+                } else {
+                    const error = await r.json();
+                    api.showToast(error.detail || 'Failed to revoke session', 'danger');
+                }
+            } catch (e) {
+                api.showToast('Error: ' + e.message, 'danger');
+            }
+        }
+
+        async function performGlobalSearch() {
+            const query = document.getElementById('globalSearchInput').value.trim();
+            if (!query) return;
+
+            try {
+                const r = await api.fetch(
+                    `/api/admin/intervention/search?query=${encodeURIComponent(query)}`
+                );
+                if (!r.ok) throw new Error(`HTTP ${r.status}`);
+
+                const d = await r.json();
+                const resultsDiv = document.getElementById('searchResults');
+                resultsDiv.style.display = 'block';
+                resultsDiv.innerHTML = `
+                    <h6><strong>Users (${d.results.users?.length || 0})</strong></h6>
+                    ${(d.results.users || []).map(u => 
+                        `<div class="search-result-item" onclick="openUserDetailModal(${u.id})" style="cursor: pointer;">
+                            ${u.email} - ${u.full_name}
+                        </div>`
+                    ).join('')}
+                    <hr>
+                    <h6><strong>Accounts (${d.results.accounts?.length || 0})</strong></h6>
+                    ${(d.results.accounts || []).map(a => 
+                        `<div class="search-result-item">${a.account_number}</div>`
+                    ).join('')}
+                `;
+            } catch (e) {
+                api.showToast('Search error: ' + e.message, 'danger');
             }
         }
 
         async function handleCreateHold(event) {
             event.preventDefault();
+            const userId = document.getElementById('selectedHoldUserId').value;
+            if (!userId) {
+                api.showToast('Please select a user', 'warning');
+                return;
+            }
+
             const data = {
-                user_id: document.getElementById('holdUser').value,
+                user_id: parseInt(userId),
                 hold_type: document.getElementById('holdType').value,
                 reason: document.getElementById('holdReason').value,
-                hold_amount: document.getElementById('holdAmount').value || null
+                duration_days: parseInt(document.getElementById('holdDuration').value),
+                created_by: api.adminInfo.user_id
             };
 
             try {
-                const response = await fetch('/api/v1/users/holds', {
+                const r = await api.fetch('/api/admin/intervention/holds/create', {
                     method: 'POST',
-                    headers: AUTH_HEADER(),
-                    body: JSON.stringify(data)
+                    body: data
                 });
-                if (!response.ok) throw new Error('Failed');
-                showAlert('Hold created successfully', 'success');
-                closeModal('createHoldModal');
-                await loadHolds();
-            } catch (error) {
-                showAlert('Error: ' + error.message, 'danger');
+
+                if (r.ok) {
+                    api.showToast('Hold created successfully', 'success');
+                    await auditLogger.logAction('HOLD_CREATE', parseInt(userId), 
+                        `Type: ${data.hold_type}, Duration: ${data.duration_days}d`);
+                    bootstrap.Modal.getInstance(document.getElementById('createHoldModal')).hide();
+                    loadHolds();
+                } else {
+                    const error = await r.json();
+                    api.showToast(error.detail || 'Failed to create hold', 'danger');
+                }
+            } catch (e) {
+                api.showToast('Error: ' + e.message, 'danger');
             }
         }
 
-        function viewUser(id) { alert('View user ' + id); }
-        function editUser(id) { alert('Edit user ' + id); }
-        function viewHolds(id) { alert('View holds for user ' + id); }
-        function removeHold(id) { alert('Remove hold ' + id); }
-        function unfreezeAccount(id) { alert('Unfreeze account ' + id); }
-        function updateCreditScore(id) { alert('Update credit score for user ' + id); }
-        function viewDevice(id) { alert('View device ' + id); }
-        
-        function openModal(id) { new bootstrap.Modal(document.getElementById(id)).show(); }
-        function closeModal(id) { bootstrap.Modal.getInstance(document.getElementById(id))?.hide(); }
-        function formatCurrency(amount) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount); }
-        function formatDate(date) { return new Date(date).toLocaleString(); }
+        async function handleBulkEmail(event) {
+            event.preventDefault();
+
+            const emailFilter = document.getElementById('emailFilter').value;
+            if (!emailFilter) {
+                api.showToast('Please select target users', 'warning');
+                return;
+            }
+
+            const data = {
+                kyc_status_filter: emailFilter,
+                email_template: document.getElementById('emailTemplate').value,
+                subject: document.getElementById('emailSubject').value,
+                sent_by: api.adminInfo.user_id
+            };
+
+            try {
+                const r = await api.fetch('/api/admin/intervention/bulk-email', {
+                    method: 'POST',
+                    body: data
+                });
+
+                if (r.ok) {
+                    const d = await r.json();
+                    api.showToast(
+                        `Email campaign queued for ${d.recipient_count} users`,
+                        'success'
+                    );
+                    await auditLogger.logAction('BULK_EMAIL_SENT', null, 
+                        `Filter: ${emailFilter}, Recipients: ${d.recipient_count}`);
+                    bootstrap.Modal.getInstance(document.getElementById('bulkEmailModal')).hide();
+                    document.getElementById('bulkEmailForm').reset();
+                } else {
+                    const error = await r.json();
+                    api.showToast(error.detail || 'Failed to queue emails', 'danger');
+                }
+            } catch (e) {
+                api.showToast('Error: ' + e.message, 'danger');
+            }
+        }
+
+        async function requestDeleteUser(userId) {
+            if (!api.requireSuperAdmin()) return;
+
+            const confirmDelete = confirm(
+                'WARNING: This will permanently delete the user and all associated data. This action cannot be undone. Continue?'
+            );
+            if (!confirmDelete) return;
+
+            try {
+                const r = await api.fetch(`/api/admin/users/${userId}`, {
+                    method: 'DELETE'
+                });
+
+                if (r.ok) {
+                    api.showToast('User deleted successfully', 'success');
+                    await auditLogger.logAction('USER_DELETED', userId, 'Permanent deletion');
+                    loadUsers();
+                } else {
+                    const error = await r.json();
+                    api.showToast(error.detail || 'Failed to delete user', 'danger');
+                }
+            } catch (e) {
+                api.showToast('Error: ' + e.message, 'danger');
+            }
+        }
+
+        function openSuspendModal(userId, userEmail) {
+            document.getElementById('suspendUserId').value = userId;
+            document.getElementById('suspendUserEmail').value = userEmail;
+            document.getElementById('suspendReasonDiv').style.display = 'block';
+            document.getElementById('suspendNoteDiv').style.display = 'block';
+            document.getElementById('suspendDurationDiv').style.display = 'block';
+            const suspendModal = new bootstrap.Modal(document.getElementById('suspendModal'));
+            suspendModal.show();
+        }
+
+        async function handleSuspendUser(event) {
+            event.preventDefault();
+            try {
+                const userId = document.getElementById('suspendUserId').value;
+                const reason = document.getElementById('suspendReason').value;
+                const note = document.getElementById('suspendNote').value;
+                const duration = parseInt(document.getElementById('suspendDuration').value) || 0;
+
+                const r = await api.fetch(`/api/admin/users/${userId}/suspend`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        reason: reason,
+                        note: note,
+                        duration_days: duration
+                    })
+                });
+
+                if (r.ok) {
+                    api.showToast('User account suspended successfully', 'success');
+                    await auditLogger.logAction('USER_SUSPENDED', userId, `Reason: ${reason}`);
+                    bootstrap.Modal.getInstance(document.getElementById('suspendModal')).hide();
+                    loadUsers();
+                } else {
+                    const error = await r.json();
+                    api.showToast(error.detail || 'Failed to suspend user', 'danger');
+                }
+            } catch (e) {
+                api.showToast('Error: ' + e.message, 'danger');
+            }
+        }
+
+        function openFreezeModal(userId, userEmail) {
+            document.getElementById('freezeUserId').value = userId;
+            document.getElementById('freezeUserEmail').value = userEmail;
+            document.getElementById('freezeReasonDiv').style.display = 'block';
+            document.getElementById('freezeNoteDiv').style.display = 'block';
+            document.getElementById('freezeDurationDiv').style.display = 'block';
+            const freezeModal = new bootstrap.Modal(document.getElementById('freezeModal'));
+            freezeModal.show();
+        }
+
+        async function handleFreezeAccount(event) {
+            event.preventDefault();
+            try {
+                const userId = document.getElementById('freezeUserId').value;
+                const reason = document.getElementById('freezeReason').value;
+                const note = document.getElementById('freezeNote').value;
+                const duration = parseInt(document.getElementById('freezeDuration').value) || 0;
+
+                const r = await api.fetch(`/api/admin/users/${userId}/freeze`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        reason: reason,
+                        note: note,
+                        duration_days: duration
+                    })
+                });
+
+                if (r.ok) {
+                    api.showToast('User account frozen successfully', 'success');
+                    await auditLogger.logAction('ACCOUNT_FROZEN', userId, `Reason: ${reason}`);
+                    bootstrap.Modal.getInstance(document.getElementById('freezeModal')).hide();
+                    loadUsers();
+                } else {
+                    const error = await r.json();
+                    api.showToast(error.detail || 'Failed to freeze account', 'danger');
+                }
+            } catch (e) {
+                api.showToast('Error: ' + e.message, 'danger');
+            }
+        }
+
+        function refreshAllData() {
+            document.getElementById('refreshBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
+            loadAllData().then(() => {
+                document.getElementById('refreshBtn').innerHTML = '<i class="fas fa-sync"></i> Refresh';
+                api.showToast('Data refreshed', 'info', 2000);
+            }).catch(e => {
+                document.getElementById('refreshBtn').innerHTML = '<i class="fas fa-sync"></i> Refresh';
+            });
+        }
     </script>
-    <script src="/static/js/admin-guard.js"></script>
 </body>
 </html>

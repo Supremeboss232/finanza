@@ -238,11 +238,16 @@ async def fund_user_transfer(
         account = result.scalar_one_or_none()
         
         if not account:
+            # Generate unique account number
+            import time
+            account_number = f"ACC{user_id}{int(time.time() * 1000000) % 1000000}"
             account = DBAccount(
+                account_number=account_number,
                 owner_id=user_id,
                 account_type=account_type,
                 balance=0.0,
-                currency="USD"
+                currency="USD",
+                status="active"
             )
             db_session.add(account)
             await db_session.flush()
@@ -413,11 +418,15 @@ async def bulk_fund_users(
                 account = result.scalar_one_or_none()
                 
                 if not account:
+                    import time
+                    account_number = f"ACC{user.id}{int(time.time() * 1000000) % 1000000}"
                     account = DBAccount(
+                        account_number=account_number,
                         owner_id=user.id,
                         account_type=account_type,
                         balance=0.0,
-                        currency="USD"
+                        currency="USD",
+                        status="active"
                     )
                     db_session.add(account)
                     await db_session.flush()

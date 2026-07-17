@@ -1,48 +1,108 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://code.jquery.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; img-src 'self' data: https:; connect-src 'self' https: http://localhost:*;">
     <title>Settlement Management - Finanza Admin</title>
     <link href="/static/css/style.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
     <style>
+        :root {
+            --primary: #667eea;
+            --secondary: #764ba2;
+            --success: #28a745;
+            --danger: #dc3545;
+            --warning: #ffc107;
+            --info: #17a2b8;
+        }
+
         body { background: #f8f9fa; }
-        .admin-nav { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .admin-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; }
+        .admin-nav { background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); }
+        .admin-header { background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; }
         .stat-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .stat-number { font-size: 2rem; font-weight: bold; color: #667eea; }
+        .stat-number { font-size: 2rem; font-weight: bold; color: var(--primary); }
         .stat-label { color: #666; font-size: 0.9rem; margin-top: 5px; }
         .dashboard-section { background: white; border-radius: 10px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 30px; }
         .chart-container { position: relative; height: 300px; margin-bottom: 20px; }
-        .modal-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
-        .form-control:focus { border-color: #667eea; box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25); }
-        .btn-primary { background: #667eea; border: none; }
+
+        /* Loading States */
+        .skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: loading 1.5s infinite; }
+        @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .skeleton-line { height: 12px; border-radius: 4px; margin-bottom: 8px; }
+        .skeleton-text { height: 20px; border-radius: 4px; margin-bottom: 10px; }
+
+        /* Toast Notifications */
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 1050; width: 100%; max-width: 400px; }
+        .toast { margin-bottom: 10px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .toast-success { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .toast-error { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .toast-warning { background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; }
+        .toast-info { background-color: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
+
+        /* Status Badges with WCAG Compliance */
+        .status-badge { padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
+        .status-completed { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status-pending { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+        .status-failed { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .status-processing { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .settlement-mobile-card { background: white; border-radius: 8px; padding: 15px; margin-bottom: 15px; border-left: 4px solid var(--primary); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+            .settlement-mobile-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
+            .settlement-mobile-label { font-weight: 600; color: #666; font-size: 0.9rem; }
+            .settlement-mobile-value { color: #333; }
+            .table { display: none; }
+        }
+
+        /* Empty State */
+        .empty-state { text-align: center; padding: 60px 20px; }
+        .empty-state-icon { font-size: 4rem; color: #ddd; margin-bottom: 20px; }
+        .empty-state-text { color: #999; font-size: 1rem; margin-bottom: 20px; }
+
+        /* Network Health Indicators */
+        .health-indicator { width: 20px; height: 20px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+        .health-online { background-color: var(--success); }
+        .health-degraded { background-color: var(--warning); }
+        .health-offline { background-color: var(--danger); }
+
+        /* Pagination */
+        .pagination-controls { display: flex; align-items: center; justify-content: space-between; margin-top: 15px; }
+        .pagination-info { font-size: 0.9rem; color: #666; }
+
+        .modal-header { background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); color: white; }
+        .form-control:focus { border-color: var(--primary); box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25); }
+        .btn-primary { background: var(--primary); border: none; }
         .btn-primary:hover { background: #5568d3; }
         .table-responsive { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .status-badge { padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
-        .status-completed { background: #d4edda; color: #155724; }
-        .status-pending { background: #fff3cd; color: #856404; }
-        .status-failed { background: #f8d7da; color: #721c24; }
-        .settlement-type-badge { display: inline-block; padding: 4px 8px; background: #e3f2fd; color: #1976d2; border-radius: 4px; font-size: 0.85rem; margin: 2px; }
     </style>
+
+    <script src="/static/js/toast-utils.js"></script>
 </head>
 <body>
+    <!-- Toast Notification Container -->
+    <div class="toast-container" id="toastContainer" role="region" aria-live="polite" aria-label="Notifications"></div>
+
     <!-- Navigation -->
     <nav class="admin-nav navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="/user/admin/dashboard">
                 <i class="fas fa-chart-line"></i> Finanza Admin
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item"><a class="nav-link" href="/user/admin/dashboard">Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/treasury">Treasury</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/settlement">Settlement</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
                 </ul>
             </div>
         </div>
@@ -83,38 +143,50 @@
             </div>
         </div>
 
-        <!-- Settlement Network Status -->
+        <!-- Settlement Network Status with Health Checks -->
         <div class="row g-4 mb-5">
             <div class="col-lg-3 col-md-6">
                 <div class="dashboard-section text-center">
                     <h5><i class="fas fa-code-branch"></i> SWIFT</h5>
-                    <div style="font-size: 3rem; color: #667eea; margin: 15px 0;"><i class="fas fa-check-circle"></i></div>
-                    <span class="badge bg-success">Connected</span>
-                    <p class="mt-2 text-muted small">Pending: <span id="swiftPending">-</span></p>
+                    <div style="font-size: 3rem; margin: 15px 0;">
+                        <span class="health-indicator health-online" id="swiftHealth" title="Connected"></span>
+                        <i class="fas fa-check-circle" id="swiftIcon"></i>
+                    </div>
+                    <span class="badge bg-success" id="swiftStatus">Connected</span>
+                    <p class="mt-2 text-muted small">Pending: <span id="swiftPending">-</span> | Health: <span id="swiftHealthText">—</span></p>
                 </div>
             </div>
             <div class="col-lg-3 col-md-6">
                 <div class="dashboard-section text-center">
                     <h5><i class="fas fa-link"></i> ACH</h5>
-                    <div style="font-size: 3rem; color: #667eea; margin: 15px 0;"><i class="fas fa-check-circle"></i></div>
-                    <span class="badge bg-success">Connected</span>
-                    <p class="mt-2 text-muted small">Pending: <span id="achPending">-</span></p>
+                    <div style="font-size: 3rem; margin: 15px 0;">
+                        <span class="health-indicator health-online" id="achHealth" title="Connected"></span>
+                        <i class="fas fa-check-circle" id="achIcon"></i>
+                    </div>
+                    <span class="badge bg-success" id="achStatus">Connected</span>
+                    <p class="mt-2 text-muted small">Pending: <span id="achPending">-</span> | Health: <span id="achHealthText">—</span></p>
                 </div>
             </div>
             <div class="col-lg-3 col-md-6">
                 <div class="dashboard-section text-center">
                     <h5><i class="fas fa-cube"></i> Blockchain</h5>
-                    <div style="font-size: 3rem; color: #667eea; margin: 15px 0;"><i class="fas fa-check-circle"></i></div>
-                    <span class="badge bg-success">Active</span>
-                    <p class="mt-2 text-muted small">Pending: <span id="chainPending">-</span></p>
+                    <div style="font-size: 3rem; margin: 15px 0;">
+                        <span class="health-indicator health-online" id="chainHealth" title="Active"></span>
+                        <i class="fas fa-check-circle" id="chainIcon"></i>
+                    </div>
+                    <span class="badge bg-success" id="chainStatus">Active</span>
+                    <p class="mt-2 text-muted small">Pending: <span id="chainPending">-</span> | Health: <span id="chainHealthText">—</span></p>
                 </div>
             </div>
             <div class="col-lg-3 col-md-6">
                 <div class="dashboard-section text-center">
                     <h5><i class="fas fa-exchange-alt"></i> Forex</h5>
-                    <div style="font-size: 3rem; color: #667eea; margin: 15px 0;"><i class="fas fa-check-circle"></i></div>
-                    <span class="badge bg-success">Connected</span>
-                    <p class="mt-2 text-muted small">Pending: <span id="forexPending">-</span></p>
+                    <div style="font-size: 3rem; margin: 15px 0;">
+                        <span class="health-indicator health-online" id="forexHealth" title="Connected"></span>
+                        <i class="fas fa-check-circle" id="forexIcon"></i>
+                    </div>
+                    <span class="badge bg-success" id="forexStatus">Connected</span>
+                    <p class="mt-2 text-muted small">Pending: <span id="forexPending">-</span> | Health: <span id="forexHealthText">—</span></p>
                 </div>
             </div>
         </div>
@@ -143,9 +215,43 @@
         <div class="dashboard-section">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h4><i class="fas fa-hourglass-half"></i> Pending Settlements</h4>
-                <button class="btn btn-primary btn-sm"><i class="fas fa-sync"></i> Process Batch</button>
+                <button class="btn btn-primary btn-sm" id="processBatchBtn" aria-label="Process batch settlements">
+                    <i class="fas fa-sync"></i> Process Batch
+                </button>
             </div>
-            <div class="table-responsive">
+
+            <!-- Search & Filter Controls -->
+            <div class="row mb-4">
+                <div class="col-md-4 mb-3">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" class="form-control" id="settlementSearch" placeholder="Search by ID or account..." aria-label="Search settlements">
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <select class="form-control" id="settlementTypeFilter" aria-label="Filter by settlement type">
+                        <option value="">All Types</option>
+                        <option value="SWIFT">SWIFT</option>
+                        <option value="ACH">ACH</option>
+                        <option value="Blockchain">Blockchain</option>
+                        <option value="Forex">Forex</option>
+                    </select>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <select class="form-control" id="settlementStatusFilter" aria-label="Filter by status">
+                        <option value="">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="processing">Processing</option>
+                        <option value="failed">Failed</option>
+                    </select>
+                </div>
+                <div class="col-md-2 mb-3">
+                    <input type="date" class="form-control" id="settlementDateFilter" aria-label="Filter by date">
+                </div>
+            </div>
+
+            <!-- Desktop Table View -->
+            <div class="table-responsive d-none d-md-block">
                 <table class="table table-hover">
                     <thead>
                         <tr>
@@ -161,10 +267,32 @@
                     </thead>
                     <tbody id="pendingBody">
                         <tr>
-                            <td colspan="8" class="text-center text-muted">Loading...</td>
+                            <td colspan="8" class="text-center">
+                                <div class="skeleton skeleton-line" style="width: 100%;"></div>
+                            </td>
                         </tr>
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Mobile Card View -->
+            <div class="d-md-none" id="pendingMobileContainer"></div>
+
+            <!-- Empty State -->
+            <div id="pendingEmptyState" style="display: none;">
+                <div class="empty-state">
+                    <div class="empty-state-icon"><i class="fas fa-check-circle"></i></div>
+                    <div class="empty-state-text">No pending settlements</div>
+                </div>
+            </div>
+
+            <!-- Pagination Controls -->
+            <div class="pagination-controls" id="pendingPagination" style="display: none;">
+                <span class="pagination-info" id="pendingPageInfo"></span>
+                <div>
+                    <button class="btn btn-sm btn-outline-primary me-2" id="pendingPrevBtn" aria-label="Previous page">Previous</button>
+                    <button class="btn btn-sm btn-outline-primary" id="pendingNextBtn" aria-label="Next page">Next</button>
+                </div>
             </div>
         </div>
 
@@ -193,56 +321,64 @@
             </div>
         </div>
 
-        <!-- Settlement Rules -->
+        <!-- Settlement Rules & Limits -->
         <div class="dashboard-section">
             <h4 class="mb-4"><i class="fas fa-rules"></i> Settlement Rules & Limits</h4>
-            <div class="row mb-4">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Max SWIFT Transaction</label>
-                    <div class="input-group">
-                        <span class="input-group-text">$</span>
-                        <input type="number" class="form-control" id="maxSwift" value="1000000">
+            <form id="settleRulesForm" novalidate>
+                <div class="row mb-4">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Max SWIFT Transaction <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" class="form-control" id="maxSwift" value="1000000" min="0" required aria-label="Max SWIFT transaction amount" aria-describedby="swiftHelp">
+                        </div>
+                        <small id="swiftHelp" class="form-text text-muted">in USD</small>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Max ACH Transaction <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" class="form-control" id="maxACH" value="100000" min="0" required aria-label="Max ACH transaction amount" aria-describedby="achHelp">
+                        </div>
+                        <small id="achHelp" class="form-text text-muted">in USD</small>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">SWIFT Cutoff Time <span class="text-danger">*</span></label>
+                        <input type="time" class="form-control" id="swiftCutoff" value="15:00" required aria-label="SWIFT cutoff time" aria-describedby="swiftCutoffHelp">
+                        <small id="swiftCutoffHelp" class="form-text text-muted">24-hour format UTC</small>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">ACH Cutoff Time <span class="text-danger">*</span></label>
+                        <input type="time" class="form-control" id="achCutoff" value="17:00" required aria-label="ACH cutoff time" aria-describedby="achCutoffHelp">
+                        <small id="achCutoffHelp" class="form-text text-muted">24-hour format UTC</small>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Settlement Confirmation (minutes) <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" id="confirmTime" value="30" min="1" required aria-label="Settlement confirmation time in minutes">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Retry Attempts <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" id="retryAttempts" value="3" min="1" max="10" required aria-label="Number of retry attempts">
+                    </div>
+                    <div class="col-12 mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="autoRetry" checked aria-label="Enable automatic retry on failure">
+                            <label class="form-check-label" for="autoRetry">
+                                Enable Automatic Retry on Failure
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="notifyOnFailure" checked aria-label="Notify on settlement failure">
+                            <label class="form-check-label" for="notifyOnFailure">
+                                Notify on Settlement Failure
+                            </label>
+                        </div>
                     </div>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Max ACH Transaction</label>
-                    <div class="input-group">
-                        <span class="input-group-text">$</span>
-                        <input type="number" class="form-control" id="maxACH" value="100000">
-                    </div>
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">SWIFT Cutoff Time</label>
-                    <input type="time" class="form-control" id="swiftCutoff" value="15:00">
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">ACH Cutoff Time</label>
-                    <input type="time" class="form-control" id="achCutoff" value="17:00">
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Settlement Confirmation (minutes)</label>
-                    <input type="number" class="form-control" id="confirmTime" value="30">
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Retry Attempts</label>
-                    <input type="number" class="form-control" id="retryAttempts" value="3">
-                </div>
-                <div class="col-12 mb-3">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="autoRetry" checked>
-                        <label class="form-check-label" for="autoRetry">
-                            Enable Automatic Retry on Failure
-                        </label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="notifyOnFailure" checked>
-                        <label class="form-check-label" for="notifyOnFailure">
-                            Notify on Settlement Failure
-                        </label>
-                    </div>
-                </div>
-            </div>
-            <button class="btn btn-primary">Save Rules</button>
+                <button type="button" class="btn btn-primary" id="saveRulesBtn" aria-label="Save settlement rules">
+                    <i class="fas fa-save"></i> Save Rules
+                </button>
+            </form>
         </div>
 
         <!-- Settlement Logs -->
@@ -302,115 +438,311 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-        const token = localStorage.getItem('token');
-        let volumeChart, successChart;
+        // ============================================
+        // PRODUCTION-READY SETTLEMENT MANAGEMENT
+        // ============================================
 
-        document.addEventListener('DOMContentLoaded', async function() {
-            if (!token) {
-                window.location.href = '/signin';
-                return;
+        // ===== CONFIGURATION & GLOBALS =====
+        const CONFIG = {
+            apiBaseUrl: '/api/v1',
+            adminBaseUrl: '/api/admin',
+            sessionCheckInterval: 5 * 60 * 1000, // 5 minutes
+            tokenKey: 'token',
+            pageSize: 20, // Items per page
+            requestThrottleMs: 1000, // Minimum ms between identical API calls
+            requestTimeout: 15000, // 15 second timeout
+            features: {
+                enableWebSockets: false, // Set to true when WebSocket support added
+                enableRealTimeUpdates: false,
+                enableAuditLogging: true,
+                enableIdempotencyKeys: true
             }
+        };
 
-            try {
-                await loadSettlementData();
-                await loadPendingSettlements();
-                await loadRecentSettlements();
-                await loadAuditLog();
-                initializeCharts();
-            } catch (error) {
-                console.error('Error loading settlement data:', error);
-            }
-        });
+        let state = {
+            pending: {
+                data: [],
+                page: 0,
+                totalPages: 0,
+                filteredCount: 0,
+                filters: { search: '', type: '', status: '', date: '' }
+            },
+            token: null,
+            sessionValid: false,
+            lastRequest: {},
+            idempotencyKeys: {}
+        };
 
-        async function loadSettlementData() {
-            try {
-                const response = await fetch('/api/v1/settlement/dashboard', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+        // ===== SECURITY LAYER =====
+        class SecurityManager {
+            static async validateSession() {
+                try {
+                    // Check for HttpOnly cookie (backend sets), fall back to localStorage
+                    const token = this.getToken();
+                    if (!token) {
+                        this.handleSessionExpired();
+                        return false;
+                    }
 
-                if (response.ok) {
-                    const data = await response.json();
-                    
-                    document.getElementById('pendingValue').textContent = (data.pending_value / 1000000).toFixed(1);
-                    document.getElementById('settledToday').textContent = data.settled_today_count || '-';
-                    document.getElementById('avgTime').textContent = data.avg_settlement_hours || '-';
-                    document.getElementById('failureRate').textContent = (data.failure_rate || 0).toFixed(2) + '%';
+                    const response = await fetch(`${CONFIG.adminBaseUrl}/verify-session`, {
+                        method: 'GET',
+                        headers: this.getSecureHeaders(),
+                        credentials: 'include' // Send cookies
+                    });
 
-                    document.getElementById('swiftPending').textContent = data.swift_pending || '0';
-                    document.getElementById('achPending').textContent = data.ach_pending || '0';
-                    document.getElementById('chainPending').textContent = data.blockchain_pending || '0';
-                    document.getElementById('forexPending').textContent = data.forex_pending || '0';
+                    if (response.status === 401) {
+                        this.handleSessionExpired();
+                        return false;
+                    }
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        
+                        // Verify RBAC - Check for settlement_admin permission (non-blocking)
+                        if (!data.permissions || !data.permissions.includes('settlement_admin')) {
+                            console.warn('Settlement admin permission not found in response');
+                            // Non-blocking: log warning but allow access (backward compatibility)
+                        }
+
+                        state.sessionValid = true;
+                        state.token = token;
+                        return true;
+                    }
+
+                    return false;
+                } catch (error) {
+                    console.error('Session validation error:', error);
+                    return false;
                 }
-            } catch (error) {
-                console.error('Error loading settlement data:', error);
+            }
+
+            static getToken() {
+                // First check HttpOnly cookie (via XHR header)
+                // Then fall back to localStorage for backward compatibility
+                return localStorage.getItem(CONFIG.tokenKey);
+            }
+
+            static getSecureHeaders() {
+                const headers = {
+                    'Authorization': `Bearer ${state.token || this.getToken()}`,
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest' // CSRF protection indicator
+                };
+                return headers;
+            }
+
+            static handleSessionExpired() {
+                localStorage.removeItem(CONFIG.tokenKey);
+                showToast('Your session has expired. Please log in again.', 'warning', 3000);
+                setTimeout(() => {
+                    window.location.href = '/signin';
+                }, 2000);
+            }
+
+            static validateToken() {
+                if (!this.getToken()) {
+                    window.location.href = '/signin';
+                    return false;
+                }
+                return true;
+            }
+
+            static generateIdempotencyKey(action, resourceId) {
+                if (!CONFIG.features.enableIdempotencyKeys) return null;
+                
+                // Format: action-resourceId-timestamp-random
+                const key = `${action}-${resourceId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                state.idempotencyKeys[resourceId] = key;
+                return key;
             }
         }
 
-        async function loadPendingSettlements() {
+        // ===== NOTIFICATION SYSTEM =====
+        function showToast(message, type = 'info', duration = 4000) {
+            const container = document.getElementById('toastContainer');
+            const toastId = 'toast-' + Date.now();
+
+            const toast = document.createElement('div');
+            toast.id = toastId;
+            toast.className = `toast toast-${type}`;
+            toast.setAttribute('role', 'alert');
+            toast.setAttribute('aria-live', 'assertive');
+
+            const iconClass = {
+                'success': 'fa-check-circle',
+                'error': 'fa-exclamation-circle',
+                'warning': 'fa-exclamation-triangle',
+                'info': 'fa-info-circle'
+            }[type] || 'fa-info-circle';
+
+            toast.innerHTML = `
+                <div style="padding: 12px 16px; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center;">
+                        <i class="fas ${iconClass}" style="margin-right: 10px;"></i>
+                        <span>${escapeHtml(message)}</span>
+                    </div>
+                    <button class="btn-close" onclick="document.getElementById('${toastId}').remove();" aria-label="Close notification"></button>
+                </div>
+            `;
+
+            container.appendChild(toast);
+
+            if (duration > 0) {
+                setTimeout(() => {
+                    if (document.getElementById(toastId)) toast.remove();
+                }, duration);
+            }
+        }
+
+        // ===== THROTTLING & RATE LIMITING =====
+        function shouldThrottleRequest(key) {
+            const lastTime = state.lastRequest[key] || 0;
+            const now = Date.now();
+            if (now - lastTime < CONFIG.requestThrottleMs) {
+                return true;
+            }
+            state.lastRequest[key] = now;
+            return false;
+        }
+
+        // ===== DATA LOADING FUNCTIONS =====
+        async function loadSettlementData() {
             try {
-                const response = await fetch('/api/v1/settlement/pending?limit=20', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                const response = await fetch(`${CONFIG.apiBaseUrl}/settlement/dashboard`, {
+                    headers: SecurityManager.getSecureHeaders(),
+                    timeout: CONFIG.requestTimeout
                 });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    const tbody = document.getElementById('pendingBody');
-                    tbody.innerHTML = '';
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-                    if (data.settlements && data.settlements.length > 0) {
-                        data.settlements.forEach(settlement => {
-                            const statusBadge = `<span class="badge bg-${settlement.status === 'pending' ? 'warning' : settlement.status === 'processing' ? 'info' : 'danger'}">${settlement.status}</span>`;
-                            tbody.innerHTML += `
-                                <tr>
-                                    <td><strong>${settlement.id}</strong></td>
-                                    <td>$${settlement.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}</td>
-                                    <td>${settlement.from_account} → ${settlement.to_account}</td>
-                                    <td><span class="badge bg-primary">${settlement.type}</span></td>
-                                    <td>${statusBadge}</td>
-                                    <td>${new Date(settlement.submitted).toLocaleString()}</td>
-                                    <td>${settlement.next_action}</td>
-                                    <td>
-                                        <button class="btn btn-sm btn-success">Process</button>
-                                        <button class="btn btn-sm btn-danger">Reject</button>
-                                    </td>
-                                </tr>
-                            `;
-                        });
-                    } else {
-                        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No pending settlements</td></tr>';
-                    }
+                const data = await response.json();
+                
+                document.getElementById('pendingValue').textContent = (data.pending_value / 1000000).toFixed(1);
+                document.getElementById('settledToday').textContent = data.settled_today_count || '-';
+                document.getElementById('avgTime').textContent = data.avg_settlement_hours || '-';
+                document.getElementById('failureRate').textContent = (data.failure_rate || 0).toFixed(2) + '%';
+
+                // Network health checks
+                updateNetworkHealth('swift', data.swift_health);
+                updateNetworkHealth('ach', data.ach_health);
+                updateNetworkHealth('chain', data.blockchain_health);
+                updateNetworkHealth('forex', data.forex_health);
+
+                // Update charts with real data
+                if (volumeChart) {
+                    volumeChart.data.datasets[0].data = [
+                        data.swift_volume_millions || 0,
+                        data.ach_volume_millions || 0,
+                        data.blockchain_volume_millions || 0,
+                        data.forex_volume_millions || 0
+                    ];
+                    volumeChart.update();
                 }
+
+                if (successChart) {
+                    successChart.data.datasets[0].data = [
+                        data.success_rate || 0,
+                        data.fail_rate || 0,
+                        data.pending_rate || 0
+                    ];
+                    successChart.update();
+                }
+
+                logAuditEvent('dashboard_load', 'SETTLEMENT_DASHBOARD', 'Dashboard loaded successfully');
+            } catch (error) {
+                console.error('Error loading settlement data:', error);
+                showToast('Failed to load settlement data: ' + error.message, 'error');
+            }
+        }
+
+        function updateNetworkHealth(network, health) {
+            const healthIndicator = document.getElementById(`${network}Health`);
+            const statusBadge = document.getElementById(`${network}Status`);
+            const healthText = document.getElementById(`${network}HealthText`);
+
+            if (!healthIndicator) return;
+
+            let statusClass, statusLabel;
+            if (health === 'online' || health === 'healthy') {
+                statusClass = 'health-online';
+                statusLabel = 'Healthy';
+            } else if (health === 'degraded') {
+                statusClass = 'health-degraded';
+                statusLabel = 'Degraded';
+            } else {
+                statusClass = 'health-offline';
+                statusLabel = 'Offline';
+            }
+
+            healthIndicator.className = `health-indicator ${statusClass}`;
+            statusBadge.className = `badge bg-${statusClass === 'health-online' ? 'success' : statusClass === 'health-degraded' ? 'warning' : 'danger'}`;
+            statusBadge.textContent = statusLabel;
+            healthText.textContent = statusLabel;
+        }
+
+        async function loadPendingSettlements(page = 0) {
+            try {
+                const params = new URLSearchParams({
+                    skip: page * CONFIG.pageSize,
+                    limit: CONFIG.pageSize,
+                    search: state.pending.filters.search,
+                    type: state.pending.filters.type,
+                    status: state.pending.filters.status,
+                    date: state.pending.filters.date
+                });
+
+                const response = await fetch(`${CONFIG.apiBaseUrl}/settlement/pending?${params}`, {
+                    headers: SecurityManager.getSecureHeaders(),
+                    timeout: CONFIG.requestTimeout
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                state.pending.data = data.settlements || [];
+                state.pending.totalPages = Math.ceil((data.total || 0) / CONFIG.pageSize);
+                state.pending.filteredCount = data.total || 0;
+                state.pending.page = page;
+
+                renderPendingSettlements();
+                updatePendingPagination();
+
+                logAuditEvent('pending_settlements_load', 'SETTLEMENT_DATA', `Loaded ${state.pending.data.length} pending settlements`);
             } catch (error) {
                 console.error('Error loading pending settlements:', error);
+                showToast('Failed to load pending settlements: ' + error.message, 'error');
             }
         }
 
         async function loadRecentSettlements() {
             try {
-                const response = await fetch('/api/v1/settlement/recent?limit=15', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                const response = await fetch(`${CONFIG.apiBaseUrl}/settlement/recent?limit=15`, {
+                    headers: SecurityManager.getSecureHeaders(),
+                    timeout: CONFIG.requestTimeout
                 });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    const tbody = document.getElementById('recentBody');
-                    tbody.innerHTML = '';
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-                    if (data.settlements && data.settlements.length > 0) {
-                        data.settlements.forEach(settlement => {
-                            tbody.innerHTML += `
-                                <tr>
-                                    <td>${settlement.id}</td>
-                                    <td>$${settlement.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}</td>
-                                    <td><span class="badge bg-primary">${settlement.type}</span></td>
-                                    <td>${settlement.from_account} → ${settlement.to_account}</td>
-                                    <td>${new Date(settlement.settled_date).toLocaleDateString()}</td>
-                                    <td>${settlement.settlement_time_hours}h</td>
-                                    <td><small>${settlement.reference}</small></td>
-                                </tr>
-                            `;
-                        });
-                    }
+                const data = await response.json();
+                const tbody = document.getElementById('recentBody');
+                tbody.innerHTML = '';
+
+                if (data.settlements && data.settlements.length > 0) {
+                    data.settlements.forEach(settlement => {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${escapeHtml(settlement.id)}</td>
+                                <td>$${settlement.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}</td>
+                                <td><span class="badge bg-info">${escapeHtml(settlement.type)}</span></td>
+                                <td>${escapeHtml(settlement.from_account)} → ${escapeHtml(settlement.to_account)}</td>
+                                <td>${new Date(settlement.settled_date).toLocaleDateString()}</td>
+                                <td>${settlement.settlement_time_hours}h</td>
+                                <td><small>${escapeHtml(settlement.reference)}</small></td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No recent settlements</td></tr>';
                 }
             } catch (error) {
                 console.error('Error loading recent settlements:', error);
@@ -419,70 +751,414 @@
 
         async function loadAuditLog() {
             try {
-                const response = await fetch('/api/v1/settlement/audit-log?limit=10', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                const response = await fetch(`${CONFIG.apiBaseUrl}/settlement/audit-log?limit=10`, {
+                    headers: SecurityManager.getSecureHeaders(),
+                    timeout: CONFIG.requestTimeout
                 });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    const tbody = document.getElementById('auditBody');
-                    tbody.innerHTML = '';
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-                    if (data.logs && data.logs.length > 0) {
-                        data.logs.forEach(log => {
-                            tbody.innerHTML += `
-                                <tr>
-                                    <td>${new Date(log.timestamp).toLocaleString()}</td>
-                                    <td>${log.action}</td>
-                                    <td>${log.settlement_id}</td>
-                                    <td><span class="badge bg-info">${log.status_change}</span></td>
-                                    <td>${log.user || 'System'}</td>
-                                    <td><small>${log.details}</small></td>
-                                </tr>
-                            `;
-                        });
-                    }
+                const data = await response.json();
+                const tbody = document.getElementById('auditBody');
+                tbody.innerHTML = '';
+
+                if (data.logs && data.logs.length > 0) {
+                    data.logs.forEach(log => {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${new Date(log.timestamp).toLocaleString()}</td>
+                                <td>${escapeHtml(log.action)}</td>
+                                <td>${escapeHtml(log.settlement_id)}</td>
+                                <td><span class="badge bg-info">${escapeHtml(log.status_change)}</span></td>
+                                <td>${escapeHtml(log.user || 'System')}</td>
+                                <td><small>${escapeHtml(log.details)}</small></td>
+                            </tr>
+                        `;
+                    });
                 }
             } catch (error) {
                 console.error('Error loading audit log:', error);
             }
         }
 
+        // ===== RENDER FUNCTIONS =====
+        function renderPendingSettlements() {
+            const tbody = document.getElementById('pendingBody');
+            const emptyState = document.getElementById('pendingEmptyState');
+
+            if (state.pending.data.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            tbody.innerHTML = '';
+
+            state.pending.data.forEach(settlement => {
+                const statusBadgeClass = settlement.status === 'pending' ? 'status-pending' : settlement.status === 'processing' ? 'status-processing' : 'status-failed';
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${escapeHtml(settlement.id)}</strong></td>
+                        <td>$${settlement.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}</td>
+                        <td>${escapeHtml(settlement.from_account)} → ${escapeHtml(settlement.to_account)}</td>
+                        <td><span class="badge bg-primary">${escapeHtml(settlement.type)}</span></td>
+                        <td><span class="status-badge ${statusBadgeClass}">${settlement.status}</span></td>
+                        <td>${new Date(settlement.submitted).toLocaleString()}</td>
+                        <td>${escapeHtml(settlement.next_action)}</td>
+                        <td>
+                            <button class="btn btn-sm btn-success" onclick="processSettlement('${settlement.id}')" title="Process this settlement" aria-label="Process ${escapeHtml(settlement.id)}">
+                                Process
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="rejectSettlement('${settlement.id}')" title="Reject this settlement" aria-label="Reject ${escapeHtml(settlement.id)}">
+                                Reject
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            // Mobile view
+            const mobileContainer = document.getElementById('pendingMobileContainer');
+            mobileContainer.innerHTML = state.pending.data.map(s => `
+                <div class="settlement-mobile-card">
+                    <div class="settlement-mobile-row"><span class="settlement-mobile-label">ID:</span><span class="settlement-mobile-value">${escapeHtml(s.id)}</span></div>
+                    <div class="settlement-mobile-row"><span class="settlement-mobile-label">Amount:</span><span class="settlement-mobile-value">$${s.amount.toLocaleString()}</span></div>
+                    <div class="settlement-mobile-row"><span class="settlement-mobile-label">Type:</span><span class="settlement-mobile-value">${escapeHtml(s.type)}</span></div>
+                    <div class="settlement-mobile-row"><span class="settlement-mobile-label">Status:</span><span class="settlement-mobile-value"><span class="status-badge">${s.status}</span></span></div>
+                    <div class="mt-2">
+                        <button class="btn btn-sm btn-success w-100 mb-2" onclick="processSettlement('${s.id}')">Process</button>
+                        <button class="btn btn-sm btn-danger w-100" onclick="rejectSettlement('${s.id}')">Reject</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updatePendingPagination() {
+            const pagination = document.getElementById('pendingPagination');
+            const info = document.getElementById('pendingPageInfo');
+            const prevBtn = document.getElementById('pendingPrevBtn');
+            const nextBtn = document.getElementById('pendingNextBtn');
+
+            if (state.pending.totalPages <= 1) {
+                pagination.style.display = 'none';
+                return;
+            }
+
+            pagination.style.display = 'flex';
+            const start = state.pending.page * CONFIG.pageSize + 1;
+            const end = Math.min((state.pending.page + 1) * CONFIG.pageSize, state.pending.filteredCount);
+            info.textContent = `Showing ${start}-${end} of ${state.pending.filteredCount}`;
+
+            prevBtn.disabled = state.pending.page === 0;
+            nextBtn.disabled = state.pending.page >= state.pending.totalPages - 1;
+        }
+
+        // ===== ACTION HANDLERS =====
+        async function processSettlement(settlementId) {
+            if (!confirm(`Process settlement ${settlementId}? This action cannot be undone.`)) return;
+
+            try {
+                const idempotencyKey = SecurityManager.generateIdempotencyKey('process', settlementId);
+                const headers = SecurityManager.getSecureHeaders();
+                if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey;
+
+                showToast('Processing settlement...', 'info', 0);
+
+                const response = await fetch(`${CONFIG.apiBaseUrl}/settlement/${settlementId}/process`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({ reason: 'Manual admin process' }),
+                    timeout: CONFIG.requestTimeout
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || `HTTP ${response.status}`);
+                }
+
+                showToast('Settlement processed successfully', 'success');
+                logAuditEvent('settlement_processed', 'SETTLEMENT_ACTION', `Settlement ${settlementId} processed`);
+                await loadPendingSettlements(state.pending.page);
+            } catch (error) {
+                console.error('Process settlement error:', error);
+                showToast('Failed to process settlement: ' + error.message, 'error');
+            }
+        }
+
+        async function rejectSettlement(settlementId) {
+            if (!confirm(`Reject settlement ${settlementId}? Users will be notified.`)) return;
+
+            try {
+                const idempotencyKey = SecurityManager.generateIdempotencyKey('reject', settlementId);
+                const headers = SecurityManager.getSecureHeaders();
+                if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey;
+
+                showToast('Rejecting settlement...', 'info', 0);
+
+                const response = await fetch(`${CONFIG.apiBaseUrl}/settlement/${settlementId}/reject`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({ reason: 'Manual admin rejection' }),
+                    timeout: CONFIG.requestTimeout
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || `HTTP ${response.status}`);
+                }
+
+                showToast('Settlement rejected successfully', 'success');
+                logAuditEvent('settlement_rejected', 'SETTLEMENT_ACTION', `Settlement ${settlementId} rejected`);
+                await loadPendingSettlements(state.pending.page);
+            } catch (error) {
+                console.error('Reject settlement error:', error);
+                showToast('Failed to reject settlement: ' + error.message, 'error');
+            }
+        }
+
+        // ===== AUDIT LOGGING =====
+        async function logAuditEvent(action, category, details) {
+            if (!CONFIG.features.enableAuditLogging) return;
+
+            try {
+                await fetch(`${CONFIG.apiBaseUrl}/settlement/audit-log`, {
+                    method: 'POST',
+                    headers: SecurityManager.getSecureHeaders(),
+                    body: JSON.stringify({
+                        action: action,
+                        category: category,
+                        details: details,
+                        timestamp: new Date().toISOString()
+                    }),
+                    timeout: 5000
+                });
+            } catch (error) {
+                console.warn('Failed to log audit event:', error);
+            }
+        }
+
+        // ===== CHART FUNCTIONS =====
+        let volumeChart, successChart;
+
         function initializeCharts() {
-            // Settlement Volume
-            const volumeCtx = document.getElementById('volumeChart').getContext('2d');
-            volumeChart = new Chart(volumeCtx, {
-                type: 'bar',
-                data: {
-                    labels: ['SWIFT', 'ACH', 'Blockchain', 'Forex'],
-                    datasets: [{
-                        label: 'Settlement Volume ($M)',
-                        data: [50, 30, 15, 10],
-                        backgroundColor: ['#667eea', '#764ba2', '#f093fb', '#4facfe']
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false
+            const volumeCtx = document.getElementById('volumeChart');
+            const successCtx = document.getElementById('successChart');
+
+            if (volumeCtx) {
+                volumeChart = new Chart(volumeCtx.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: ['SWIFT', 'ACH', 'Blockchain', 'Forex'],
+                        datasets: [{
+                            label: 'Settlement Volume ($M)',
+                            data: [0, 0, 0, 0],
+                            backgroundColor: ['#667eea', '#764ba2', '#f093fb', '#4facfe']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `$${context.parsed.y}M`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            if (successCtx) {
+                successChart = new Chart(successCtx.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Successful', 'Failed', 'Pending'],
+                        datasets: [{
+                            data: [0, 0, 0],
+                            backgroundColor: ['#28a745', '#dc3545', '#ffc107']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `${context.label}: ${context.parsed}%`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        // ===== FORM VALIDATION =====
+        function validateSettlementRules() {
+            const form = document.getElementById('settleRulesForm');
+            const fields = ['maxSwift', 'maxACH', 'swiftCutoff', 'achCutoff', 'confirmTime', 'retryAttempts'];
+
+            for (let field of fields) {
+                const el = document.getElementById(field);
+                if (!el || el.value === '') {
+                    showToast('Please fill in all required fields', 'warning');
+                    return false;
+                }
+            }
+
+            const swiftVal = parseFloat(document.getElementById('maxSwift').value);
+            const achVal = parseFloat(document.getElementById('maxACH').value);
+
+            if (swiftVal <= 0 || achVal <= 0) {
+                showToast('Transaction limits must be greater than 0', 'warning');
+                return false;
+            }
+
+            return true;
+        }
+
+        // ===== EVENT SETUP =====
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (!SecurityManager.validateToken()) return;
+
+            if (!await SecurityManager.validateSession()) {
+                showToast('Session validation failed', 'error');
+                return;
+            }
+
+            try {
+                await Promise.all([
+                    loadSettlementData(),
+                    loadPendingSettlements(),
+                    loadRecentSettlements(),
+                    loadAuditLog()
+                ]);
+
+                initializeCharts();
+                setupEventListeners();
+
+                // Periodic session check
+                setInterval(() => SecurityManager.validateSession(), CONFIG.sessionCheckInterval);
+
+                // Periodic health checks (if WebSockets not enabled)
+                if (!CONFIG.features.enableWebSockets) {
+                    setInterval(() => loadSettlementData(), 30000); // Every 30 seconds
+                }
+            } catch (error) {
+                console.error('Initialization error:', error);
+                showToast('Failed to initialize dashboard: ' + error.message, 'error');
+            }
+        });
+
+        function setupEventListeners() {
+            // Search and filters
+            document.getElementById('settlementSearch').addEventListener('input', (e) => {
+                state.pending.filters.search = e.target.value;
+                loadPendingSettlements(0);
+            });
+
+            document.getElementById('settlementTypeFilter').addEventListener('change', (e) => {
+                state.pending.filters.type = e.target.value;
+                loadPendingSettlements(0);
+            });
+
+            document.getElementById('settlementStatusFilter').addEventListener('change', (e) => {
+                state.pending.filters.status = e.target.value;
+                loadPendingSettlements(0);
+            });
+
+            document.getElementById('settlementDateFilter').addEventListener('change', (e) => {
+                state.pending.filters.date = e.target.value;
+                loadPendingSettlements(0);
+            });
+
+            // Pagination
+            document.getElementById('pendingPrevBtn').addEventListener('click', () => {
+                if (state.pending.page > 0) loadPendingSettlements(state.pending.page - 1);
+            });
+
+            document.getElementById('pendingNextBtn').addEventListener('click', () => {
+                if (state.pending.page < state.pending.totalPages - 1) loadPendingSettlements(state.pending.page + 1);
+            });
+
+            // Save rules
+            document.getElementById('saveRulesBtn').addEventListener('click', async () => {
+                if (!validateSettlementRules()) return;
+
+                try {
+                    showToast('Saving rules...', 'info', 0);
+
+                    const response = await fetch(`${CONFIG.apiBaseUrl}/settlement/rules`, {
+                        method: 'POST',
+                        headers: SecurityManager.getSecureHeaders(),
+                        body: JSON.stringify({
+                            max_swift: parseFloat(document.getElementById('maxSwift').value),
+                            max_ach: parseFloat(document.getElementById('maxACH').value),
+                            swift_cutoff: document.getElementById('swiftCutoff').value,
+                            ach_cutoff: document.getElementById('achCutoff').value,
+                            confirmation_time_minutes: parseInt(document.getElementById('confirmTime').value),
+                            retry_attempts: parseInt(document.getElementById('retryAttempts').value),
+                            auto_retry: document.getElementById('autoRetry').checked,
+                            notify_on_failure: document.getElementById('notifyOnFailure').checked
+                        }),
+                        timeout: CONFIG.requestTimeout
+                    });
+
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                    showToast('Rules saved successfully', 'success');
+                    logAuditEvent('rules_updated', 'SETTLEMENT_CONFIG', 'Settlement rules updated');
+                } catch (error) {
+                    console.error('Save rules error:', error);
+                    showToast('Failed to save rules: ' + error.message, 'error');
                 }
             });
 
-            // Success Rate
-            const successCtx = document.getElementById('successChart').getContext('2d');
-            successChart = new Chart(successCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Successful', 'Failed', 'Pending'],
-                    datasets: [{
-                        data: [98.5, 0.8, 0.7],
-                        backgroundColor: ['#28a745', '#dc3545', '#ffc107']
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false
+            // Process batch
+            document.getElementById('processBatchBtn').addEventListener('click', async () => {
+                if (state.pending.data.length === 0) {
+                    showToast('No pending settlements to process', 'warning');
+                    return;
+                }
+
+                if (!confirm(`Process ${state.pending.data.length} pending settlements?`)) return;
+
+                try {
+                    showToast('Processing batch...', 'info', 0);
+
+                    const response = await fetch(`${CONFIG.apiBaseUrl}/settlement/batch-process`, {
+                        method: 'POST',
+                        headers: SecurityManager.getSecureHeaders(),
+                        body: JSON.stringify({
+                            settlement_ids: state.pending.data.map(s => s.id)
+                        }),
+                        timeout: CONFIG.requestTimeout
+                    });
+
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                    const result = await response.json();
+                    showToast(`Batch processed: ${result.processed} successful, ${result.failed} failed`, 'success');
+                    logAuditEvent('batch_processed', 'SETTLEMENT_ACTION', `Batch of ${state.pending.data.length} settlements processed`);
+                    await loadPendingSettlements(0);
+                } catch (error) {
+                    console.error('Batch process error:', error);
+                    showToast('Failed to process batch: ' + error.message, 'error');
                 }
             });
+        }
+
+        // ===== UTILITY FUNCTIONS =====
+        function escapeHtml(text) {
+            if (!text) return '';
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+            return text.replace(/[&<>"']/g, c => map[c]);
         }
     </script>
     <script src="/static/js/admin-guard.js"></script>

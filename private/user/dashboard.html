@@ -1,8 +1,22 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Dashboard - Finanza Bank</title>
+    <title>Dashboard - Finanza Bank (Production)</title>
+    
+    <!-- Content Security Policy (CSP) - Prevents XSS attacks -->
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://code.jquery.com https://cdnjs.cloudflare.com;
+        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;
+        font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net;
+        img-src 'self' data: https:;
+        connect-src 'self' https://api.finanzabank.local;
+        base-uri 'self';
+        form-action 'self';">
+    
+    <!-- CRITICAL: Global Guard Script - Must be FIRST script to prevent FOUC -->
+    <script src="/static/js/dashboard-guard.js"></script>
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <link href="/img/favicon.ico" rel="icon">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,11 +28,154 @@
     <link href="/static/lib/owlcarousel/assets/owl.carousel.min.css" rel="stylesheet">
     <link href="/static/css/bootstrap.min.css" rel="stylesheet">
     <link href="/static/css/style.css" rel="stylesheet">
+    
+    <style>
+        /* Loading Skeleton Animation */
+        .skeleton-loader {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: skeleton-loading 1.5s infinite;
+        }
+        
+        @keyframes skeleton-loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        
+        /* PII Masking & Balance Masking */
+        .pii-toggle { cursor: pointer; transition: all 0.3s ease; }
+        .pii-toggle:hover { color: #0d47a1; transform: scale(1.1); }
+        .pii-masked { font-family: monospace; letter-spacing: 2px; user-select: none; }
+        .balance-masked { 
+            font-family: monospace; 
+            letter-spacing: 3px; 
+            user-select: none;
+            font-weight: bold;
+        }
+        
+        /* Account Suspension Banner */
+        .suspension-banner {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+            color: white; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;
+            animation: slide-down 0.3s ease;
+        }
+        
+        @keyframes slide-down {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Error State UI */
+        .error-card {
+            background: #fff5f5;
+            border: 1px solid #ffebee;
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+            color: #c62828;
+        }
+        
+        .error-card .btn {
+            margin-top: 1rem;
+        }
+        
+        .retry-button {
+            padding: 0.5rem 1.5rem;
+            font-weight: 600;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .retry-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        /* Token Expiry Warning */
+        .token-expiry-warning {
+            background: #fff3cd; border: 1px solid #ffc107; color: #856404;
+            padding: 1rem; border-radius: 4px; margin-bottom: 1rem;
+        }
+        
+        /* Empty State */
+        .empty-state { text-align: center; padding: 3rem; color: #999; }
+        .empty-state-icon { font-size: 4rem; margin-bottom: 1rem; opacity: 0.2; }
+        
+        /* Pagination */
+        .load-more-btn { padding: 0.75rem 2rem; font-weight: 600; border-radius: 4px; }
+        
+        /* Data Cards */
+        .data-card-skeleton { height: 100px; border-radius: 8px; }
+        
+        /* State Indicator */
+        .state-indicator {
+            display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+            background: #28a745; animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .last-updated { font-size: 0.85rem; color: #999; margin-top: 0.5rem; }
+        
+        /* Failed Data State */
+        .data-error-state {
+            background: #fff5f5;
+            border-left: 4px solid #dc3545;
+            padding: 1rem;
+            border-radius: 4px;
+            color: #721c24;
+            margin-bottom: 1rem;
+        }
+        
+        .data-error-state .retry-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 0.5rem;
+            font-size: 0.85rem;
+        }
+        
+        .data-error-state .retry-btn:hover {
+            background: #c82333;
+        }
+    </style>
+
+    <script src="/static/js/toast-utils.js"></script>
 </head>
 <body>
-    <div id="spinner" class="show bg-white position-fixed translate-middle w-100 vh-100 top-50 start-50 d-flex align-items-center justify-content-center">
-        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
-            <span class="sr-only">Loading...</span>
+    
+    
+    <!-- Maintenance Mode Redirect (Hidden) -->
+    <div id="maintenance-mode-redirect" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:10000; align-items:center; justify-content:center;">
+        <div style="text-align:center; padding:2rem;">
+            <i class="fas fa-wrench" style="font-size:4rem; color:#ffc107; margin-bottom:1rem;"></i>
+            <h2>Maintenance in Progress</h2>
+            <p class="text-muted">We're performing scheduled maintenance. Please try again in a few moments.</p>
+            <div class="spinner-border text-primary mt-3" role="status" style="width: 2rem; height: 2rem;">
+                <span class="sr-only">Checking status...</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Error Boundary Banner -->
+    <div id="error-boundary-banner" style="display:none;" class="container-fluid bg-danger bg-gradient text-white py-3 sticky-top" style="z-index:100;">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    <strong id="error-boundary-message">We're having trouble reaching the server. Some data may be outdated.</strong>
+                </div>
+                <button class="btn btn-sm btn-light" onclick="location.reload()" title="Retry loading data">
+                    <i class="fas fa-sync-alt me-1"></i>Retry
+                </button>
+            </div>
         </div>
     </div>
     <!-- Navbar Start -->
@@ -51,7 +208,6 @@
                             <a href="/user/analytics" class="dropdown-item">Business Analysis</a>
                             <a href="/user/treasury_portfolio" class="dropdown-item">Financial Planning</a>
                             <a href="/user/insurance" class="dropdown-item">Insurance</a>
-                            <a href="/user/treasury_portfolio" class="dropdown-item">Projects</a>
                         </div>
                     </div>
                     <div class="nav-item dropdown">
@@ -65,15 +221,15 @@
                             <a href="/user/alerts" class="dropdown-item">Alerts</a>
                             <a href="/user/contact" class="dropdown-item">Contact/Support</a>
                             <hr class="m-2">
-                            <a href="/logout" class="dropdown-item text-danger">Logout</a>
+                            <a href="#" class="dropdown-item text-danger" onclick="handleLogout(event)">Logout</a>
                         </div>
                     </div>
                 </div>
             </div>
         </nav>
     </div>
-    <!-- Navbar End -->
-    <div class="container-fluid page-header mb-5 wow fadeIn" data-wow-delay="0.1s">
+    <!-- Page Header -->
+    <div class="container-fluid page-header mb-4 wow fadeIn" data-wow-delay="0.1s">
         <div class="container">
             <h1 class="display-4 pb-3 animated slideInDown">Dashboard</h1>
             <nav aria-label="breadcrumb animated slideInDown">
@@ -84,16 +240,28 @@
             </nav>
         </div>
     </div>
+    
+    <!-- Main Content -->
     <div class="container-xxl py-5">
         <div class="container">
             <div class="row g-5">
                 <div class="col-lg-12 wow fadeInUp" data-wow-delay="0.1s">
-                    <!-- User Welcome Section -->
-                    <div class="card mb-4 bg-primary bg-gradient text-white">
+                    
+                    <!-- Account Suspension Banner -->
+                    <div id="suspension-banner" style="display:none;"></div>
+                    
+                    <!-- Token Expiry Warning -->
+                    <div id="token-expiry-warning" style="display:none;" class="token-expiry-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Session Expiring Soon</strong> - Your session will expire in <span id="expiry-countdown"></span> minutes.
+                    </div>
+                    
+                    <!-- Welcome Section -->
+                    <div class="card mb-4 bg-primary bg-gradient text-white skeleton-loader" id="welcome-section" style="height: 120px;">
                         <div class="card-body">
                             <div class="row align-items-center">
                                 <div class="col-md-8">
-                                    <h3 class="card-title mb-1">Welcome, <span id="user-full-name">Guest</span>!</h3>
+                                    <h3 class="card-title mb-1">Welcome, <span id="user-full-name">...</span>!</h3>
                                     <p class="card-text mb-2">
                                         <i class="fas fa-envelope me-2"></i><span id="user-email">—</span>
                                     </p>
@@ -102,67 +270,85 @@
                                     </p>
                                 </div>
                                 <div class="col-md-4 text-md-end">
-                                    <div class="fs-3" id="user-avatar">👤</div>
+                                    <span class="state-indicator"></span> <span id="session-status">Real-time</span>
                                 </div>
                             </div>
                         </div>
                     </div>
-
+                    
                     <!-- KYC Status Alert -->
                     <div id="kyc-alert-container" class="mb-4"></div>
-
+                    
                     <!-- Account Summary Cards -->
                     <div class="row mb-4">
+                        <!-- Balance Card -->
                         <div class="col-lg-3 col-md-6 mb-3">
                             <div class="card border-left border-primary">
                                 <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
                                         <div>
                                             <h6 class="card-title text-muted mb-1">Total Balance</h6>
-                                            <h4 class="mb-0" id="user-balance">$0.00</h4>
+                                            <h4 class="mb-0" id="user-balance">
+                                                <span class="skeleton-loader" style="display:inline-block; width: 120px; height: 28px; border-radius: 4px;"></span>
+                                            </h4>
                                             <small class="text-muted">Across all accounts</small>
                                         </div>
-                                        <i class="fas fa-wallet fa-2x text-primary opacity-50"></i>
+                                        <button class="btn btn-sm btn-outline-primary pii-toggle" id="toggle-balance-mask" onclick="toggleBalanceMasking()" title="Show/Hide Balance">
+                                            <i class="fas fa-eye me-1"></i>
+                                        </button>
                                     </div>
+                                    <div class="last-updated" id="balance-updated"></div>
                                 </div>
                             </div>
                         </div>
+                        
+                        <!-- Investments Card -->
                         <div class="col-lg-3 col-md-6 mb-3">
                             <div class="card border-left border-success">
                                 <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex justify-content-between align-items-start">
                                         <div>
                                             <h6 class="card-title text-muted mb-1">Active Investments</h6>
-                                            <h4 class="mb-0" id="user-investments">$0.00</h4>
-                                            <small class="text-muted" id="investment-count">0 accounts</small>
+                                            <h4 class="mb-0" id="user-investments">
+                                                <span class="skeleton-loader" style="display:inline-block; width: 120px; height: 28px; border-radius: 4px;"></span>
+                                            </h4>
+                                            <small class="text-muted" id="investment-count">—</small>
                                         </div>
                                         <i class="fas fa-chart-line fa-2x text-success opacity-50"></i>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                        
+                        <!-- Loans Card -->
                         <div class="col-lg-3 col-md-6 mb-3">
                             <div class="card border-left border-warning">
                                 <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex justify-content-between align-items-start">
                                         <div>
                                             <h6 class="card-title text-muted mb-1">Outstanding Loans</h6>
-                                            <h4 class="mb-0" id="user-loans">$0.00</h4>
-                                            <small class="text-muted" id="loan-count">0 loans</small>
+                                            <h4 class="mb-0" id="user-loans">
+                                                <span class="skeleton-loader" style="display:inline-block; width: 120px; height: 28px; border-radius: 4px;"></span>
+                                            </h4>
+                                            <small class="text-muted" id="loan-count">—</small>
                                         </div>
                                         <i class="fas fa-hand-holding-usd fa-2x text-warning opacity-50"></i>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                        
+                        <!-- Deposits Card -->
                         <div class="col-lg-3 col-md-6 mb-3">
                             <div class="card border-left border-info">
                                 <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex justify-content-between align-items-start">
                                         <div>
                                             <h6 class="card-title text-muted mb-1">Total Deposits</h6>
-                                            <h4 class="mb-0" id="deposits-total">$0.00</h4>
-                                            <small class="text-muted" id="deposit-count">0 accounts</small>
+                                            <h4 class="mb-0" id="deposits-total">
+                                                <span class="skeleton-loader" style="display:inline-block; width: 120px; height: 28px; border-radius: 4px;"></span>
+                                            </h4>
+                                            <small class="text-muted" id="deposit-count">—</small>
                                         </div>
                                         <i class="fas fa-piggy-bank fa-2x text-info opacity-50"></i>
                                     </div>
@@ -176,18 +362,20 @@
                         <div class="card-header bg-primary bg-gradient text-white">
                             <div class="d-flex justify-content-between align-items-center">
                                 <h5 class="mb-0"><i class="fas fa-university me-2"></i>Your Accounts</h5>
-                                <button class="btn btn-sm btn-light" id="toggle-account-numbers" onclick="toggleAccountNumbers()">
-                                    <i class="fas fa-eye me-1"></i><span id="toggle-text">Show</span> Numbers
+                                <button class="btn btn-sm btn-light" id="toggle-account-numbers" onclick="togglePIIMasking()" title="Show/Hide Account Numbers">
+                                    <i class="fas fa-eye me-1 pii-toggle"></i><span id="pii-toggle-text">Show</span> Numbers
                                 </button>
                             </div>
                         </div>
                         <div class="card-body">
                             <div id="accounts-container">
-                                <div class="text-center py-5">
-                                    <div class="spinner-border spinner-border-sm text-primary" role="status">
-                                        <span class="visually-hidden">Loading...</span>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="card border-start border-4 border-primary data-card-skeleton"></div>
                                     </div>
-                                    <p class="mt-2 text-muted">Loading accounts...</p>
+                                    <div class="col-md-6">
+                                        <div class="card border-start border-4 border-primary data-card-skeleton"></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -202,14 +390,15 @@
                                     <h5 class="mb-0"><i class="fas fa-piggy-bank me-2"></i>Your Deposits</h5>
                                 </div>
                                 <div class="card-body">
-                                    <div id="deposits-list" class="deposits-container">
-                                        <p class="text-muted">No active deposits</p>
+                                    <div id="deposits-list">
+                                        <div class="skeleton-loader" style="height: 60px; border-radius: 4px; margin-bottom: 10px;"></div>
+                                        <div class="skeleton-loader" style="height: 60px; border-radius: 4px;"></div>
                                     </div>
                                     <a href="/user/deposits" class="btn btn-sm btn-info mt-3">View All Deposits</a>
                                 </div>
                             </div>
                         </div>
-
+                        
                         <!-- Loans Section -->
                         <div class="col-lg-6 mb-4">
                             <div class="card shadow-sm">
@@ -217,8 +406,9 @@
                                     <h5 class="mb-0"><i class="fas fa-hand-holding-usd me-2"></i>Your Loans</h5>
                                 </div>
                                 <div class="card-body">
-                                    <div id="loans-list" class="loans-container">
-                                        <p class="text-muted">No active loans</p>
+                                    <div id="loans-list">
+                                        <div class="skeleton-loader" style="height: 60px; border-radius: 4px; margin-bottom: 10px;"></div>
+                                        <div class="skeleton-loader" style="height: 60px; border-radius: 4px;"></div>
                                     </div>
                                     <a href="/user/loans" class="btn btn-sm btn-warning mt-3">View All Loans</a>
                                 </div>
@@ -231,17 +421,11 @@
                         <div class="card-header bg-success bg-gradient text-white">
                             <div class="d-flex justify-content-between align-items-center">
                                 <h5 class="mb-0"><i class="fas fa-exchange-alt me-2"></i>Recent Transactions</h5>
-                                <a href="/user/analytics" class="btn btn-sm btn-light">View All</a>
+                                <a href="/user/transactions" class="btn btn-sm btn-light">View All</a>
                             </div>
                         </div>
                         <div class="card-body">
-                            <div id="transactions-loader" class="text-center py-4">
-                                <div class="spinner-border spinner-border-sm text-success" role="status">
-                                    <span class="visually-hidden">Loading...</span>
-                                </div>
-                                <p class="mt-2 text-muted">Loading transactions...</p>
-                            </div>
-                            <table class="table table-sm table-hover mb-0" id="transactions-table" style="display:none;">
+                            <table class="table table-sm table-hover mb-0" id="transactions-table">
                                 <thead class="table-light">
                                     <tr>
                                         <th>Date</th>
@@ -251,31 +435,39 @@
                                     </tr>
                                 </thead>
                                 <tbody id="transactions-body">
+                                    <tr><td colspan="4"><div class="spinner-border spinner-border-sm text-success" role="status" style="margin: 1rem auto; display: block;"><span class="visually-hidden">Loading...</span></div></td></tr>
                                 </tbody>
                             </table>
-                            <div id="no-transactions" class="text-center py-4 text-muted">
-                                <i class="fas fa-inbox fa-3x opacity-25 mb-3"></i>
-                                <p>No transactions yet</p>
+                            <div id="no-transactions" style="display:none;">
+                                <div class="empty-state">
+                                    <div class="empty-state-icon"><i class="fas fa-inbox"></i></div>
+                                    <p><strong>No Transactions Yet</strong></p>
+                                    <p class="small text-muted">Your transaction history will appear here once you complete your first transaction.</p>
+                                </div>
                             </div>
+                            <div id="pagination-container" class="pagination-container"></div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    <!-- Footer Start -->
+    <!-- Footer -->
     <div class="container-fluid bg-dark text-light footer mt-5 py-5 wow fadeIn" data-wow-delay="0.1s">
         <div class="container py-5">
             <div class="row g-5">
                 <div class="col-lg-3 col-md-6">
                     <h5 class="text-white mb-4">Address</h5>
-                    <p class="mb-2"><i class="fa fa-map-marker-alt me-3"></i>123 Street, New York, USA</p>
+                    <p class="mb-2"><i class="fa fa-map-marker-alt me-3"></i>100 Financial Ave, New York, NY 10001</p>
                 </div>
             </div>
         </div>
     </div>
     <!-- Footer End -->
+    
     <a href="#" class="btn btn-lg btn-primary btn-lg-square back-to-top"><i class="bi bi-arrow-up"></i></a>
+    
+    <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/static/lib/wow/wow.min.js"></script>
@@ -284,213 +476,314 @@
     <script src="/static/lib/counterup/counterup.min.js"></script>
     <script src="/static/lib/owlcarousel/owl.carousel.min.js"></script>
     <script src="/static/js/main.js"></script>
-    <script src="/static/js/user-guard.js"></script>
-    <script src="/static/js/realtime.js"></script>
-    <script src="/static/js/user-client.js"></script>
-    <script src="/static/js/page-sync.js"></script>
+    
+    <!-- Production Dashboard Scripts (in order) -->
+    <script src="/static/js/dashboard-state.js"></script>
+    <script src="/static/js/csrf-manager.js"></script>
+    <script src="/static/js/dashboard-error-handler.js"></script>
+    <script src="/static/js/dashboard-silent-refresh.js"></script>
+    <script src="/static/js/dashboard-micro-fetches.js"></script>
+    <script src="/static/js/dashboard-audit.js"></script>
+    
+    <!-- Immediate bootstrap - ensure globals are set -->
     <script>
-        // Global state for account number visibility
-        let showAccountNumbers = false;
-        let currentUser = null;
-        let userAccounts = [];
-
-        // Utility: Format currency
-        function formatCurrency(amount) {
-            return `$${parseFloat(amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        console.log('[BOOTSTRAP] Scripts loaded. Checking globals...');
+        console.log('[BOOTSTRAP] dashboardState exists?', typeof dashboardState !== 'undefined');
+        console.log('[BOOTSTRAP] DashboardMicroFetes exists?', typeof DashboardMicroFetes !== 'undefined');
+        
+        // Ensure dashboardState is global if it exists
+        if (typeof dashboardState !== 'undefined' && !window.dashboardState) {
+            window.dashboardState = dashboardState;
+            console.log('[BOOTSTRAP] ✓ Exposed dashboardState to window');
         }
-
-        // Utility: Format date
-        function formatDate(dateString) {
+        
+        // Ensure DashboardMicroFetes is global if it exists
+        if (typeof DashboardMicroFetes !== 'undefined' && !window.DashboardMicroFetes) {
+            window.DashboardMicroFetes = DashboardMicroFetes;
+            console.log('[BOOTSTRAP] ✓ Exposed DashboardMicroFetes to window');
+        }
+        
+        // Create microFetches instance immediately if dependencies exist
+        if (window.dashboardState && window.DashboardMicroFetes && !window.microFetches) {
             try {
-                const date = new Date(dateString);
-                return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+                window.microFetches = new window.DashboardMicroFetes(window.dashboardState);
+                console.log('[BOOTSTRAP] ✓ microFetches created');
             } catch (e) {
-                return dateString;
+                console.error('[BOOTSTRAP] ❌ Failed to create microFetches:', e);
             }
         }
-
-        // Utility: Get status badge color
-        function getStatusBadge(status) {
-            const statusMap = {
-                'completed': { color: 'success', text: 'Completed' },
-                'pending': { color: 'warning', text: 'Pending' },
-                'failed': { color: 'danger', text: 'Failed' },
-                'blocked': { color: 'secondary', text: 'Blocked' },
-                'cancelled': { color: 'dark', text: 'Cancelled' }
-            };
-            const s = statusMap[status?.toLowerCase()] || { color: 'secondary', text: status || 'Unknown' };
-            return `<span class="badge bg-${s.color}">${s.text}</span>`;
+    </script>
+    
+    <!-- Dashboard Initialization -->
+    <script>
+        // Check if guard already passed
+        if (window.DASHBOARD_GUARD_PASSED === true) {
+            console.log('[DASHBOARD] Guard already passed. Initializing dashboard...');
+            initializeDashboard();
+        } else {
+            // Wait for guard to pass
+            window.addEventListener('dashboardGuardPassed', function() {
+                console.log('[DASHBOARD] Guard passed. Initializing dashboard...');
+                initializeDashboard();
+            });
         }
-
-        // Toggle account number visibility
-        function toggleAccountNumbers() {
-            showAccountNumbers = !showAccountNumbers;
-            document.getElementById('toggle-text').textContent = showAccountNumbers ? 'Hide' : 'Show';
-            document.getElementById('toggle-account-numbers').innerHTML = `
-                <i class="fas fa-${showAccountNumbers ? 'eye-slash' : 'eye'} me-1"></i><span id="toggle-text">${showAccountNumbers ? 'Hide' : 'Show'}</span> Numbers
-            `;
-            loadAccounts(); // Refresh accounts with new visibility setting
+        
+        if (window.WOW) {
+            new WOW().init();
         }
-
-        // Format account number
-        function formatAccountNumber(accountNumber) {
-            if (!accountNumber) return '••••••••';
-            if (showAccountNumbers) {
-                return accountNumber;
-            } else {
-                const lastFour = accountNumber.substring(accountNumber.length - 4);
-                return '••••' + lastFour;
-            }
-        }
-
-        // Get verification badge
-        function getVerificationBadge(kycStatus) {
-            const badges = {
-                'approved': { color: 'success', text: '✓ Verified', icon: 'check-circle' },
-                'pending': { color: 'warning', text: '⏳ Verification Pending', icon: 'clock' },
-                'rejected': { color: 'danger', text: '✗ Verification Failed', icon: 'times-circle' },
-                'not_started': { color: 'secondary', text: '○ Not Verified', icon: 'circle' }
-            };
-            const badge = badges[kycStatus?.toLowerCase()] || badges['not_started'];
-            return `<span class="badge bg-${badge.color}"><i class="fas fa-${badge.icon} me-1"></i>${badge.text}</span>`;
-        }
-
-        // Load all dashboard data from single endpoint
-        async function loadDashboardData() {
+        
+        let piiMasking = false;
+        let balanceMasking = false;
+        let currentTransactionPage = 1;
+        const transactionPageSize = 10; // Show only 10 transactions per page
+        
+        /**
+         * Initialize production dashboard
+         */
+        async function initializeDashboard() {
             try {
-                const response = await fetch('/api/user/dashboard', { credentials: 'include' });
-                if (!response.ok) throw new Error('Failed to load dashboard data');
+                console.log('[DASHBOARD] Initializing production dashboard...');
                 
-                const data = await response.json();
+                // 1. Initialize error handler (CRITICAL)
+                dashboardErrorHandler.init();
                 
-                // Update user info
-                if (data.user) {
-                    currentUser = data.user;
-                    document.getElementById('user-full-name').textContent = data.user.full_name || 'User';
-                    document.getElementById('user-email').textContent = data.user.email || '—';
+                // 2. Register components for error handling
+                registerDashboardComponents();
+                
+                // 3. Check maintenance mode
+                const maintenanceCheck = await checkMaintenanceMode();
+                if (maintenanceCheck) {
+                    console.warn('[DASHBOARD] System in maintenance. Dashboard unavailable.');
+                    return;
+                }
+                
+                // 4. Initialize CSRF manager
+                await csrfManager.init();
+                
+                // 5. Initialize audit logger
+                dashboardAudit.init();
+                
+                // 6. Initialize silent refresh manager (prevents mid-transaction session loss)
+                silentRefreshManager.init();
+                
+                // 7. Setup state listeners
+                setupStateListeners();
+                
+                // 8. Start session heartbeat
+                dashboardState.startSessionHeartbeat();
+                
+                // 9. Setup auto-logout
+                setupAutoLogout();
+                
+                // 10. Setup token expiry countdown
+                setupTokenExpiryCountdown();
+                
+                // 11. microFetches should already be created by bootstrap script
+                if (!window.microFetches) {
+                    console.error('[DASHBOARD] ❌ microFetches not available!');
+                } else {
+                    console.log('[MICRO-FETCH] ✓ microFetches ready');
+                }
+                
+                // 12. Load all data
+                if (window.microFetches) {
+                    const maxLoadTimeout = setTimeout(() => {
+                        console.warn('[DASHBOARD] Load timeout - hiding spinner');
+                        const spinner = document.getElementById('page-spinner');
+                        if (spinner) spinner.style.display = 'none';
+                    }, 10000);
                     
-                    // Display verification badge - need to get kyc_status from profile
-                    loadUserProfile();
-                }
-                
-                // Update balance
-                document.getElementById('user-balance').textContent = formatCurrency(data.balance || 0);
-                
-                // Update accounts
-                if (data.accounts && data.accounts.length > 0) {
-                    userAccounts = data.accounts;
-                    renderAccounts(data.accounts);
+                    window.microFetches.loadAllDashboardData()
+                        .then(() => {
+                            clearTimeout(maxLoadTimeout);
+                            console.log('[DASHBOARD] ✓ Data loading complete, hiding spinner');
+                            const spinner = document.getElementById('page-spinner');
+                            if (spinner) spinner.style.display = 'none';
+                            dashboardErrorHandler.hideBanner();
+                        })
+                        .catch(error => {
+                            clearTimeout(maxLoadTimeout);
+                            console.error('[DASHBOARD] Data loading error:', error);
+                            dashboardErrorHandler.handleComponentError('dashboard-data', error, {
+                                showBanner: true,
+                                message: 'Failed to load dashboard data. Check console for details.'
+                            });
+                            // Still hide spinner after 3 seconds even if there's an error
+                            setTimeout(() => {
+                                const spinner = document.getElementById('page-spinner');
+                                if (spinner) spinner.style.display = 'none';
+                            }, 3000);
+                        });
                 } else {
-                    document.getElementById('accounts-container').innerHTML = '<p class="text-muted"><i class="fas fa-inbox me-2"></i>No accounts yet</p>';
+                    console.error('[DASHBOARD] ❌ microFetches not available - data will not load');
                 }
                 
-                // Update deposits
-                if (data.deposits) {
-                    document.getElementById('deposits-total').textContent = formatCurrency(data.deposits.total_amount || 0);
-                    document.getElementById('deposit-count').textContent = `${data.deposits.count || 0} account${data.deposits.count !== 1 ? 's' : ''}`;
-                }
                 
-                // Update investments
-                document.getElementById('user-investments').textContent = '$0.00';
-                document.getElementById('investment-count').textContent = `${data.active_investments || 0} account${data.active_investments !== 1 ? 's' : ''}`;
-                
-                // Update loans
-                document.getElementById('user-loans').textContent = '$0.00';
-                document.getElementById('loan-count').textContent = `${data.active_loans || 0} loan${data.active_loans !== 1 ? 's' : ''}`;
-                
-                // Update recent transactions
-                if (data.recent_transactions && data.recent_transactions.length > 0) {
-                    renderTransactions(data.recent_transactions);
-                } else {
-                    document.getElementById('transactions-loader').style.display = 'none';
-                    document.getElementById('no-transactions').style.display = 'block';
-                }
+                console.log('[DASHBOARD] ✓ Production dashboard initialized');
                 
             } catch (e) {
-                console.error('Error loading dashboard:', e);
-                document.getElementById('accounts-container').innerHTML = '<p class="text-danger"><i class="fas fa-exclamation-circle me-2"></i>Error loading dashboard</p>';
+                console.error('[DASHBOARD] Init error:', e);
+                dashboardErrorHandler.handleComponentError('dashboard-init', e, {
+                    showBanner: true,
+                    message: 'Failed to initialize dashboard. Please refresh the page.'
+                });
+                const spinner = document.getElementById('page-spinner');
+                if (spinner) spinner.style.display = 'none';
             }
         }
-
-        // Load user profile for KYC status
-        async function loadUserProfile() {
+        
+        /**
+         * Register dashboard components for error tracking
+         */
+        function registerDashboardComponents() {
+            dashboardErrorHandler.registerComponent('user-profile', async () => {
+                return window.microFetches.fetchUserProfile();
+            });
+            
+            dashboardErrorHandler.registerComponent('user-balance', async () => {
+                return window.microFetches.fetchBalance();
+            });
+            
+            dashboardErrorHandler.registerComponent('accounts', async () => {
+                return window.microFetches.fetchAccounts();
+            });
+            
+            dashboardErrorHandler.registerComponent('deposits', async () => {
+                return window.microFetches.fetchDeposits();
+            });
+            
+            dashboardErrorHandler.registerComponent('loans', async () => {
+                return window.microFetches.fetchLoans();
+            });
+            
+            dashboardErrorHandler.registerComponent('transactions', async () => {
+                currentTransactionPage = 1;
+                return window.microFetches.fetchTransactions(currentTransactionPage, transactionPageSize);
+            });
+            
+            console.log('[DASHBOARD] ✓ Components registered for error handling');
+        }
+        
+        /**
+         * Check maintenance mode and handle gracefully
+         */
+        async function checkMaintenanceMode() {
             try {
-                const response = await fetch('/api/user/profile', { credentials: 'include' });
-                if (!response.ok) return;
+                const response = await dashboardErrorHandler.retryFetch('/api/v1/system/status', {}, 2);
                 
-                const user = await response.json();
-                currentUser = user;
+                if (response.status === 503) {
+                    dashboardErrorHandler.handleMaintenanceMode();
+                    return true;
+                }
                 
-                // Update verification badge
-                const badge = getVerificationBadge(user.kyc_status);
-                document.getElementById('verification-badge').innerHTML = badge;
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.maintenance === true) {
+                        dashboardErrorHandler.handleMaintenanceMode();
+                        return true;
+                    }
+                }
                 
-                // Show KYC alert if needed
-                showKYCAlert(user.kyc_status);
+                return false;
                 
-            } catch (e) {
-                console.warn('Error loading user profile:', e);
+            } catch (error) {
+                console.warn('[DASHBOARD] Could not check maintenance status:', error.message);
+                return false;
             }
         }
-
-        // Show KYC status alert
-        function showKYCAlert(kycStatus) {
-            const container = document.getElementById('kyc-alert-container');
-            let html = '';
+        
+        /**
+         * Setup reactive state listeners
+         */
+        function setupStateListeners() {
+            // User profile
+            dashboardState.subscribe('user', (newState) => {
+                if (!newState.loading) {
+                    document.getElementById('user-full-name').textContent = newState.full_name || 'User';
+                    document.getElementById('user-email').textContent = newState.email || '—';
+                    
+                    if (newState.is_verified) {
+                        document.getElementById('verification-badge').innerHTML = '<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Verified</span>';
+                    }
+                    
+                    if (document.getElementById('welcome-section').classList.contains('skeleton-loader')) {
+                        document.getElementById('welcome-section').classList.remove('skeleton-loader');
+                    }
+                }
+            });
             
-            if (kycStatus === 'not_started') {
-                html = `
-                    <div class="alert alert-warning alert-dismissible fade show" role="alert">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        <strong>KYC Verification Pending</strong> - Complete your Know Your Customer verification to unlock all features.
-                        <a href="/user/kyc_form" class="alert-link ms-2">Complete KYC</a>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                `;
-            } else if (kycStatus === 'pending') {
-                html = `
-                    <div class="alert alert-info alert-dismissible fade show" role="alert">
-                        <i class="fas fa-clock me-2"></i>
-                        <strong>KYC Under Review</strong> - Your documents are being reviewed. This usually takes 1-2 business days.
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                `;
-            } else if (kycStatus === 'approved') {
-                html = `
-                    <div class="alert alert-success alert-dismissible fade show" role="alert">
-                        <i class="fas fa-check-circle me-2"></i>
-                        <strong>KYC Verified!</strong> You have full access to all features.
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                `;
-            } else if (kycStatus === 'rejected') {
-                html = `
-                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                        <i class="fas fa-times-circle me-2"></i>
-                        <strong>KYC Rejected</strong> - Your submission was rejected. Please resubmit with correct documents.
-                        <a href="/user/kyc_form" class="alert-link ms-2">Resubmit KYC</a>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                `;
-            }
+            // Balance
+            dashboardState.subscribe('balance', (newState) => {
+                if (!newState.loading) {
+                    document.getElementById('user-balance').innerHTML = dashboardState.formatCurrency(newState.total);
+                    document.getElementById('balance-updated').textContent = `Updated ${formatRelativeTime(newState.lastUpdated)}`;
+                }
+            });
             
-            if (html) container.innerHTML = html;
+            // Accounts
+            dashboardState.subscribe('accounts', (newState) => {
+                if (!newState.loading) {
+                    renderAccounts(newState.list);
+                }
+            });
+            
+            // Deposits
+            dashboardState.subscribe('deposits', (newState) => {
+                if (!newState.loading) {
+                    document.getElementById('deposits-total').innerHTML = dashboardState.formatCurrency(newState.total_amount);
+                    document.getElementById('deposit-count').textContent = `${newState.count} account${newState.count !== 1 ? 's' : ''}`;
+                    renderDeposits(newState.list);
+                }
+            });
+            
+            // Loans
+            dashboardState.subscribe('loans', (newState) => {
+                if (!newState.loading) {
+                    document.getElementById('user-loans').innerHTML = dashboardState.formatCurrency(newState.total_amount);
+                    document.getElementById('loan-count').textContent = `${newState.count} loan${newState.count !== 1 ? 's' : ''}`;
+                    renderLoans(newState.list);
+                }
+            });
+            
+            // Investments
+            dashboardState.subscribe('investments', (newState) => {
+                if (!newState.loading) {
+                    document.getElementById('user-investments').innerHTML = dashboardState.formatCurrency(newState.total_amount);
+                    document.getElementById('investment-count').textContent = `${newState.count} account${newState.count !== 1 ? 's' : ''}`;
+                }
+            });
+            
+            // Transactions
+            dashboardState.subscribe('transactions', (newState) => {
+                if (!newState.loading) {
+                    renderTransactions(newState.list);
+                    renderPagination(newState);
+                }
+            });
+            
+            // Account status
+            dashboardState.subscribe('accountStatus', (newState) => {
+                if (newState.is_suspended || newState.is_frozen) {
+                    showSuspensionBanner(newState);
+                }
+            });
         }
-
-        // Render accounts
+        
+        /**
+         * Render accounts with PII masking
+         */
         function renderAccounts(accounts) {
             const container = document.getElementById('accounts-container');
+            
             if (!accounts || accounts.length === 0) {
-                container.innerHTML = '<p class="text-muted"><i class="fas fa-inbox me-2"></i>No accounts yet</p>';
+                container.innerHTML = '<div class="empty-state"><p class="text-muted"><i class="fas fa-inbox me-2"></i>No accounts yet</p></div>';
                 return;
             }
             
             let html = '<div class="row g-3">';
             accounts.forEach(acc => {
-                const accountNum = formatAccountNumber(acc.account_number);
-                const verificationStatus = currentUser?.kyc_status === 'approved' 
-                    ? '<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Verified</span>'
-                    : '<span class="badge bg-warning"><i class="fas fa-exclamation-circle me-1"></i>Not Verified</span>';
+                const maskedNum = dashboardState.maskAccountNumber(acc.account_number, !piiMasking);
+                const status = acc.status === 'active' ? 'success' : 'warning';
                 
                 html += `
                     <div class="col-md-6">
@@ -498,18 +791,21 @@
                             <div class="card-body">
                                 <div class="d-flex justify-content-between align-items-start mb-3">
                                     <div>
-                                        <h6 class="text-muted mb-1">${acc.account_type?.toUpperCase() || 'Account'}</h6>
-                                        <p class="h5 mb-1">${formatCurrency(acc.balance || 0)}</p>
+                                        <h6 class="text-muted mb-1">${acc.account_type?.toUpperCase() || 'ACCOUNT'}</h6>
+                                        <p class="h5 mb-1">${dashboardState.formatCurrency(acc.balance || 0)}</p>
                                     </div>
-                                    <span class="badge bg-${acc.status === 'active' ? 'success' : 'warning'}">${acc.status || 'Active'}</span>
+                                    <span class="badge bg-${status}">${acc.status || 'ACTIVE'}</span>
                                 </div>
                                 <div class="mb-3">
                                     <small class="text-muted d-block mb-2">Account Number:</small>
-                                    <code class="user-select-all">${accountNum}</code>
+                                    <code class="user-select-all pii-masked">${maskedNum}</code>
                                 </div>
                                 <div class="mb-0">
-                                    <small class="text-muted d-block mb-2">Account Status:</small>
-                                    ${verificationStatus}
+                                    <small class="text-muted d-block mb-2">Status:</small>
+                                    <span class="badge bg-${acc.status === 'active' ? 'success' : 'warning'}">
+                                        <i class="fas fa-${acc.status === 'active' ? 'check' : 'exclamation'}-circle me-1"></i>
+                                        ${acc.status === 'active' ? 'Active' : 'Inactive'}
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -519,68 +815,285 @@
             html += '</div>';
             container.innerHTML = html;
         }
-
-        // Render transactions
+        
+        /**
+         * Render deposits
+         */
+        function renderDeposits(deposits) {
+            const container = document.getElementById('deposits-list');
+            
+            if (!deposits || deposits.length === 0) {
+                container.innerHTML = '<p class="text-muted text-center py-3"><i class="fas fa-inbox me-2"></i>No active deposits</p>';
+                return;
+            }
+            
+            let html = '';
+            deposits.slice(0, 3).forEach(dep => {
+                html += `
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">${dep.name || 'Deposit'}</h6>
+                                <small class="text-muted">${dashboardState.formatDate(dep.created_at)}</small>
+                            </div>
+                            <div class="text-end">
+                                <p class="mb-0 fw-bold">${dashboardState.formatCurrency(dep.amount)}</p>
+                                <small class="text-success"><i class="fas fa-check-circle me-1"></i>${dep.status}</small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+        
+        /**
+         * Render loans
+         */
+        function renderLoans(loans) {
+            const container = document.getElementById('loans-list');
+            
+            if (!loans || loans.length === 0) {
+                container.innerHTML = '<p class="text-muted text-center py-3"><i class="fas fa-inbox me-2"></i>No active loans</p>';
+                return;
+            }
+            
+            let html = '';
+            loans.slice(0, 3).forEach(loan => {
+                const progress = Math.round((loan.paid_amount / loan.total_amount) * 100);
+                html += `
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <h6 class="mb-0">${loan.name || 'Loan'}</h6>
+                            <small class="fw-bold">${progress}%</small>
+                        </div>
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar bg-warning" style="width: ${progress}%;"></div>
+                        </div>
+                        <small class="text-muted d-block mt-1">${dashboardState.formatCurrency(loan.paid_amount)} of ${dashboardState.formatCurrency(loan.total_amount)}</small>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+        
+        /**
+         * Render transactions with pagination
+         */
         function renderTransactions(transactions) {
-            const loader = document.getElementById('transactions-loader');
-            const table = document.getElementById('transactions-table');
             const tbody = document.getElementById('transactions-body');
             const noTxn = document.getElementById('no-transactions');
             
             if (!transactions || transactions.length === 0) {
-                loader.style.display = 'none';
-                table.style.display = 'none';
+                tbody.innerHTML = '';
                 noTxn.style.display = 'block';
                 return;
             }
             
-            loader.style.display = 'none';
             noTxn.style.display = 'none';
-            table.style.display = 'table';
             tbody.innerHTML = '';
             
-            transactions.slice(0, 10).forEach(txn => {
+            // Limit to page size
+            const pageTransactions = transactions.slice(0, transactionPageSize);
+            
+            pageTransactions.forEach(txn => {
+                const statusBadgeClass = {
+                    'completed': 'bg-success',
+                    'pending': 'bg-warning',
+                    'failed': 'bg-danger',
+                    'blocked': 'bg-secondary',
+                    'cancelled': 'bg-dark'
+                }[txn.status?.toLowerCase()] || 'bg-secondary';
+                
                 const row = `
                     <tr>
-                        <td>${formatDate(txn.created_at)}</td>
+                        <td>${dashboardState.formatDate(txn.created_at)}</td>
                         <td>${txn.type || 'Transaction'}</td>
-                        <td class="text-end fw-bold">${formatCurrency(txn.amount)}</td>
-                        <td>${getStatusBadge(txn.status)}</td>
+                        <td class="text-end fw-bold">${dashboardState.formatCurrency(txn.amount)}</td>
+                        <td><span class="badge ${statusBadgeClass}">${txn.status || 'Unknown'}</span></td>
                     </tr>
                 `;
                 tbody.innerHTML += row;
             });
         }
-
-        // Initialize on page load
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', loadDashboardData);
-        } else {
-            loadDashboardData();
-        }
-
-        // SECURE Logout handler - Clear all session state
-        document.addEventListener('click', function(e) {
-            if (e.target && e.target.getAttribute('href') === '/logout') {
-                e.preventDefault();
-                if (confirm('Are you sure you want to logout?')) {
-                    // Clear all client-side storage
-                    localStorage.clear();
-                    sessionStorage.clear();
-                    // Navigate to logout endpoint (server clears cookie)
-                    window.location.href = '/logout';
-                }
-            }
-        });
         
-        // Prevent back button from restoring cached pages
-        window.addEventListener('pageshow', function(event) {
-            if (event.persisted) {  // Page restored from back/forward cache
-                if (!localStorage.getItem('token')) {
-                    window.location.href = '/signin';
+        /**
+         * Render pagination with improved UI
+         */
+        function renderPagination(transactionState) {
+            const container = document.getElementById('pagination-container');
+            const totalTransactions = transactionState.list?.length || 0;
+            
+            if (!transactionState.hasMore || totalTransactions <= transactionPageSize) {
+                container.innerHTML = '';
+                return;
+            }
+            
+            container.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+                    <small class="text-muted">
+                        Showing 1–${Math.min(transactionPageSize, totalTransactions)} of ${totalTransactions} transactions
+                    </small>
+                    <div>
+                        <button class="btn btn-outline-success btn-sm load-more-btn me-2" onclick="loadMoreTransactions()">
+                            <i class="fas fa-chevron-down me-2"></i>Load More
+                        </button>
+                        <a href="/user/transactions" class="btn btn-outline-primary btn-sm load-more-btn">
+                            <i class="fas fa-list me-2"></i>View All
+                        </a>
+                    </div>
+                </div>
+            `;
+        }
+        
+        /**
+         * Load more transactions
+         */
+        async function loadMoreTransactions() {
+            if (microFetches) {
+                currentTransactionPage++;
+                try {
+                    await window.microFetches.fetchTransactions(currentTransactionPage, transactionPageSize);
+                } catch (error) {
+                    dashboardErrorHandler.handleComponentError('transactions', error, {
+                        showBanner: true,
+                        message: 'Failed to load more transactions.'
+                    });
                 }
             }
-        });
+        }
+        
+        /**
+         * Toggle Balance Masking
+         */
+        function toggleBalanceMasking() {
+            balanceMasking = !balanceMasking;
+            
+            const balanceElement = document.getElementById('user-balance');
+            const balanceState = dashboardState.getState('balance');
+            
+            if (balanceMasking) {
+                // Mask the balance
+                balanceElement.innerHTML = '<span class="balance-masked">• • • • •</span>';
+                document.getElementById('toggle-balance-mask').innerHTML = '<i class="fas fa-eye-slash me-1"></i>';
+            } else {
+                // Show the balance
+                balanceElement.innerHTML = dashboardState.formatCurrency(balanceState.total);
+                document.getElementById('toggle-balance-mask').innerHTML = '<i class="fas fa-eye me-1"></i>';
+            }
+            
+            dashboardAudit.logAction('balance_masking_toggled', { masked: balanceMasking });
+        }
+        
+        /**
+         * Toggle PII masking (Account Numbers)
+         */
+        function togglePIIMasking() {
+            piiMasking = !piiMasking;
+            document.getElementById('pii-toggle-text').textContent = piiMasking ? 'Hide' : 'Show';
+            document.getElementById('toggle-account-numbers').innerHTML = `
+                <i class="fas fa-${piiMasking ? 'eye-slash' : 'eye'} me-1 pii-toggle"></i><span id="pii-toggle-text">${piiMasking ? 'Hide' : 'Show'}</span> Numbers
+            `;
+            
+            const accountState = dashboardState.getState('accounts');
+            renderAccounts(accountState.list);
+            dashboardAudit.logAction('pii_toggle', { revealed: piiMasking });
+        }
+        
+        /**
+         * Show suspension banner
+         */
+        function showSuspensionBanner(status) {
+            const banner = document.getElementById('suspension-banner');
+            
+            if (status.is_suspended) {
+                banner.innerHTML = `
+                    <div class="suspension-banner">
+                        <strong><i class="fas fa-lock me-2"></i>Account Suspended</strong>
+                        <p class="mb-0 mt-2">${status.suspension_reason || 'Your account has been suspended.'}</p>
+                    </div>
+                `;
+                banner.style.display = 'block';
+            }
+        }
+        
+        /**
+         * Setup auto-logout on inactivity
+         */
+        function setupAutoLogout() {
+            let inactivityTimeout;
+            
+            const resetTimeout = () => {
+                clearTimeout(inactivityTimeout);
+                dashboardState.recordActivity();
+                inactivityTimeout = setTimeout(() => {
+                    console.warn('[DASHBOARD] Inactivity timeout. Logging out.');
+                    handleLogout();
+                }, dashboardState.config.AUTO_LOGOUT_AFTER_INACTIVITY_MS);
+            };
+            
+            document.addEventListener('mousemove', resetTimeout);
+            document.addEventListener('keypress', resetTimeout);
+            document.addEventListener('click', resetTimeout);
+            resetTimeout();
+        }
+        
+        /**
+         * Setup token expiry countdown
+         */
+        function setupTokenExpiryCountdown() {
+            setInterval(() => {
+                if (dashboardState.isTokenExpiringSoon()) {
+                    const warning = document.getElementById('token-expiry-warning');
+                    warning.style.display = 'block';
+                    
+                    const expiry = dashboardState.state.security.token_expiry;
+                    const minutesLeft = Math.ceil((expiry - Date.now()) / 60000);
+                    document.getElementById('expiry-countdown').textContent = minutesLeft;
+                }
+            }, 10000);
+        }
+        
+        /**
+         * Handle logout
+         */
+        function handleLogout(event) {
+            if (event) event.preventDefault();
+            
+            if (confirm('Are you sure you want to logout?')) {
+                dashboardAudit.logAction('user_logout');
+                dashboardAudit.flushAuditData(true);
+                
+                localStorage.clear();
+                sessionStorage.clear();
+                
+                // Destroy all managers
+                dashboardState.destroy();
+                csrfManager.destroy();
+                dashboardAudit.destroy();
+                dashboardErrorHandler.destroy();
+                silentRefreshManager.destroy();
+                
+                window.location.replace('/logout');
+            }
+        }
+        
+        /**
+         * Format relative time
+         */
+        function formatRelativeTime(isoString) {
+            if (!isoString) return 'recently';
+            
+            const date = new Date(isoString);
+            const now = new Date();
+            const seconds = Math.floor((now - date) / 1000);
+            
+            if (seconds < 60) return `${seconds}s ago`;
+            if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+            if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+            return date.toLocaleDateString();
+        }
+        
     </script>
 </body>
 

@@ -6,6 +6,7 @@ from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from deps import get_current_user, SessionDep
+from database import get_db as get_session
 from models import User
 
 router = APIRouter(

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -33,6 +33,8 @@
         .amount-positive { color: #28a745; font-weight: 600; }
         .amount-negative { color: #dc3545; font-weight: 600; }
     </style>
+
+    <script src="/static/js/toast-utils.js"></script>
 </head>
 <body>
     <nav class="admin-nav navbar navbar-expand-lg navbar-dark">
@@ -45,74 +47,6 @@
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item"><a class="nav-link" href="/user/admin/dashboard"><i class="fas fa-home"></i> Dashboard</a></li>
                     <li class="nav-item"><a class="nav-link" href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
-                </ul>
-            </div>
-        </div>
-    </nav>
-
-    <div class="container-fluid mt-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h2><i class="fas fa-exchange-alt"></i> Transaction Management</h2>
-                <p class="text-muted">Monitor and manage all system transactions</p>
-            </div>
-            <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#createTransactionModal">
-                <i class="fas fa-plus"></i> Create Transaction
-            </button>
-        </div>
-
-        <div class="stats-container">
-            <div class="stat-card">
-                <div class="stat-number" id="totalTransactions">0</div>
-                <div class="text-muted">Total</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number" id="completedCount">0</div>
-                <div class="text-muted">Completed</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number" id="pendingCount">0</div>
-                <div class="text-muted">Pending</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number" id="failedCount">0</div>
-                <div class="text-muted">Failed</div>
-            </div>
-        </div>
-
-        <div class="search-bar">
-            <div class="row">
-                <div class="col-md-3">
-                    <input type="text" id="searchInput" class="form-control" placeholder="Search by user email or reference...">
-                </div>
-                <div class="col-md-2">
-                    <select id="statusFilter" class="form-control">
-                        <option value="">All Status</option>
-                        <option value="completed">Completed</option>
-                        <option value="pending">Pending</option>
-                        <option value="failed">Failed</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <select id="typeFilter" class="form-control">
-                        <option value="">All Types</option>
-                        <option value="deposit">Deposit</option>
-    </style>
-</head>
-<body>
-    <!-- Navigation -->
-    <nav class="admin-nav navbar navbar-expand-lg navbar-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/user/admin/dashboard">
-                <i class="fas fa-chart-line"></i> Finanza Admin
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="/user/admin/dashboard">Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
                 </ul>
             </div>
         </div>
@@ -153,6 +87,47 @@
             </div>
         </div>
 
+        <!-- System Reserve Health Gauge -->
+        <div class="dashboard-section mb-5">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5><i class="fas fa-vault"></i> Bank Liquidity Status</h5>
+                <button class="btn btn-sm btn-outline-primary" onclick="refreshSystemReserve()"><i class="fas fa-sync"></i> Refresh</button>
+            </div>
+            <div class="row">
+                <div class="col-lg-6">
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 10px; margin-bottom: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <p style="margin: 0; opacity: 0.9; font-size: 0.9rem;">System Reserve (SYS-RESERVE-0001)</p>
+                                <div style="font-size: 2rem; font-weight: bold; margin-top: 5px;" id="systemReserveBalance">$0.00</div>
+                            </div>
+                            <div style="text-align: right;">
+                                <p style="margin: 0; opacity: 0.9; font-size: 0.9rem;">Liquidity Ratio</p>
+                                <div style="font-size: 2rem; font-weight: bold; margin-top: 5px;" id="liquidityRatio">-</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; border-left: 4px solid #667eea;">
+                        <p style="margin: 0 0 10px 0; color: #666; font-size: 0.9rem;">Total User Liabilities</p>
+                        <div style="font-size: 1.5rem; font-weight: bold; color: #333;" id="totalLiabilities">$0.00</div>
+                        <p style="margin: 10px 0 0 0; color: #999; font-size: 0.85rem;">Coverage: <span id="coverage" style="color: #667eea; font-weight: bold;">-</span></p>
+                    </div>
+                </div>
+            </div>
+            <div style="margin-top: 15px;">
+                <div style="background: #f0f0f0; height: 8px; border-radius: 4px; overflow: hidden;">
+                    <div id="liquidityBar" style="background: linear-gradient(90deg, #28a745 0%, #ffc107 50%, #dc3545 100%); height: 100%; width: 100%; border-radius: 4px; transition: width 0.3s;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 0.8rem; color: #666;">
+                    <span>0%</span>
+                    <span>Healthy (>100%)</span>
+                    <span>100%</span>
+                </div>
+            </div>
+        </div>
+
         <!-- Charts Row -->
         <div class="row mb-5">
             <div class="col-lg-6">
@@ -188,10 +163,10 @@
             </div>
             <div class="mb-3">
                 <div class="row g-2">
-                    <div class="col-md-3">
-                        <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Search by email or reference...">
-                    </div>
                     <div class="col-md-2">
+                        <input type="text" id="searchInput" class="form-control form-control-sm" placeholder="Search by email or ref...">
+                    </div>
+                    <div class="col-md-1">
                         <select id="statusFilter" class="form-control form-control-sm">
                             <option value="">All Status</option>
                             <option value="completed">Completed</option>
@@ -199,7 +174,7 @@
                             <option value="failed">Failed</option>
                         </select>
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-md-1">
                         <select id="typeFilter" class="form-control form-control-sm">
                             <option value="">All Types</option>
                             <option value="deposit">Deposit</option>
@@ -207,17 +182,34 @@
                             <option value="transfer">Transfer</option>
                         </select>
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-md-1">
                         <select id="directionFilter" class="form-control form-control-sm">
                             <option value="">All Directions</option>
                             <option value="debit">Debit</option>
                             <option value="credit">Credit</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
-                        <button class="btn btn-primary btn-sm w-100" onclick="loadTransactions()">
-                            <i class="fas fa-filter"></i> Apply Filters
-                        </button>
+                    <div class="col-md-1">
+                        <input type="date" id="startDateFilter" class="form-control form-control-sm" placeholder="Start date">
+                    </div>
+                    <div class="col-md-1">
+                        <input type="date" id="endDateFilter" class="form-control form-control-sm" placeholder="End date">
+                    </div>
+                    <div class="col-md-1">
+                        <input type="number" id="minAmountFilter" class="form-control form-control-sm" placeholder="Min $" step="0.01">
+                    </div>
+                    <div class="col-md-1">
+                        <input type="number" id="maxAmountFilter" class="form-control form-control-sm" placeholder="Max $" step="0.01">
+                    </div>
+                    <div class="col-md-2">
+                        <div class="btn-group w-100" role="group">
+                            <button class="btn btn-primary btn-sm" onclick="loadTransactions()">
+                                <i class="fas fa-filter"></i> Filter
+                            </button>
+                            <button class="btn btn-success btn-sm" onclick="exportTransactionsCSV()">
+                                <i class="fas fa-download"></i> CSV
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -225,21 +217,32 @@
                 <table class="table table-hover mb-0">
                     <thead class="table-light">
                         <tr>
+                            <th><input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)"></th>
                             <th>ID</th>
                             <th>User</th>
                             <th>Reference</th>
                             <th>Type</th>
                             <th>Direction</th>
                             <th>Amount</th>
+                            <th>Exchange Rate</th>
+                            <th>TxID (Hash)</th>
                             <th>Status</th>
                             <th>Timestamp</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="transactionsTable">
-                        <tr><td colspan="9" class="text-center text-muted">Loading transactions...</td></tr>
+                        <tr><td colspan="12" class="text-center text-muted">Loading transactions...</td></tr>
                     </tbody>
                 </table>
+            </div>
+            <div class="mt-3" id="batchActionsContainer" style="display: none;">
+                <div class="alert alert-info">
+                    <span id="selectedCountLabel">0 transactions</span> selected
+                    <button class="btn btn-sm btn-success ms-2" onclick="batchSettleTransactions()"><i class="fas fa-check"></i> Mark as Settled</button>
+                    <button class="btn btn-sm btn-warning ms-2" onclick="batchClearTransactions()"><i class="fas fa-forward"></i> Force Clear</button>
+                    <button class="btn btn-sm btn-danger ms-2" onclick="batchRejectTransactions()"><i class="fas fa-ban"></i> Reject & Freeze</button>
+                </div>
             </div>
         </div>
 
@@ -520,11 +523,141 @@
         </div>
     </div>
 
+    <!-- User Control Center Modal -->
+    <div class="modal fade" id="userControlModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-user-shield"></i> User Control Center</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6>User Information</h6>
+                            <p><strong>Email:</strong> <span id="modalUserEmail">-</span></p>
+                            <p><strong>Name:</strong> <span id="modalUserName">-</span></p>
+                            <p><strong>Account ID:</strong> <span id="modalUserId">-</span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Status</h6>
+                            <p><strong>KYC:</strong> <span id="modalUserKYC" class="badge">-</span></p>
+                            <p><strong>Active:</strong> <span id="modalUserActive" class="badge">-</span></p>
+                            <p><strong>Credit Score:</strong> <span id="modalUserCredit">-</span></p>
+                        </div>
+                    </div>
+                    <hr>
+                    <h6>Quick Actions</h6>
+                    <div class="btn-group w-100" role="group">
+                        <button type="button" class="btn btn-sm btn-primary" onclick="openUserKYCReview()"><i class="fas fa-id-card"></i> Review KYC</button>
+                        <button type="button" class="btn btn-sm btn-warning" onclick="openBalanceAdjustmentModal()"><i class="fas fa-money-bill"></i> Adjust Balance</button>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="openRevokeSessionModal()"><i class="fas fa-power-off"></i> Kill Sessions</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ledger Adjustment Modal -->
+    <div class="modal fade" id="ledgerAdjustmentModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-book"></i> Internal Ledger Adjustment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="ledgerAdjustmentForm" onsubmit="handleLedgerAdjustment(event)">
+                    <div class="modal-body">
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> All adjustments are logged for audit compliance.
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">From Account</label>
+                            <input type="text" id="adjustFromAccount" class="form-control" value="SYS-RESERVE-0001" readonly>
+                            <small class="text-muted">System Reserve (Default)</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">To Account (User ID)</label>
+                            <input type="number" id="adjustToUserId" class="form-control" placeholder="User ID" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Amount</label>
+                            <input type="number" id="adjustAmount" class="form-control" step="0.01" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Reason Code</label>
+                            <select id="adjustReasonCode" class="form-control" required>
+                                <option value="">Select Reason</option>
+                                <option value="DISPUTE_SETTLEMENT">Dispute Settlement</option>
+                                <option value="SYSTEM_ERROR">System Error Correction</option>
+                                <option value="REFUND">Customer Refund</option>
+                                <option value="PROMOTION">Promotional Credit</option>
+                                <option value="MANUAL_CORRECTION">Manual Correction</option>
+                                <option value="REGULATORY">Regulatory Requirement</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <textarea id="adjustDescription" class="form-control" rows="3" placeholder="Detailed explanation for audit trail" required></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger">Execute Adjustment</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settlement Documentation Modal -->
+    <div class="modal fade" id="settlementDocModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-file-upload"></i> Settlement Proof of Payment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="settlementDocForm" onsubmit="handleSettlementDocUpload(event)" enctype="multipart/form-data">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Transaction Reference</label>
+                            <input type="text" id="settlementDocTxnRef" class="form-control" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Document Type</label>
+                            <select id="settlementDocType" class="form-control" required>
+                                <option value="">Select Type</option>
+                                <option value="bank_receipt">Bank Receipt</option>
+                                <option value="wire_confirmation">Wire Confirmation</option>
+                                <option value="ach_notification">ACH Notification</option>
+                                <option value="statement">Statement Extract</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Upload File (PDF/Image)</label>
+                            <input type="file" id="settlementDocFile" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.gif" required>
+                            <small class="text-muted">Max 5MB. PDF or Image formats only.</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Notes</label>
+                            <textarea id="settlementDocNotes" class="form-control" rows="2" placeholder="Any additional context"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Upload & Mark Settled</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/admin_static/js/auth-helper.js"></script>
     <script src="/admin_static/js/admin-utils.js"></script>
     <script>
-        const AUTH_HEADER = () => ({ 'Authorization': 'Bearer ' + localStorage.getItem('token'), 'Content-Type': 'application/json' });
         let statusChart = null;
         let typesChart = null;
 
@@ -547,6 +680,16 @@
                 document.getElementById('completedCount').textContent = response.completed_24h || 0;
                 document.getElementById('failedCount').textContent = response.failed_24h || 0;
                 document.getElementById('totalVolume').textContent = formatCurrency(response.volume_24h || 0);
+                
+                // Update charts with real metrics data
+                if (statusChart) {
+                    statusChart.data.datasets[0].data = [
+                        response.completed_24h || 0,
+                        response.pending_24h || 0,
+                        response.failed_24h || 0
+                    ];
+                    statusChart.update();
+                }
             } catch (error) {
                 console.error('Error loading metrics:', error);
             }
@@ -557,12 +700,20 @@
                 const statusFilter = document.getElementById('statusFilter').value;
                 const typeFilter = document.getElementById('typeFilter').value;
                 const directionFilter = document.getElementById('directionFilter').value;
+                const startDate = document.getElementById('startDateFilter').value;
+                const endDate = document.getElementById('endDateFilter').value;
+                const minAmount = document.getElementById('minAmountFilter').value;
+                const maxAmount = document.getElementById('maxAmountFilter').value;
                 const search = document.getElementById('searchInput').value;
                 
-                let url = '/api/v1/transactions?limit=50';
+                let url = '/api/v1/transactions?limit=100';
                 if (statusFilter) url += '&status=' + statusFilter;
                 if (typeFilter) url += '&type=' + typeFilter;
                 if (directionFilter) url += '&direction=' + directionFilter;
+                if (startDate) url += '&start_date=' + startDate;
+                if (endDate) url += '&end_date=' + endDate;
+                if (minAmount) url += '&min_amount=' + minAmount;
+                if (maxAmount) url += '&max_amount=' + maxAmount;
                 if (search) url += '&search=' + search;
 
                 const response = await fetchAPI(url);
@@ -571,20 +722,35 @@
                 const tbody = document.getElementById('transactionsTable');
                 tbody.innerHTML = response.data.map(t => `
                     <tr>
+                        <td><input type="checkbox" class="txn-checkbox" value="${t.id}" onchange="updateBatchActions()"></td>
                         <td>${t.id}</td>
-                        <td>${t.user_email || 'N/A'}</td>
+                        <td><a href="#" onclick="openUserControlCenter(${t.user_id}, '${t.user_email}'); return false;" style="text-decoration: none;" title="Click to view user details">${t.user_email || 'N/A'}</a></td>
                         <td><code>${t.reference_number || 'N/A'}</code></td>
                         <td><span class="type-badge">${t.type}</span></td>
                         <td><span class="direction-badge direction-${t.direction}">${t.direction.toUpperCase()}</span></td>
                         <td><span class="${t.direction === 'credit' ? 'amount-positive' : 'amount-negative'}">${formatCurrency(t.amount)}</span></td>
+                        <td>${t.exchange_rate ? (t.exchange_rate.toFixed(6)) : '-'}</td>
+                        <td><code style="font-size: 0.8rem;">${t.transaction_hash || t.txid || 'N/A'}</code></td>
                         <td><span class="status-badge status-${t.status}">${t.status.toUpperCase()}</span></td>
                         <td>${formatDate(t.timestamp)}</td>
                         <td>
-                            <button class="btn btn-sm btn-info" onclick="viewTransaction(${t.id})"><i class="fas fa-eye"></i></button>
+                            <button class="btn btn-sm btn-info" onclick="viewTransaction(${t.id})" title="View details"><i class="fas fa-eye"></i></button>
+                            ${t.status === 'pending' ? `<button class="btn btn-sm btn-success" onclick="forceSettleTransaction(${t.id})" title="Force Clear"><i class="fas fa-check"></i></button>` : ''}
+                            ${t.status === 'pending' ? `<button class="btn btn-sm btn-warning" onclick="openSettlementDocModal('${t.reference_number}')" title="Upload proof"><i class="fas fa-file-upload"></i></button>` : ''}
                             ${t.status === 'failed' ? `<button class="btn btn-sm btn-warning" onclick="retryTransaction(${t.id})"><i class="fas fa-redo"></i></button>` : ''}
                         </td>
                     </tr>
-                `).join('') || '<tr><td colspan="9" class="text-center text-muted">No transactions found</td></tr>';
+                `).join('') || '<tr><td colspan="12" class="text-center text-muted">No transactions found</td></tr>';
+                
+                // Update types chart with real data
+                if (typesChart && response.data.length > 0) {
+                    const deposits = response.data.filter(t => t.type === 'deposit').length;
+                    const withdrawals = response.data.filter(t => t.type === 'withdrawal').length;
+                    const transfers = response.data.filter(t => t.type === 'transfer').length;
+                    
+                    typesChart.data.datasets[0].data = [deposits, withdrawals, transfers];
+                    typesChart.update();
+                }
             } catch (error) {
                 console.error('Error loading transactions:', error);
             }
@@ -661,7 +827,7 @@
 
         async function loadUsers() {
             try {
-                const response = await fetchAPI('/api/v1/users?limit=200');
+                const response = await fetchAPI('/api/admin/users?limit=200');
                 if (!response || !response.data) return;
                 
                 const select = document.getElementById('transactionUser');
@@ -683,7 +849,7 @@
         }
 
         function initCharts() {
-            // Status Chart
+            // Status Chart - data updated by loadTransactionMetrics
             const statusCtx = document.getElementById('statusChart')?.getContext('2d');
             if (statusCtx) {
                 statusChart = new Chart(statusCtx, {
@@ -691,7 +857,7 @@
                     data: {
                         labels: ['Completed', 'Pending', 'Failed'],
                         datasets: [{
-                            data: [450, 85, 35],
+                            data: [0, 0, 0],
                             backgroundColor: ['#28a745', '#ffc107', '#dc3545']
                         }]
                     },
@@ -699,7 +865,7 @@
                 });
             }
 
-            // Types Chart
+            // Types Chart - data updated by loadTransactions
             const typesCtx = document.getElementById('typesChart')?.getContext('2d');
             if (typesCtx) {
                 typesChart = new Chart(typesCtx, {
@@ -708,7 +874,7 @@
                         labels: ['Deposits', 'Withdrawals', 'Transfers'],
                         datasets: [{
                             label: 'Count',
-                            data: [120, 85, 110],
+                            data: [0, 0, 0],
                             backgroundColor: ['#28a745', '#dc3545', '#667eea']
                         }]
                     },
@@ -826,10 +992,175 @@
         function closeModal(id) { bootstrap.Modal.getInstance(document.getElementById(id))?.hide(); }
         function formatCurrency(amount) { return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount); }
         function formatDate(date) { return new Date(date).toLocaleString(); }
+
+        // ========== SYSTEM LIQUIDITY MONITORING ==========
+        async function refreshSystemReserve() {
+            try {
+                const response = await fetchAPI('/api/admin/metrics');
+                if (!response) return;
+                
+                document.getElementById('systemReserveBalance').textContent = formatCurrency(response.system_reserve_balance || 0);
+                document.getElementById('totalLiabilities').textContent = formatCurrency(response.total_user_liabilities || 0);
+                
+                const reserve = response.system_reserve_balance || 0;
+                const liabilities = response.total_user_liabilities || 1;
+                const ratio = ((reserve / liabilities) * 100).toFixed(1);
+                document.getElementById('liquidityRatio').textContent = ratio + '%';
+                document.getElementById('coverage').textContent = ratio + '%';
+                
+                const ratio_pct = Math.min(Math.max(ratio, 0), 100);
+                document.getElementById('liquidityBar').style.width = ratio_pct + '%';
+            } catch(e) { console.error('Error loading system reserve:', e); }
+        }
+
+        // ========== USER CONTROL CENTER ==========
+        function openUserControlCenter(userId, email) {
+            document.getElementById('modalUserId').textContent = userId;
+            document.getElementById('modalUserEmail').textContent = email;
+            document.getElementById('modalUserName').textContent = '-';
+            document.getElementById('modalUserKYC').textContent = 'Pending';
+            document.getElementById('modalUserActive').textContent = 'Yes';
+            document.getElementById('modalUserCredit').textContent = '-';
+            window.currentUserId = userId;
+            new bootstrap.Modal(document.getElementById('userControlModal')).show();
+        }
+
+        // ========== BATCH SELECTION ==========
+        let selectedTransactions = new Set();
+        
+        function toggleSelectAll(checkbox) {
+            const checkboxes = document.querySelectorAll('.txn-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = checkbox.checked;
+                if (checkbox.checked) selectedTransactions.add(parseInt(cb.value));
+                else selectedTransactions.delete(parseInt(cb.value));
+            });
+            updateBatchActions();
+        }
+
+        function updateBatchActions() {
+            selectedTransactions.clear();
+            document.querySelectorAll('.txn-checkbox:checked').forEach(cb => {
+                selectedTransactions.add(parseInt(cb.value));
+            });
+            const container = document.getElementById('batchActionsContainer');
+            const label = document.getElementById('selectedCountLabel');
+            if (selectedTransactions.size > 0) {
+                container.style.display = 'block';
+                label.textContent = selectedTransactions.size + ' transaction' + (selectedTransactions.size > 1 ? 's' : '');
+            } else {
+                container.style.display = 'none';
+            }
+        }
+
+        async function batchSettleTransactions() {
+            if (selectedTransactions.size === 0) { alert('No transactions selected'); return; }
+            const ids = Array.from(selectedTransactions).join(',');
+            try {
+                await fetchAPI(`/api/v1/settlement/batch-confirm?ids=${ids}`, { method: 'POST' });
+                alert('Marked ' + selectedTransactions.size + ' transactions as settled');
+                loadTransactions();
+            } catch(e) { alert('Error: ' + e.message); }
+        }
+
+        async function batchClearTransactions() {
+            if (selectedTransactions.size === 0) { alert('No transactions selected'); return; }
+            const ids = Array.from(selectedTransactions).join(',');
+            try {
+                await fetchAPI(`/api/v1/settlement/batch-force-clear?ids=${ids}`, { method: 'POST' });
+                alert('Force cleared ' + selectedTransactions.size + ' pending transactions');
+                loadTransactions();
+            } catch(e) { alert('Error: ' + e.message); }
+        }
+
+        async function batchRejectTransactions() {
+            if (selectedTransactions.size === 0) { alert('No transactions selected'); return; }
+            const ids = Array.from(selectedTransactions).join(',');
+            try {
+                await fetchAPI(`/api/v1/settlement/batch-reject?ids=${ids}`, { method: 'POST' });
+                alert('Rejected and frozen ' + selectedTransactions.size + ' transactions');
+                loadTransactions();
+            } catch(e) { alert('Error: ' + e.message); }
+        }
+
+        // ========== LEDGER ADJUSTMENT ==========
+        async function handleLedgerAdjustment(event) {
+            event.preventDefault();
+            const data = {
+                user_id: parseInt(document.getElementById('adjustToUserId').value),
+                amount: parseFloat(document.getElementById('adjustAmount').value),
+                reason_code: document.getElementById('adjustReasonCode').value,
+                description: document.getElementById('adjustDescription').value,
+                created_by: 1
+            };
+            try {
+                const response = await fetchAPI('/api/admin/intervention/balance/adjust', { method: 'POST', body: JSON.stringify(data) });
+                alert('Ledger adjustment executed: ' + response.ledger_entry_id);
+                bootstrap.Modal.getInstance(document.getElementById('ledgerAdjustmentModal')).hide();
+                loadTransactions();
+            } catch(e) { alert('Error: ' + e.message); }
+        }
+
+        // ========== SETTLEMENT DOCUMENTATION ==========
+        function openSettlementDocModal(refId) {
+            document.getElementById('settlementDocTxnRef').value = refId;
+            window.settlementTxnRef = refId;
+            new bootstrap.Modal(document.getElementById('settlementDocModal')).show();
+        }
+
+        async function handleSettlementDocUpload(event) {
+            event.preventDefault();
+            const formData = new FormData();
+            formData.append('transaction_ref', document.getElementById('settlementDocTxnRef').value);
+            formData.append('doc_type', document.getElementById('settlementDocType').value);
+            formData.append('file', document.getElementById('settlementDocFile').files[0]);
+            formData.append('notes', document.getElementById('settlementDocNotes').value);
+            
+            try {
+                await fetch('/api/v1/settlement/submit-evidence', { method: 'POST', body: formData });
+                alert('Settlement documentation uploaded');
+                bootstrap.Modal.getInstance(document.getElementById('settlementDocModal')).hide();
+                loadTransactions();
+            } catch(e) { alert('Error: ' + e.message); }
+        }
+
+        // ========== ACTION HANDLERS ==========
+        async function forceSettleTransaction(txnId) {
+            if (!confirm('Force settle this pending transaction?')) return;
+            try {
+                await fetchAPI('/api/v1/settlement/force-clear', { method: 'POST', body: JSON.stringify({ transaction_id: txnId }) });
+                alert('Transaction forced to settled status');
+                loadTransactions();
+            } catch(e) { alert('Error: ' + e.message); }
+        }
+
+        // ========== CSV EXPORT ==========
+        async function exportTransactionsCSV() {
+            try {
+                const statusFilter = document.getElementById('statusFilter').value;
+                const typeFilter = document.getElementById('typeFilter').value;
+                const directionFilter = document.getElementById('directionFilter').value;
+                
+                let url = '/api/v1/transactions/export?format=csv';
+                if (statusFilter) url += '&status=' + statusFilter;
+                if (typeFilter) url += '&type=' + typeFilter;
+                if (directionFilter) url += '&direction=' + directionFilter;
+                
+                const response = await fetch(url);
+                const blob = await response.blob();
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'transactions_' + new Date().toISOString().split('T')[0] + '.csv';
+                link.click();
+            } catch(e) { alert('Error exporting: ' + e.message); }
+        }
+
+        // Load on startup
+        document.addEventListener('DOMContentLoaded', function() {
+            refreshSystemReserve();
+            setInterval(refreshSystemReserve, 60000); // Refresh every minute
+        });
     </script>
     <script src="/static/js/admin-guard.js"></script>
-</body>
-</html>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

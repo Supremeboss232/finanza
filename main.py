@@ -696,7 +696,6 @@ async def user_jail_middleware(request: Request, call_next):
     return response
 
 
-@app.on_event("startup")
 async def startup_event():
     try:
         # Initialize SSH tunnel if configured
@@ -788,7 +787,6 @@ async def startup_event():
         print(f"[WARN] Startup issue: {e}")
         print("[WARN] Application will continue in limited mode")
 
-@app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup on application shutdown"""
     try:
@@ -802,6 +800,16 @@ async def shutdown_event():
         print("[OK] Application shutdown complete")
     except Exception as e:
         log.error(f"Error during shutdown: {e}")
+
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await startup_event()
+    yield
+    await shutdown_event()
+
+app.router.lifespan_context = lifespan
 
 # --- Static Files & Routers ---
 

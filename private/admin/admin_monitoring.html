@@ -1,33 +1,205 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitoring Admin - Finanza</title>
+    <title>Monitoring Admin - Production-Scale Observability</title>
     <link href="/static/css/style.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
     <style>
-        .admin-header { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; }
-        .status-healthy { color: #28a745; }
-        .status-warning { color: #ffc107; }
-        .status-error { color: #dc3545; }
-        .service-card { border-left: 4px solid #667eea; transition: all 0.3s; }
-        .service-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        #systemHealthChart, #performanceChart { max-height: 300px; }
-        .status-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; }
+        .monitoring-connection-lost {
+            display: none;
+            background: #dc3545;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            animation: slideDown 0.3s ease-out;
+        }
+        .monitoring-connection-lost.show { display: block; }
+        @keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        .admin-header { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            color: white; 
+            padding: 30px; 
+            border-radius: 10px; 
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .timerange-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        
+        .timerange-selector .btn {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+        
+        .timerange-selector .btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .status-card {
+            border-left: 4px solid;
+            transition: all 0.3s;
+        }
+        
+        .status-card.healthy { border-left-color: #28a745; }
+        .status-card.warning { border-left-color: #ffc107; }
+        .status-card.error { border-left-color: #dc3545; }
+        
+        .status-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+
+        .status-dot {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
         .status-dot.healthy { background: #28a745; }
         .status-dot.warning { background: #ffc107; }
         .status-dot.error { background: #dc3545; }
+
+        .latency-metric {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 5px;
+            margin-top: 8px;
+            font-size: 13px;
+        }
+
+        .latency-metric .badge {
+            margin-right: 8px;
+        }
+
+        .chart-placeholder {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 300px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            color: #6c757d;
+        }
+
+        .infrastructure-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .infrastructure-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .infrastructure-controls input {
+            max-width: 300px;
+        }
+
+        .quick-action-btn {
+            padding: 4px 8px;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        .cluster-group {
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .cluster-group:last-child {
+            border-bottom: none;
+        }
+
+        .cluster-header {
+            background: #f8f9fa;
+            padding: 10px 15px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .alert-config-modal .form-group {
+            margin-bottom: 15px;
+        }
+
+        .alert-config-modal .metric-threshold {
+            border: 1px solid #e9ecef;
+            padding: 12px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+        }
+
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+
+        .toast-notification {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideInRight 0.3s ease-out;
+        }
+
+        @keyframes slideInRight {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        .toast-notification.success { border-left: 4px solid #28a745; }
+        .toast-notification.error { border-left: 4px solid #dc3545; }
+        .toast-notification.warning { border-left: 4px solid #ffc107; }
+        .toast-notification.info { border-left: 4px solid #17a2b8; }
+
+        .pagination-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+
+        #systemHealthChart, #latencyChart, #errorRateChart { max-height: 350px; }
     </style>
+
+    <script src="/static/js/toast-utils.js"></script>
 </head>
 <body>
     <!-- Navigation -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="/user/dashboard">
-                <i class="fas fa-heartbeat"></i> System Monitoring
+                <i class="fas fa-heartbeat"></i> Monitoring & Observability
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -49,431 +221,858 @@
     </nav>
 
     <div class="container-fluid mt-5 mb-5">
-        <!-- Header -->
+        <!-- Connection Loss Banner -->
+        <div id="monitoringConnectionLost" class="monitoring-connection-lost">
+            <i class="fas fa-exclamation-triangle"></i> Monitoring Connection Lost - Using cached data. Last update: <span id="lastUpdateTime">--</span>
+        </div>
+
+        <!-- Header with Controls -->
         <div class="admin-header">
-            <h1><i class="fas fa-heartbeat"></i> System Monitoring</h1>
-            <p class="mb-0">Real-time system health, performance, and analytics</p>
+            <div>
+                <h1><i class="fas fa-heartbeat"></i> Production Monitoring</h1>
+                <p class="mb-0">High-availability observability platform with proactive alerting</p>
+            </div>
+            <button class="btn btn-light" data-bs-toggle="modal" data-bs-target="#alertSettingsModal">
+                <i class="fas fa-bell"></i> Configure Alerts
+            </button>
         </div>
 
         <!-- System Status Overview -->
         <div class="row g-4 mb-5">
             <div class="col-lg-3 col-md-6">
-                <div class="card service-card">
+                <div class="card status-card healthy">
                     <div class="card-body">
-                        <h6 class="card-title text-muted">Overall System</h6>
-                        <h3 class="status-healthy"><span class="status-dot healthy"></span>HEALTHY</h3>
-                        <p class="text-muted small mb-0">All systems operational</p>
+                        <h6 class="card-title text-muted">Overall Status</h6>
+                        <h3 id="systemStatus">
+                            <span class="status-dot healthy"></span>
+                            <span id="systemStatusText">LOADING</span>
+                        </h3>
+                        <p class="text-muted small mb-0" id="systemStatusDetail">Loading data...</p>
                     </div>
                 </div>
             </div>
             <div class="col-lg-3 col-md-6">
-                <div class="card service-card">
+                <div class="card status-card healthy">
                     <div class="card-body">
                         <h6 class="card-title text-muted">Uptime (30 days)</h6>
-                        <h2 id="uptime">99.99%</h2>
+                        <h2 id="uptime">--</h2>
                         <p class="text-muted small mb-0">Incidents: <span id="incidents">0</span></p>
                     </div>
                 </div>
             </div>
             <div class="col-lg-3 col-md-6">
-                <div class="card service-card">
+                <div class="card status-card healthy">
                     <div class="card-body">
-                        <h6 class="card-title text-muted">Active Users</h6>
-                        <h2 id="activeUsers">-</h2>
-                        <p class="text-muted small mb-0" id="peakUsers">Peak: -</p>
+                        <h6 class="card-title text-muted">Response Time</h6>
+                        <h2 id="responseTime">--</h2>
+                        <div class="latency-metric">
+                            <strong>Average:</strong> <span id="avgLatency">--</span>ms
+                            <br>
+                            <strong>P99:</strong> <span id="p99Latency">--</span>ms
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="col-lg-3 col-md-6">
-                <div class="card service-card">
+                <div class="card status-card healthy">
                     <div class="card-body">
-                        <h6 class="card-title text-muted">Response Time</h6>
-                        <h2 id="responseTime">-ms</h2>
-                        <p class="text-muted small mb-0" id="apiHealth">APIs: Healthy</p>
+                        <h6 class="card-title text-muted">Error Rate (24h)</h6>
+                        <h2 id="errorRate">--</h2>
+                        <p class="text-muted small mb-0">Active Alerts: <span id="activeAlerts">0</span></p>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Charts Row -->
+        <!-- Time-Series Charts with Time Range Selector -->
+        <div class="row mb-5">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-chart-line"></i> System Health (Time-Series)</h5>
+                        <div class="timerange-selector">
+                            <button class="btn btn-sm btn-outline-secondary" onclick="changeTimeRange('1h')">1h</button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="changeTimeRange('6h')">6h</button>
+                            <button class="btn btn-sm btn-outline-secondary active" onclick="changeTimeRange('24h')">24h</button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="changeTimeRange('7d')">7d</button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="changeTimeRange('30d')">30d</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="systemHealthChartContainer" class="chart-placeholder">
+                            <i class="fas fa-spinner fa-spin"></i> Loading time-series data...
+                        </div>
+                        <canvas id="systemHealthChart" style="display: none;"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0"><i class="fas fa-percentage"></i> System Metrics</h5>
+                    </div>
+                    <div class="card-body" id="systemMetricsContainer">
+                        <p class="text-center text-muted">Loading metrics...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Latency & Error Rate Charts -->
         <div class="row mb-5">
             <div class="col-lg-6">
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="mb-0"><i class="fas fa-chart-line"></i> System Health (24h)</h5>
+                        <h5 class="mb-0"><i class="fas fa-clock"></i> Latency (Average vs P99)</h5>
                     </div>
                     <div class="card-body">
-                        <canvas id="systemHealthChart"></canvas>
+                        <div id="latencyChartContainer" class="chart-placeholder">
+                            <i class="fas fa-spinner fa-spin"></i> Loading latency data...
+                        </div>
+                        <canvas id="latencyChart" style="display: none;"></canvas>
                     </div>
                 </div>
             </div>
             <div class="col-lg-6">
                 <div class="card">
                     <div class="card-header">
-                        <h5 class="mb-0"><i class="fas fa-tachometer-alt"></i> Performance Metrics</h5>
+                        <h5 class="mb-0"><i class="fas fa-exclamation-circle"></i> Error Rate Trend</h5>
                     </div>
                     <div class="card-body">
-                        <canvas id="performanceChart"></canvas>
+                        <div id="errorRateChartContainer" class="chart-placeholder">
+                            <i class="fas fa-spinner fa-spin"></i> Loading error rate data...
+                        </div>
+                        <canvas id="errorRateChart" style="display: none;"></canvas>
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- Service Status -->
+        <!-- Active Alerts -->
         <div class="card mb-5">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-cube"></i> Service Status</h5>
-            </div>
-            <div class="card-body">
-                <div class="row g-3" id="servicesContainer">
-                    <div class="col-12 text-center text-muted">Loading services...</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Database Status -->
-        <div class="card mb-5">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-database"></i> Database Health</h5>
-            </div>
-            <div class="card-body">
-                <div class="row g-3 mb-3" id="databaseMetrics">
-                    <div class="col-12 text-center text-muted">Loading...</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Recent Alerts -->
-        <div class="card mb-5">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Recent Alerts</h5>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-exclamation-triangle"></i> Active Alerts</h5>
+                <span class="badge bg-danger" id="alertCount">0</span>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-striped">
                         <thead>
                             <tr>
-                                <th>Timestamp</th>
+                                <th>Time</th>
                                 <th>Severity</th>
                                 <th>Component</th>
-                                <th>Message</th>
-                                <th>Status</th>
+                                <th>Metric</th>
+                                <th>Threshold</th>
+                                <th>Current Value</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
-                        <tbody id="alertsBody">
-                            <tr><td colspan="6" class="text-center text-muted">Loading...</td></tr>
+                        <tbody id="activeAlertsBody">
+                            <tr><td colspan="7" class="text-center text-muted">No active alerts</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
 
-        <!-- Infrastructure Monitoring -->
+        <!-- Infrastructure Monitoring with Search & Grouping -->
         <div class="card">
             <div class="card-header">
                 <h5 class="mb-0"><i class="fas fa-server"></i> Infrastructure Monitoring</h5>
             </div>
             <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>Component</th>
-                                <th>Status</th>
-                                <th>CPU Usage</th>
-                                <th>Memory</th>
-                                <th>Disk</th>
-                                <th>Network</th>
-                                <th>Last Updated</th>
-                            </tr>
-                        </thead>
-                        <tbody id="infrastructureBody">
-                            <tr><td colspan="7" class="text-center text-muted">Loading...</td></tr>
-                        </tbody>
-                    </table>
+                <div class="infrastructure-header">
+                    <div class="infrastructure-controls">
+                        <input type="text" id="infrastructureSearch" class="form-control" placeholder="Search by service name...">
+                        <select id="clusterFilter" class="form-select" style="max-width: 150px;">
+                            <option value="">All Clusters</option>
+                            <option value="us-east-1">US-East-1</option>
+                            <option value="us-west-1">US-West-1</option>
+                            <option value="eu-west-1">EU-West-1</option>
+                            <option value="ap-south-1">AP-South-1</option>
+                        </select>
+                        <select id="statusFilter" class="form-select" style="max-width: 150px;">
+                            <option value="">All Status</option>
+                            <option value="healthy">Healthy</option>
+                            <option value="warning">Warning</option>
+                            <option value="error">Error</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="infrastructureContainer">
+                    <p class="text-center text-muted"><i class="fas fa-spinner fa-spin"></i> Loading infrastructure...</p>
+                </div>
+
+                <div class="pagination-controls">
+                    <button id="prevBtn" class="btn btn-sm btn-outline-secondary" onclick="previousInfraPage()" disabled>Previous</button>
+                    <span id="pageInfo">Page 1 of 1</span>
+                    <button id="nextBtn" class="btn btn-sm btn-outline-secondary" onclick="nextInfraPage()" disabled>Next</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container"></div>
+
+    <!-- Alert Settings Modal -->
+    <div class="modal fade alert-config-modal" id="alertSettingsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Configure Alert Thresholds</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group mb-3">
+                        <label class="form-label"><strong>Integration Channel</strong></label>
+                        <select id="alertChannel" class="form-select">
+                            <option value="email">Email</option>
+                            <option value="slack">Slack</option>
+                            <option value="pagerduty">PagerDuty</option>
+                            <option value="webhook">Custom Webhook</option>
+                        </select>
+                    </div>
+
+                    <hr>
+                    <h6 class="mb-3"><strong>Metric Thresholds</strong></h6>
+
+                    <div class="metric-threshold">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label class="form-label">CPU Usage Alert</label>
+                                <input type="number" class="form-control" id="cpuThreshold" value="85" min="0" max="100"> %
+                                <small class="text-muted">Alert if CPU > threshold for 5 minutes</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Memory Usage Alert</label>
+                                <input type="number" class="form-control" id="memoryThreshold" value="80" min="0" max="100"> %
+                                <small class="text-muted">Alert if Memory > threshold for 5 minutes</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="metric-threshold">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label class="form-label">Response Time Alert</label>
+                                <input type="number" class="form-control" id="latencyThreshold" value="500"> ms
+                                <small class="text-muted">Alert if P99 latency exceeds threshold</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Error Rate Alert</label>
+                                <input type="number" class="form-control" id="errorRateThreshold" value="1" min="0" max="100"> %
+                                <small class="text-muted">Alert if error rate exceeds threshold</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="metric-threshold">
+                        <label class="form-label">Webhook URL (if Custom Webhook selected)</label>
+                        <input type="url" class="form-control" id="webhookUrl" placeholder="https://your-webhook.com/alerts">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveAlertSettings()">Save Settings</button>
                 </div>
             </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-        const token = localStorage.getItem('token');
-        let healthChart = null;
-        let performanceChart = null;
+        // ==================== CONFIGURATION ====================
+        const CONFIG = {
+            API_BASE: '/api/v1',
+            REFRESH_INTERVAL: 30000,
+            SESSION_CHECK_INTERVAL: 60000,
+            TOAST_DURATION: 5000,
+            CACHE_MAX_AGE: 300000, // 5 minutes
+            INFRASTRUCTURE_PAGE_SIZE: 10
+        };
 
+        // ==================== STATE MANAGEMENT ====================
+        const state = {
+            token: localStorage.getItem('token'),
+            currentTimeRange: '24h',
+            currentInfraPage: 1,
+            totalInfraServices: 0,
+            monitoringConnectionLost: false,
+            lastDataUpdate: Date.now(),
+            dataCache: {}
+        };
+
+        // ==================== SECURITY MANAGER ====================
+        class SecurityManager {
+            constructor() {
+                this.sessionToken = localStorage.getItem('token');
+                this.csrfToken = localStorage.getItem('csrf_token') || this.generateCSRFToken();
+            }
+
+            generateCSRFToken() {
+                const token = 'csrf_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('csrf_token', token);
+                return token;
+            }
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            getSecureHeaders(method = 'GET') {
+                const headers = {
+                    'Authorization': `Bearer ${this.sessionToken}`,
+                    'Content-Type': 'application/json'
+                };
+                if (method === 'POST' || method === 'PUT') {
+                    headers['X-CSRF-Token'] = this.csrfToken;
+                }
+                return headers;
+            }
+
+            validateSession() {
+                return !!this.sessionToken;
+            }
+        }
+
+        const securityManager = new SecurityManager();
+
+        // ==================== TOAST NOTIFICATIONS ====================
+        function showToast(message, type = 'info', duration = CONFIG.TOAST_DURATION) {
+            const container = document.querySelector('.toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast-notification ${type}`;
+            
+            const icons = {
+                success: 'fa-check-circle',
+                error: 'fa-times-circle',
+                warning: 'fa-exclamation-circle',
+                info: 'fa-info-circle'
+            };
+            
+            toast.innerHTML = `
+                <i class="fas ${icons[type]}"></i>
+                <span>${securityManager.escapeHtml(message)}</span>
+            `;
+            
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), duration);
+        }
+
+        // ==================== MONITORING API CALLS ====================
+        async function fetchMonitoringData(endpoint) {
+            try {
+                const response = await fetch(`${CONFIG.API_BASE}${endpoint}`, {
+                    headers: securityManager.getSecureHeaders()
+                });
+
+                if (response.status === 401) {
+                    window.location.href = '/signin';
+                    return null;
+                }
+
+                if (!response.ok) {
+                    updateConnectionStatus(false);
+                    return null;
+                }
+
+                updateConnectionStatus(true);
+                state.lastDataUpdate = Date.now();
+                return await response.json();
+            } catch (error) {
+                console.error(`Error fetching ${endpoint}:`, error);
+                updateConnectionStatus(false);
+                return null;
+            }
+        }
+
+        function updateConnectionStatus(connected) {
+            const banner = document.getElementById('monitoringConnectionLost');
+            state.monitoringConnectionLost = !connected;
+            
+            if (!connected) {
+                banner.classList.add('show');
+                document.getElementById('lastUpdateTime').textContent = new Date(state.lastDataUpdate).toLocaleTimeString();
+            } else {
+                banner.classList.remove('show');
+            }
+        }
+
+        // ==================== TIME RANGE MANAGEMENT ====================
+        function changeTimeRange(range) {
+            state.currentTimeRange = range;
+            document.querySelectorAll('.timerange-selector button').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            loadSystemHealthChart();
+            loadLatencyChart();
+            loadErrorRateChart();
+        }
+
+        // ==================== CHART MANAGEMENT ====================
+        let healthChart = null;
+        let latencyChart = null;
+        let errorRateChart = null;
+
+        async function loadSystemHealthChart() {
+            const data = await fetchMonitoringData(`/monitoring/metrics/system-health?timerange=${state.currentTimeRange}`);
+            if (!data || !data.success) {
+                document.getElementById('systemHealthChartContainer').innerHTML = 
+                    '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> Failed to load system health data</div>';
+                return;
+            }
+
+            document.getElementById('systemHealthChartContainer').style.display = 'none';
+            const canvas = document.getElementById('systemHealthChart');
+            canvas.style.display = 'block';
+
+            const ctx = canvas.getContext('2d');
+            if (healthChart) healthChart.destroy();
+
+            healthChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels || [],
+                    datasets: [{
+                        label: 'System Health %',
+                        data: data.values || [],
+                        borderColor: '#28a745',
+                        backgroundColor: 'rgba(40, 167, 69, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#28a745'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { position: 'top' }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            min: 95,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+
+        async function loadLatencyChart() {
+            const data = await fetchMonitoringData(`/monitoring/metrics/latency?timerange=${state.currentTimeRange}`);
+            if (!data || !data.success) {
+                document.getElementById('latencyChartContainer').innerHTML = 
+                    '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> Failed to load latency data</div>';
+                return;
+            }
+
+            document.getElementById('latencyChartContainer').style.display = 'none';
+            const canvas = document.getElementById('latencyChart');
+            canvas.style.display = 'block';
+
+            const ctx = canvas.getContext('2d');
+            if (latencyChart) latencyChart.destroy();
+
+            latencyChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.labels || [],
+                    datasets: [
+                        {
+                            label: 'Average Latency (ms)',
+                            data: data.average || [],
+                            borderColor: '#17a2b8',
+                            backgroundColor: 'rgba(23, 162, 184, 0.1)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.3,
+                            pointRadius: 2
+                        },
+                        {
+                            label: 'P99 Latency (ms)',
+                            data: data.p99 || [],
+                            borderColor: '#ffc107',
+                            backgroundColor: 'rgba(255, 193, 7, 0.1)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.3,
+                            pointRadius: 2,
+                            borderDash: [5, 5]
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { position: 'top' }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        async function loadErrorRateChart() {
+            const data = await fetchMonitoringData(`/monitoring/metrics/error-rate?timerange=${state.currentTimeRange}`);
+            if (!data || !data.success) {
+                document.getElementById('errorRateChartContainer').innerHTML = 
+                    '<div class="alert alert-warning"><i class="fas fa-exclamation-triangle"></i> Failed to load error rate data</div>';
+                return;
+            }
+
+            document.getElementById('errorRateChartContainer').style.display = 'none';
+            const canvas = document.getElementById('errorRateChart');
+            canvas.style.display = 'block';
+
+            const ctx = canvas.getContext('2d');
+            if (errorRateChart) errorRateChart.destroy();
+
+            errorRateChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.labels || [],
+                    datasets: [{
+                        label: 'Error Rate %',
+                        data: data.values || [],
+                        backgroundColor: data.values.map(v => v > 1 ? '#dc3545' : '#28a745'),
+                        borderRadius: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        // ==================== STATUS METRICS ====================
+        async function loadSystemMetrics() {
+            const data = await fetchMonitoringData('/monitoring/metrics/status');
+            if (!data || !data.success) return;
+
+            document.getElementById('systemStatusText').textContent = data.status || 'UNKNOWN';
+            document.getElementById('systemStatusDetail').textContent = data.detail || 'No detail available';
+            document.getElementById('uptime').textContent = (data.uptime || 0).toFixed(2) + '%';
+            document.getElementById('incidents').textContent = data.incidents || '0';
+            document.getElementById('responseTime').textContent = (data.avg_latency || 0).toFixed(0) + 'ms';
+            document.getElementById('avgLatency').textContent = (data.avg_latency || 0).toFixed(0);
+            document.getElementById('p99Latency').textContent = (data.p99_latency || 0).toFixed(0);
+            document.getElementById('errorRate').textContent = (data.error_rate || 0).toFixed(2) + '%';
+
+            // Render system metrics
+            const metricsContainer = document.getElementById('systemMetricsContainer');
+            metricsContainer.innerHTML = `
+                <div class="metric-card mb-2">
+                    <small class="text-muted d-block">CPU Load</small>
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar" style="width: ${data.cpu_load || 0}%;">${data.cpu_load || 0}%</div>
+                    </div>
+                </div>
+                <div class="metric-card mb-2">
+                    <small class="text-muted d-block">Memory Usage</small>
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar" style="width: ${data.memory_usage || 0}%;">${data.memory_usage || 0}%</div>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <small class="text-muted d-block">Disk I/O</small>
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar" style="width: ${data.disk_io || 0}%;">${data.disk_io || 0}%</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ==================== ACTIVE ALERTS ====================
+        async function loadActiveAlerts() {
+            const data = await fetchMonitoringData('/monitoring/alerts/active');
+            if (!data || !data.success) return;
+
+            const tbody = document.getElementById('activeAlertsBody');
+            document.getElementById('alertCount').textContent = (data.alerts || []).length;
+
+            if (!data.alerts || data.alerts.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No active alerts</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = data.alerts.map(alert => {
+                const severityColor = alert.severity === 'critical' ? 'danger' : alert.severity === 'warning' ? 'warning' : 'info';
+                return `
+                    <tr>
+                        <td><small>${new Date(alert.timestamp).toLocaleTimeString()}</small></td>
+                        <td><span class="badge bg-${severityColor}">${alert.severity.toUpperCase()}</span></td>
+                        <td><strong>${securityManager.escapeHtml(alert.component)}</strong></td>
+                        <td>${securityManager.escapeHtml(alert.metric)}</td>
+                        <td>${alert.threshold}</td>
+                        <td><strong>${alert.current_value}</strong></td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="acknowledgeAlert('${alert.id}')">Acknowledge</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function acknowledgeAlert(alertId) {
+            const result = await fetch(`${CONFIG.API_BASE}/monitoring/alerts/${alertId}/acknowledge`, {
+                method: 'POST',
+                headers: securityManager.getSecureHeaders('POST')
+            });
+
+            if (result.ok) {
+                showToast('Alert acknowledged', 'success');
+                await loadActiveAlerts();
+            } else {
+                showToast('Failed to acknowledge alert', 'error');
+            }
+        }
+
+        // ==================== INFRASTRUCTURE MONITORING ====================
+        async function loadInfrastructure() {
+            const searchTerm = document.getElementById('infrastructureSearch').value;
+            const clusterFilter = document.getElementById('clusterFilter').value;
+            const statusFilter = document.getElementById('statusFilter').value;
+
+            const params = new URLSearchParams({
+                limit: CONFIG.INFRASTRUCTURE_PAGE_SIZE,
+                skip: (state.currentInfraPage - 1) * CONFIG.INFRASTRUCTURE_PAGE_SIZE,
+                search: searchTerm,
+                cluster: clusterFilter,
+                status: statusFilter
+            });
+
+            const data = await fetchMonitoringData(`/monitoring/infrastructure?${params}`);
+            if (!data || !data.success) return;
+
+            renderInfrastructure(data.services || [], data.total || 0);
+        }
+
+        function renderInfrastructure(services, total) {
+            const container = document.getElementById('infrastructureContainer');
+            state.totalInfraServices = total;
+
+            if (!services || services.length === 0) {
+                container.innerHTML = '<p class="text-center text-muted">No services found</p>';
+                updateInfraPagination();
+                return;
+            }
+
+            // Group by cluster
+            const grouped = {};
+            services.forEach(service => {
+                const cluster = service.cluster || 'Unknown';
+                if (!grouped[cluster]) grouped[cluster] = [];
+                grouped[cluster].push(service);
+            });
+
+            container.innerHTML = Object.entries(grouped).map(([cluster, items]) => {
+                return `
+                    <div class="cluster-group">
+                        <div class="cluster-header">
+                            <span><i class="fas fa-server"></i> ${securityManager.escapeHtml(cluster)}</span>
+                            <span class="badge bg-info">${items.length} services</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Service Name</th>
+                                        <th>Status</th>
+                                        <th>CPU</th>
+                                        <th>Memory</th>
+                                        <th>Disk</th>
+                                        <th>Network</th>
+                                        <th>Last Updated</th>
+                                        <th>Quick Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${items.map(service => {
+                                        const statusColor = service.status === 'healthy' ? 'success' : service.status === 'warning' ? 'warning' : 'danger';
+                                        return `
+                                            <tr>
+                                                <td><strong>${securityManager.escapeHtml(service.name)}</strong></td>
+                                                <td><span class="badge bg-${statusColor}">${service.status.toUpperCase()}</span></td>
+                                                <td>
+                                                    <div class="progress" style="height: 20px;">
+                                                        <div class="progress-bar" style="width: ${service.cpu || 0}%;">${service.cpu || 0}%</div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="progress" style="height: 20px;">
+                                                        <div class="progress-bar" style="width: ${service.memory || 0}%;">${service.memory || 0}%</div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="progress" style="height: 20px;">
+                                                        <div class="progress-bar" style="width: ${service.disk || 0}%;">${service.disk || 0}%</div>
+                                                    </div>
+                                                </td>
+                                                <td><small>${service.network || '--'}</small></td>
+                                                <td><small>${new Date(service.last_updated).toLocaleTimeString()}</small></td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-outline-warning quick-action-btn" onclick="quickAction('${service.id}', 'restart')">
+                                                        <i class="fas fa-sync"></i> Restart
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-info quick-action-btn" onclick="quickAction('${service.id}', 'clear-cache')">
+                                                        <i class="fas fa-broom"></i> Cache
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            updateInfraPagination();
+        }
+
+        function updateInfraPagination() {
+            const totalPages = Math.ceil(state.totalInfraServices / CONFIG.INFRASTRUCTURE_PAGE_SIZE);
+            document.getElementById('pageInfo').textContent = `Page ${state.currentInfraPage} of ${totalPages || 1}`;
+            document.getElementById('prevBtn').disabled = state.currentInfraPage <= 1;
+            document.getElementById('nextBtn').disabled = state.currentInfraPage >= totalPages;
+        }
+
+        function previousInfraPage() {
+            if (state.currentInfraPage > 1) {
+                state.currentInfraPage--;
+                loadInfrastructure();
+            }
+        }
+
+        function nextInfraPage() {
+            const totalPages = Math.ceil(state.totalInfraServices / CONFIG.INFRASTRUCTURE_PAGE_SIZE);
+            if (state.currentInfraPage < totalPages) {
+                state.currentInfraPage++;
+                loadInfrastructure();
+            }
+        }
+
+        // Search & filter event listeners
+        document.getElementById('infrastructureSearch')?.addEventListener('input', () => {
+            state.currentInfraPage = 1;
+            loadInfrastructure();
+        });
+
+        document.getElementById('clusterFilter')?.addEventListener('change', () => {
+            state.currentInfraPage = 1;
+            loadInfrastructure();
+        });
+
+        document.getElementById('statusFilter')?.addEventListener('change', () => {
+            state.currentInfraPage = 1;
+            loadInfrastructure();
+        });
+
+        // ==================== QUICK ACTIONS ====================
+        async function quickAction(serviceId, action) {
+            const actionName = action === 'restart' ? 'restart' : 'clear cache for';
+            if (!confirm(`Are you sure you want to ${actionName} this service?`)) return;
+
+            const result = await fetch(`${CONFIG.API_BASE}/monitoring/infrastructure/${serviceId}/${action}`, {
+                method: 'POST',
+                headers: securityManager.getSecureHeaders('POST'),
+                body: JSON.stringify({
+                    action,
+                    timestamp: new Date().toISOString()
+                })
+            });
+
+            if (result.ok) {
+                showToast(`Service ${action} initiated successfully`, 'success');
+                await loadInfrastructure();
+            } else {
+                showToast(`Failed to ${action} service`, 'error');
+            }
+        }
+
+        // ==================== ALERT SETTINGS ====================
+        async function saveAlertSettings() {
+            const settings = {
+                channel: document.getElementById('alertChannel').value,
+                thresholds: {
+                    cpu: parseInt(document.getElementById('cpuThreshold').value),
+                    memory: parseInt(document.getElementById('memoryThreshold').value),
+                    latency: parseInt(document.getElementById('latencyThreshold').value),
+                    error_rate: parseFloat(document.getElementById('errorRateThreshold').value)
+                },
+                webhook_url: document.getElementById('webhookUrl').value || null,
+                timestamp: new Date().toISOString()
+            };
+
+            const result = await fetch(`${CONFIG.API_BASE}/monitoring/alert-settings`, {
+                method: 'POST',
+                headers: securityManager.getSecureHeaders('POST'),
+                body: JSON.stringify(settings)
+            });
+
+            if (result.ok) {
+                showToast('Alert settings saved successfully', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('alertSettingsModal')).hide();
+            } else {
+                showToast('Failed to save alert settings', 'error');
+            }
+        }
+
+        // ==================== INITIALIZATION ====================
         document.addEventListener('DOMContentLoaded', async function() {
-            if (!token) {
+            if (!state.token) {
                 window.location.href = '/signin';
                 return;
             }
 
             try {
+                // Load all monitoring data
                 await loadSystemMetrics();
-                await loadCharts();
-                await loadServiceStatus();
-                await loadDatabaseMetrics();
-                await loadAlerts();
+                await loadSystemHealthChart();
+                await loadLatencyChart();
+                await loadErrorRateChart();
+                await loadActiveAlerts();
                 await loadInfrastructure();
 
                 // Refresh data every 30 seconds
                 setInterval(async () => {
                     await loadSystemMetrics();
-                    await loadCharts();
-                    await loadAlerts();
-                }, 30000);
+                    await loadActiveAlerts();
+                    // Only refresh charts if not in a different timerange modal
+                    if (!document.querySelector('.modal.show')) {
+                        await loadSystemHealthChart();
+                        await loadLatencyChart();
+                        await loadErrorRateChart();
+                    }
+                }, CONFIG.REFRESH_INTERVAL);
+
+                showToast('Monitoring dashboard loaded', 'success');
             } catch (error) {
-                console.error('Error loading monitoring data:', error);
+                console.error('Initialization error:', error);
+                showToast('Failed to load monitoring data', 'error');
             }
         });
 
-        async function loadSystemMetrics() {
-            try {
-                const response = await fetch('/api/v1/monitoring/metrics', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    
-                    document.getElementById('uptime').textContent = (data.uptime || 99.99).toFixed(2) + '%';
-                    document.getElementById('incidents').textContent = data.incidents || '0';
-                    
-                    document.getElementById('activeUsers').textContent = data.active_users || '0';
-                    document.getElementById('peakUsers').textContent = 'Peak: ' + (data.peak_users || '0');
-                    
-                    document.getElementById('responseTime').textContent = (data.response_time || 145) + 'ms';
-                    document.getElementById('apiHealth').textContent = 'APIs: ' + (data.api_status || 'Healthy');
-                }
-            } catch (error) {
-                console.error('Error loading system metrics:', error);
-            }
-        }
-
-        async function loadCharts() {
-            try {
-                const response = await fetch('/api/v1/monitoring/chart-data', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-
-                    // System Health Chart
-                    let ctx = document.getElementById('systemHealthChart').getContext('2d');
-                    if (healthChart) healthChart.destroy();
-                    healthChart = new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: data.hours || Array.from({length: 24}, (_, i) => i + 'h'),
-                            datasets: [{
-                                label: 'System Health %',
-                                data: data.health_scores || Array(24).fill(99.9),
-                                borderColor: '#28a745',
-                                backgroundColor: 'rgba(40, 167, 69, 0.1)',
-                                borderWidth: 2,
-                                fill: true,
-                                tension: 0.3
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: true,
-                            scales: {
-                                y: {
-                                    beginAtZero: false,
-                                    min: 95,
-                                    max: 100
-                                }
-                            }
-                        }
-                    });
-
-                    // Performance Chart
-                    ctx = document.getElementById('performanceChart').getContext('2d');
-                    if (performanceChart) performanceChart.destroy();
-                    performanceChart = new Chart(ctx, {
-                        type: 'radar',
-                        data: {
-                            labels: ['CPU', 'Memory', 'Disk I/O', 'Network', 'Database', 'Cache'],
-                            datasets: [{
-                                label: 'Performance Score',
-                                data: [92, 85, 88, 95, 90, 94],
-                                borderColor: '#667eea',
-                                backgroundColor: 'rgba(102, 126, 234, 0.2)',
-                                borderWidth: 2
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: true
-                        }
-                    });
-                }
-            } catch (error) {
-                console.error('Error loading charts:', error);
-            }
-        }
-
-        async function loadServiceStatus() {
-            try {
-                const response = await fetch('/api/v1/monitoring/services', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    const container = document.getElementById('servicesContainer');
-                    container.innerHTML = '';
-
-                    if (data.services && data.services.length > 0) {
-                        data.services.forEach(service => {
-                            const statusClass = service.status === 'healthy' ? 'status-healthy' : service.status === 'warning' ? 'status-warning' : 'status-error';
-                            const statusDot = service.status === 'healthy' ? 'healthy' : service.status === 'warning' ? 'warning' : 'error';
-                            
-                            container.innerHTML += `
-                                <div class="col-md-6 col-lg-4">
-                                    <div class="card service-card">
-                                        <div class="card-body">
-                                            <div class="d-flex justify-content-between align-items-start">
-                                                <div>
-                                                    <h6 class="card-title mb-2">${service.name}</h6>
-                                                    <p class="text-muted small mb-1">${service.description}</p>
-                                                    <p class="small"><span class="status-dot ${statusDot}"></span><strong>${service.uptime}% uptime</strong></p>
-                                                </div>
-                                                <span class="${statusClass}"><strong>${service.status.toUpperCase()}</strong></span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            `;
-                        });
-                    }
-                }
-            } catch (error) {
-                console.error('Error loading services:', error);
-            }
-        }
-
-        async function loadDatabaseMetrics() {
-            try {
-                const response = await fetch('/api/v1/monitoring/database', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    const container = document.getElementById('databaseMetrics');
-                    container.innerHTML = '';
-
-                    const metrics = [
-                        { label: 'Connections', value: data.connections || '12/100', icon: 'fas fa-plug' },
-                        { label: 'Query Time', value: data.query_time || '42ms', icon: 'fas fa-clock' },
-                        { label: 'Cache Hit Rate', value: data.cache_hit_rate || '94%', icon: 'fas fa-check-circle' },
-                        { label: 'Disk Used', value: data.disk_used || '245GB / 500GB', icon: 'fas fa-hdd' }
-                    ];
-
-                    metrics.forEach(metric => {
-                        container.innerHTML += `
-                            <div class="col-md-6 col-lg-3">
-                                <div class="card">
-                                    <div class="card-body">
-                                        <i class="${metric.icon}" style="color: #667eea; font-size: 24px;"></i>
-                                        <h6 class="card-title mt-2">${metric.label}</h6>
-                                        <h4>${metric.value}</h4>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    });
-                }
-            } catch (error) {
-                console.error('Error loading database metrics:', error);
-            }
-        }
-
-        async function loadAlerts() {
-            try {
-                const response = await fetch('/api/v1/monitoring/alerts?limit=10', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    const tbody = document.getElementById('alertsBody');
-                    tbody.innerHTML = '';
-
-                    if (data.alerts && data.alerts.length > 0) {
-                        data.alerts.forEach(alert => {
-                            const severityColor = alert.severity === 'critical' ? 'danger' : alert.severity === 'warning' ? 'warning' : 'info';
-                            tbody.innerHTML += `
-                                <tr>
-                                    <td>${new Date(alert.timestamp).toLocaleString()}</td>
-                                    <td><span class="badge bg-${severityColor}">${alert.severity.toUpperCase()}</span></td>
-                                    <td>${alert.component}</td>
-                                    <td>${alert.message}</td>
-                                    <td><span class="badge bg-${alert.resolved ? 'success' : 'warning'}">${alert.resolved ? 'Resolved' : 'Active'}</span></td>
-                                    <td>
-                                        ${!alert.resolved ? '<button class="btn btn-sm btn-primary">Acknowledge</button>' : ''}
-                                    </td>
-                                </tr>
-                            `;
-                        });
-                    } else {
-                        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No recent alerts</td></tr>';
-                    }
-                }
-            } catch (error) {
-                console.error('Error loading alerts:', error);
-            }
-        }
-
-        async function loadInfrastructure() {
-            try {
-                const response = await fetch('/api/v1/monitoring/infrastructure', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    const tbody = document.getElementById('infrastructureBody');
-                    tbody.innerHTML = '';
-
-                    if (data.components && data.components.length > 0) {
-                        data.components.forEach(comp => {
-                            const statusClass = comp.status === 'healthy' ? 'success' : comp.status === 'warning' ? 'warning' : 'danger';
-                            tbody.innerHTML += `
-                                <tr>
-                                    <td><strong>${comp.name}</strong></td>
-                                    <td><span class="badge bg-${statusClass}">${comp.status.toUpperCase()}</span></td>
-                                    <td>
-                                        <div class="progress" style="height: 20px;">
-                                            <div class="progress-bar" style="width: ${comp.cpu}%;">${comp.cpu}%</div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="progress" style="height: 20px;">
-                                            <div class="progress-bar" style="width: ${comp.memory}%;">${comp.memory}%</div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="progress" style="height: 20px;">
-                                            <div class="progress-bar" style="width: ${comp.disk}%;">${comp.disk}%</div>
-                                        </div>
-                                    </td>
-                                    <td>${comp.network}</td>
-                                    <td>${new Date(comp.last_updated).toLocaleTimeString()}</td>
-                                </tr>
-                            `;
-                        });
-                    }
-                }
-            } catch (error) {
-                console.error('Error loading infrastructure:', error);
-            }
-        }
+        window.addEventListener('beforeunload', () => {
+            // Cleanup
+        });
     </script>
     <script src="/static/js/admin-guard.js"></script>
 </body>

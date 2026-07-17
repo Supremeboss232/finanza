@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reporting & Analytics - Admin Dashboard</title>
+    <title>Production Analytics Engine - Compliance & BI</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.css">
@@ -54,7 +54,31 @@
         .section-divider hr { flex: 1; border-color: #e5e7eb; }
 
         .filter-section { background: white; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+        .task-processing { display: none; background: #fffbeb; border: 1px solid #fcd34d; padding: 12px 15px; border-radius: 6px; margin-bottom: 15px; align-items: center; gap: 10px; color: #92400e; }
+        .task-processing.show { display: flex; }
+
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+        .toast-notification { background: white; padding: 15px 20px; border-radius: 5px; margin-bottom: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 10px; animation: slideInRight 0.3s ease-out; }
+        @keyframes slideInRight { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .toast-notification.success { border-left: 4px solid #28a745; }
+        .toast-notification.error { border-left: 4px solid #dc3545; }
+        .toast-notification.warning { border-left: 4px solid #ffc107; }
+        .toast-notification.info { border-left: 4px solid #17a2b8; }
+
+        .status-badge-processing { background: #fbbf24; color: #78350f; }
+        .status-badge-completed { background: #10b981; color: white; }
+        .status-badge-failed { background: #ef4444; color: white; }
+        .status-badge-pending { background: #94a3b8; color: white; }
+
+        .drill-down-table { background: #f3f4f6; padding: 15px; border-radius: 6px; margin-top: 10px; }
+
+        .date-range-filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+        .date-range-filters .form-group { flex: 1; min-width: 200px; margin-bottom: 0; }
+        .date-range-filters .btn { align-self: flex-end; }
     </style>
+
+    <script src="/static/js/toast-utils.js"></script>
 </head>
 <body>
     <!-- Navbar -->
@@ -67,10 +91,28 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item"><a class="nav-link text-white" href="javascript:navigateTo('/user/admin/')">&larr; Dashboard</a></li>
+                    <li class="nav-item"><span class="nav-link text-light" id="adminRole"></span></li>
                 </ul>
             </div>
         </div>
     </nav>
+
+    <!-- Breadcrumb Navigation -->
+    <div style="background: #f5f7fa; border-bottom: 1px solid #e5e7eb; padding: 0.75rem 0;">
+        <div class="container-fluid">
+            <nav aria-label="breadcrumb" class="small">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="/user/admin/" style="color: #667eea; text-decoration: none;">Admin Dashboard</a></li>
+                    <li class="breadcrumb-item active">Reporting & Analytics</li>
+                    <li class="breadcrumb-item" style="margin-left: auto;">
+                        <a href="/user/admin/settings" style="color: #667eea; text-decoration: none;">
+                            <i class="fas fa-cog"></i> Settings
+                        </a>
+                    </li>
+                </ol>
+            </nav>
+        </div>
+    </div>
 
     <div class="container-fluid p-4">
         <!-- Page Header -->
@@ -79,46 +121,95 @@
             <p class="mb-0">Comprehensive business intelligence and regulatory reporting</p>
         </div>
 
+        <!-- Global Filters -->
+        <div class="filter-section">
+            <h5 class="mb-3"><i class="fas fa-filter"></i> Global Report Filters</h5>
+            <div class="date-range-filters">
+                <div class="form-group">
+                    <label class="form-label">Start Date</label>
+                    <input type="date" class="form-control" id="filterStartDate">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">End Date</label>
+                    <input type="date" class="form-control" id="filterEndDate">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Branch/Location</label>
+                    <select class="form-select" id="filterBranch">
+                        <option value="">All Branches</option>
+                        <option value="us-east">US-East</option>
+                        <option value="us-west">US-West</option>
+                        <option value="eu-west">EU-West</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Currency</label>
+                    <select class="form-select" id="filterCurrency">
+                        <option value="">All Currencies</option>
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                        <option value="GBP">GBP</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="applyFilters()"><i class="fas fa-search"></i> Apply Filters</button>
+            </div>
+        </div>
+
+        <!-- Task Processing Status -->
+        <div id="taskProcessing" class="task-processing">
+            <i class="fas fa-spinner fa-spin"></i>
+            <div>
+                <strong>Processing Report:</strong> <span id="taskStatus">Initializing...</span>
+                <div style="font-size: 0.85rem; margin-top: 5px;">Task ID: <code id="taskId">--</code></div>
+            </div>
+        </div>
+
         <!-- Metrics Row -->
         <div class="row mb-4">
             <div class="col-md-3">
                 <div class="metric-card">
-                    <div class="metric-icon"><i class="fas fa-transactions"></i></div>
-                    <div class="metric-value" id="totalTransactions">0</div>
+                    <div class="metric-icon"><i class="fas fa-exchange"></i></div>
+                    <div class="metric-value" id="totalTransactions">--</div>
                     <div class="metric-label">Total Transactions</div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="metric-card">
                     <div class="metric-icon"><i class="fas fa-dollar-sign"></i></div>
-                    <div class="metric-value" id="totalVolume">$0M</div>
+                    <div class="metric-value" id="totalVolume">--</div>
                     <div class="metric-label">Transaction Volume</div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="metric-card">
                     <div class="metric-icon"><i class="fas fa-users"></i></div>
-                    <div class="metric-value" id="activeUsers">0</div>
+                    <div class="metric-value" id="activeUsers">--</div>
                     <div class="metric-label">Active Users</div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="metric-card">
                     <div class="metric-icon"><i class="fas fa-check-circle"></i></div>
-                    <div class="metric-value" id="completionRate">0%</div>
+                    <div class="metric-value" id="completionRate">--</div>
                     <div class="metric-label">Completion Rate</div>
                 </div>
             </div>
         </div>
 
-        <!-- Charts Row -->
+        <!-- Charts Row with Drill-Down -->
         <div class="row mb-4">
             <div class="col-md-6">
                 <div class="data-table">
                     <div style="padding: 1.5rem;">
-                        <h5 class="mb-3">Revenue Trend (30 Days)</h5>
-                        <div class="chart-container">
-                            <canvas id="revenueChart"></canvas>
+                        <h5 class="mb-3"><i class="fas fa-chart-line"></i> Revenue Trend (Downsampled)</h5>
+                        <div id="revenueChartContainer" class="chart-container" style="display: flex; align-items: center; justify-content: center; color: #6b7280;">
+                            <i class="fas fa-spinner fa-spin"></i> Loading aggregated data...
+                        </div>
+                        <canvas id="revenueChart" style="display: none;"></canvas>
+                        <div id="drillDownRevenue" class="drill-down-table" style="display: none;">
+                            <h6>Selected Period Data</h6>
+                            <small class="text-muted" id="drillDownRevenueInfo">Click a bar to drill down into detailed transaction data</small>
+                            <div id="drillDownRevenueTable" style="margin-top: 10px;"></div>
                         </div>
                     </div>
                 </div>
@@ -126,10 +217,11 @@
             <div class="col-md-6">
                 <div class="data-table">
                     <div style="padding: 1.5rem;">
-                        <h5 class="mb-3">Transaction Types</h5>
-                        <div class="chart-container">
-                            <canvas id="typesChart"></canvas>
+                        <h5 class="mb-3"><i class="fas fa-pie-chart"></i> Transaction Types Distribution</h5>
+                        <div id="typesChartContainer" class="chart-container" style="display: flex; align-items: center; justify-content: center; color: #6b7280;">
+                            <i class="fas fa-spinner fa-spin"></i> Loading transaction types...
                         </div>
+                        <canvas id="typesChart" style="display: none;"></canvas>
                     </div>
                 </div>
             </div>
@@ -141,30 +233,30 @@
             <hr>
         </div>
 
-        <div class="filter-section">
+        <div class="filter-section" data-permission="reporting:write">
+            <h5 class="mb-3"><i class="fas fa-cog"></i> Report Generation</h5>
             <div class="row">
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label">Report Type</label>
                     <select class="form-select" id="reportType">
                         <option value="">Select Type...</option>
-                        <option value="transaction">Transaction Report</option>
-                        <option value="user_demographics">User Demographics</option>
-                        <option value="revenue">Revenue Report</option>
-                        <option value="compliance">Compliance Report</option>
-                        <option value="regulatory">Regulatory Report</option>
+                        <option value="transaction">Transaction</option>
+                        <option value="revenue">Revenue</option>
+                        <option value="compliance">Compliance</option>
+                        <option value="regulatory">Regulatory</option>
+                        <option value="audit">Audit Trail</option>
                     </select>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label">Date Range</label>
-                    <select class="form-select" id="dateRange">
-                        <option value="today">Today</option>
-                        <option value="7days">Last 7 Days</option>
-                        <option value="30days" selected>Last 30 Days</option>
-                        <option value="90days">Last 90 Days</option>
-                        <option value="custom">Custom</option>
+                <div class="col-md-2">
+                    <label class="form-label">Granularity</label>
+                    <select class="form-select" id="granularity">
+                        <option value="hourly">Hourly</option>
+                        <option value="daily" selected>Daily</option>
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label">Export Format</label>
                     <select class="form-select" id="exportFormat">
                         <option value="pdf">PDF</option>
@@ -173,10 +265,16 @@
                         <option value="json">JSON</option>
                     </select>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label">&nbsp;</label>
-                    <button class="btn btn-primary w-100" onclick="generateReport()">
-                        <i class="fas fa-download"></i> Generate Report
+                <div class="col-md-2">
+                    <label class="form-label">Include</label>
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="includePII" value="mask_pii">
+                        <label class="form-check-label" for="includePII">Mask PII</label>
+                    </div>
+                </div>
+                <div class="col-md-4 d-flex align-items-flex-end">
+                    <button class="btn btn-primary w-100" onclick="generateReportAsync()">
+                        <i class="fas fa-hourglass-start"></i> Queue Report (Async)
                     </button>
                 </div>
             </div>
@@ -184,7 +282,7 @@
 
         <!-- Reports Table -->
         <div class="section-divider">
-            <h3>Recent Reports</h3>
+            <h3><i class="fas fa-file-pdf"></i> Report Queue & History</h3>
             <hr>
         </div>
 
@@ -192,18 +290,19 @@
             <table class="table">
                 <thead>
                     <tr>
-                        <th>Report ID</th>
+                        <th>Task ID</th>
                         <th>Report Type</th>
-                        <th>Date Range</th>
-                        <th>Generated Date</th>
-                        <th>Records</th>
+                        <th>Requested By</th>
+                        <th>Queued Date</th>
+                        <th>Granularity</th>
                         <th>Status</th>
-                        <th>File</th>
+                        <th>Progress</th>
+                        <th>File Size</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="reportsTable">
-                    <tr><td colspan="8" class="text-center text-muted py-4">Loading reports...</td></tr>
+                    <tr><td colspan="9" class="text-center text-muted py-4">Loading reports...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -271,120 +370,386 @@
         </div>
     </div>
 
+    <!-- Toast Notifications -->
+    <div class="toast-container"></div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
-    <script src="/admin_static/js/admin-utils.js"></script>
 
     <script>
+        // ==================== CONFIGURATION ====================
+        const CONFIG = {
+            API_BASE: '/api/v1',
+            REFRESH_INTERVAL: 5000,
+            SESSION_CHECK_INTERVAL: 60000,
+            TOAST_DURATION: 5000,
+            TASK_POLL_INTERVAL: 2000
+        };
+
+        // ==================== STATE MANAGEMENT ====================
+        const state = {
+            token: localStorage.getItem('token'),
+            currentFilters: {
+                start_date: '',
+                end_date: '',
+                branch: '',
+                currency: ''
+            },
+            activeTasks: {},
+            downloadedReports: new Set()
+        };
+
+        // ==================== SECURITY MANAGER ====================
+        class SecurityManager {
+            constructor() {
+                this.sessionToken = localStorage.getItem('token');
+                this.csrfToken = localStorage.getItem('csrf_token') || this.generateCSRFToken();
+            }
+
+            generateCSRFToken() {
+                const token = 'csrf_' + Math.random().toString(36).substr(2, 9);
+                localStorage.setItem('csrf_token', token);
+                return token;
+            }
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            maskPII(value, type = 'email') {
+                if (!value) return '***';
+                if (type === 'email') return value.substring(0, 2) + '***' + value.substring(value.length - 5);
+                if (type === 'phone') return '***-***-' + value.substring(value.length - 4);
+                if (type === 'account') return 'ACC-' + value.substring(value.length - 4);
+                return '***';
+            }
+
+            getSecureHeaders(method = 'GET') {
+                const headers = {
+                    'Authorization': `Bearer ${this.sessionToken}`,
+                    'Content-Type': 'application/json'
+                };
+                if (method === 'POST' || method === 'PUT') {
+                    headers['X-CSRF-Token'] = this.csrfToken;
+                }
+                return headers;
+            }
+        }
+
+        const securityManager = new SecurityManager();
+
+        // ==================== TOAST NOTIFICATIONS ====================
+        function showToast(message, type = 'info', duration = CONFIG.TOAST_DURATION) {
+            const container = document.querySelector('.toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast-notification ${type}`;
+            
+            const icons = {
+                success: 'fa-check-circle',
+                error: 'fa-times-circle',
+                warning: 'fa-exclamation-circle',
+                info: 'fa-info-circle'
+            };
+            
+            toast.innerHTML = `
+                <i class="fas ${icons[type]}"></i>
+                <span>${securityManager.escapeHtml(message)}</span>
+            `;
+            
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), duration);
+        }
+
+        // ==================== ASYNC REPORTING TASK QUEUE ====================
+        async function generateReportAsync() {
+            const reportType = document.getElementById('reportType').value;
+            const exportFormat = document.getElementById('exportFormat').value;
+            const granularity = document.getElementById('granularity').value;
+            const maskPII = document.getElementById('includePII').checked;
+
+            if (!reportType) {
+                showToast('Please select a report type', 'warning');
+                return;
+            }
+
+            // Show processing status
+            const processingDiv = document.getElementById('taskProcessing');
+            processingDiv.classList.add('show');
+            document.getElementById('taskStatus').textContent = 'Queuing report...';
+
+            try {
+                const requestBody = {
+                    report_type: reportType,
+                    export_format: exportFormat,
+                    granularity: granularity,
+                    mask_pii: maskPII,
+                    filters: state.currentFilters,
+                    timestamp: new Date().toISOString()
+                };
+
+                const response = await fetch(`${CONFIG.API_BASE}/reports/queue`, {
+                    method: 'POST',
+                    headers: securityManager.getSecureHeaders('POST'),
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!response.ok) throw new Error('Failed to queue report');
+
+                const data = await response.json();
+                const taskId = data.task_id;
+
+                state.activeTasks[taskId] = {
+                    status: 'pending',
+                    progress: 0,
+                    reportType: reportType
+                };
+
+                document.getElementById('taskId').textContent = taskId;
+                document.getElementById('taskStatus').textContent = 'Queued - waiting for processing...';
+                showToast(`Report queued with task ID: ${taskId}`, 'success');
+
+                // Poll for task status
+                pollTaskStatus(taskId);
+
+                // Log audit event
+                await auditLog('REPORT_QUEUED', 'reporting', { task_id: taskId, report_type: reportType, filters: state.currentFilters });
+            } catch (error) {
+                console.error('Error queuing report:', error);
+                showToast('Failed to queue report', 'error');
+                processingDiv.classList.remove('show');
+            }
+        }
+
+        async function pollTaskStatus(taskId) {
+            const maxAttempts = 120; // 4 minutes max
+            let attempt = 0;
+
+            const poll = async () => {
+                try {
+                    const response = await fetch(`${CONFIG.API_BASE}/reports/task/${taskId}/status`, {
+                        headers: securityManager.getSecureHeaders()
+                    });
+
+                    if (!response.ok) throw new Error('Failed to get task status');
+
+                    const data = await response.json();
+                    state.activeTasks[taskId] = data;
+
+                    document.getElementById('taskStatus').textContent = `${data.status.toUpperCase()} - ${data.progress}%`;
+
+                    if (data.status === 'completed') {
+                        document.getElementById('taskProcessing').classList.remove('show');
+                        showToast(`Report ready for download! File: ${data.file_name}`, 'success');
+                        await loadReports();
+                        await auditLog('REPORT_COMPLETED', 'reporting', { task_id: taskId, file_size: data.file_size });
+                    } else if (data.status === 'failed') {
+                        document.getElementById('taskProcessing').classList.remove('show');
+                        showToast(`Report generation failed: ${data.error}`, 'error');
+                        await auditLog('REPORT_FAILED', 'reporting', { task_id: taskId, error: data.error });
+                    } else if (attempt < maxAttempts) {
+                        attempt++;
+                        setTimeout(poll, CONFIG.TASK_POLL_INTERVAL);
+                    }
+                } catch (error) {
+                    console.error('Poll error:', error);
+                    if (attempt < maxAttempts) {
+                        attempt++;
+                        setTimeout(poll, CONFIG.TASK_POLL_INTERVAL);
+                    }
+                }
+            };
+
+            poll();
+        }
+
+        // ==================== FILTER MANAGEMENT ====================
+        function applyFilters() {
+            state.currentFilters = {
+                start_date: document.getElementById('filterStartDate').value,
+                end_date: document.getElementById('filterEndDate').value,
+                branch: document.getElementById('filterBranch').value,
+                currency: document.getElementById('filterCurrency').value
+            };
+
+            loadReportingMetrics();
+            loadCharts();
+            showToast(`Filters applied: ${JSON.stringify(state.currentFilters)}`, 'info');
+        }
+
+        // ==================== CHARTS WITH AGGREGATION ====================
         let revenueChart, typesChart;
 
-        document.addEventListener('DOMContentLoaded', function() {
-            checkAdminAccess();
-            loadReportingMetrics();
-            loadReports();
-            loadSchedules();
-            initCharts();
-        });
-
-        async function loadReportingMetrics() {
+        async function loadCharts() {
             try {
-                const response = await fetchAPI('/api/v1/reports/metrics');
-                if (response.success) {
-                    document.getElementById('totalTransactions').textContent = response.data.total_transactions || 0;
-                    document.getElementById('totalVolume').textContent = formatCurrency(response.data.total_volume || 0, true);
-                    document.getElementById('activeUsers').textContent = response.data.active_users || 0;
-                    document.getElementById('completionRate').textContent = (response.data.completion_rate || 0) + '%';
+                const params = new URLSearchParams(state.currentFilters);
+                const response = await fetch(`${CONFIG.API_BASE}/reports/metrics/aggregated?${params}`, {
+                    headers: securityManager.getSecureHeaders()
+                });
+
+                if (!response.ok) {
+                    console.warn(`Failed to load chart data: ${response.status}`);
+                    throw new Error('Failed to load chart data');
+                }
+
+                const data = await response.json();
+
+                // Validate data before rendering
+                if (!data) {
+                    throw new Error('No chart data returned');
+                }
+
+                // Revenue Chart - Downsampled Data
+                if (data.revenue && data.revenue.labels && data.revenue.labels.length > 0) {
+                    renderRevenueChart(data.revenue);
+                } else {
+                    document.getElementById('revenueChartContainer').innerHTML = '<div class="alert alert-info">No revenue data available for this period</div>';
+                    document.getElementById('revenueChart').style.display = 'none';
+                }
+
+                // Types Chart
+                if (data.transaction_types && data.transaction_types.labels && data.transaction_types.labels.length > 0) {
+                    renderTypesChart(data.transaction_types);
+                } else {
+                    document.getElementById('typesChartContainer').innerHTML = '<div class="alert alert-info">No transaction data available for this period</div>';
+                    document.getElementById('typesChart').style.display = 'none';
                 }
             } catch (error) {
-                console.error('Error loading metrics:', error);
+                console.error('Error loading charts:', error);
+                showToast('Failed to load chart data', 'error');
+                document.getElementById('revenueChartContainer').innerHTML = '<div class="alert alert-warning">Failed to load revenue data</div>';
+                document.getElementById('typesChartContainer').innerHTML = '<div class="alert alert-warning">Failed to load transaction types</div>';
             }
         }
 
-        async function loadReports() {
-            try {
-                const response = await fetchAPI('/api/v1/reports');
-                const table = document.getElementById('reportsTable');
-                
-                if (!response.success || !response.data?.length) {
-                    table.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No reports generated</td></tr>';
-                    return;
-                }
+        function renderRevenueChart(data) {
+            document.getElementById('revenueChartContainer').style.display = 'none';
+            const canvas = document.getElementById('revenueChart');
+            canvas.style.display = 'block';
 
-                table.innerHTML = response.data.map(report => `
-                    <tr>
-                        <td><strong>#${report.id}</strong></td>
-                        <td>${report.report_type}</td>
-                        <td>${report.date_range}</td>
-                        <td>${formatDate(report.generated_date)}</td>
-                        <td><strong>${report.record_count}</strong></td>
-                        <td><span class="badge bg-success">Completed</span></td>
-                        <td>${report.file_name}</td>
-                        <td><button class="btn btn-sm btn-primary" onclick="downloadReport('${report.id}')">Download</button></td>
-                    </tr>
-                `).join('');
-            } catch (error) {
-                console.error('Error loading reports:', error);
-            }
-        }
+            const ctx = canvas.getContext('2d');
+            if (revenueChart) revenueChart.destroy();
 
-        async function loadSchedules() {
-            try {
-                const response = await fetchAPI('/api/v1/reports/schedules');
-                const table = document.getElementById('schedulesTable');
-                
-                if (!response.success || !response.data?.length) {
-                    table.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No scheduled reports</td></tr>';
-                    return;
-                }
-
-                table.innerHTML = response.data.map(schedule => `
-                    <tr>
-                        <td><strong>#${schedule.id}</strong></td>
-                        <td>${schedule.report_type}</td>
-                        <td><span class="badge bg-info">${schedule.frequency}</span></td>
-                        <td>${formatDate(schedule.next_run)}</td>
-                        <td>${schedule.recipients}</td>
-                        <td><span class="badge ${schedule.is_active ? 'bg-success' : 'bg-secondary'}">${schedule.is_active ? 'Active' : 'Inactive'}</span></td>
-                        <td>${schedule.last_run ? formatDate(schedule.last_run) : 'Never'}</td>
-                        <td><button class="btn btn-sm btn-warning" onclick="editSchedule('${schedule.id}')">Edit</button></td>
-                    </tr>
-                `).join('');
-            } catch (error) {
-                console.error('Error loading schedules:', error);
-            }
-        }
-
-        function initCharts() {
-            const revenueCtx = document.getElementById('revenueChart').getContext('2d');
-            revenueChart = new Chart(revenueCtx, {
-                type: 'line',
+            revenueChart = new Chart(ctx, {
+                type: 'bar',
                 data: {
-                    labels: ['Day 1', 'Day 5', 'Day 10', 'Day 15', 'Day 20', 'Day 25', 'Day 30'],
+                    labels: data.labels || [],
                     datasets: [{
-                        label: 'Revenue ($K)',
-                        data: [45, 52, 48, 61, 55, 67, 72],
+                        label: 'Revenue (SUM)',
+                        data: data.values || [],
+                        backgroundColor: 'rgba(102, 126, 234, 0.8)',
                         borderColor: '#667eea',
-                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                        fill: true,
-                        tension: 0.4
+                        borderWidth: 1,
+                        borderRadius: 4
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { display: true } },
-                    scales: { y: { beginAtZero: true } }
+                    plugins: {
+                        legend: { display: true },
+                        tooltip: {
+                            callbacks: {
+                                afterLabel: function(context) {
+                                    return `Click to drill down to raw transactions`;
+                                }
+                            }
+                        }
+                    },
+                    scales: { y: { beginAtZero: true } },
+                    onClick: (event) => {
+                        const canvasPosition = Chart.helpers.getRelativePosition(event, revenueChart);
+                        const dataX = revenueChart.scales.x.getValueForPixel(canvasPosition.x);
+                        if (data.labels && data.labels[dataX]) {
+                            drillDownRevenue(data.labels[dataX]);
+                        }
+                    }
                 }
             });
+        }
 
-            const typesCtx = document.getElementById('typesChart').getContext('2d');
-            typesChart = new Chart(typesCtx, {
+        async function drillDownRevenue(period) {
+            try {
+                const params = new URLSearchParams({
+                    period: period,
+                    ...state.currentFilters
+                });
+
+                const response = await fetch(`${CONFIG.API_BASE}/reports/drill-down/revenue?${params}`, {
+                    headers: securityManager.getSecureHeaders()
+                });
+
+                if (!response.ok) {
+                    console.warn(`Failed to drill down: ${response.status}`);
+                    throw new Error('Failed to drill down');
+                }
+
+                const data = await response.json();
+
+                // Validate data
+                if (!data || !data.transactions || !Array.isArray(data.transactions)) {
+                    throw new Error('Invalid drill-down data format');
+                }
+
+                const drillDownDiv = document.getElementById('drillDownRevenue');
+                drillDownDiv.style.display = 'block';
+                document.getElementById('drillDownRevenueInfo').textContent = `Displaying ${data.transactions.length} transactions for period: ${period}`;
+
+                const tbody = document.getElementById('drillDownRevenueTable');
+                if (data.transactions.length === 0) {
+                    tbody.innerHTML = '<p class="text-muted">No transactions found for this period</p>';
+                    return;
+                }
+
+                tbody.innerHTML = `
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Transaction ID</th>
+                                <th>Amount</th>
+                                <th>Type</th>
+                                <th>Time</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.transactions.map(tx => `
+                                <tr>
+                                    <td><code>${securityManager.escapeHtml(String(tx.id || 'N/A'))}</code></td>
+                                    <td>$${(tx.amount || 0).toFixed(2)}</td>
+                                    <td>${securityManager.escapeHtml(String(tx.type || 'unknown'))}</td>
+                                    <td>${new Date(tx.timestamp).toLocaleTimeString()}</td>
+                                    <td><span class="badge bg-success">${securityManager.escapeHtml(String(tx.status || 'unknown'))}</span></td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+            } catch (error) {
+                console.error('Drill-down error:', error);
+                showToast('Failed to load detailed data', 'error');
+                const drillDownDiv = document.getElementById('drillDownRevenue');
+                drillDownDiv.style.display = 'block';
+                document.getElementById('drillDownRevenueTable').innerHTML = '<p class="text-danger">Failed to load detail data</p>';
+            }
+        }
+
+        function renderTypesChart(data) {
+            document.getElementById('typesChartContainer').style.display = 'none';
+            const canvas = document.getElementById('typesChart');
+            canvas.style.display = 'block';
+
+            const ctx = canvas.getContext('2d');
+            if (typesChart) typesChart.destroy();
+
+            typesChart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Transfer', 'Payment', 'Deposit', 'Withdrawal'],
+                    labels: data.labels || [],
                     datasets: [{
-                        data: [40, 30, 20, 10],
-                        backgroundColor: ['#667eea', '#764ba2', '#f59e0b', '#10b981'],
+                        data: data.values || [],
+                        backgroundColor: ['#667eea', '#764ba2', '#f59e0b', '#10b981', '#ef4444'],
                         borderColor: 'white',
                         borderWidth: 2
                     }]
@@ -397,45 +762,320 @@
             });
         }
 
-        function generateReport() {
-            const reportType = document.getElementById('reportType').value;
-            const exportFormat = document.getElementById('exportFormat').value;
-            if (!reportType) {
-                showAlert('Please select a report type', 'warning');
-                return;
+        // ==================== METRICS & REPORTS ====================
+        async function loadReportingMetrics() {
+            try {
+                const params = new URLSearchParams(state.currentFilters);
+                const response = await fetch(`${CONFIG.API_BASE}/reports/metrics?${params}`, {
+                    headers: securityManager.getSecureHeaders()
+                });
+
+                if (!response.ok) {
+                    console.warn(`Failed to load metrics: ${response.status}`);
+                    throw new Error('Failed to load metrics');
+                }
+
+                const data = await response.json();
+
+                // Safely update metrics with fallback to "--"
+                document.getElementById('totalTransactions').textContent = data.total_transactions !== undefined ? data.total_transactions : '--';
+                document.getElementById('totalVolume').textContent = data.total_volume !== undefined ? formatCurrency(data.total_volume, true) : '--';
+                document.getElementById('activeUsers').textContent = data.active_users !== undefined ? data.active_users : '--';
+                document.getElementById('completionRate').textContent = data.completion_rate !== undefined ? (data.completion_rate).toFixed(1) + '%' : '--';
+            } catch (error) {
+                console.error('Error loading metrics:', error);
+                // Set all metrics to "--" on error
+                document.getElementById('totalTransactions').textContent = '--';
+                document.getElementById('totalVolume').textContent = '--';
+                document.getElementById('activeUsers').textContent = '--';
+                document.getElementById('completionRate').textContent = '--';
+                showToast('Failed to load metrics - using default values', 'warning');
             }
-            showAlert(`Generating ${reportType} report as ${exportFormat}...`, 'info');
         }
 
-        function downloadReport(reportId) {
-            showAlert(`Downloading report #${reportId}...`, 'success');
+        async function loadReports() {
+            try {
+                const response = await fetch(`${CONFIG.API_BASE}/reports/tasks`, {
+                    headers: securityManager.getSecureHeaders()
+                });
+
+                if (!response.ok) {
+                    console.warn(`Failed to load reports: ${response.status}`);
+                    throw new Error('Failed to load reports');
+                }
+
+                const data = await response.json();
+
+                const tbody = document.getElementById('reportsTable');
+                if (!data.tasks || data.tasks.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">No reports yet</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.tasks.map(task => {
+                    // Validate required fields
+                    if (!task.task_id || !task.report_type) {
+                        console.warn('Invalid task data:', task);
+                        return '';
+                    }
+
+                    const statusClass = task.status === 'completed' ? 'status-badge-completed' : 
+                                       task.status === 'failed' ? 'status-badge-failed' : 
+                                       task.status === 'processing' ? 'status-badge-processing' : 'status-badge-pending';
+                    const progressBar = `<div class="progress" style="height: 20px;"><div class="progress-bar" style="width: ${(task.progress || 0).toFixed(0)}%;">${(task.progress || 0).toFixed(0)}%</div></div>`;
+
+                    return `
+                        <tr>
+                            <td><code>${securityManager.escapeHtml(String(task.task_id))}</code></td>
+                            <td>${securityManager.escapeHtml(String(task.report_type))}</td>
+                            <td><span class="text-muted">${securityManager.maskPII(String(task.requested_by || 'unknown'), 'email')}</span></td>
+                            <td>${new Date(task.created_at).toLocaleString()}</td>
+                            <td><small>${task.granularity || '-'}</small></td>
+                            <td><span class="badge ${statusClass}">${(task.status || 'unknown').toUpperCase()}</span></td>
+                            <td>${progressBar}</td>
+                            <td>${task.file_size ? formatBytes(task.file_size) : '--'}</td>
+                            <td>
+                                ${task.status === 'completed' ? `<button class="btn btn-sm btn-primary" onclick="downloadReport('${securityManager.escapeHtml(String(task.task_id))}')"><i class="fas fa-download"></i></button>` : '--'}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Error loading reports:', error);
+                const tbody = document.getElementById('reportsTable');
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">Unable to load reports</td></tr>';
+                showToast('Failed to load reports', 'error');
+            }
+        }
+
+        async function downloadReport(taskId) {
+            try {
+                const response = await fetch(`${CONFIG.API_BASE}/reports/tasks/${taskId}/download`, {
+                    headers: securityManager.getSecureHeaders()
+                });
+
+                if (!response.ok) throw new Error('Failed to download');
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `report-${taskId}.pdf`;
+                a.click();
+
+                state.downloadedReports.add(taskId);
+                showToast('Report downloaded successfully', 'success');
+
+                await auditLog('REPORT_DOWNLOADED', 'reporting', { task_id: taskId });
+            } catch (error) {
+                console.error('Download error:', error);
+                showToast('Failed to download report', 'error');
+            }
+        }
+
+        // ==================== AUDIT LOGGING ====================
+        async function auditLog(action, category, details) {
+            try {
+                await fetch(`${CONFIG.API_BASE}/reports/audit-log`, {
+                    method: 'POST',
+                    headers: securityManager.getSecureHeaders('POST'),
+                    body: JSON.stringify({
+                        action,
+                        category,
+                        details,
+                        timestamp: new Date().toISOString(),
+                        user_agent: navigator.userAgent
+                    })
+                });
+            } catch (error) {
+                console.error('Audit log error:', error);
+            }
+        }
+
+        // ==================== UTILITY FUNCTIONS ====================
+        function formatCurrency(value, millions = false) {
+            if (millions) return '$' + (value / 1000000).toFixed(1) + 'M';
+            return '$' + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // ==================== INITIALIZATION ====================
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (!state.token) {
+                window.location.href = '/signin';
+                return;
+            }
+
+            try {
+                // 1. Check admin permissions and display role
+                await checkAdminPermissions();
+
+                // 2. Set default dates
+                const today = new Date();
+                const lastMonth = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+                document.getElementById('filterEndDate').valueAsDate = today;
+                document.getElementById('filterStartDate').valueAsDate = lastMonth;
+
+                // 3. Load all initial data in sequence to prevent race conditions
+                showToast('Loading analytics engine...', 'info');
+                
+                // Wait for metrics first
+                await loadReportingMetrics();
+                
+                // Then load charts (which depend on metrics)
+                await loadCharts();
+                
+                // Load reports and schedules in parallel
+                await Promise.all([
+                    loadReports(),
+                    loadSchedules()
+                ]);
+
+                // 4. Set up periodic refresh
+                setInterval(loadReports, CONFIG.REFRESH_INTERVAL);
+
+                showToast('Analytics engine ready', 'success');
+            } catch (error) {
+                console.error('Initialization error:', error);
+                showToast('Failed to initialize dashboard', 'error');
+            }
+        });
+
+        /**
+         * Check admin permissions and display role
+         * Uses admin-guard.js to validate scope-based access
+         */
+        async function checkAdminPermissions() {
+            try {
+                const response = await fetch(`${CONFIG.API_BASE}/admin/me`, {
+                    headers: securityManager.getSecureHeaders()
+                });
+
+                if (!response.ok) {
+                    window.location.href = '/login';
+                    return;
+                }
+
+                const adminData = await response.json();
+                document.getElementById('adminRole').textContent = 
+                    `${adminData.role || 'Admin'} ${adminData.is_superadmin ? '(Superadmin)' : ''}`;
+
+                // Check for reporting:view permission
+                const hasReportingView = adminData.scopes?.includes('reporting:view');
+                if (!hasReportingView) {
+                    showToast('Limited access: Some reporting features may be restricted', 'warning');
+                    // Hide advanced features if user lacks permission
+                    document.querySelectorAll('[data-permission="reporting:write"]').forEach(el => {
+                        el.style.opacity = '0.5';
+                        el.style.pointerEvents = 'none';
+                    });
+                }
+            } catch (error) {
+                console.warn('Could not verify admin permissions:', error);
+                // Continue anyway with limited functionality
+            }
+        }
+
+        async function loadSchedules() {
+            try {
+                const response = await fetch(`${CONFIG.API_BASE}/reports/schedules`, {
+                    headers: securityManager.getSecureHeaders()
+                });
+
+                if (!response.ok) {
+                    console.warn(`Failed to load schedules: ${response.status}`);
+                    throw new Error('Failed to load schedules');
+                }
+
+                const data = await response.json();
+
+                const table = document.getElementById('schedulesTable');
+                if (!data.schedules || data.schedules.length === 0) {
+                    table.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No scheduled reports</td></tr>';
+                    return;
+                }
+
+                table.innerHTML = data.schedules.map(schedule => {
+                    // Validate data before processing
+                    if (!schedule.schedule_id || !schedule.report_type) {
+                        console.warn('Invalid schedule data:', schedule);
+                        return '';
+                    }
+
+                    return `
+                        <tr>
+                            <td><code>${securityManager.escapeHtml(String(schedule.schedule_id))}</code></td>
+                            <td>${securityManager.escapeHtml(String(schedule.report_type))}</td>
+                            <td><span class="badge bg-info">${securityManager.escapeHtml(String(schedule.frequency))}</span></td>
+                            <td>${new Date(schedule.next_run).toLocaleString()}</td>
+                            <td><span class="text-muted">${securityManager.maskPII(String(schedule.recipients), 'email')}</span></td>
+                            <td><span class="badge ${schedule.is_active ? 'bg-success' : 'bg-secondary'}">${schedule.is_active ? 'Active' : 'Inactive'}</span></td>
+                            <td>${schedule.last_run ? new Date(schedule.last_run).toLocaleString() : 'Never'}</td>
+                            <td><button class="btn btn-sm btn-warning" onclick="editSchedule('${securityManager.escapeHtml(String(schedule.schedule_id))}')">Edit</button></td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Error loading schedules:', error);
+                const table = document.getElementById('schedulesTable');
+                table.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">Unable to load schedules</td></tr>';
+                showToast('Failed to load schedules', 'error');
+            }
         }
 
         function editSchedule(scheduleId) {
-            showAlert(`Editing schedule #${scheduleId}...`, 'info');
+            showToast(`Editing schedule: ${scheduleId}`, 'info');
         }
 
-        document.getElementById('createReportForm')?.addEventListener('submit', async function(e) {
-            e.preventDefault();
+        /**
+         * Navigate to another admin page
+         * Used by breadcrumb and navigation links
+         */
+        function navigateTo(path) {
+            window.location.href = path;
+        }
+
+        /**
+         * Cross-portal session synchronization
+         * Checks if global settings changed in another portal (e.g., admin_settings.html)
+         */
+        async function syncCrossPortalSettings() {
             try {
-                const response = await fetchAPI('/api/v1/reports', {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        report_name: document.getElementById('reportName').value,
-                        include_metrics: document.getElementById('includeMetrics').checked,
-                        include_charts: document.getElementById('includeCharts').checked,
-                        include_tables: document.getElementById('includeTables').checked
-                    })
+                const response = await fetch(`${CONFIG.API_BASE}/config`, {
+                    headers: securityManager.getSecureHeaders()
                 });
-                if (response.success) {
-                    showAlert('Report created successfully', 'success');
-                    bootstrap.Modal.getInstance(document.getElementById('createReportModal')).hide();
-                    loadReports();
+
+                if (response.ok) {
+                    const config = await response.json();
+                    
+                    // If fiscal year changed, reload reports
+                    const storedFiscalYear = localStorage.getItem('fiscal_year_start');
+                    if (storedFiscalYear !== config.fiscal_year_start) {
+                        localStorage.setItem('fiscal_year_start', config.fiscal_year_start);
+                        console.log('Fiscal year updated, reloading reports...');
+                        await loadReportingMetrics();
+                        await loadCharts();
+                    }
+
+                    // If maintenance mode enabled, show warning
+                    if (config.maintenance_mode) {
+                        showToast('⚠️ System in maintenance mode - data may be stale', 'warning');
+                    }
                 }
             } catch (error) {
-                showAlert('Error creating report', 'danger');
+                console.warn('Cross-portal sync error:', error);
             }
-        });
+        }
+
+        // Sync settings periodically
+        setInterval(syncCrossPortalSettings, 30000); // Every 30 seconds
     </script>
     <script src="/static/js/admin-guard.js"></script>
 </body>

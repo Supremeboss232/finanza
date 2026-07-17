@@ -61,8 +61,17 @@ class SystemFundService:
         try:
             print(f"[SystemFundService] Starting fund transfer: user_id={target_user_id}, account_id={target_account_id}, amount={amount}")
             
+            amount_decimal = Decimal(str(amount))
+            if amount_decimal <= 0:
+                raise ValueError("Funding amount must be positive")
+
             # Get system reserve account
             reserve_account = await SystemFundService.get_system_reserve_account(db)
+            reserve_balance = Decimal(str(reserve_account.balance or 0))
+            if reserve_account.status != "active":
+                raise ValueError("System reserve account is not active")
+            if reserve_balance < amount_decimal:
+                raise ValueError("Insufficient reserve account balance for this funding operation")
             print(f"[SystemFundService] Got reserve account: {reserve_account.account_number}")
             
             # Get target account
@@ -86,8 +95,13 @@ class SystemFundService:
                 raise ValueError(f"Admin user {admin_user_id} not found")
             print(f"[SystemFundService] Got admin user: {admin_user.email}")
             
-            amount_decimal = Decimal(str(amount))
             print(f"[SystemFundService] Amount: {amount_decimal}")
+            if not target_user.is_active:
+                raise ValueError("Target user account is inactive")
+            if target_user.kyc_status != "approved":
+                raise ValueError("Target user must be KYC approved before admin funding")
+            if target_account.status != "active":
+                raise ValueError("Target account is not active")
             
             # Create or get transaction record if not provided
             if not transaction_id:
@@ -139,9 +153,11 @@ class SystemFundService:
             db.add(debit_entry)
             await db.flush()
             
-            # ISSUE #4 FIX: Do NOT manually update account.balance
-            # Balance is now calculated from ledger (source of truth)
-            # Step removed: target_account.balance = float(target_account.balance) + amount
+            # Keep account balances synced for UI and accounting safety.
+            reserve_account.balance = reserve_balance - amount_decimal
+            target_account.balance = Decimal(str(target_account.balance or 0)) + amount_decimal
+            db.add(reserve_account)
+            db.add(target_account)
             
             # Step 4: Create AuditLog entry
             audit_details = {

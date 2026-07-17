@@ -19,6 +19,8 @@ from sqlalchemy import select, func, and_, or_
 from decimal import Decimal
 from typing import Tuple, Optional, Dict, List
 from datetime import datetime
+from config import settings
+from monitoring_service import AlertService
 from models import (
     Ledger as DBLedger,
     Transaction as DBTransaction,
@@ -29,9 +31,130 @@ from models import (
 
 class LedgerService:
     """Service for managing double-entry ledger entries"""
-    
+
     # Special system account: user_id = 1 (admin/system account with infinite funds)
+    
+    @staticmethod
+    async def create_deposit_entry(
+        db: AsyncSession,
+        account_id: int,
+        amount: Decimal,
+        reference: str,
+        transaction_id: Optional[int] = None,
+    ) -> Dict:
+        """Compatibility wrapper used by mobile deposit approval flow."""
+        try:
+            account = await db.get(DBAccount, account_id)
+            if not account:
+                return {"success": False, "error": "Account not found"}
+
+            debit_entry, credit_entry = await LedgerService.create_deposit(
+                db=db,
+                user_id=account.owner_id,
+                amount=amount,
+                description=reference,
+                transaction_id=transaction_id,
+                reference_number=reference,
+            )
+
+            return {
+                "success": True,
+                "debit_entry_id": debit_entry.id,
+                "credit_entry_id": credit_entry.id,
+                "amount": float(amount),
+            }
+        except Exception as exc:
+            return {"success": False, "error": str(exc)}
+
     SYSTEM_USER_ID = 1
+
+    @staticmethod
+    async def create_deposit(
+        db: AsyncSession,
+        user_id: int,
+        amount: Decimal,
+        description: str,
+        transaction_id: Optional[int] = None,
+        reference_number: Optional[str] = None,
+    ) -> Tuple[DBLedger, DBLedger]:
+        """
+        Create a deposit ledger pair for an external payment.
+
+        The deposit is represented as:
+        1. Debit from the system account (user_id = 1)
+        2. Credit to the receiving user account
+        """
+        if amount <= 0:
+            raise ValueError("Amount must be positive")
+
+        user_result = await db.execute(select(DBUser).where(DBUser.id == user_id))
+        if not user_result.scalar_one_or_none():
+            raise ValueError("User not found")
+
+        transaction = None
+        if transaction_id is not None:
+            transaction_result = await db.execute(select(DBTransaction).where(DBTransaction.id == transaction_id))
+            transaction = transaction_result.scalar_one_or_none()
+            if not transaction:
+                raise ValueError("Transaction not found")
+        else:
+            transaction = DBTransaction(
+                user_id=user_id,
+                account_id=(await db.execute(select(DBAccount.id).where(DBAccount.owner_id == user_id).limit(1))).scalar_one_or_none(),
+                amount=amount,
+                transaction_type="deposit",
+                direction="credit",
+                status="completed",
+                description=description,
+                reference_number=reference_number,
+            )
+            db.add(transaction)
+            await db.flush()
+
+        now = datetime.utcnow()
+
+        debit_entry = DBLedger(
+            user_id=LedgerService.SYSTEM_USER_ID,
+            entry_type="debit",
+            amount=amount,
+            transaction_id=transaction.id,
+            source_user_id=LedgerService.SYSTEM_USER_ID,
+            destination_user_id=user_id,
+            description=f"Debit: {description}",
+            reference_number=reference_number,
+            status="posted",
+            posted_at=now,
+        )
+        db.add(debit_entry)
+        await db.flush()
+
+        credit_entry = DBLedger(
+            user_id=user_id,
+            entry_type="credit",
+            amount=amount,
+            transaction_id=transaction.id,
+            related_entry_id=debit_entry.id,
+            source_user_id=LedgerService.SYSTEM_USER_ID,
+            destination_user_id=user_id,
+            description=f"Credit: {description}",
+            reference_number=reference_number,
+            status="posted",
+            posted_at=now,
+        )
+        db.add(credit_entry)
+        await db.flush()
+
+        debit_entry.related_entry_id = credit_entry.id
+        db.add(debit_entry)
+        await db.flush()
+
+        account_result = await db.execute(select(DBAccount).where(DBAccount.owner_id == user_id).limit(1))
+        account = account_result.scalar_one_or_none()
+        if account:
+            account.balance = (account.balance or 0) + Decimal(str(amount))
+            db.add(account)
+
+        return debit_entry, credit_entry
     
     @staticmethod
     async def create_atomic_transfer(
@@ -293,6 +416,18 @@ class LedgerService:
         
         if not result["is_balanced"]:
             result["errors"].append(f"Ledger not balanced: debits ${result['total_debits']:.2f} ≠ credits ${result['total_credits']:.2f}")
+
+        if not result["is_balanced"] or result["orphaned_entries"] > 0:
+            details = (
+                f"Ledger reconciliation found a discrepancy: total_debits=${result['total_debits']:.2f}, "
+                f"total_credits=${result['total_credits']:.2f}, difference=${result['difference']:.2f}, "
+                f"orphaned_entries={result['orphaned_entries']}"
+            )
+            await AlertService.alert_ledger_discrepancy(
+                summary="Ledger integrity issue detected",
+                details=details,
+                recipients=[settings.ADMIN_EMAIL]
+            )
         
         return result
     

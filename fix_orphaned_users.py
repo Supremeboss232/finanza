@@ -66,7 +66,8 @@ class OrphanedUserFixer:
                     account_number=account_number,
                     account_type='primary',
                     balance=0.0,
-                    currency='USD'
+                    currency='USD',
+                    status='active'
                 )
                 db.add(primary_account)
                 

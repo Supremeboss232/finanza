@@ -1,8 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Currency exchange - convert between currencies securely with Finanza Bank">
     <title>Currency Exchange - Finanza</title>
     <link href="/static/css/style.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -17,6 +18,8 @@
         .rate-change-down { color: #dc3545; }
         #exchangeRateChart { max-height: 300px; }
     </style>
+
+    <script src="/static/js/toast-utils.js"></script>
 </head>
 <body>
     <!-- Navigation -->
@@ -175,6 +178,8 @@
                         </div>
                     </div>
 
+                    <div id="formError" class="alert alert-danger d-none mt-2" role="alert"></div>
+                    <div id="formSuccess" class="alert alert-success d-none mt-2" role="alert"></div>
                     <button type="submit" class="btn btn-primary btn-lg w-100">
                         <i class="fas fa-check"></i> Confirm Exchange
                     </button>
@@ -188,7 +193,10 @@
                 <h5 class="mb-0"><i class="fas fa-chart-line"></i> Exchange Rate Trend (24h)</h5>
             </div>
             <div class="card-body">
-                <canvas id="exchangeRateChart"></canvas>
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-chart-line fa-2x mb-2"></i>
+                    <p class="mb-0">Live chart data is not available at this time.</p>
+                </div>
             </div>
         </div>
 
@@ -236,7 +244,6 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         const token = localStorage.getItem('token');
-        let chart = null;
 
         document.addEventListener('DOMContentLoaded', async function() {
             if (!token) {
@@ -249,7 +256,6 @@
                 await loadAccounts();
                 await loadLiveRates();
                 await loadRecentExchanges();
-                await loadExchangeChart();
                 setupEventListeners();
             } catch (error) {
                 console.error('Error loading exchange data:', error);
@@ -266,27 +272,17 @@
         }
 
         async function loadExchangeStats() {
-            try {
-                const response = await fetch('/api/v1/currency_exchange/stats', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    document.getElementById('currencyCount').textContent = data.total_currencies || '0';
-                    document.getElementById('totalExchanged').textContent = '$' + (data.total_exchanged || 0).toLocaleString();
-                    document.getElementById('pendingTrades').textContent = data.pending_trades || '0';
-                    document.getElementById('bestRate').textContent = (data.best_rate || 0).toFixed(4);
-                    document.getElementById('bestRatePair').textContent = data.best_rate_pair || '-';
-                }
-            } catch (error) {
-                console.error('Error loading exchange stats:', error);
-            }
+            // Stats endpoint not available — show placeholder values
+            document.getElementById('currencyCount').textContent = '--';
+            document.getElementById('totalExchanged').textContent = '$0.00';
+            document.getElementById('pendingTrades').textContent = '--';
+            document.getElementById('bestRate').textContent = '--';
+            document.getElementById('bestRatePair').textContent = '--';
         }
 
         async function loadAccounts() {
             try {
-                const response = await fetch('/api/v1/accounts', {
+                const response = await fetch('/api/user/accounts', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
@@ -305,6 +301,8 @@
                             toSelect.innerHTML += option;
                         });
                     }
+                } else {
+                    console.error('Failed to load accounts, status:', response.status);
                 }
             } catch (error) {
                 console.error('Error loading accounts:', error);
@@ -313,7 +311,7 @@
 
         async function loadLiveRates() {
             try {
-                const response = await fetch('/api/v1/currency_exchange/rates', {
+                const response = await fetch('/api/v1/fx/all-rates/USD', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
@@ -322,8 +320,11 @@
                     const container = document.getElementById('ratesContainer');
                     container.innerHTML = '';
 
-                    if (data.rates && Object.keys(data.rates).length > 0) {
-                        Object.entries(data.rates).forEach(([pair, rate]) => {
+                    // API returns { rates: { EUR: 0.92, GBP: 0.79, ... } }
+                    const rates = data.rates || data;
+                    if (rates && Object.keys(rates).length > 0) {
+                        Object.entries(rates).forEach(([currency, rate]) => {
+                            const pair = `USD/${currency}`;
                             const change = Math.random() > 0.5 ? '+0.23%' : '-0.12%';
                             const changeClass = change.includes('+') ? 'rate-change-up' : 'rate-change-down';
                             
@@ -336,7 +337,7 @@
                                                     <h6 class="card-title mb-1">${pair}</h6>
                                                     <p class="text-muted small mb-0">Exchange rate</p>
                                                 </div>
-                                                <span class="badge bg-primary">${rate.toFixed(4)}</span>
+                                                <span class="badge bg-primary">${parseFloat(rate).toFixed(4)}</span>
                                             </div>
                                             <p class="text-muted small mt-2 mb-0">24h change: <span class="${changeClass}">${change}</span></p>
                                         </div>
@@ -344,86 +345,60 @@
                                 </div>
                             `;
                         });
+                    } else {
+                        container.innerHTML = '<div class="col-12 text-center text-muted">No rate data available.</div>';
                     }
+                } else {
+                    console.error('Failed to load live rates, status:', response.status);
+                    document.getElementById('ratesContainer').innerHTML = '<div class="col-12 text-center text-muted">Unable to load rates at this time.</div>';
                 }
             } catch (error) {
                 console.error('Error loading live rates:', error);
+                document.getElementById('ratesContainer').innerHTML = '<div class="col-12 text-center text-muted">Unable to load rates at this time.</div>';
             }
         }
 
         async function loadRecentExchanges() {
+            const tbody = document.getElementById('recentExchangesBody');
             try {
-                const response = await fetch('/api/v1/currency_exchange/history', {
+                const response = await fetch('/api/v1/fx/history/USD/EUR', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
                 if (response.ok) {
                     const data = await response.json();
-                    const tbody = document.getElementById('recentExchangesBody');
                     tbody.innerHTML = '';
 
-                    if (data.exchanges && data.exchanges.length > 0) {
-                        data.exchanges.forEach(ex => {
+                    const records = data.history || data.exchanges || data;
+                    if (Array.isArray(records) && records.length > 0) {
+                        records.forEach(ex => {
+                            const date = ex.date || ex.timestamp || ex.created_at || '';
                             tbody.innerHTML += `
                                 <tr>
-                                    <td>${new Date(ex.date).toLocaleDateString()}</td>
-                                    <td><span class="currency-badge">${ex.from_currency}</span></td>
-                                    <td><span class="currency-badge">${ex.to_currency}</span></td>
-                                    <td>${ex.rate.toFixed(4)}</td>
-                                    <td>${ex.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}</td>
-                                    <td>${ex.fee.toLocaleString('en-US', {maximumFractionDigits: 2})}</td>
-                                    <td><span class="badge bg-success">${ex.status}</span></td>
+                                    <td>${date ? new Date(date).toLocaleDateString() : '--'}</td>
+                                    <td><span class="currency-badge">${ex.from_currency || 'USD'}</span></td>
+                                    <td><span class="currency-badge">${ex.to_currency || 'EUR'}</span></td>
+                                    <td>${ex.rate != null ? parseFloat(ex.rate).toFixed(4) : '--'}</td>
+                                    <td>${ex.amount != null ? parseFloat(ex.amount).toLocaleString('en-US', {maximumFractionDigits: 2}) : '--'}</td>
+                                    <td>${ex.fee != null ? parseFloat(ex.fee).toLocaleString('en-US', {maximumFractionDigits: 2}) : '--'}</td>
+                                    <td><span class="badge bg-success">${ex.status || 'Completed'}</span></td>
                                 </tr>
                             `;
                         });
                     } else {
-                        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No exchanges yet</td></tr>';
+                        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No exchange history available.</td></tr>';
                     }
+                } else {
+                    console.error('Failed to load exchange history, status:', response.status);
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Unable to load exchange history.</td></tr>';
                 }
             } catch (error) {
                 console.error('Error loading exchanges:', error);
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Unable to load exchange history.</td></tr>';
             }
         }
 
-        async function loadExchangeChart() {
-            try {
-                const response = await fetch('/api/v1/currency_exchange/chart-data', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    const ctx = document.getElementById('exchangeRateChart').getContext('2d');
-                    
-                    if (chart) chart.destroy();
-                    
-                    chart = new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: data.labels || Array.from({length: 24}, (_, i) => i + 'h'),
-                            datasets: [{
-                                label: 'USD to EUR',
-                                data: data.rates || Array(24).fill(1.1),
-                                borderColor: '#f5576c',
-                                backgroundColor: 'rgba(245, 87, 108, 0.1)',
-                                borderWidth: 2,
-                                fill: true,
-                                tension: 0.3
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: true,
-                            plugins: {
-                                legend: { display: false }
-                            }
-                        }
-                    });
-                }
-            } catch (error) {
-                console.error('Error loading chart:', error);
-            }
-        }
+        // Chart data endpoint not available — chart section replaced with placeholder in HTML
 
         function updateConversion() {
             const amount = parseFloat(document.getElementById('fromAmount').value) || 0;
@@ -451,35 +426,51 @@
         async function handleExchange(e) {
             e.preventDefault();
 
-            const exchange = {
+            const errorEl = document.getElementById('formError');
+            const successEl = document.getElementById('formSuccess');
+            errorEl.classList.add('d-none');
+            successEl.classList.add('d-none');
+
+            const accountId = parseInt(document.getElementById('fromAccount').value, 10);
+            if (!accountId) {
+                errorEl.textContent = 'Please select a From Account.';
+                errorEl.classList.remove('d-none');
+                return;
+            }
+
+            const payload = {
                 from_currency: document.getElementById('fromCurrency').value,
                 to_currency: document.getElementById('toCurrency').value,
                 amount: parseFloat(document.getElementById('fromAmount').value),
-                from_account_id: document.getElementById('fromAccount').value,
-                to_account_id: document.getElementById('toAccount').value
+                account_id: accountId
             };
 
             try {
-                const response = await fetch('/api/v1/currency_exchange/exchange', {
+                const response = await fetch('/api/v1/fx/convert', {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(exchange)
+                    body: JSON.stringify(payload)
                 });
 
                 if (response.ok) {
-                    alert('Exchange completed successfully!');
+                    successEl.textContent = 'Exchange completed successfully!';
+                    successEl.classList.remove('d-none');
                     document.getElementById('exchangeForm').reset();
                     await loadExchangeStats();
                     await loadRecentExchanges();
                 } else {
-                    alert('Error completing exchange');
+                    const errData = await response.json().catch(() => ({}));
+                    errorEl.textContent = errData.detail || 'Error completing exchange. Please try again.';
+                    errorEl.classList.remove('d-none');
+                    console.error('Exchange error:', response.status, errData);
                 }
             } catch (error) {
                 console.error('Error:', error);
-                alert('Error completing exchange');
+                errorEl.textContent = 'Network error. Please check your connection and try again.';
+                errorEl.classList.remove('d-none');
             }
         }
     </script>

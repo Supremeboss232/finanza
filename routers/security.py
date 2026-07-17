@@ -1,12 +1,15 @@
 """Security and authentication API routes."""
 
+import json
+import secrets
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
 from datetime import datetime
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from deps import get_current_user, SessionDep
-from models import User
+from models import AuditLog, User, UserSettings
 
 router = APIRouter(
     prefix="/api/security",
@@ -91,9 +94,27 @@ async def get_login_history(
     db_session: SessionDep = None,
     limit: int = 10
 ):
-    """Get login history for current user."""
-    # Login history functionality to be implemented
-    return []
+    """Return recent login and security events for the current user."""
+    result = await db_session.execute(
+        select(AuditLog)
+        .where(AuditLog.user_id == current_user.id)
+        .where(AuditLog.action_type.in_(["login", "failed_login", "logout", "password_reset"]))
+        .order_by(AuditLog.created_at.desc())
+        .limit(limit)
+    )
+    events = []
+    for entry in result.scalars().all():
+        details = json.loads(entry.details) if entry.details else {}
+        events.append({
+            "id": entry.id,
+            "action": entry.action_type,
+            "status": entry.status,
+            "timestamp": entry.created_at.isoformat() if entry.created_at else None,
+            "ip_address": details.get("ip_address"),
+            "device": details.get("device") or "Unknown device",
+            "reason": entry.reason,
+        })
+    return events
 
 
 @router.get("/devices")
@@ -101,9 +122,25 @@ async def get_trusted_devices(
     current_user: User = Depends(get_current_user),
     db_session: SessionDep = None
 ):
-    """Get list of trusted devices."""
-    # Device management functionality to be implemented
-    return []
+    """Return the current user's trusted/recognized device summary."""
+    result = await db_session.execute(
+        select(AuditLog)
+        .where(AuditLog.user_id == current_user.id)
+        .where(AuditLog.action_type.in_(["login", "device_trusted"]))
+        .order_by(AuditLog.created_at.desc())
+        .limit(10)
+    )
+    devices = []
+    for entry in result.scalars().all():
+        details = json.loads(entry.details) if entry.details else {}
+        devices.append({
+            "id": entry.id,
+            "name": details.get("device") or "Unknown device",
+            "ip_address": details.get("ip_address"),
+            "last_seen": entry.created_at.isoformat() if entry.created_at else None,
+            "trusted": entry.action_type == "device_trusted",
+        })
+    return devices
 
 
 @router.post("/devices/{device_id}/trust", status_code=status.HTTP_200_OK)
@@ -155,20 +192,19 @@ async def enable_2fa(
     current_user: User = Depends(get_current_user),
     db_session: SessionDep = None
 ):
-    """Enable two-factor authentication."""
-    method = method_data.get("method")
-    
-    if method == "authenticator":
-        return {
-            "method": "authenticator",
-            "message": "Scan QR code with your authenticator app",
-            "qr_code": "data:image/png;base64,iVBORw0KGg...",
-            "secret": "JBSWY3DPEBLW64TMMQ======"
-        }
-    
+    """Enable two-factor authentication and persist the preference in user settings."""
+    method = (method_data or {}).get("method") or "authenticator"
+    settings = await db_session.get(UserSettings, current_user.id)
+    if not settings:
+        settings = UserSettings(user_id=current_user.id)
+        db_session.add(settings)
+    settings.two_factor_enabled = True
+    settings.preferences = json.dumps({"two_factor_method": method})
+    await db_session.commit()
     return {
         "method": method,
-        "message": f"2FA method {method} setup initiated"
+        "message": "Two-factor authentication enabled",
+        "enabled": True,
     }
 
 
@@ -177,10 +213,15 @@ async def disable_2fa(
     current_user: User = Depends(get_current_user),
     db_session: SessionDep = None
 ):
-    """Disable two-factor authentication."""
+    """Disable two-factor authentication in the user settings record."""
+    settings = await db_session.get(UserSettings, current_user.id)
+    if settings:
+        settings.two_factor_enabled = False
+        await db_session.commit()
     return {
         "message": "Two-factor authentication has been disabled",
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.utcnow().isoformat(),
+        "enabled": False,
     }
 
 
@@ -189,16 +230,17 @@ async def get_backup_codes(
     current_user: User = Depends(get_current_user),
     db_session: SessionDep = None
 ):
-    """Get backup codes for 2FA."""
+    """Generate backup codes for 2FA and persist them in the user settings record."""
+    backup_codes = [f"{secrets.token_hex(2).upper()}-{secrets.token_hex(2).upper()}-{secrets.token_hex(2).upper()}" for _ in range(5)]
+    settings = await db_session.get(UserSettings, current_user.id)
+    if not settings:
+        settings = UserSettings(user_id=current_user.id)
+        db_session.add(settings)
+    settings.preferences = json.dumps({"backup_codes": backup_codes, "two_factor_method": "authenticator"})
+    await db_session.commit()
     return {
-        "backup_codes": [
-            "AAAA-AAAA-AAAA",
-            "BBBB-BBBB-BBBB",
-            "CCCC-CCCC-CCCC",
-            "DDDD-DDDD-DDDD",
-            "EEEE-EEEE-EEEE"
-        ],
-        "message": "Save these codes in a secure place. Each code can be used once."
+        "backup_codes": backup_codes,
+        "message": "Save these codes in a secure place. Each code can be used once.",
     }
 
 

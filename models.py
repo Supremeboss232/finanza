@@ -1,7 +1,7 @@
 # models.py
 # SQLAlchemy models defining database tables (User, Admin, Transactions, KYC, etc.).
 
-from sqlalchemy import Boolean, Column, Integer, String, DateTime, Date, ForeignKey, Float, Numeric, Text, Index
+from sqlalchemy import Boolean, Column, Integer, String, DateTime, Date, ForeignKey, Float, Numeric, Text, Index, LargeBinary
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base # Assuming database.py defines Base
@@ -20,6 +20,7 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     is_verified = Column(Boolean, default=False)
     is_admin = Column(Boolean, default=False)
+    admin_role = Column(String, default="STANDARD", nullable=False)  # STANDARD, ADMIN, TREASURY, SUPER_ADMIN
     # ⚠️ RULE 1: KYC Status controls transaction completion
     # STATES: not_started, pending, approved, rejected
     # Only 'approved' KYC allows completed transactions
@@ -31,10 +32,27 @@ class User(Base):
     address = Column(String, nullable=True)
     region = Column(String, nullable=True)
     routing_number = Column(String, nullable=True)
+    
+    # MFA/2FA Fields
+    mfa_secret = Column(String, nullable=True)  # Base32 encoded TOTP secret
+    mfa_enabled = Column(Boolean, default=False)  # Whether MFA is enabled
+    mfa_backup_codes = Column(Text, nullable=True)  # Comma-separated hashed backup codes
+    mfa_enabled_at = Column(DateTime(timezone=True), nullable=True)  # When MFA was enabled
+    
+    # Account Status Flags
+    is_suspended = Column(Boolean, default=False)  # Admin suspended this user - cannot login
+    is_frozen = Column(Boolean, default=False)  # Admin froze account - cannot do any operations
+    
+    # Granular Permissions
+    custom_permissions = Column(Text, nullable=True)  # JSON: {granted: [...], denied: [...]}
 
     # Relationships
     accounts = relationship("Account", back_populates="owner")
-    transactions = relationship("Transaction", back_populates="user")
+    transactions = relationship(
+        "Transaction",
+        back_populates="user",
+        foreign_keys="[Transaction.user_id]",
+    )
     kyc_info = relationship("KYCInfo", uselist=False, back_populates="user")
     investments = relationship("Investment", back_populates="owner")
     loans = relationship("Loan", back_populates="owner")
@@ -45,6 +63,19 @@ class User(Base):
     support_tickets = relationship("SupportTicket", back_populates="submitter")
     user_settings = relationship("UserSettings", uselist=False, back_populates="user")
     projects = relationship("Project", back_populates="owner")
+    mobile_deposits = relationship("MobileDeposit", foreign_keys="MobileDeposit.user_id", back_populates="user")
+
+    @property
+    def balance(self):
+        if 'accounts' in self.__dict__ and self.accounts:
+            return sum(acc.balance for acc in self.accounts)
+        return 0.0
+
+    @balance.setter
+    def balance(self, value):
+        if 'accounts' in self.__dict__ and self.accounts:
+            self.accounts[0].balance = value
+
 
 class Account(Base):
     __tablename__ = "accounts"
@@ -52,9 +83,12 @@ class Account(Base):
     id = Column(Integer, primary_key=True, index=True, comment="Account ID - unique, immutable")
     account_number = Column(String, unique=True, index=True, nullable=False, comment="User-facing account number - immutable")
     account_type = Column(String, default="savings", nullable=False)  # savings, checking, business, investment, loan
-    balance = Column(Float, default=0.0, nullable=False)  # Source of truth: synced from ledger
+    balance = Column(Numeric(15, 2), default=0.0, nullable=False)  # Source of truth: synced from ledger (Numeric for precision)
     currency = Column(String, default="USD", nullable=False)
     owner_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True, comment="User ID - Foreign Key (NOT for admin accounts)")  # REQUIRED: Every account must have an owner
+    
+    # Region association for multi-region support
+    region_id = Column(Integer, ForeignKey("regions.id"), nullable=True, index=True, comment="Region where account is domiciled")
     
     # Account status: active, frozen, closed
     status = Column(String, default="active", nullable=False)
@@ -65,12 +99,15 @@ class Account(Base):
     # Flag to exclude from user-account binding enforcement (for admin/system accounts)
     is_admin_account = Column(Boolean, default=False, nullable=False, comment="If True, not subject to user binding enforcement")
     
+    # Flag for system/treasury accounts
+    is_system_account = Column(Boolean, default=False, nullable=False, comment="If True, only allows admin disbursements")
+    
     created_at = Column(DateTime(timezone=True), server_default=func.now(), default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), default=func.now(), onupdate=func.now(), nullable=False)
 
     owner = relationship("User", back_populates="accounts")
     transactions = relationship("Transaction", back_populates="account")
-    # TODO: Add region_id and region relationship after Phase 3B database migration
+    region = relationship("Region", back_populates="accounts")
 
 class Transaction(Base):
     __tablename__ = "transactions"
@@ -78,7 +115,8 @@ class Transaction(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)  # REQUIRED: Every transaction must belong to a user
     account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False)  # REQUIRED: Every transaction must belong to an account
-    amount = Column(Float, nullable=False)
+    recipient_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # Optional recipient for payment flows
+    amount = Column(Numeric(15, 2), nullable=False)  # Numeric for financial precision
     transaction_type = Column(String, nullable=False)  # e.g., "deposit", "withdrawal", "transfer", "fund_transfer"
     direction = Column(String, nullable=True)  # "credit" or "debit" for clarity
     status = Column(String, default="pending", nullable=False)  # STATES: pending, blocked, completed, failed, cancelled
@@ -91,7 +129,15 @@ class Transaction(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
-    user = relationship("User", back_populates="transactions")
+    user = relationship(
+        "User",
+        back_populates="transactions",
+        foreign_keys=[user_id],
+    )
+    recipient = relationship(
+        "User",
+        foreign_keys=[recipient_user_id],
+    )
     account = relationship("Account", back_populates="transactions")
 
 class KYCInfo(Base):
@@ -166,10 +212,10 @@ class Deposit(Base):
     __tablename__ = "deposits"
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
-    amount = Column(Float)
-    current_balance = Column(Float)
+    amount = Column(Numeric(15, 2))  # Numeric for financial precision
+    current_balance = Column(Numeric(15, 2))  # Numeric for financial precision
     currency = Column(String, default="USD")
-    interest_rate = Column(Float, default=0.0)
+    interest_rate = Column(Numeric(5, 4), default=0.0)  # Numeric for rate precision (e.g., 5.2500%)
     term_months = Column(Integer, default=12)
     maturity_date = Column(DateTime(timezone=True), nullable=True)
     status = Column(String, default="active")
@@ -181,11 +227,11 @@ class Loan(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     loan_type = Column(String, nullable=True)  # personal, auto, home, student, business
-    amount = Column(Float)
-    remaining_balance = Column(Float)
-    monthly_payment = Column(Float, default=0.0)
-    paid_amount = Column(Float, default=0.0)
-    interest_rate = Column(Float)
+    amount = Column(Numeric(15, 2))  # Numeric for financial precision
+    remaining_balance = Column(Numeric(15, 2))  # Numeric for financial precision
+    monthly_payment = Column(Numeric(15, 2), default=0.0)  # Numeric for financial precision
+    paid_amount = Column(Numeric(15, 2), default=0.0)  # Numeric for financial precision
+    interest_rate = Column(Numeric(5, 4))  # Numeric for rate precision (e.g., 5.2500%)
     term_months = Column(Integer)
     purpose = Column(String, nullable=True)
     approved_at = Column(DateTime(timezone=True), nullable=True)
@@ -198,10 +244,10 @@ class Investment(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     investment_type = Column(String)
-    amount = Column(Float)
-    current_value = Column(Float, nullable=True)
-    interest_earned = Column(Float, default=0.0)
-    annual_return_rate = Column(Float, default=0.0)
+    amount = Column(Numeric(15, 2))  # Numeric for financial precision
+    current_value = Column(Numeric(15, 2), nullable=True)  # Numeric for financial precision
+    interest_earned = Column(Numeric(15, 2), default=0.0)  # Numeric for financial precision
+    annual_return_rate = Column(Numeric(5, 4), default=0.0)  # Numeric for rate precision (e.g., 5.2500%)
     purpose = Column(String, nullable=True)
     maturity_date = Column(DateTime(timezone=True), nullable=True)
     status = Column(String, default="active")
@@ -216,9 +262,9 @@ class Card(Base):
     card_type = Column(String)
     card_holder_name = Column(String, nullable=True)
     expiry_date = Column(String)
-    balance = Column(Float, default=0.0)
-    credit_limit = Column(Float, default=5000.0)
-    transaction_limit = Column(Float, default=10000.0)
+    balance = Column(Numeric(15, 2), default=0.0)  # Numeric for financial precision
+    credit_limit = Column(Numeric(15, 2), default=5000.0)  # Numeric for financial precision
+    transaction_limit = Column(Numeric(15, 2), default=10000.0)  # Numeric for financial precision
     status = Column(String, default="active")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     owner = relationship("User", back_populates="cards")
@@ -229,8 +275,8 @@ class Policy(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
     policy_number = Column(String, unique=True, index=True)
     policy_type = Column(String)  # e.g., "health", "auto", "home", "life"
-    coverage_amount = Column(Float)
-    premium = Column(Float)
+    coverage_amount = Column(Numeric(15, 2))  # Numeric for financial precision
+    premium = Column(Numeric(12, 2))  # Numeric for financial precision
     start_date = Column(DateTime(timezone=True))
     renewal_date = Column(DateTime(timezone=True))
     status = Column(String, default="active")  # e.g., "active", "expired", "cancelled"
@@ -244,7 +290,7 @@ class Claim(Base):
     id = Column(Integer, primary_key=True, index=True)
     policy_id = Column(Integer, ForeignKey("policies.id"))
     claim_number = Column(String, unique=True, index=True)
-    amount = Column(Float)
+    amount = Column(Numeric(15, 2))  # Numeric for financial precision
     status = Column(String, default="pending")  # e.g., "pending", "approved", "rejected", "paid"
     description = Column(String)
     submitted_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -257,8 +303,8 @@ class Budget(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     category = Column(String)  # e.g., "groceries", "utilities", "entertainment"
-    limit = Column(Float)
-    spent = Column(Float, default=0.0)
+    limit = Column(Numeric(12, 2))  # Numeric for financial precision
+    spent = Column(Numeric(12, 2), default=0.0)  # Numeric for financial precision
     month = Column(String)  # e.g., "2025-01" for January 2025
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
@@ -269,8 +315,8 @@ class Goal(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     goal_name = Column(String)
-    target_amount = Column(Float)
-    current_amount = Column(Float, default=0.0)
+    target_amount = Column(Numeric(12, 2))  # Numeric for financial precision
+    current_amount = Column(Numeric(12, 2), default=0.0)  # Numeric for financial precision
     deadline = Column(DateTime(timezone=True))
     status = Column(String, default="active")  # e.g., "active", "completed", "abandoned"
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -325,7 +371,7 @@ class Project(Base):
     project_name = Column(String)
     description = Column(String)
     status = Column(String, default="planning")  # e.g., "planning", "in_progress", "completed"
-    budget = Column(Float, nullable=True)
+    budget = Column(Numeric(12, 2), nullable=True)  # Numeric for financial precision
     start_date = Column(DateTime(timezone=True), nullable=True)
     end_date = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -461,8 +507,13 @@ class Admin(Base):
 class Region(Base):
     __tablename__ = "regions"
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String)
-    # TODO: Add accounts_in_region relationship after Phase 3B database migration
+    name = Column(String, unique=True, nullable=False, index=True)
+    code = Column(String, unique=True, nullable=False)  # e.g., "US", "EU", "APAC"
+    description = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationship: accounts in this region
+    accounts = relationship("Account", back_populates="region")
 
 # Stub models for any other missing dependencies (common in large projects)
 class FundSource(Base):
@@ -488,10 +539,23 @@ class CountryRiskAssessment(Base):
 class FlaggedTransaction(Base):
     __tablename__ = "flagged_transactions"
     id = Column(Integer, primary_key=True, index=True)
+    transaction_id = Column(Integer, ForeignKey("transactions.id"), nullable=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    status = Column(String, default="pending", nullable=True)
+    risk_level = Column(String, default="medium", nullable=True)
+    reason = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), nullable=True)
 
 class FundTransfer(Base):
     __tablename__ = "fund_transfers"
     id = Column(Integer, primary_key=True, index=True)
+    from_user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    to_user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    amount = Column(Numeric(15, 2), nullable=True)  # Numeric for financial precision
+    status = Column(String, default="pending", nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), nullable=True)
 
 class InvestigationCase(Base):
     __tablename__ = "investigation_cases"
@@ -499,7 +563,28 @@ class InvestigationCase(Base):
 
 class MobileDeposit(Base):
     __tablename__ = "mobile_deposits"
+
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=True, index=True)
+    amount = Column(Numeric(15, 2), nullable=False)
+    check_number = Column(String, nullable=True)
+    issuer_name = Column(String, nullable=True)
+    bank_routing = Column(String, nullable=True)
+    bank_account = Column(String, nullable=True)
+    status = Column(String, default="pending_images", nullable=False, index=True)
+    quality_score = Column(Integer, nullable=True)
+    front_image_url = Column(String(2048), nullable=True)
+    back_image_url = Column(String(2048), nullable=True)
+    reviewer_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+    review_notes = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), nullable=True)
+    processed_at = Column(DateTime(timezone=True), nullable=True)
+
+    user = relationship("User", foreign_keys=[user_id], back_populates="mobile_deposits")
+    reviewer = relationship("User", foreign_keys=[reviewer_id])
+    account = relationship("Account", foreign_keys=[account_id])
 
 class SanctionsScreening(Base):
     __tablename__ = "sanctions_screenings"
@@ -536,6 +621,19 @@ class CreditScore(Base):
     
     user = relationship("User")
 
+
+class RegionCompliance(Base):
+    """Regional compliance requirements and settings"""
+    __tablename__ = "region_compliance"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    region_name = Column(String, nullable=False, unique=True, index=True)
+    country_code = Column(String, nullable=True)
+    kyc_required = Column(Boolean, default=True)
+    aml_level = Column(String, default="standard")  # standard, enhanced, high_risk
+    transaction_limit = Column(Numeric(15, 2), default=50000.0)  # Numeric for financial precision
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
 class AccountHold(Base):
     """Account hold/freeze records"""
@@ -896,7 +994,7 @@ class InterestAccrual(Base):
     account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False, index=True)
     accrual_date = Column(DateTime(timezone=True), server_default=func.now())
     amount = Column(Numeric(12, 2), nullable=False)
-    rate = Column(Float, nullable=False)
+    rate = Column(Numeric(5, 4), nullable=False)  # Numeric for rate precision (e.g., 5.2500%)
     posted = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
@@ -1025,6 +1123,115 @@ class RTPTransaction(Base):
     transaction = relationship("Transaction")
 
 
+# ==================== NEW ADMIN FEATURES ====================
+
+class ScheduledAdjustment(Base):
+    """Scheduled balance adjustments - recurring or one-time"""
+    __tablename__ = "scheduled_adjustments"
+    
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    amount = Column(Numeric(15, 2), nullable=False)  # Positive for credit, negative for debit
+    reason = Column(String, nullable=False)
+    scheduled_for = Column(DateTime(timezone=True), nullable=False, index=True)
+    recurrence = Column(String, default="ONCE")  # ONCE, DAILY, WEEKLY, MONTHLY, QUARTERLY
+    recurrence_end = Column(DateTime(timezone=True), nullable=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    status = Column(String, default="PENDING", nullable=False, index=True)  # PENDING, EXECUTED, FAILED, CANCELLED
+    executed_at = Column(DateTime(timezone=True), nullable=True)
+    last_executed = Column(DateTime(timezone=True), nullable=True)
+    error_message = Column(String, nullable=True)
+    cancellation_reason = Column(String, nullable=True)
+    notes = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+
+class ApprovalRequest(Base):
+    """Multi-admin approval workflow requests"""
+    __tablename__ = "approval_requests"
+    
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    action_type = Column(String, nullable=False, index=True)  # BALANCE_ADJUSTMENT, ADMIN_CREATION, etc
+    requested_by = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    data = Column(Text, nullable=False)  # JSON of action details
+    status = Column(String, default="PENDING", nullable=False, index=True)  # PENDING, APPROVED, REJECTED, EXPIRED
+    required_approvals = Column(Integer, default=2)
+    current_approvals = Column(Integer, default=0)
+    deadline = Column(DateTime(timezone=True), nullable=False)
+    approved_at = Column(DateTime(timezone=True), nullable=True)
+    rejected_at = Column(DateTime(timezone=True), nullable=True)
+    rejected_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    last_voted_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class ApprovalVote(Base):
+    """Individual approval votes on approval requests"""
+    __tablename__ = "approval_votes"
+    
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    request_id = Column(String, ForeignKey("approval_requests.id"), nullable=False, index=True)
+    voted_by = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    vote = Column(String, nullable=False)  # APPROVE or REJECT
+    comments = Column(String, nullable=True)
+    voted_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+# ==================== NORMALIZED PERMISSION STORAGE ====================
+
+class AdminPermissionOverride(Base):
+    """Normalized storage for granular permission overrides
+    
+    Instead of storing JSON in User.custom_permissions, store individual rows
+    This allows better querying and auditing of permission changes
+    """
+    __tablename__ = "admin_permission_overrides"
+    
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    admin_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    permission = Column(String, nullable=False, index=True)  # e.g., "perm:users:suspend"
+    action = Column(String, nullable=False)  # "GRANT" or "DENY"
+    granted_by = Column(Integer, ForeignKey("users.id"), nullable=False)  # Which admin granted this
+    reason = Column(String, nullable=True)  # Why this permission was granted/denied
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    expires_at = Column(DateTime(timezone=True), nullable=True)  # Optional: Permission expires
+    is_active = Column(Boolean, default=True, index=True)  # Soft delete
+
+
+class PermissionAuditLog(Base):
+    """Audit trail of all permission changes"""
+    __tablename__ = "permission_audit_logs"
+    
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    admin_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    permission = Column(String, nullable=False)
+    action = Column(String, nullable=False)  # GRANT, DENY, RESET
+    changed_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    old_value = Column(String, nullable=True)  # Previous permission state
+    new_value = Column(String, nullable=True)  # New permission state
+    reason = Column(String, nullable=True)
+    ip_address = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+
+class RateLimitLog(Base):
+    """Rate limiting audit trail (for database backend)"""
+    __tablename__ = "rate_limit_logs"
+    
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    identifier = Column(String, nullable=False, index=True)  # user_id or IP address
+    identifier_type = Column(String, nullable=False)  # "user" or "ip"
+    endpoint = Column(String, nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+
+
+# ==================== UPDATE User MODEL ====================
+# Add these columns to User model if not already present:
+# custom_permissions = Column(Text, nullable=True)  # JSON of granted/denied permissions
+# is_suspended = Column(Boolean, default=False)  # Admin can suspend users
+# is_frozen = Column(Boolean, default=False)  # Admin can freeze accounts
+
+
 class FedNowTransaction(Base):
     """Federal Reserve FedNow transaction"""
     __tablename__ = "fednow_transactions"
@@ -1048,7 +1255,7 @@ class FraudScore(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     transaction_id = Column(Integer, ForeignKey("transactions.id"), nullable=False, index=True)
-    score = Column(Float, default=0.0, nullable=False)
+    score = Column(Numeric(5, 4), default=0.0, nullable=False)  # Numeric for score precision (0.0000 to 1.0000)
     risk_level = Column(String, nullable=False)  # low, medium, high, critical
     decision = Column(String, nullable=True)  # approve, challenge, block
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -1153,3 +1360,137 @@ class TokenBlacklist(Base):
     expires_at = Column(DateTime(timezone=True), nullable=False)  # Token expiration time from JWT
     
     user = relationship("User")
+
+
+# ===== ADMIN AUDIT LOG MODEL =====
+
+class AdminAuditLog(Base):
+    """
+    Audit log for all admin configuration changes.
+    Records every change to system settings for compliance.
+    """
+    __tablename__ = "admin_audit_logs"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    admin_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    action = Column(String, nullable=False, index=True)  # e.g., "update_setting", "rotate_api_keys", "toggle_maintenance_mode"
+    setting_name = Column(String, nullable=True)  # Name of setting changed
+    old_value = Column(String, nullable=True)  # Previous value
+    new_value = Column(String, nullable=True)  # New value
+    ip_address = Column(String, nullable=True)  # Admin's IP address
+    timestamp = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
+    
+    admin = relationship("User")
+
+
+# ===== BILL PAY MODELS =====
+
+class Biller(Base):
+    __tablename__ = "billers"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    biller_name = Column(String, nullable=False)
+    biller_type = Column(String, nullable=False)
+    processing_time_days = Column(Integer, default=1)
+    active = Column(Boolean, default=True)
+
+
+class Payee(Base):
+    __tablename__ = "payees"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False)
+    payee_name = Column(String, nullable=False)
+    payee_type = Column(String, nullable=False)
+    account_number = Column(String, nullable=False)
+    routing_number = Column(String, nullable=True)
+    address = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
+    status = Column(String, default="active")
+    last_payment_date = Column(DateTime, nullable=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class BillPayment(Base):
+    __tablename__ = "bill_payments"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False)
+    payee_id = Column(Integer, ForeignKey("payees.id"), nullable=False)
+    amount = Column(Float, nullable=False)
+    payment_date = Column(DateTime, nullable=False)
+    status = Column(String, default="scheduled")
+    memo = Column(String, nullable=True)
+    failure_reason = Column(String, nullable=True)
+    processed_at = Column(DateTime, nullable=True)
+    transaction_id = Column(Integer, ForeignKey("transactions.id"), nullable=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    retry_count = Column(Integer, default=0)
+    frequency = Column(String, nullable=True)
+    end_date = Column(DateTime, nullable=True)
+
+
+class PaymentReceipt(Base):
+    __tablename__ = "payment_receipts"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    payment_id = Column(Integer, ForeignKey("bill_payments.id"), nullable=False)
+    transaction_id = Column(Integer, ForeignKey("transactions.id"), nullable=False)
+    receipt_date = Column(DateTime, default=datetime.utcnow)
+    status = Column(String, default="generated")
+
+
+class PaymentFailureLog(Base):
+    __tablename__ = "payment_failure_logs"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    payment_id = Column(Integer, ForeignKey("bill_payments.id"), nullable=False)
+    failure_reason = Column(String, nullable=False)
+    failure_date = Column(DateTime, default=datetime.utcnow)
+    retry_count = Column(Integer, default=1)
+
+
+class PaymentSchedule(Base):
+    __tablename__ = "payment_schedules"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    account_id = Column(Integer, ForeignKey("accounts.id"), nullable=False)
+    payee_id = Column(Integer, ForeignKey("payees.id"), nullable=False)
+    amount = Column(Float, nullable=False)
+    frequency = Column(String, nullable=False)  # weekly, biweekly, monthly, quarterly, annual
+    start_date = Column(DateTime, nullable=False)
+    end_date = Column(DateTime, nullable=True)
+    status = Column(String, default="active")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class CheckImage(Base):
+    __tablename__ = "check_images"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    deposit_id = Column(Integer, ForeignKey("mobile_deposits.id"), nullable=False)
+    image_side = Column(String, nullable=False)  # "front" or "back"
+    image_data = Column(LargeBinary, nullable=False)
+    image_hash = Column(String, nullable=False)
+    image_size = Column(Integer, nullable=False)
+    upload_date = Column(DateTime, default=datetime.utcnow)
+
+
+class CheckOCRData(Base):
+    __tablename__ = "check_ocr_data"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    deposit_id = Column(Integer, ForeignKey("mobile_deposits.id"), nullable=False)
+    routing_number = Column(String, nullable=True)
+    account_number = Column(String, nullable=True)
+    check_number = Column(String, nullable=True)
+    amount = Column(Float, nullable=True)
+    date_field = Column(DateTime, nullable=True)
+    payee = Column(String, nullable=True)
+    extracted_at = Column(DateTime, default=datetime.utcnow)
+    confidence_score = Column(Float, nullable=True)
+
+
+OCRResult = CheckOCRData

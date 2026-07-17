@@ -27,17 +27,25 @@ user_templates = Jinja2Templates(directory=str(BASE_PATH / "private/user"))
 
 @private_router.get("/dashboard")
 async def dashboard(request: Request, current_user: User = Depends(get_current_user)):
-    """Renders the user's main dashboard with data from the database."""
-    # Prevent admin users from accessing the user dashboard
-    if current_user.is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Admins must use the admin dashboard"
-        )
+    """
+    Renders the appropriate dashboard based on user type - NO REDIRECT.
     
-    # In a real app, you'd fetch more complex user-specific data from other tables.
-    # The relationships (accounts, investments, loans) are now eagerly loaded via the dependency.
+    CASE 1: Regular User → Renders private/user/dashboard.html
+    CASE 2: Admin User → Directly serves private/admin/admin_dashboard_hub.html (no 302 redirect)
     
+    ⚠️ CRITICAL: This route does NOT redirect to avoid 302 loops.
+    The frontend login flow already knows user type from is_admin flag.
+    """
+    # Check if admin - serve admin dashboard directly (no redirect)
+    if current_user.is_admin or current_user.email == "admin@admin.com":
+        # Serve admin dashboard directly without HTTP redirect
+        admin_file = BASE_PATH / "private/admin/admin_dashboard_hub.html"
+        if not admin_file.exists():
+            raise HTTPException(status_code=404, detail="Admin dashboard not found")
+        return FileResponse(admin_file, media_type="text/html")
+    
+    # Regular user - serve user dashboard
+    # Load their financial data
     total_balance = sum(account.balance for account in current_user.accounts)
     total_investments = sum(investment.amount for investment in current_user.investments)
     total_loans = sum(loan.amount for loan in current_user.loans)
@@ -48,7 +56,6 @@ async def dashboard(request: Request, current_user: User = Depends(get_current_u
         "investments_value": total_investments,
         "outstanding_loans": total_loans
     }
-    # Include verification and account info so templates can show KYC state
     user_data["is_verified"] = getattr(current_user, "is_verified", False)
     user_data["account_number"] = getattr(current_user, "account_number", None)
     return user_templates.TemplateResponse("dashboard.html", {"request": request, "user": user_data})
@@ -114,18 +121,87 @@ async def account_settings_page(request: Request, current_user: User = Depends(g
     """Renders the user's account settings page."""
     return user_templates.TemplateResponse("account.html", {"request": request, "user": current_user})
 
+@private_router.get("/settings")
+async def settings_page(request: Request, current_user: User = Depends(get_current_user)):
+    """Renders the user's settings page."""
+    return user_templates.TemplateResponse("settings.html", {"request": request, "user": current_user})
+
+@private_router.get("/notifications")
+async def notifications_page(request: Request, current_user: User = Depends(get_current_user)):
+    """Renders the user's notifications page."""
+    return user_templates.TemplateResponse("notifications.html", {"request": request, "user": current_user})
+
+@private_router.get("/security")
+async def security_page(request: Request, current_user: User = Depends(get_current_user)):
+    """Renders the user's security page."""
+    return user_templates.TemplateResponse("security.html", {"request": request, "user": current_user})
+
+@private_router.get("/alerts")
+async def alerts_page(request: Request, current_user: User = Depends(get_current_user)):
+    """Renders the user's alerts page."""
+    return user_templates.TemplateResponse("alerts.html", {"request": request, "user": current_user})
+
+@private_router.get("/support")
+async def support_page(request: Request, current_user: User = Depends(get_current_user)):
+    """Renders the user's support/contact page."""
+    return user_templates.TemplateResponse("contact.html", {"request": request, "user": current_user})
+
+@private_router.get("/transactions")
+async def transactions_page(request: Request, current_user: User = Depends(get_current_user)):
+    """Renders the user's transactions page."""
+    return user_templates.TemplateResponse("transactions.html", {"request": request, "user": current_user})
+
 @private_router.get("/admin/dashboard", tags=["Admin UI"])
 async def admin_dashboard(request: Request, current_user: User = Depends(get_current_admin_user)):
-    """Serves the admin dashboard HTML file."""
+    """
+    Serves the unified admin dashboard with role-based access control.
+    Shows/hides sections based on user's admin_role (STANDARD, ADMIN, TREASURY, SUPER_ADMIN).
+    """
     if not current_user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     if not current_user.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
-    # Serve the standalone HTML file
+    
+    # Serve the admin dashboard hub with role information
     admin_file = BASE_PATH / "private/admin/admin_dashboard_hub.html"
     if not admin_file.exists():
         raise HTTPException(status_code=404, detail=f"Admin dashboard not found at {admin_file}")
     return FileResponse(admin_file, media_type="text/html")
+
+@private_router.get("/admin/user-info", tags=["Admin API"])
+async def get_admin_user_info(current_user: User = Depends(get_current_admin_user)):
+    """API endpoint to get admin user info for frontend role-based access control."""
+    if not current_user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+    if not current_user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+    
+    admin_role = (getattr(current_user, 'admin_role', None) or 'STANDARD').upper()
+    
+    return {
+        "success": True,
+        "user": {
+            "id": current_user.id,
+            "email": current_user.email,
+            "full_name": current_user.full_name,
+            "is_admin": current_user.is_admin,
+            "admin_role": admin_role,
+            "kyc_status": current_user.kyc_status,
+            "created_at": current_user.created_at.isoformat() if current_user.created_at else None
+        },
+        "permissions": {
+            "is_standard_admin": admin_role == "STANDARD",
+            "is_admin": admin_role == "ADMIN",
+            "is_treasury_admin": admin_role == "TREASURY",
+            "is_super_admin": admin_role == "SUPER_ADMIN",
+            "can_manage_users": admin_role in ["ADMIN", "SUPER_ADMIN"],
+            "can_manage_treasury": admin_role in ["TREASURY", "SUPER_ADMIN"],
+            "can_manage_admins": admin_role == "SUPER_ADMIN",
+            "can_access_advanced_search": admin_role in ["ADMIN", "SUPER_ADMIN"],
+            "can_access_bulk_operations": admin_role in ["ADMIN", "SUPER_ADMIN"],
+            "can_access_management_panel": admin_role == "SUPER_ADMIN"
+        }
+    }
 
 @private_router.get("/admin/admin_users.html", tags=["Admin UI"])
 async def admin_users_page(request: Request, current_user: User = Depends(get_current_admin_user)):
@@ -181,17 +257,38 @@ async def admin_fund_page_route(request: Request, current_user: User = Depends(g
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
     return FileResponse(BASE_PATH / "private/admin/admin_fund.html", media_type="text/html")
 
-@private_router.get("/admin/reports", tags=["Admin UI"])
-async def admin_reports_page_route(request: Request, current_user: User = Depends(get_current_admin_user)):
-    if not current_user.is_admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
-    return FileResponse(BASE_PATH / "private/admin/admin_reports.html", media_type="text/html")
 
-@private_router.get("/admin/settings", tags=["Admin UI"])
-async def admin_settings_page_route(request: Request, current_user: User = Depends(get_current_admin_user)):
+# --- Admin Operations & Control Pages ---
+
+@private_router.get("/admin/advanced_search", tags=["Admin UI"])
+async def admin_advanced_search_page(request: Request, current_user: User = Depends(get_current_admin_user)):
     if not current_user.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
-    return FileResponse(BASE_PATH / "private/admin/admin_settings.html", media_type="text/html")
+    return FileResponse(BASE_PATH / "private/admin/admin_advanced_search.html", media_type="text/html")
+
+@private_router.get("/admin/management_panel", tags=["Admin UI"])
+async def admin_management_panel_page(request: Request, current_user: User = Depends(get_current_admin_user)):
+    if not current_user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+    return FileResponse(BASE_PATH / "private/admin/admin_management_panel.html", media_type="text/html")
+
+@private_router.get("/admin/mfa_setup", tags=["Admin UI"])
+async def admin_mfa_setup_page(request: Request, current_user: User = Depends(get_current_admin_user)):
+    if not current_user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+    return FileResponse(BASE_PATH / "private/admin/admin_mfa_setup.html", media_type="text/html")
+
+@private_router.get("/admin/bulk_operations", tags=["Admin UI"])
+async def admin_bulk_operations_page(request: Request, current_user: User = Depends(get_current_admin_user)):
+    if not current_user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+    return FileResponse(BASE_PATH / "private/admin/admin_bulk_operations.html", media_type="text/html")
+
+@private_router.get("/admin/activity_dashboard", tags=["Admin UI"])
+async def admin_activity_dashboard_page(request: Request, current_user: User = Depends(get_current_admin_user)):
+    if not current_user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
+    return FileResponse(BASE_PATH / "private/admin/admin_activity_dashboard.html", media_type="text/html")
 
 @private_router.get("/admin/{page}", tags=["Admin UI"])
 async def admin_generic_page(page: str, request: Request, current_user: User = Depends(get_current_admin_user)):

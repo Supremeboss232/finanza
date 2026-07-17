@@ -1,0 +1,1199 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MFA/2FA Setup - Finanza Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: white !important;
+        }
+
+        .navbar a {
+            color: rgba(255, 255, 255, 0.8) !important;
+            transition: all 0.3s ease;
+        }
+
+        .navbar a:hover {
+            color: white !important;
+        }
+
+        .container-fluid {
+            padding: 30px;
+        }
+
+        .mfa-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .mfa-header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .mfa-header p {
+            margin: 10px 0 0;
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            color: #999;
+            margin-top: 10px;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .nav-tabs {
+            border-bottom: 2px solid white;
+            margin-bottom: 30px;
+        }
+
+        .nav-tabs .nav-link {
+            color: white;
+            border: none;
+            border-bottom: 3px solid transparent;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            padding: 15px 20px;
+        }
+
+        .nav-tabs .nav-link:hover {
+            color: white;
+            border-bottom-color: white;
+        }
+
+        .nav-tabs .nav-link.active {
+            background: none;
+            color: white;
+            border-bottom-color: white;
+        }
+
+        .card {
+            background: white;
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px 10px 0 0;
+            padding: 20px;
+            font-weight: 600;
+        }
+
+        .card-body {
+            padding: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: block;
+            color: #333;
+        }
+
+        .form-control, .form-select {
+            border: 1px solid #ddd;
+            padding: 12px 15px;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #ddd;
+            color: #333;
+        }
+
+        .btn-success {
+            background: #2ecc71;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+            color: white;
+        }
+
+        .btn-sm {
+            padding: 8px 12px;
+            font-size: 0.9rem;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        /* TOTP Setup */
+        .totp-container {
+            text-align: center;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .qr-code {
+            width: 250px;
+            height: 250px;
+            margin: 0 auto 20px;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: white;
+        }
+
+        .manual-code {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 1.2rem;
+            letter-spacing: 2px;
+            word-break: break-all;
+            margin: 15px 0;
+            user-select: all;
+        }
+
+        .code-input {
+            font-size: 1.5rem;
+            text-align: center;
+            letter-spacing: 5px;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* Backup Codes */
+        .backup-codes-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .backup-code {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            padding: 12px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            word-break: break-all;
+            transition: all 0.3s ease;
+        }
+
+        .backup-code:hover {
+            background: #f0f0f0;
+            border-color: #667eea;
+        }
+
+        .backup-code.used {
+            opacity: 0.5;
+            text-decoration: line-through;
+            color: #999;
+        }
+
+        /* Admin MFA Status */
+        .mfa-item {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #eee;
+            transition: all 0.3s ease;
+        }
+
+        .mfa-item:hover {
+            background: #f0f0f0;
+            border-color: #667eea;
+        }
+
+        .mfa-info {
+            flex: 1;
+        }
+
+        .mfa-email {
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1rem;
+        }
+
+        .mfa-status {
+            color: #999;
+            margin-top: 8px;
+            font-size: 0.9rem;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin: 0 5px;
+        }
+
+        .status-enabled {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-disabled {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .mfa-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: white;
+        }
+
+        .search-box {
+            margin-bottom: 20px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        .loading {
+            text-align: center;
+            color: #999;
+            padding: 40px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .step {
+            flex: 1;
+            text-align: center;
+            position: relative;
+        }
+
+        .step-number {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            line-height: 40px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .step.active .step-number {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 0 0 8px rgba(102, 126, 234, 0.2);
+        }
+
+        .step.completed .step-number {
+            background: #2ecc71;
+        }
+
+        .step-label {
+            font-size: 0.9rem;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .step.active .step-label {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .step-line {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            right: -50%;
+            height: 2px;
+            background: #ddd;
+            z-index: -1;
+        }
+
+        .step.completed .step-line {
+            background: #2ecc71;
+        }
+
+        @media (max-width: 768px) {
+            .mfa-header h1 {
+                font-size: 1.8rem;
+            }
+
+            .mfa-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .mfa-actions {
+                width: 100%;
+                margin-top: 15px;
+            }
+
+            .stats-container {
+                grid-template-columns: 1fr;
+            }
+
+            .backup-codes-list {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+
+    <script src="/static/js/toast-utils.js"></script>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/user/dashboard">
+                <i class="fas fa-lock"></i> Finanza Admin
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/user/admin/users">Admin Users</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/user/admin/management_panel">Admin Management</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/user/admin/advanced_search">Advanced Search</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/user/dashboard">Dashboard</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container-fluid">
+        <!-- MFA Header -->
+        <div class="mfa-header">
+            <h1>🔐 MFA/2FA Setup</h1>
+            <p>Setup and manage two-factor authentication for admin accounts</p>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-number" id="totalAdmins">0</div>
+                <div class="stat-label">Total Admins</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="mfaEnabled">0</div>
+                <div class="stat-label">MFA Enabled</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="mfaDisabled">0</div>
+                <div class="stat-label">MFA Disabled</div>
+            </div>
+        </div>
+
+        <!-- Tab Navigation -->
+        <ul class="nav nav-tabs" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" data-bs-toggle="tab" href="#setupTab" role="tab">
+                    <i class="fas fa-cog"></i> Setup MFA
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#statusTab" role="tab">
+                    <i class="fas fa-users"></i> Admin MFA Status
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#backupCodesTab" role="tab">
+                    <i class="fas fa-key"></i> Backup Codes Management
+                </a>
+            </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content">
+            <!-- Setup MFA Tab -->
+            <div id="setupTab" class="tab-pane fade show active" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-cog"></i> Setup TOTP 2FA
+                    </div>
+                    <div class="card-body">
+                        <div id="setupAlert" class="alert" style="display:none;"></div>
+
+                        <!-- Step Indicator -->
+                        <div class="step-indicator">
+                            <div class="step active" id="step1">
+                                <div class="step-number">1</div>
+                                <div class="step-label">Scan QR Code</div>
+                                <div class="step-line"></div>
+                            </div>
+                            <div class="step" id="step2">
+                                <div class="step-number">2</div>
+                                <div class="step-label">Enter Code</div>
+                                <div class="step-line"></div>
+                            </div>
+                            <div class="step" id="step3">
+                                <div class="step-number">3</div>
+                                <div class="step-label">Save Codes</div>
+                            </div>
+                        </div>
+
+                        <!-- Step 1: QR Code -->
+                        <div id="step1Content" style="display:block;">
+                            <h5 class="mb-3">Step 1: Scan QR Code</h5>
+                            <p>Use an authenticator app like Google Authenticator, Microsoft Authenticator, or Authy to scan this QR code:</p>
+
+                            <div class="totp-container">
+                                <div id="qrCode" class="qr-code">
+                                    <p style="padding-top:100px; color:#999;">QR Code will appear here</p>
+                                </div>
+                                <p style="color:#666; margin-bottom:0;">Can't scan? Enter this code manually:</p>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Manual Entry Code</label>
+                                <div class="manual-code" id="manualCode">XXXX XXXX XXXX XXXX</div>
+                                <small class="text-muted">Select and copy to add manually to your authenticator</small>
+                            </div>
+
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i> 
+                                <strong>Recommended Apps:</strong> Google Authenticator, Microsoft Authenticator, Authy, LastPass Authenticator
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Verify Code -->
+                        <div id="step2Content" style="display:none;">
+                            <h5 class="mb-3">Step 2: Verify Your Authenticator</h5>
+                            <p>Enter the 6-digit code from your authenticator app to verify setup:</p>
+
+                            <div class="form-group">
+                                <label>6-Digit Verification Code</label>
+                                <input type="text" id="verificationCode" class="form-control code-input" placeholder="000000" maxlength="6" inputmode="numeric" />
+                            </div>
+
+                            <button class="btn btn-primary" onclick="verifyTOTPCode()">
+                                <i class="fas fa-check"></i> Verify Code
+                            </button>
+                            <button class="btn btn-secondary" onclick="goBackToStep1()">
+                                <i class="fas fa-arrow-left"></i> Back
+                            </button>
+                        </div>
+
+                        <!-- Step 3: Backup Codes -->
+                        <div id="step3Content" style="display:none;">
+                            <h5 class="mb-3">Step 3: Save Backup Codes</h5>
+                            <p>Save these backup codes in a secure location. Each code can be used once if you lose access to your authenticator:</p>
+
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle"></i> 
+                                <strong>Important:</strong> Write down or save these codes in a secure place. You cannot see them again.
+                            </div>
+
+                            <div class="backup-codes-list" id="backupCodesList">
+                                <p class="empty-state">Loading backup codes...</p>
+                            </div>
+
+                            <div style="margin-top: 20px; display: flex; gap: 10px;">
+                                <button class="btn btn-primary" onclick="downloadBackupCodes()">
+                                    <i class="fas fa-download"></i> Download Codes
+                                </button>
+                                <button class="btn btn-success" onclick="finalizeMFASetup()">
+                                    <i class="fas fa-check-circle"></i> Setup Complete
+                                </button>
+                            </div>
+                        </div>
+
+                        <button class="btn btn-primary" onclick="initiateMFASetup()" id="startBtn" style="margin-top:20px;">
+                            <i class="fas fa-shield-alt"></i> Start MFA Setup
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin MFA Status Tab -->
+            <div id="statusTab" class="tab-pane fade" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-users"></i> Admin MFA Status
+                    </div>
+                    <div class="card-body">
+                        <div class="search-box">
+                            <input type="text" id="searchAdmin" placeholder="Search by email..." onkeyup="filterAdmins()" />
+                        </div>
+
+                        <div id="adminList">
+                            <p class="loading"><i class="fas fa-spinner fa-spin"></i> Loading admin MFA status...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Backup Codes Management Tab -->
+            <div id="backupCodesTab" class="tab-pane fade" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-key"></i> Backup Codes Management
+                    </div>
+                    <div class="card-body">
+                        <div id="backupAlert" class="alert" style="display:none;"></div>
+
+                        <div class="form-group">
+                            <label>Select Admin</label>
+                            <select id="selectAdmin" class="form-control" onchange="loadAdminBackupCodes()">
+                                <option value="">Choose an admin...</option>
+                            </select>
+                        </div>
+
+                        <div id="backupCodesContent" style="display:none;">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i> 
+                                Manage backup codes for the selected admin
+                            </div>
+
+                            <div class="admin-info" style="background: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                                <p><strong>Admin Email:</strong> <span id="adminEmail"></span></p>
+                                <p style="margin-bottom:0;"><strong>MFA Status:</strong> <span id="mfaStatus"></span></p>
+                            </div>
+
+                            <div class="backup-codes-list" id="adminBackupCodes">
+                                <p class="empty-state">Loading backup codes...</p>
+                            </div>
+
+                            <div style="margin-top: 20px; display: flex; gap: 10px;">
+                                <button class="btn btn-primary" onclick="regenerateBackupCodes()">
+                                    <i class="fas fa-sync-alt"></i> Regenerate Codes
+                                </button>
+                                <button class="btn btn-danger" onclick="disableMFAForAdmin()">
+                                    <i class="fas fa-ban"></i> Disable MFA
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- QRCode Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <!-- MFA Setup Script -->
+    <script>
+        const API_BASE = '/api/admin/advanced';
+        let currentSetupSession = null;
+        let backupCodesGenerated = [];
+        let selectedAdmin = null;
+
+        // Get authentication token
+        function getAuthToken() {
+            return localStorage.getItem('token') || 
+                   localStorage.getItem('access_token') || 
+                   localStorage.getItem('auth_token') || '';
+        }
+
+        // Show alert messages
+        function showAlert(elementId, message, type) {
+            const alert = document.getElementById(elementId);
+            if (alert) {
+                alert.textContent = message;
+                alert.className = `alert alert-${type}`;
+                alert.style.display = 'block';
+                if (type === 'success') {
+                    setTimeout(() => alert.style.display = 'none', 4000);
+                }
+            }
+        }
+
+        // Initiate MFA Setup
+        async function initiateMFASetup() {
+            try {
+                const response = await fetch(`${API_BASE}/mfa/setup-initiate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getAuthToken()}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                currentSetupSession = data.session_id;
+
+                // Display QR Code
+                document.getElementById('qrCode').innerHTML = '';
+                new QRCode(document.getElementById('qrCode'), {
+                    text: data.totp_uri,
+                    width: 250,
+                    height: 250,
+                    colorDark: '#667eea',
+                    colorLight: '#ffffff',
+                });
+
+                // Display Manual Code
+                document.getElementById('manualCode').textContent = data.secret.match(/.{1,4}/g).join(' ');
+
+                // Hide start button and show step 1
+                document.getElementById('startBtn').style.display = 'none';
+                document.getElementById('step1Content').style.display = 'block';
+                document.getElementById('step1').classList.add('active');
+                
+                showAlert('setupAlert', '✓ QR Code generated! Scan it with your authenticator app.', 'success');
+            } catch (error) {
+                showAlert('setupAlert', 'Error: ' + error.message, 'danger');
+            }
+        }
+
+        // Verify TOTP Code
+        async function verifyTOTPCode() {
+            const code = document.getElementById('verificationCode').value.replace(/\s/g, '');
+
+            if (code.length !== 6 || isNaN(code)) {
+                showAlert('setupAlert', 'Please enter a valid 6-digit code', 'danger');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/mfa/verify-totp`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getAuthToken()}`
+                    },
+                    body: JSON.stringify({
+                        session_id: currentSetupSession,
+                        totp_code: code
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Invalid TOTP code');
+                }
+
+                const data = await response.json();
+                backupCodesGenerated = data.backup_codes;
+
+                // Move to Step 3
+                document.getElementById('step1Content').style.display = 'none';
+                document.getElementById('step2Content').style.display = 'none';
+                document.getElementById('step3Content').style.display = 'block';
+
+                // Update step indicator
+                document.getElementById('step1').classList.remove('active');
+                document.getElementById('step1').classList.add('completed');
+                document.getElementById('step2').classList.remove('active');
+                document.getElementById('step2').classList.add('completed');
+                document.getElementById('step3').classList.add('active');
+
+                // Display backup codes
+                displayBackupCodes(data.backup_codes);
+                showAlert('setupAlert', '✓ TOTP code verified! Save your backup codes.', 'success');
+            } catch (error) {
+                showAlert('setupAlert', 'Error: ' + error.message, 'danger');
+            }
+        }
+
+        // Display backup codes
+        function displayBackupCodes(codes) {
+            const container = document.getElementById('backupCodesList');
+            container.innerHTML = codes.map(code => 
+                `<div class="backup-code" onclick="copyToClipboard('${code}')" title="Click to copy">
+                    ${code}
+                </div>`
+            ).join('');
+        }
+
+        // Copy to clipboard
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text);
+            showAlert('setupAlert', '✓ Code copied to clipboard!', 'success');
+        }
+
+        // Download backup codes
+        function downloadBackupCodes() {
+            const content = 'Finanza Admin MFA Backup Codes\n' +
+                          '================================\n' +
+                          'Generated: ' + new Date().toLocaleString() + '\n' +
+                          'IMPORTANT: Keep these codes in a secure location!\n' +
+                          '================================\n\n' +
+                          backupCodesGenerated.join('\n');
+
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'mfa-backup-codes.txt';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            showAlert('setupAlert', '✓ Backup codes downloaded!', 'success');
+        }
+
+        // Finalize MFA Setup
+        async function finalizeMFASetup() {
+            try {
+                const response = await fetch(`${API_BASE}/mfa/setup-complete`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getAuthToken()}`
+                    },
+                    body: JSON.stringify({
+                        session_id: currentSetupSession
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to complete setup');
+                }
+
+                showAlert('setupAlert', '✓ MFA setup completed successfully! Your account is now protected.', 'success');
+                
+                // Reset setup
+                setTimeout(() => {
+                    location.reload();
+                }, 2000);
+            } catch (error) {
+                showAlert('setupAlert', 'Error: ' + error.message, 'danger');
+            }
+        }
+
+        // Go back to step 1
+        function goBackToStep1() {
+            document.getElementById('step1Content').style.display = 'block';
+            document.getElementById('step2Content').style.display = 'none';
+            document.getElementById('step2').classList.remove('active');
+            document.getElementById('verificationCode').value = '';
+        }
+
+        // Load admin MFA status
+        async function loadAdminMFAStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/mfa/admin-status`, {
+                    headers: { 
+                        'Authorization': `Bearer ${getAuthToken()}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                const adminList = document.getElementById('adminList');
+
+                if (data.admins && data.admins.length > 0) {
+                    adminList.innerHTML = data.admins.map(admin => `
+                        <div class="mfa-item">
+                            <div class="mfa-info">
+                                <div class="mfa-email">${admin.email}</div>
+                                <div class="mfa-status">
+                                    <span class="status-badge ${admin.mfa_enabled ? 'status-enabled' : 'status-disabled'}">
+                                        ${admin.mfa_enabled ? '✓ MFA Enabled' : '✗ MFA Disabled'}
+                                    </span>
+                                    ${admin.mfa_enabled ? `<small>Setup: ${new Date(admin.mfa_setup_date).toLocaleDateString()}</small>` : ''}
+                                </div>
+                            </div>
+                            <div class="mfa-actions">
+                                ${!admin.mfa_enabled ? 
+                                    `<button class="btn btn-primary btn-sm" onclick="enableMFAForAdmin('${admin.id}', '${admin.email}')">
+                                        <i class="fas fa-shield-alt"></i> Enable MFA
+                                    </button>` :
+                                    `<button class="btn btn-warning btn-sm" onclick="resetMFAForAdmin('${admin.id}', '${admin.email}')">
+                                        <i class="fas fa-sync-alt"></i> Reset MFA
+                                    </button>`
+                                }
+                            </div>
+                        </div>
+                    `).join('');
+
+                    // Update stats
+                    document.getElementById('totalAdmins').textContent = data.admins.length;
+                    document.getElementById('mfaEnabled').textContent = data.admins.filter(a => a.mfa_enabled).length;
+                    document.getElementById('mfaDisabled').textContent = data.admins.filter(a => !a.mfa_enabled).length;
+                } else {
+                    adminList.innerHTML = '<p class="empty-state">No admins found</p>';
+                }
+            } catch (error) {
+                console.error('Error loading admin MFA status:', error);
+                document.getElementById('adminList').innerHTML = `<p class="empty-state" style="color:red;">Error loading data</p>`;
+            }
+        }
+
+        // Filter admins
+        function filterAdmins() {
+            const search = document.getElementById('searchAdmin').value.toLowerCase();
+            document.querySelectorAll('.mfa-item').forEach(item => {
+                const email = item.querySelector('.mfa-email').textContent.toLowerCase();
+                item.style.display = email.includes(search) ? 'block' : 'none';
+            });
+        }
+
+        // Load admin list for backup codes
+        async function loadAdminList() {
+            try {
+                const response = await fetch(`${API_BASE}/admin/list`, {
+                    headers: { 
+                        'Authorization': `Bearer ${getAuthToken()}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                const select = document.getElementById('selectAdmin');
+                select.innerHTML = '<option value="">Choose an admin...</option>' +
+                    data.admins.map(admin => 
+                        `<option value="${admin.id}">${admin.email}</option>`
+                    ).join('');
+            } catch (error) {
+                console.error('Error loading admin list:', error);
+            }
+        }
+
+        // Load admin backup codes
+        async function loadAdminBackupCodes() {
+            const adminId = document.getElementById('selectAdmin').value;
+            if (!adminId) {
+                document.getElementById('backupCodesContent').style.display = 'none';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/mfa/backup-codes/${adminId}`, {
+                    headers: { 
+                        'Authorization': `Bearer ${getAuthToken()}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                selectedAdmin = adminId;
+
+                // Display admin info
+                document.getElementById('adminEmail').textContent = data.admin_email;
+                document.getElementById('mfaStatus').innerHTML = data.mfa_enabled ? 
+                    '<span class="status-badge status-enabled">✓ Enabled</span>' :
+                    '<span class="status-badge status-disabled">✗ Disabled</span>';
+
+                // Display backup codes
+                const container = document.getElementById('adminBackupCodes');
+                if (data.backup_codes && data.backup_codes.length > 0) {
+                    container.innerHTML = data.backup_codes.map(code => 
+                        `<div class="backup-code ${code.used ? 'used' : ''}">
+                            ${code.code}
+                            <small style="display:block; margin-top:5px; color:#999;">
+                                ${code.used ? 'Used: ' + new Date(code.used_at).toLocaleDateString() : 'Unused'}
+                            </small>
+                        </div>`
+                    ).join('');
+                } else {
+                    container.innerHTML = '<p class="empty-state">No backup codes available</p>';
+                }
+
+                document.getElementById('backupCodesContent').style.display = 'block';
+            } catch (error) {
+                console.error('Error loading backup codes:', error);
+                showAlert('backupAlert', 'Error loading backup codes', 'danger');
+            }
+        }
+
+        // Regenerate backup codes
+        async function regenerateBackupCodes() {
+            if (!selectedAdmin) return;
+
+            if (!confirm('Regenerate backup codes? Old codes will be invalidated.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/mfa/backup-codes/${selectedAdmin}/regenerate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getAuthToken()}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to regenerate codes');
+                }
+
+                showAlert('backupAlert', '✓ Backup codes regenerated successfully!', 'success');
+                loadAdminBackupCodes();
+            } catch (error) {
+                showAlert('backupAlert', 'Error: ' + error.message, 'danger');
+            }
+        }
+
+        // Disable MFA for admin
+        async function disableMFAForAdmin() {
+            if (!selectedAdmin) return;
+
+            if (!confirm('Disable MFA for this admin? They will need to set it up again.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/mfa/disable/${selectedAdmin}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getAuthToken()}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to disable MFA');
+                }
+
+                showAlert('backupAlert', '✓ MFA disabled for this admin!', 'success');
+                loadAdminMFAStatus();
+                loadAdminBackupCodes();
+            } catch (error) {
+                showAlert('backupAlert', 'Error: ' + error.message, 'danger');
+            }
+        }
+
+        // Enable/Reset MFA for admin
+        async function enableMFAForAdmin(adminId, adminEmail) {
+            showAlert('setupAlert', `✓ MFA reset initiated for ${adminEmail}. They will receive an email with setup instructions.`, 'success');
+            loadAdminMFAStatus();
+        }
+
+        function resetMFAForAdmin(adminId, adminEmail) {
+            if (confirm(`Reset MFA for ${adminEmail}? They will need to set it up again.`)) {
+                enableMFAForAdmin(adminId, adminEmail);
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadAdminMFAStatus();
+            loadAdminList();
+        });
+    </script>
+</body>
+</html>

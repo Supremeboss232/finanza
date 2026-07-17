@@ -1,7 +1,7 @@
 # routers/bill_pay_api.py
 # API endpoints for bill pay services
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Path
 from sqlalchemy.orm import Session
 from datetime import datetime
 from typing import Optional
@@ -108,7 +108,7 @@ async def list_payees(
 
 @router.delete("/payees/{payee_id}")
 async def remove_payee(
-    payee_id: int = Query(..., gt=0),
+    payee_id: int = Path(..., gt=0),
     current_user_id: Optional[int] = None,
     db: Session = Depends(get_db)
 ):
@@ -164,7 +164,7 @@ async def get_supported_billers(
 
 @router.get("/billers/{biller_id}/delivery-estimate")
 async def estimate_delivery_date(
-    biller_id: int = Query(..., gt=0),
+    biller_id: int = Path(..., gt=0),
     payment_date: datetime = Query(...),
     db: Session = Depends(get_db)
 ):
@@ -263,7 +263,7 @@ async def get_payment_history(
 
 @router.get("/payments/{payment_id}")
 async def get_payment_details(
-    payment_id: int = Query(..., gt=0),
+    payment_id: int = Path(..., gt=0),
     db: Session = Depends(get_db)
 ):
     """Get details of a specific payment"""
@@ -297,7 +297,7 @@ async def get_payment_details(
 
 @router.delete("/payments/{payment_id}")
 async def cancel_payment(
-    payment_id: int = Query(..., gt=0),
+    payment_id: int = Path(..., gt=0),
     current_user_id: Optional[int] = None,
     db: Session = Depends(get_db)
 ):
@@ -438,7 +438,7 @@ async def list_payment_schedules(
 
 @router.delete("/schedules/{schedule_id}")
 async def cancel_payment_schedule(
-    schedule_id: int = Query(..., gt=0),
+    schedule_id: int = Path(..., gt=0),
     current_user_id: Optional[int] = None,
     db: Session = Depends(get_db)
 ):

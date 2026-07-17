@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 
 from models import User as DBUser, Account as DBAccount, Transaction as DBTransaction
+from balance_service_ledger import BalanceServiceLedger
 
 class AccountIDEnforcement:
     """Validates and enforces Account ID → User ID relationships"""
@@ -164,10 +165,12 @@ class AccountIDEnforcement:
         if user.kyc_status != "approved":
             return False, f"User KYC status is {user.kyc_status}, transactions require 'approved' status"
         
-        # Check sufficient balance for withdrawals
+        # Check sufficient balance for withdrawals using the ledger-derived
+        # balance, which is the source of truth for account funds.
         if transaction_amount < 0:  # Withdrawal
-            if account.balance + transaction_amount < 0:
-                return False, f"Insufficient balance. Have: {account.balance}, Need: {-transaction_amount}"
+            available_balance = await BalanceServiceLedger.get_user_balance(db, user_id)
+            if available_balance + transaction_amount < 0:
+                return False, f"Insufficient balance. Have: ${available_balance:.2f}, Need: ${-transaction_amount:.2f}"
         
         return True, ""
     

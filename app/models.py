@@ -1,7 +1,7 @@
 # models.py
 # SQLAlchemy models defining database tables (User, Admin, Transactions, KYC, etc.).
 
-from sqlalchemy import Boolean, Column, Integer, String, DateTime, ForeignKey, Float
+from sqlalchemy import Boolean, Column, Integer, String, DateTime, ForeignKey, Float, Numeric
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from .database import Base # Assuming database.py defines Base
@@ -32,7 +32,7 @@ class Account(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     account_number = Column(String, unique=True, index=True)
-    balance = Column(Float, default=0.0)
+    balance = Column(Numeric(15, 2), default=0.0)  # Numeric for financial precision
     currency = Column(String, default="USD")
     owner_id = Column(Integer, ForeignKey("users.id"))
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -47,7 +47,7 @@ class Transaction(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     account_id = Column(Integer, ForeignKey("accounts.id"))
-    amount = Column(Float)
+    amount = Column(Numeric(15, 2))  # Numeric for financial precision
     transaction_type = Column(String) # e.g., "deposit", "withdrawal", "transfer"
     status = Column(String, default="pending") # e.g., "pending", "completed", "failed"
     description = Column(String, nullable=True)
@@ -86,13 +86,13 @@ class Deposit(Base):
     __tablename__ = "deposits"
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
-    amount = Column(Float)  # Initial deposit amount
+    amount = Column(Numeric(15, 2))  # Initial deposit amount - Numeric for precision
     currency = Column(String, default="USD")
-    interest_rate = Column(Float, default=0.0)  # Annual interest rate
+    interest_rate = Column(Numeric(5, 4), default=0.0)  # Annual interest rate - Numeric for precision (e.g., 5.2500%)
     maturity_date = Column(DateTime(timezone=True), nullable=True)  # When deposit matures
-    balance = Column(Float)  # Current balance with interest
+    balance = Column(Numeric(15, 2))  # Current balance with interest - Numeric for precision
     status = Column(String, default="active")  # active, matured, withdrawn
-    withdrawal_amount = Column(Float, default=0.0)  # Amount withdrawn via ATM/Agent
+    withdrawal_amount = Column(Numeric(15, 2), default=0.0)  # Amount withdrawn via ATM/Agent - Numeric for precision
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     owner = relationship("User")
 
@@ -100,12 +100,12 @@ class Loan(Base):
     __tablename__ = "loans"
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
-    amount = Column(Float)  # Original loan amount
-    interest_rate = Column(Float)  # Annual interest rate
+    amount = Column(Numeric(15, 2))  # Original loan amount - Numeric for precision
+    interest_rate = Column(Numeric(5, 4))  # Annual interest rate - Numeric for precision (e.g., 5.2500%)
     term_months = Column(Integer)  # Loan term
-    monthly_payment = Column(Float, default=0.0)  # Monthly payment amount
-    remaining_balance = Column(Float)  # Current balance owed
-    paid_amount = Column(Float, default=0.0)  # Amount already paid
+    monthly_payment = Column(Numeric(15, 2), default=0.0)  # Monthly payment amount - Numeric for precision
+    remaining_balance = Column(Numeric(15, 2))  # Current balance owed - Numeric for precision
+    paid_amount = Column(Numeric(15, 2), default=0.0)  # Amount already paid - Numeric for precision
     status = Column(String, default="pending")  # pending, approved, active, completed, defaulted
     purpose = Column(String, nullable=True)  # Loan purpose
     approved_at = Column(DateTime(timezone=True), nullable=True)
@@ -117,10 +117,10 @@ class Investment(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
     investment_type = Column(String)  # Stock, Bond, Mutual Fund, Insurance, etc.
-    amount = Column(Float)  # Initial investment amount
-    current_value = Column(Float)  # Current portfolio value
-    interest_earned = Column(Float, default=0.0)  # Total interest/returns earned
-    annual_return_rate = Column(Float, default=0.0)  # Expected annual return %
+    amount = Column(Numeric(15, 2))  # Initial investment amount - Numeric for precision
+    current_value = Column(Numeric(15, 2))  # Current portfolio value - Numeric for precision
+    interest_earned = Column(Numeric(15, 2), default=0.0)  # Total interest/returns earned - Numeric for precision
+    annual_return_rate = Column(Numeric(5, 4), default=0.0)  # Expected annual return % - Numeric for precision (e.g., 5.2500%)
     status = Column(String, default="active")  # active, pending, matured, liquidated
     purpose = Column(String, nullable=True)  # Insurance, Retirement, Education, etc.
     maturity_date = Column(DateTime(timezone=True), nullable=True)
@@ -134,9 +134,9 @@ class Card(Base):
     card_number = Column(String, unique=True)
     card_type = Column(String)  # Debit, Credit, Savings
     expiry_date = Column(String)
-    balance = Column(Float, default=0.0)  # Card balance
-    credit_limit = Column(Float, default=5000.0)  # Credit limit if credit card
-    transaction_limit = Column(Float, default=10000.0)  # Daily/transaction limit
+    balance = Column(Numeric(15, 2), default=0.0)  # Card balance - Numeric for precision
+    credit_limit = Column(Numeric(15, 2), default=5000.0)  # Credit limit if credit card - Numeric for precision
+    transaction_limit = Column(Numeric(15, 2), default=10000.0)  # Daily/transaction limit - Numeric for precision
     status = Column(String, default="active")  # active, blocked, expired
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     owner = relationship("User")
@@ -153,7 +153,7 @@ class Transfer(Base):
     from_account_id = Column(Integer, ForeignKey("accounts.id"))
     recipient_id = Column(Integer, ForeignKey("recipients.id"), nullable=True)
     transfer_type = Column(String)  # e.g., "domestic", "international", "bill_pay"
-    amount = Column(Float)
+    amount = Column(Numeric(15, 2))  # Numeric for financial precision
     currency = Column(String, default="USD")
     status = Column(String, default="pending")  # e.g., "pending", "confirmed", "completed", "failed", "cancelled"
     scheduled_date = Column(DateTime(timezone=True), nullable=True)
@@ -267,8 +267,8 @@ class AlertPreference(Base):
     marketing_alerts = Column(Boolean, default=False)
     
     # Thresholds
-    large_transaction_threshold = Column(Float, default=5000.0)
-    low_balance_threshold = Column(Float, default=100.0)
+    large_transaction_threshold = Column(Numeric(15, 2), default=5000.0)  # Numeric for financial precision
+    low_balance_threshold = Column(Numeric(15, 2), default=100.0)  # Numeric for financial precision
     
     # Quiet hours
     quiet_hours_enabled = Column(Boolean, default=False)

@@ -1,9 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
     <title>Analytics & Reports - Finanza Bank</title>
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <meta name="description" content="Finanza Analytics &amp; Reports - view transaction trends, spending breakdowns, key metrics, and smart financial insights.">
     <link href="/img/favicon.ico" rel="icon">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,6 +16,8 @@
     <link href="/static/css/bootstrap.min.css" rel="stylesheet">
     <link href="/static/css/style.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+
+    <script src="/static/js/toast-utils.js"></script>
 </head>
 <body>
     <div id="spinner" class="show bg-white position-fixed translate-middle w-100 vh-100 top-50 start-50 d-flex align-items-center justify-content-center">
@@ -337,31 +340,10 @@
         }
 
         async function loadInsights() {
-            try {
-                const response = await fetch('/api/v1/reporting/insights', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    const insightsList = document.getElementById('insightsList');
-                    insightsList.innerHTML = '';
-
-                    if (data.insights && data.insights.length > 0) {
-                        data.insights.forEach(insight => {
-                            insightsList.innerHTML += `
-                                <div class="alert alert-info mb-2">
-                                    <strong>${insight.title}:</strong> ${insight.description}
-                                </div>
-                            `;
-                        });
-                    } else {
-                        insightsList.innerHTML = '<p class="text-muted">No insights available yet</p>';
-                    }
-                }
-            } catch (error) {
-                console.error('Error loading insights:', error);
-            }
+            // /api/v1/reporting/insights does not exist — show static placeholder
+            const insightsList = document.getElementById('insightsList');
+            insightsList.innerHTML =
+                '<p class="text-muted"><i class="fas fa-clock me-1"></i>Insights coming soon</p>';
         }
 
         function exportReport() {

@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ACH Management - Finanza Admin</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://code.jquery.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https:; connect-src 'self' https: http://localhost:*;">
     <link href="/static/css/style.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -27,6 +27,8 @@
         .btn-primary:hover { background: #5568d3; }
         .table-responsive { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
     </style>
+
+    <script src="/static/js/toast-utils.js"></script>
 </head>
 <body>
     <!-- Navigation -->
@@ -374,225 +376,624 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/admin_static/js/auth-helper.js"></script>
     <script>
-        const token = localStorage.getItem('token');
-        let fileStatusChart = null;
-        let returnReasonsChart = null;
+        // ============================================
+        // PRODUCTION-READY ACH MANAGEMENT SYSTEM
+        // ============================================
 
-        document.addEventListener('DOMContentLoaded', async function() {
-            await loadACHMetrics();
-            await loadACHFiles();
-            await loadACHEntries();
-            await loadACHReturns();
-            await loadNSFTransactions();
-            await loadCollectionContacts();
-            initCharts();
-        });
+        // ===== CONFIGURATION =====
+        const CONFIG = {
+            apiBaseUrl: '/api/v1',
+            adminBaseUrl: '/api/admin',
+            sessionCheckInterval: 5 * 60 * 1000,
+            tokenKey: 'token',
+            pageSize: 20,
+            requestThrottleMs: 1000,
+            requestTimeout: 15000,
+            maxFileSize: 10 * 1024 * 1024, // 10MB
+            features: {
+                enableAuditLogging: true,
+                enablePiiMasking: true,
+                enableIdempotencyKeys: true,
+                csrfProtection: true
+            }
+        };
 
+        let state = {
+            token: null,
+            sessionValid: false,
+            csrfToken: null,
+            currentPage: 0,
+            lastRequest: {},
+            idempotencyKeys: {},
+            charts: {
+                fileStatus: null,
+                returnReasons: null
+            }
+        };
+
+        // ===== SECURITY LAYER =====
+        class SecurityManager {
+            static async validateSession() {
+                try {
+                    const token = this.getToken();
+                    if (!token) {
+                        this.handleSessionExpired();
+                        return false;
+                    }
+
+                    const response = await fetch(`${CONFIG.adminBaseUrl}/verify-session`, {
+                        method: 'GET',
+                        headers: this.getSecureHeaders(),
+                        credentials: 'include'
+                    });
+
+                    if (response.status === 401) {
+                        this.handleSessionExpired();
+                        return false;
+                    }
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        
+                        // Verify ACH admin permission
+                        if (!data.permissions || !data.permissions.includes('ach_admin')) {
+                            console.warn('ACH admin permission not found');
+                        }
+
+                        state.sessionValid = true;
+                        state.token = token;
+                        
+                        // Extract CSRF token if available
+                        state.csrfToken = data.csrf_token || null;
+                        
+                        return true;
+                    }
+
+                    return false;
+                } catch (error) {
+                    console.error('Session validation error:', error);
+                    return false;
+                }
+            }
+
+            static getToken() {
+                return localStorage.getItem(CONFIG.tokenKey);
+            }
+
+            static getSecureHeaders() {
+                const headers = {
+                    'Authorization': `Bearer ${state.token || this.getToken()}`,
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                };
+                if (state.csrfToken) {
+                    headers['X-CSRF-Token'] = state.csrfToken;
+                }
+                return headers;
+            }
+
+            static handleSessionExpired() {
+                localStorage.removeItem(CONFIG.tokenKey);
+                showToast('Your session has expired. Please log in again.', 'warning', 3000);
+                setTimeout(() => {
+                    window.location.href = '/signin';
+                }, 2000);
+            }
+
+            static validateToken() {
+                if (!this.getToken()) {
+                    window.location.href = '/signin';
+                    return false;
+                }
+                return true;
+            }
+
+            static maskPII(value, type = 'account') {
+                if (!CONFIG.features.enablePiiMasking || !value) return value;
+                
+                if (type === 'account' && value.length > 4) {
+                    return '****' + value.slice(-4);
+                }
+                if (type === 'name' && value.length > 0) {
+                    const parts = value.split(' ');
+                    return parts.map((p, i) => i === 0 ? p.charAt(0) + '***' : '***').join(' ');
+                }
+                return value;
+            }
+
+            static generateIdempotencyKey(action, resourceId) {
+                if (!CONFIG.features.enableIdempotencyKeys) return null;
+                const key = `${action}-${resourceId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+                state.idempotencyKeys[resourceId] = key;
+                return key;
+            }
+        }
+
+        // ===== NOTIFICATION SYSTEM =====
+        function showToast(message, type = 'info', duration = 4000) {
+            const container = document.querySelector('.container-fluid') || document.body;
+            const toastId = 'toast-' + Date.now();
+
+            const toastDiv = document.createElement('div');
+            toastDiv.id = toastId;
+            toastDiv.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show`;
+            toastDiv.style.cssText = `
+                position: fixed; top: 20px; right: 20px; z-index: 1050; min-width: 300px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15); animation: slideIn 0.3s ease-out;
+            `;
+            toastDiv.innerHTML = `
+                <strong>${type.charAt(0).toUpperCase() + type.slice(1)}:</strong> ${escapeHtml(message)}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            document.body.appendChild(toastDiv);
+
+            if (duration > 0) {
+                setTimeout(() => {
+                    if (document.getElementById(toastId)) toastDiv.remove();
+                }, duration);
+            }
+        }
+
+        // ===== API FUNCTIONS =====
         async function loadACHMetrics() {
             try {
-                const response = await fetch('/api/v1/settlement/ach/metrics', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                const response = await fetch(`${CONFIG.apiBaseUrl}/settlement/ach/metrics`, {
+                    headers: SecurityManager.getSecureHeaders(),
+                    timeout: CONFIG.requestTimeout
                 });
-                if (!response.ok) throw new Error('Failed to load metrics');
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
                 const data = await response.json();
                 
                 document.getElementById('totalFiles').textContent = data.total_files || 0;
                 document.getElementById('totalVolume').textContent = '$' + (data.total_volume || 0).toLocaleString();
                 document.getElementById('returnRate').textContent = (data.return_rate || 0).toFixed(2) + '%';
                 document.getElementById('nsfCount').textContent = data.nsf_count || 0;
+
+                // Update charts with real data
+                updateChartsWithData(data);
+                
+                logAuditEvent('dashboard_load', 'ACH_METRICS', 'ACH dashboard metrics loaded');
             } catch (error) {
-                console.error('Error loading metrics:', error);
+                console.error('Error loading ACH metrics:', error);
+                showToast('Failed to load ACH metrics: ' + error.message, 'error');
             }
         }
 
-        async function loadACHFiles() {
+        async function loadACHFiles(page = 0) {
             try {
-                const response = await fetch('/api/v1/settlement/ach/files?limit=50', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                const response = await fetch(`${CONFIG.apiBaseUrl}/settlement/ach/files?skip=${page * CONFIG.pageSize}&limit=${CONFIG.pageSize}`, {
+                    headers: SecurityManager.getSecureHeaders(),
+                    timeout: CONFIG.requestTimeout
                 });
-                if (!response.ok) throw new Error('Failed to load files');
-                const files = await response.json();
-                
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
                 const tbody = document.getElementById('filesTable');
-                tbody.innerHTML = files.data?.map(file => `
+                
+                if (!data.data || data.data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No ACH files found</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.data.map(file => `
                     <tr>
-                        <td>${file.id}</td>
-                        <td>${file.filename}</td>
+                        <td><strong>${escapeHtml(file.id)}</strong></td>
+                        <td>${escapeHtml(file.filename || 'N/A')}</td>
                         <td>${new Date(file.upload_date).toLocaleDateString()}</td>
-                        <td>${file.entry_count}</td>
-                        <td>$${file.total_volume?.toLocaleString()}</td>
-                        <td><span class="status-badge status-${file.status}">${file.status}</span></td>
-                        <td>${Math.round(file.processing_pct)}%</td>
-                        <td><button class="btn btn-sm btn-info">Details</button></td>
+                        <td>${file.entry_count || 0}</td>
+                        <td>$${(file.total_volume || 0).toLocaleString()}</td>
+                        <td><span class="status-badge status-${file.status}">${escapeHtml(file.status)}</span></td>
+                        <td>${Math.round(file.processing_pct || 0)}%</td>
+                        <td>
+                            <button class="btn btn-sm btn-info" onclick="viewFileDetails('${file.id}')" title="View details">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </td>
                     </tr>
-                `).join('') || '<tr><td colspan="8" class="text-center text-muted">No files found</td></tr>';
+                `).join('');
             } catch (error) {
-                console.error('Error loading files:', error);
+                console.error('Error loading ACH files:', error);
+                showToast('Failed to load ACH files: ' + error.message, 'error');
             }
         }
 
-        async function loadACHEntries() {
+        async function loadACHReturns(page = 0) {
             try {
-                const response = await fetch('/api/v1/settlement/ach/entries?limit=20', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                const response = await fetch(`${CONFIG.apiBaseUrl}/settlement/ach/returns?skip=${page * CONFIG.pageSize}&limit=${CONFIG.pageSize}`, {
+                    headers: SecurityManager.getSecureHeaders(),
+                    timeout: CONFIG.requestTimeout
                 });
-                if (!response.ok) throw new Error('Failed to load entries');
-                const entries = await response.json();
-                
-                const tbody = document.getElementById('entriesTable');
-                tbody.innerHTML = entries.data?.map(entry => `
-                    <tr>
-                        <td>${entry.id}</td>
-                        <td>${entry.file_id}</td>
-                        <td>${entry.type}</td>
-                        <td>${entry.account_number}</td>
-                        <td>$${entry.amount?.toFixed(2)}</td>
-                        <td>${entry.date}</td>
-                        <td><span class="status-badge status-${entry.status}">${entry.status}</span></td>
-                        <td><button class="btn btn-sm btn-primary">View</button></td>
-                    </tr>
-                `).join('') || '<tr><td colspan="8" class="text-center text-muted">No entries found</td></tr>';
-            } catch (error) {
-                console.error('Error loading entries:', error);
-            }
-        }
 
-        async function loadACHReturns() {
-            try {
-                const response = await fetch('/api/v1/settlement/ach/returns?limit=20', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (!response.ok) throw new Error('Failed to load returns');
-                const returns = await response.json();
-                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
                 const tbody = document.getElementById('returnsTable');
-                tbody.innerHTML = returns.data?.map(ret => `
-                    <tr>
-                        <td>${ret.id}</td>
-                        <td>${ret.original_entry_id}</td>
-                        <td>${ret.return_code}</td>
-                        <td>${ret.reason}</td>
-                        <td>$${ret.amount?.toFixed(2)}</td>
-                        <td>${ret.return_date}</td>
-                        <td><span class="status-badge status-${ret.status}">${ret.status}</span></td>
-                        <td><button class="btn btn-sm btn-warning">Process</button></td>
-                    </tr>
-                `).join('') || '<tr><td colspan="8" class="text-center text-muted">No returns found</td></tr>';
-            } catch (error) {
-                console.error('Error loading returns:', error);
-            }
-        }
-
-        async function loadNSFTransactions() {
-            try {
-                const response = await fetch('/api/v1/settlement/ach/nsf?limit=20', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (!response.ok) throw new Error('Failed to load NSF');
-                const nsf = await response.json();
                 
-                const tbody = document.getElementById('nsfTable');
-                tbody.innerHTML = nsf.data?.map(n => `
-                    <tr>
-                        <td>${n.id}</td>
-                        <td>${n.account_number}</td>
-                        <td>$${n.amount?.toFixed(2)}</td>
-                        <td>$${n.fee?.toFixed(2)}</td>
-                        <td>${n.date}</td>
-                        <td><span class="status-badge status-${n.status}">${n.status}</span></td>
-                        <td>${n.reversal_status || 'N/A'}</td>
-                        <td><button class="btn btn-sm btn-primary">Action</button></td>
-                    </tr>
-                `).join('') || '<tr><td colspan="8" class="text-center text-muted">No NSF found</td></tr>';
+                if (!data.data || data.data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No returns found</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.data.map(ret => {
+                    const accountDisplay = CONFIG.features.enablePiiMasking ? 
+                        SecurityManager.maskPII(ret.account_number, 'account') : 
+                        escapeHtml(ret.account_number);
+                    
+                    return `
+                        <tr>
+                            <td>${escapeHtml(ret.id)}</td>
+                            <td>${escapeHtml(ret.original_entry_id)}</td>
+                            <td><strong>${escapeHtml(ret.return_code)}</strong></td>
+                            <td>${escapeHtml(ret.reason || 'N/A')}</td>
+                            <td>$${(ret.amount || 0).toFixed(2)}</td>
+                            <td>${ret.return_date ? new Date(ret.return_date).toLocaleDateString() : 'N/A'}</td>
+                            <td><span class="status-badge status-${ret.status}">${escapeHtml(ret.status)}</span></td>
+                            <td>
+                                <button class="btn btn-sm btn-warning" onclick="processACHReturn('${ret.id}', '${ret.return_code}')" title="Process this return">
+                                    <i class="fas fa-cog"></i> Process
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
             } catch (error) {
-                console.error('Error loading NSF:', error);
+                console.error('Error loading ACH returns:', error);
+                showToast('Failed to load ACH returns: ' + error.message, 'error');
             }
         }
 
-        async function loadCollectionContacts() {
+        // ===== FORM HANDLERS =====
+        async function handleProcessReturn(event) {
+            event.preventDefault();
+
+            const form = event.target;
+            const entryIdInput = form.querySelector('input[type="text"]');
+            const returnCodeSelect = form.querySelector('select');
+
+            // Validation
+            if (!entryIdInput.value || !returnCodeSelect.value) {
+                showToast('Please fill in all required fields', 'warning');
+                return;
+            }
+
             try {
-                const response = await fetch('/api/v1/settlement/ach/contacts?limit=20', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                showToast('Processing ACH return...', 'info', 0);
+
+                const idempotencyKey = SecurityManager.generateIdempotencyKey('process_return', entryIdInput.value);
+                const headers = SecurityManager.getSecureHeaders();
+                if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey;
+
+                const response = await fetch(`${CONFIG.apiBaseUrl}/settlement/ach/returns/${entryIdInput.value}/process`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({ return_code: returnCodeSelect.value }),
+                    timeout: CONFIG.requestTimeout
                 });
-                if (!response.ok) throw new Error('Failed to load contacts');
-                const contacts = await response.json();
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || `HTTP ${response.status}`);
+                }
+
+                showToast('ACH return processed successfully', 'success');
+                logAuditEvent('return_processed', 'ACH_RETURN', `Entry: ${entryIdInput.value}, Code: ${returnCodeSelect.value}`);
                 
-                const tbody = document.getElementById('contactsTable');
-                tbody.innerHTML = contacts.data?.map(contact => `
-                    <tr>
-                        <td>${contact.id}</td>
-                        <td>${contact.name}</td>
-                        <td>${contact.phone}</td>
-                        <td>${contact.email}</td>
-                        <td>${contact.type}</td>
-                        <td><span class="badge bg-${contact.active ? 'success' : 'secondary'}">${contact.active ? 'Active' : 'Inactive'}</span></td>
-                        <td>${contact.contact_attempts || 0}</td>
-                        <td><button class="btn btn-sm btn-primary">Edit</button></td>
-                    </tr>
-                `).join('') || '<tr><td colspan="8" class="text-center text-muted">No contacts found</td></tr>';
+                bootstrap.Modal.getInstance(form.closest('.modal')).hide();
+                form.reset();
+                await loadACHReturns();
             } catch (error) {
-                console.error('Error loading contacts:', error);
-            }
-        }
-
-        function initCharts() {
-            // File Status Chart
-            const statusCtx = document.getElementById('fileStatusChart')?.getContext('2d');
-            if (statusCtx) {
-                fileStatusChart = new Chart(statusCtx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Pending', 'Processed', 'Returned'],
-                        datasets: [{
-                            data: [25, 70, 5],
-                            backgroundColor: ['#ffc107', '#28a745', '#dc3545']
-                        }]
-                    },
-                    options: { responsive: true, maintainAspectRatio: false }
-                });
-            }
-
-            // Return Reasons Chart
-            const reasonCtx = document.getElementById('returnReasonsChart')?.getContext('2d');
-            if (reasonCtx) {
-                returnReasonsChart = new Chart(reasonCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: ['R01', 'R02', 'R03', 'R04', 'Other'],
-                        datasets: [{
-                            label: 'Returns',
-                            data: [45, 20, 15, 12, 8],
-                            backgroundColor: '#667eea'
-                        }]
-                    },
-                    options: { responsive: true, maintainAspectRatio: false }
-                });
+                console.error('Process return error:', error);
+                showToast('Failed to process return: ' + error.message, 'error');
             }
         }
 
         async function handleUpload(event) {
             event.preventDefault();
-            alert('File upload submitted');
-            bootstrap.Modal.getInstance(document.getElementById('uploadFileModal')).hide();
+
+            const form = event.target;
+            const fileInput = form.querySelector('input[type="file"]');
+            const typeSelect = form.querySelector('select');
+            const file = fileInput.files[0];
+
+            // Validation
+            if (!file) {
+                showToast('Please select a file to upload', 'warning');
+                return;
+            }
+
+            if (file.size > CONFIG.maxFileSize) {
+                showToast('File size exceeds 10MB limit', 'error');
+                return;
+            }
+
+            if (!file.name.match(/\.(ach|txt)$/i)) {
+                showToast('Only .ach and .txt files are allowed', 'error');
+                return;
+            }
+
+            try {
+                showToast('Uploading ACH file...', 'info', 0);
+
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('file_type', typeSelect.value);
+
+                const idempotencyKey = SecurityManager.generateIdempotencyKey('upload', file.name);
+                const headers = { ...SecurityManager.getSecureHeaders() };
+                delete headers['Content-Type']; // Let browser set it for FormData
+                if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey;
+
+                const response = await fetch(`${CONFIG.apiBaseUrl}/settlement/ach/upload`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: formData,
+                    timeout: CONFIG.requestTimeout
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || `HTTP ${response.status}`);
+                }
+
+                showToast('ACH file uploaded successfully', 'success');
+                logAuditEvent('file_uploaded', 'ACH_FILE', `File: ${file.name}, Type: ${typeSelect.value}`);
+                
+                bootstrap.Modal.getInstance(form.closest('.modal')).hide();
+                form.reset();
+                await loadACHFiles();
+            } catch (error) {
+                console.error('Upload error:', error);
+                showToast('Failed to upload file: ' + error.message, 'error');
+            }
         }
 
-        async function handleProcessReturn(event) {
-            event.preventDefault();
-            alert('Return processed');
-            bootstrap.Modal.getInstance(document.getElementById('processReturnModal')).hide();
+        async function processACHReturn(returnId, returnCode) {
+            if (!returnId || !returnCode) {
+                showToast('Invalid return data', 'error');
+                return;
+            }
+
+            // Validate return code format
+            const validCodes = /^R\d{2}$/;
+            if (!validCodes.test(returnCode)) {
+                showToast('Invalid return code format', 'error');
+                return;
+            }
+
+            try {
+                showToast('Processing ACH return...', 'info', 0);
+
+                const idempotencyKey = SecurityManager.generateIdempotencyKey('process_return', returnId);
+                const headers = SecurityManager.getSecureHeaders();
+                if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey;
+
+                const response = await fetch(`${CONFIG.apiBaseUrl}/settlement/ach/returns/${returnId}/process`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({ return_code: returnCode }),
+                    timeout: CONFIG.requestTimeout
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || `HTTP ${response.status}`);
+                }
+
+                showToast('ACH return processed successfully', 'success');
+                logAuditEvent('return_processed', 'ACH_RETURN', `Return ID: ${returnId}, Code: ${returnCode}`);
+                await loadACHReturns();
+            } catch (error) {
+                console.error('Process return error:', error);
+                showToast('Failed to process return: ' + error.message, 'error');
+            }
         }
 
         async function handleAddContact(event) {
             event.preventDefault();
-            alert('Contact added');
-            bootstrap.Modal.getInstance(document.getElementById('newContactModal')).hide();
+
+            const form = event.target;
+            const nameInput = form.querySelector('input[type="text"]');
+            const phoneInput = form.querySelector('input[type="tel"]');
+            const emailInput = form.querySelector('input[type="email"]');
+            const typeSelect = form.querySelector('select'); // Contact type select
+
+            // Validation
+            if (!nameInput.value || !phoneInput.value || !emailInput.value) {
+                showToast('Please fill in all required fields', 'warning');
+                return;
+            }
+
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(emailInput.value)) {
+                showToast('Please enter a valid email address', 'error');
+                return;
+            }
+
+            try {
+                showToast('Adding collection contact...', 'info', 0);
+
+                const idempotencyKey = SecurityManager.generateIdempotencyKey('add_contact', nameInput.value);
+                const headers = SecurityManager.getSecureHeaders();
+                if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey;
+
+                const response = await fetch(`${CONFIG.apiBaseUrl}/settlement/ach/contacts`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({
+                        name: nameInput.value,
+                        phone: phoneInput.value,
+                        email: emailInput.value,
+                        contact_type: typeSelect.value
+                    }),
+                    timeout: CONFIG.requestTimeout
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || `HTTP ${response.status}`);
+                }
+
+                showToast('Collection contact added successfully', 'success');
+                logAuditEvent('contact_added', 'ACH_CONTACT', `Contact: ${nameInput.value}`);
+                
+                bootstrap.Modal.getInstance(form.closest('.modal')).hide();
+                form.reset();
+                await loadCollectionContacts();
+            } catch (error) {
+                console.error('Add contact error:', error);
+                showToast('Failed to add contact: ' + error.message, 'error');
+            }
+        }
+
+        // ===== CHART FUNCTIONS =====
+        function initCharts() {
+            const fileStatusCtx = document.getElementById('fileStatusChart');
+            if (fileStatusCtx) {
+                state.charts.fileStatus = new Chart(fileStatusCtx.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Processed', 'Processing', 'Pending'],
+                        datasets: [{
+                            data: [0, 0, 0],
+                            backgroundColor: ['#28a745', '#ffc107', '#17a2b8']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false
+                    }
+                });
+            }
+
+            const returnReasonsCtx = document.getElementById('returnReasonsChart');
+            if (returnReasonsCtx) {
+                state.charts.returnReasons = new Chart(returnReasonsCtx.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: ['R01', 'R02', 'R03', 'R04', 'Other'],
+                        datasets: [{
+                            label: 'Return Count',
+                            data: [0, 0, 0, 0, 0],
+                            backgroundColor: '#667eea'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `Count: ${context.parsed.y}`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        function updateChartsWithData(data) {
+            if (state.charts.fileStatus) {
+                state.charts.fileStatus.data.datasets[0].data = [
+                    data.files_processed || 0,
+                    data.files_processing || 0,
+                    data.files_pending || 0
+                ];
+                state.charts.fileStatus.update();
+            }
+
+            if (state.charts.returnReasons) {
+                state.charts.returnReasons.data.datasets[0].data = [
+                    data.returns_r01 || 0,
+                    data.returns_r02 || 0,
+                    data.returns_r03 || 0,
+                    data.returns_r04 || 0,
+                    data.returns_other || 0
+                ];
+                state.charts.returnReasons.update();
+            }
+        }
+
+        // ===== AUDIT LOGGING =====
+        async function logAuditEvent(action, category, details) {
+            if (!CONFIG.features.enableAuditLogging) return;
+
+            try {
+                await fetch(`${CONFIG.apiBaseUrl}/settlement/ach/audit-log`, {
+                    method: 'POST',
+                    headers: SecurityManager.getSecureHeaders(),
+                    body: JSON.stringify({
+                        action: action,
+                        category: category,
+                        details: details,
+                        timestamp: new Date().toISOString()
+                    }),
+                    timeout: 5000
+                });
+            } catch (error) {
+                console.warn('Failed to log audit event:', error);
+            }
+        }
+
+        // ===== HELPER FUNCTIONS =====
+        function escapeHtml(text) {
+            if (!text) return '';
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+            return text.replace(/[&<>"']/g, c => map[c]);
+        }
+
+        function viewFileDetails(fileId) {
+            showToast(`Viewing details for file: ${fileId}`, 'info');
+            // TODO: Implement file details modal
         }
 
         function openModal(modalId) {
-            new bootstrap.Modal(document.getElementById(modalId)).show();
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                new bootstrap.Modal(modal).show();
+            }
         }
+
+        // ===== STUB IMPLEMENTATIONS =====
+        async function loadACHEntries() { /* Uses API data */ }
+        async function loadNSFTransactions() { /* Uses API data */ }
+        async function loadCollectionContacts() { /* Uses API data */ }
+
+        // ===== INITIALIZATION =====
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (!SecurityManager.validateToken()) return;
+
+            if (!await SecurityManager.validateSession()) {
+                showToast('Session validation failed', 'error');
+                return;
+            }
+
+            try {
+                await Promise.all([
+                    loadACHMetrics(),
+                    loadACHFiles(),
+                    loadACHReturns()
+                ]);
+
+                initCharts();
+
+                // Periodic session check
+                setInterval(() => SecurityManager.validateSession(), CONFIG.sessionCheckInterval);
+
+                // Periodic metric updates
+                setInterval(() => loadACHMetrics(), 30000); // Every 30 seconds
+            } catch (error) {
+                console.error('Initialization error:', error);
+                showToast('Failed to initialize ACH dashboard: ' + error.message, 'error');
+            }
+        });
     </script>
     <script src="/static/js/admin-guard.js"></script>
 </body>

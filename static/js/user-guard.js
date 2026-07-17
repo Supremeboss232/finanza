@@ -53,12 +53,27 @@
     return;
   }
 
-  var isAdmin = decoded.is_admin === true || decoded.is_admin === 'true';
+  var isAdmin = localStorage.getItem('is_admin') === 'true' || localStorage.getItem('is_admin') === true;
+  
+  console.log('[user-guard.js] Initialized:', { 
+    isAdmin: isAdmin, 
+    is_admin_localStorage: localStorage.getItem('is_admin'),
+    currentPath: window.location.pathname,
+    token: localStorage.getItem('token') ? 'exists' : 'missing'
+  });
 
   // Step 4: Block regular users from admin realm
   var currentPath = window.location.pathname;
   if (!isAdmin && currentPath.includes('/user/admin')) {
+    console.log('[user-guard.js] Non-admin accessing admin path, redirecting...');
     window.location.href = '/user/dashboard';
+    return;
+  }
+  
+  // Step 4b: Block admins from regular user paths (prevent confusion)
+  if (isAdmin && currentPath === '/user/dashboard') {
+    console.log('[user-guard.js] Admin accessing user dashboard, redirecting to admin dashboard...');
+    window.location.href = '/user/admin/dashboard';
     return;
   }
 

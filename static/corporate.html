@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -26,6 +26,8 @@
 
     <!-- Template Stylesheet -->
     <link href="/static/css/style.css" rel="stylesheet">
+
+    <script src="/static/js/toast-utils.js"></script>
 </head>
 
 <body>
@@ -40,11 +42,11 @@
     <div class="container-fluid fixed-top px-0 wow fadeIn" data-wow-delay="0.1s">
         <div class="top-bar row gx-0 align-items-center d-none d-lg-flex">
             <div class="col-lg-6 px-5 text-start">
-                <small><i class="fa fa-map-marker-alt text-primary me-2"></i>123 Street, New York, USA</small>
-                <small class="ms-4"><i class="fa fa-clock text-primary me-2"></i>9.00 am - 9.00 pm</small>
+                <small><i class="fa fa-map-marker-alt text-primary me-2"></i>100 Financial Ave, New York, NY 10001</small>
+                <small class="ms-4"><i class="fa fa-clock text-primary me-2"></i>8:00 AM - 8:00 PM ET</small>
             </div>
             <div class="col-lg-6 px-5 text-end">
-                <small><i class="fa fa-envelope text-primary me-2"></i>info@example.com</small>
+                <small><i class="fa fa-envelope text-primary me-2"></i>support@finanzabank.com</small>
                 <small class="ms-4"><i class="fa fa-phone-alt text-primary me-2"></i>+012 345 6789</small>
             </div>
         </div>
@@ -61,21 +63,21 @@
                     <div class="nav-item dropdown">
                         <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Banking</a>
                         <div class="dropdown-menu border-light m-0">
-                            <a href="personal.html" class="dropdown-item">Personal Banking</a>
-                            <a href="corporate.html" class="dropdown-item active">Corporate Banking</a>
+                            <a href="/personal" class="dropdown-item">Personal Banking</a>
+                            <a href="/corporate" class="dropdown-item active">Corporate Banking</a>
                         </div>
                     </div>
-                    <a href="deposits.html" class="nav-item nav-link">Deposits</a>
-                    <a href="credits.html" class="nav-item nav-link">Credits</a>
-                    <a href="cards.html" class="nav-item nav-link">Cards</a>
-                    <a href="investments.html" class="nav-item nav-link">Investments</a>
-                    <a href="loans.html" class="nav-item nav-link">Loans</a>
-                    <a href="insurance.html" class="nav-item nav-link">Insurance</a>
+                    <a href="/deposits" class="nav-item nav-link">Deposits</a>
+                    <a href="/credits" class="nav-item nav-link">Credits</a>
+                    <a href="/cards" class="nav-item nav-link">Cards</a>
+                    <a href="/investments" class="nav-item nav-link">Investments</a>
+                    <a href="/loans" class="nav-item nav-link">Loans</a>
+                    <a href="/insurance" class="nav-item nav-link">Insurance</a>
                     <div class="nav-item dropdown">
                         <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Account</a>
                         <div class="dropdown-menu border-light m-0">
-                            <a href="signin.html" class="dropdown-item">Sign In</a>
-                            <a href="signup.html" class="dropdown-item">Sign Up</a>
+                            <a href="/signin" class="dropdown-item">Sign In</a>
+                            <a href="/signup" class="dropdown-item">Sign Up</a>
                         </div>
                     </div>
                 </div>
@@ -163,11 +165,11 @@
                 </div>
                 <div class="col-lg-3 col-md-6">
                     <h4 class="text-white mb-4">Services</h4>
-                    <a class="btn btn-link" href="financial_planning.html">Financial Planning</a>
-                    <a class="btn btn-link" href="investments.html">Cash Investment</a>
-                    <a class="btn btn-link" href="financial_consultancy.html">Financial Consultancy</a>
-                    <a class="btn btn-link" href="loans.html">Business Loans</a>
-                    <a class="btn btn-link" href="business_analysis.html">Business Analysis</a>
+                    <a class="btn btn-link" href="/financial_planning">Financial Planning</a>
+                    <a class="btn btn-link" href="/investments">Cash Investment</a>
+                    <a class="btn btn-link" href="/financial_consultancy">Financial Consultancy</a>
+                    <a class="btn btn-link" href="/loans">Business Loans</a>
+                    <a class="btn btn-link" href="/business_analysis">Business Analysis</a>
                 </div>
                 <div class="col-lg-3 col-md-6">
                     <h4 class="text-white mb-4">Quick Links</h4>

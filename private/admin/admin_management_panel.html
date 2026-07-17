@@ -1,0 +1,1399 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Management - Finanza</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
+        }
+
+        /* Navigation */
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: white !important;
+        }
+
+        .navbar a {
+            color: rgba(255, 255, 255, 0.8) !important;
+            transition: all 0.3s ease;
+        }
+
+        .navbar a:hover {
+            color: white !important;
+        }
+
+        /* Main Container */
+        .container-fluid {
+            padding: 30px;
+        }
+
+        /* Header Section */
+        .admin-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .admin-header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .admin-header p {
+            margin: 10px 0 0;
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .admin-header button {
+            background: white;
+            color: #667eea;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .admin-header button:hover {
+            background: #f0f0f0;
+            transform: translateY(-2px);
+        }
+
+        /* Stats Cards */
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            color: #999;
+            margin-top: 10px;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Tab Navigation */
+        .nav-tabs {
+            border-bottom: 2px solid white;
+            margin-bottom: 30px;
+        }
+
+        .nav-tabs .nav-link {
+            color: white;
+            border: none;
+            border-bottom: 3px solid transparent;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            padding: 15px 20px;
+        }
+
+        .nav-tabs .nav-link:hover {
+            color: white;
+            border-bottom-color: white;
+        }
+
+        .nav-tabs .nav-link.active {
+            background: none;
+            color: white;
+            border-bottom-color: white;
+        }
+
+        /* Cards */
+        .card {
+            background: white;
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px 10px 0 0;
+            padding: 20px;
+            font-weight: 600;
+        }
+
+        .card-body {
+            padding: 30px;
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: block;
+            color: #333;
+        }
+
+        .form-control, .form-select {
+            border: 1px solid #ddd;
+            padding: 12px 15px;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #ddd;
+            color: #333;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+            color: white;
+        }
+
+        .btn-warning {
+            background: #f39c12;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #d68910;
+            color: white;
+        }
+
+        .btn-sm {
+            padding: 8px 12px;
+            font-size: 0.9rem;
+        }
+
+        /* Admin List */
+        .admin-item {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #eee;
+            transition: all 0.3s ease;
+        }
+
+        .admin-item:hover {
+            background: #f0f0f0;
+            border-color: #667eea;
+        }
+
+        .admin-info {
+            flex: 1;
+        }
+
+        .admin-email {
+            font-weight: 600;
+            color: #333;
+            font-size: 1.1rem;
+        }
+
+        .admin-role {
+            color: #999;
+            margin-top: 8px;
+            font-size: 0.9rem;
+        }
+
+        .role-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-right: 10px;
+            text-transform: uppercase;
+        }
+
+        .role-super_admin {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .role-admin {
+            background: #3498db;
+            color: white;
+        }
+
+        .role-treasury {
+            background: #2ecc71;
+            color: white;
+        }
+
+        .role-compliance {
+            background: #f39c12;
+            color: white;
+        }
+
+        .role-support {
+            background: #9b59b6;
+            color: white;
+        }
+
+        .admin-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        /* Search Box */
+        .search-box {
+            margin-bottom: 20px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        /* Alerts */
+        .alert {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error,
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        /* Modals */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: white;
+        }
+
+        /* Loading State */
+        .loading {
+            text-align: center;
+            color: #999;
+            padding: 40px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        /* Permission Checkboxes */
+        .form-check {
+            margin-bottom: 12px;
+        }
+
+        .form-check-input {
+            width: 1.25em;
+            height: 1.25em;
+            margin-top: 0.3em;
+            vertical-align: top;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            background-color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .form-check-input:checked {
+            background-color: #667eea;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-check-input:focus {
+            border-color: #667eea;
+            outline: none;
+        }
+
+        .form-check-label {
+            margin-bottom: 0;
+            cursor: pointer;
+            font-weight: 500;
+            color: #333;
+            user-select: none;
+        }
+
+        .permission-section {
+            margin-bottom: 10px;
+        }
+
+        .permission-section h6 {
+            font-weight: 600;
+            color: #667eea;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .admin-header {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .admin-header h1 {
+                font-size: 1.8rem;
+            }
+
+            .admin-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .admin-actions {
+                width: 100%;
+                margin-top: 15px;
+            }
+
+            .stats-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+
+    <script src="/static/js/toast-utils.js"></script>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/user/dashboard">
+                <i class="fas fa-lock"></i> Finanza Admin
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/user/admin/users">Admin Users</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/user/admin/mfa_setup">MFA/2FA Setup</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/user/admin/advanced_search">Advanced Search</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/user/admin/bulk_operations">Bulk Operations</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/user/dashboard">Dashboard</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <div class="container-fluid">
+        <!-- Admin Header -->
+        <div class="admin-header">
+            <div>
+                <h1>👥 Admin Management</h1>
+                <p>Create, manage, and control admin accounts</p>
+            </div>
+            <button onclick="loadAdmins()">
+                <i class="fas fa-sync-alt"></i> Refresh
+            </button>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-number" id="totalAdmins">0</div>
+                <div class="stat-label">Total Admins</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="activeAdmins">0</div>
+                <div class="stat-label">Active Admins</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="revokedAdmins">0</div>
+                <div class="stat-label">Revoked Admins</div>
+            </div>
+        </div>
+
+        <!-- Tab Navigation -->
+        <ul class="nav nav-tabs" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" data-bs-toggle="tab" href="#createAdminTab" role="tab">
+                    <i class="fas fa-plus"></i> Create Admin
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#manageAdminsTab" role="tab">
+                    <i class="fas fa-users"></i> Manage Admins
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#permissionsTab" role="tab">
+                    <i class="fas fa-lock"></i> Permissions
+                </a>
+            </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content">
+            <!-- Create Admin Tab -->
+            <div id="createAdminTab" class="tab-pane fade show active" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-plus"></i> Create New Admin Account
+                    </div>
+                    <div class="card-body">
+                        <div id="createAlert" class="alert" style="display:none;"></div>
+
+                        <div class="form-group">
+                            <label>Email Address</label>
+                            <input type="email" id="createEmail" class="form-control" placeholder="admin@example.com" />
+                        </div>
+
+                        <div class="form-group">
+                            <label>Full Name</label>
+                            <input type="text" id="createName" class="form-control" placeholder="John Doe" />
+                        </div>
+
+                        <div class="form-group">
+                            <label>Temporary Password</label>
+                            <input type="password" id="createPassword" class="form-control" placeholder="Enter password" />
+                        </div>
+
+                        <div class="form-group">
+                            <label>Admin Role</label>
+                            <select id="createRole" class="form-control">
+                                <option value="SUPER_ADMIN">Super Admin (Full Access)</option>
+                                <option value="ADMIN">Admin (User & KYC Management)</option>
+                                <option value="TREASURY">Treasury (Balance Management)</option>
+                                <option value="COMPLIANCE">Compliance (KYC & Audit)</option>
+                                <option value="SUPPORT">Support (View Only + Password Reset)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="createRequire2FA" />
+                                Require 2FA on first login
+                            </label>
+                        </div>
+
+                        <button class="btn btn-primary" onclick="createAdmin()">
+                            <i class="fas fa-plus"></i> Create Admin Account
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Manage Admins Tab -->
+            <div id="manageAdminsTab" class="tab-pane fade" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-users"></i> Active Admins
+                    </div>
+                    <div class="card-body">
+                        <div class="search-box">
+                            <input type="text" id="searchAdmin" placeholder="Search by email..." onkeyup="filterAdmins()" />
+                        </div>
+
+                        <div id="adminList">
+                            <p class="loading"><i class="fas fa-spinner fa-spin"></i> Loading admins...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Permissions Tab -->
+            <div id="permissionsTab" class="tab-pane fade" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-lock"></i> Granular Permissions
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            Override role-based permissions for fine-grained control
+                        </div>
+
+                        <div class="form-group">
+                            <label>Select Admin</label>
+                            <select id="permissionAdmin" class="form-control" onchange="loadAdminPermissions()">
+                                <option value="">Choose an admin...</option>
+                            </select>
+                        </div>
+
+                        <div id="permissionContent" style="display:none;">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i> Check permissions to grant, uncheck to deny
+                            </div>
+
+                            <div id="permAlert" class="alert" style="display:none;"></div>
+
+                            <!-- Permission Categories -->
+                            <div class="permission-section">
+                                <h6 style="background: #f5f5f5; padding: 10px; border-radius: 5px; margin-top: 15px; margin-bottom: 10px;">
+                                    <i class="fas fa-users"></i> User Management
+                                </h6>
+                                <div style="padding-left: 20px;">
+                                    <div class="form-check">
+                                        <input class="form-check-input permission-checkbox" type="checkbox" id="perm_user_view" value="user:view" />
+                                        <label class="form-check-label" for="perm_user_view">View Users</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input permission-checkbox" type="checkbox" id="perm_user_create" value="user:create" />
+                                        <label class="form-check-label" for="perm_user_create">Create Users</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input permission-checkbox" type="checkbox" id="perm_user_edit" value="user:edit" />
+                                        <label class="form-check-label" for="perm_user_edit">Edit Users</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input permission-checkbox" type="checkbox" id="perm_user_delete" value="user:delete" />
+                                        <label class="form-check-label" for="perm_user_delete">Delete Users</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- KYC Permissions -->
+                            <div class="permission-section">
+                                <h6 style="background: #f5f5f5; padding: 10px; border-radius: 5px; margin-top: 15px; margin-bottom: 10px;">
+                                    <i class="fas fa-certificate"></i> KYC Management
+                                </h6>
+                                <div style="padding-left: 20px;">
+                                    <div class="form-check">
+                                        <input class="form-check-input permission-checkbox" type="checkbox" id="perm_kyc_view" value="kyc:view" />
+                                        <label class="form-check-label" for="perm_kyc_view">View KYC Data</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input permission-checkbox" type="checkbox" id="perm_kyc_approve" value="kyc:approve" />
+                                        <label class="form-check-label" for="perm_kyc_approve">Approve KYC</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input permission-checkbox" type="checkbox" id="perm_kyc_reject" value="kyc:reject" />
+                                        <label class="form-check-label" for="perm_kyc_reject">Reject KYC</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input permission-checkbox" type="checkbox" id="perm_kyc_verify" value="kyc:verify" />
+                                        <label class="form-check-label" for="perm_kyc_verify">Verify Documents</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Transaction Permissions -->
+                            <div class="permission-section">
+                                <h6 style="background: #f5f5f5; padding: 10px; border-radius: 5px; margin-top: 15px; margin-bottom: 10px;">
+                                    <i class="fas fa-exchange-alt"></i> Transactions
+                                </h6>
+                                <div style="padding-left: 20px;">
+                                    <div class="form-check">
+                                        <input class="form-check-input permission-checkbox" type="checkbox" id="perm_transaction_view" value="transaction:view" />
+                                        <label class="form-check-label" for="perm_transaction_view">View Transactions</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input permission-checkbox" type="checkbox" id="perm_transaction_approve" value="transaction:approve" />
+                                        <label class="form-check-label" for="perm_transaction_approve">Approve Transactions</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input permission-checkbox" type="checkbox" id="perm_transaction_reject" value="transaction:reject" />
+                                        <label class="form-check-label" for="perm_transaction_reject">Reject Transactions</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input permission-checkbox" type="checkbox" id="perm_transaction_reverse" value="transaction:reverse" />
+                                        <label class="form-check-label" for="perm_transaction_reverse">Reverse Transactions</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Treasury Permissions -->
+                            <div class="permission-section">
+                                <h6 style="background: #f5f5f5; padding: 10px; border-radius: 5px; margin-top: 15px; margin-bottom: 10px;">
+                                    <i class="fas fa-vault"></i> Treasury & Balance
+                                </h6>
+                                <div style="padding-left: 20px;">
+                                    <div class="form-check">
+                                        <input class="form-check-input permission-checkbox" type="checkbox" id="perm_treasury_view" value="treasury:view" />
+                                        <label class="form-check-label" for="perm_treasury_view">View Treasury Data</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input permission-checkbox" type="checkbox" id="perm_balance_adjust" value="balance:adjust" />
+                                        <label class="form-check-label" for="perm_balance_adjust">Adjust Balances</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input permission-checkbox" type="checkbox" id="perm_balance_reconcile" value="balance:reconcile" />
+                                        <label class="form-check-label" for="perm_balance_reconcile">Reconcile Balances</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Compliance & Audit -->
+                            <div class="permission-section">
+                                <h6 style="background: #f5f5f5; padding: 10px; border-radius: 5px; margin-top: 15px; margin-bottom: 10px;">
+                                    <i class="fas fa-shield-alt"></i> Compliance & Audit
+                                </h6>
+                                <div style="padding-left: 20px;">
+                                    <div class="form-check">
+                                        <input class="form-check-input permission-checkbox" type="checkbox" id="perm_audit_view" value="audit:view" />
+                                        <label class="form-check-label" for="perm_audit_view">View Audit Logs</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input permission-checkbox" type="checkbox" id="perm_aml_view" value="aml:view" />
+                                        <label class="form-check-label" for="perm_aml_view">View AML Reports</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input permission-checkbox" type="checkbox" id="perm_compliance_report" value="compliance:report" />
+                                        <label class="form-check-label" for="perm_compliance_report">Generate Compliance Reports</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Admin & System -->
+                            <div class="permission-section">
+                                <h6 style="background: #f5f5f5; padding: 10px; border-radius: 5px; margin-top: 15px; margin-bottom: 10px;">
+                                    <i class="fas fa-cogs"></i> Admin & System
+                                </h6>
+                                <div style="padding-left: 20px;">
+                                    <div class="form-check">
+                                        <input class="form-check-input permission-checkbox" type="checkbox" id="perm_admin_view" value="admin:view" />
+                                        <label class="form-check-label" for="perm_admin_view">View Admin Users</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input permission-checkbox" type="checkbox" id="perm_admin_create" value="admin:create" />
+                                        <label class="form-check-label" for="perm_admin_create">Create Admin Users</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input permission-checkbox" type="checkbox" id="perm_admin_manage" value="admin:manage" />
+                                        <label class="form-check-label" for="perm_admin_manage">Manage Admin Roles</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input permission-checkbox" type="checkbox" id="perm_system_config" value="system:config" />
+                                        <label class="form-check-label" for="perm_system_config">Configure System Settings</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="margin-top: 30px; display: flex; gap: 10px;">
+                                <button class="btn btn-primary" onclick="savePermissions()">
+                                    <i class="fas fa-save"></i> Save Permissions
+                                </button>
+                                <button class="btn btn-secondary" onclick="resetPermissions()">
+                                    <i class="fas fa-redo"></i> Reset to Role Defaults
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reset Password Modal -->
+    <div id="resetPasswordModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span><i class="fas fa-redo"></i> Reset Password</span>
+                <button class="modal-close" onclick="closeModal('resetPasswordModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="resetAlert" class="alert" style="display:none;"></div>
+                
+                <p><strong>Admin:</strong> <span id="resetEmailDisplay"></span></p>
+
+                <div class="form-group">
+                    <label>New Password</label>
+                    <input type="password" id="newPassword" class="form-control" placeholder="Enter new password" />
+                </div>
+
+                <div class="form-group">
+                    <label>Confirm Password</label>
+                    <input type="password" id="confirmPassword" class="form-control" placeholder="Confirm password" />
+                </div>
+
+                <button class="btn btn-primary" onclick="confirmResetPassword()">Reset Password</button>
+                <button class="btn btn-secondary" onclick="closeModal('resetPasswordModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Revoke Access Modal -->
+    <div id="revokeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span><i class="fas fa-ban"></i> Revoke Admin Access</span>
+                <button class="modal-close" onclick="closeModal('revokeModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="revokeAlert" class="alert" style="display:none;"></div>
+                
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i> This will immediately disable this admin account
+                </div>
+
+                <p><strong>Admin:</strong> <span id="revokeEmailDisplay"></span></p>
+
+                <div class="form-group">
+                    <label>Reason for Revocation</label>
+                    <input type="text" id="revocationReason" class="form-control" placeholder="e.g., Terminated, Promotion" />
+                </div>
+
+                <button class="btn btn-danger" onclick="confirmRevoke()">Revoke Access</button>
+                <button class="btn btn-secondary" onclick="closeModal('revokeModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change Role Modal -->
+    <div id="changeRoleModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span><i class="fas fa-user-cog"></i> Change Admin Role</span>
+                <button class="modal-close" onclick="closeModal('changeRoleModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="changeRoleAlert" class="alert" style="display:none;"></div>
+                
+                <p><strong>Admin:</strong> <span id="changeRoleEmailDisplay"></span></p>
+
+                <div class="form-group">
+                    <label>New Role</label>
+                    <select id="newRole" class="form-control">
+                        <option value="">-- Select a role --</option>
+                        <option value="ADMIN">Admin</option>
+                        <option value="TREASURY">Treasury</option>
+                        <option value="COMPLIANCE">Compliance</option>
+                        <option value="SUPPORT">Support</option>
+                        <option value="SUPER_ADMIN">Super Admin</option>
+                    </select>
+                </div>
+
+                <button class="btn btn-primary" onclick="confirmChangeRole()">Change Role</button>
+                <button class="btn btn-secondary" onclick="closeModal('changeRoleModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Admin Management Script -->
+    <script>
+        const API_BASE = '/api/admin/advanced';
+        let selectedAdmin = null;
+
+        // Get authentication token from localStorage
+        function getAuthToken() {
+            return localStorage.getItem('token') || 
+                   localStorage.getItem('access_token') || 
+                   localStorage.getItem('auth_token') || '';
+        }
+
+        // Show alert messages
+        function showAlert(elementId, message, type) {
+            const alert = document.getElementById(elementId);
+            if (alert) {
+                alert.textContent = message;
+                alert.className = `alert alert-${type}`;
+                alert.style.display = 'block';
+                if (type === 'success') {
+                    setTimeout(() => alert.style.display = 'none', 4000);
+                }
+            }
+        }
+
+        // Create new admin
+        async function createAdmin() {
+            const email = document.getElementById('createEmail').value;
+            const name = document.getElementById('createName').value;
+            const password = document.getElementById('createPassword').value;
+            const role = document.getElementById('createRole').value;
+
+            if (!email || !name || !password) {
+                showAlert('createAlert', 'Please fill all required fields', 'danger');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/create`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getAuthToken()}`
+                    },
+                    body: JSON.stringify({
+                        email,
+                        full_name: name,
+                        password,
+                        admin_role: role
+                    })
+                });
+
+                if (response.ok) {
+                    showAlert('createAlert', '✓ Admin account created successfully!', 'success');
+                    document.getElementById('createEmail').value = '';
+                    document.getElementById('createName').value = '';
+                    document.getElementById('createPassword').value = '';
+                    document.getElementById('createRole').value = 'SUPER_ADMIN';
+                    loadAdmins();
+                    loadAdminList();
+                } else {
+                    const data = await response.json();
+                    showAlert('createAlert', 'Error: ' + (data.detail || 'Failed to create admin'), 'danger');
+                }
+            } catch (error) {
+                showAlert('createAlert', 'Error: ' + error.message, 'danger');
+            }
+        }
+
+        // Load all admins
+        async function loadAdmins() {
+            try {
+                const response = await fetch(`${API_BASE}/admin/list`, {
+                    headers: { 
+                        'Authorization': `Bearer ${getAuthToken()}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                if (!data || !data.admins) {
+                    throw new Error('Invalid response structure');
+                }
+
+                const adminList = document.getElementById('adminList');
+                
+                if (data.admins.length > 0) {
+                    adminList.innerHTML = data.admins.map(admin => `
+                        <div class="admin-item">
+                            <div class="admin-info">
+                                <div class="admin-email">${admin.email}</div>
+                                <div class="admin-role">
+                                    <span class="role-badge role-${(admin.admin_role || 'standard').toLowerCase()}">
+                                        ${(admin.admin_role || 'STANDARD').toUpperCase()}
+                                    </span>
+                                    <small>Created: ${new Date(admin.created_at).toLocaleDateString()}</small>
+                                </div>
+                            </div>
+                            <div class="admin-actions">
+                                <button class="btn btn-primary btn-sm" onclick="openResetPassword('${admin.id}', '${admin.email}')">
+                                    <i class="fas fa-key"></i> Reset PWD
+                                </button>
+                                <button class="btn btn-warning btn-sm" onclick="openChangeRole('${admin.id}', '${admin.email}')">
+                                    <i class="fas fa-user-cog"></i> Role
+                                </button>
+                                <button class="btn btn-danger btn-sm" onclick="openRevoke('${admin.id}', '${admin.email}')">
+                                    <i class="fas fa-ban"></i> Revoke
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+
+                    document.getElementById('totalAdmins').textContent = data.admins.length;
+                    document.getElementById('activeAdmins').textContent = data.admins.filter(a => a.is_active !== false).length;
+                    document.getElementById('revokedAdmins').textContent = data.admins.filter(a => a.is_active === false).length;
+                } else {
+                    adminList.innerHTML = '<p class="empty-state">No admins found</p>';
+                }
+            } catch (error) {
+                console.error('Error loading admins:', error);
+                document.getElementById('adminList').innerHTML = `<p class="empty-state" style="color:red;">Error loading admins: ${error.message}</p>`;
+            }
+        }
+
+        // Filter admins by search
+        function filterAdmins() {
+            const search = document.getElementById('searchAdmin').value.toLowerCase();
+            document.querySelectorAll('.admin-item').forEach(item => {
+                const email = item.querySelector('.admin-email').textContent.toLowerCase();
+                item.style.display = email.includes(search) ? 'block' : 'none';
+            });
+        }
+
+        // Load admin list for permissions
+        async function loadAdminList() {
+            try {
+                const response = await fetch(`${API_BASE}/admin/list`, {
+                    headers: { 
+                        'Authorization': `Bearer ${getAuthToken()}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                if (!data || !data.admins) {
+                    throw new Error('Invalid response structure');
+                }
+
+                const select = document.getElementById('permissionAdmin');
+                select.innerHTML = '<option value="">Choose an admin...</option>' +
+                    data.admins.map(admin => 
+                        `<option value="${admin.id}">${admin.email} (${admin.admin_role || 'STANDARD'})</option>`
+                    ).join('');
+            } catch (error) {
+                console.error('Error loading admin list:', error);
+            }
+        }
+
+        // Load admin permissions
+        function loadAdminPermissions() {
+            const adminId = document.getElementById('permissionAdmin').value;
+            const permissionContent = document.getElementById('permissionContent');
+            
+            if (!adminId) {
+                permissionContent.style.display = 'none';
+                return;
+            }
+
+            // Clear all checkboxes first
+            document.querySelectorAll('.permission-checkbox').forEach(cb => cb.checked = false);
+
+            // Load permissions for selected admin from API or use role defaults
+            loadPermissionsForAdmin(adminId);
+            permissionContent.style.display = 'block';
+        }
+
+        // Load permissions from backend
+        async function loadPermissionsForAdmin(adminId) {
+            try {
+                const response = await fetch(`${API_BASE}/admin/permissions/${adminId}`, {
+                    headers: { 
+                        'Authorization': `Bearer ${getAuthToken()}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.permissions && Array.isArray(data.permissions)) {
+                        // Check the permissions that are granted
+                        data.permissions.forEach(perm => {
+                            const checkbox = document.querySelector(`input[value="${perm}"]`);
+                            if (checkbox) {
+                                checkbox.checked = true;
+                            }
+                        });
+                    }
+                } else if (response.status === 404) {
+                    // If no custom permissions, load role defaults
+                    await loadRoleDefaultPermissions(adminId);
+                }
+            } catch (error) {
+                console.error('Error loading permissions:', error);
+                // Load role defaults on error
+                await loadRoleDefaultPermissions(adminId);
+            }
+        }
+
+        // Load default permissions based on admin's role
+        async function loadRoleDefaultPermissions(adminId) {
+            try {
+                const adminSelect = document.getElementById('permissionAdmin');
+                const selectedOption = adminSelect.options[adminSelect.selectedIndex];
+                const roleMatch = selectedOption.text.match(/\((.*?)\)$/);
+                const role = roleMatch ? roleMatch[1].toUpperCase() : 'STANDARD';
+
+                const rolePermissions = {
+                    'SUPER_ADMIN': [
+                        'user:view', 'user:create', 'user:edit', 'user:delete',
+                        'kyc:view', 'kyc:approve', 'kyc:reject', 'kyc:verify',
+                        'transaction:view', 'transaction:approve', 'transaction:reject', 'transaction:reverse',
+                        'treasury:view', 'balance:adjust', 'balance:reconcile',
+                        'audit:view', 'aml:view', 'compliance:report',
+                        'admin:view', 'admin:create', 'admin:manage', 'system:config'
+                    ],
+                    'ADMIN': [
+                        'user:view', 'user:create', 'user:edit',
+                        'kyc:view', 'kyc:approve', 'kyc:reject',
+                        'transaction:view', 'transaction:approve',
+                        'audit:view', 'aml:view',
+                        'admin:view'
+                    ],
+                    'TREASURY': [
+                        'user:view',
+                        'transaction:view',
+                        'treasury:view', 'balance:adjust', 'balance:reconcile',
+                        'audit:view'
+                    ],
+                    'COMPLIANCE': [
+                        'user:view',
+                        'kyc:view', 'kyc:verify',
+                        'transaction:view',
+                        'audit:view', 'aml:view', 'compliance:report'
+                    ],
+                    'SUPPORT': [
+                        'user:view',
+                        'transaction:view',
+                        'audit:view'
+                    ]
+                };
+
+                const permissions = rolePermissions[role] || rolePermissions['STANDARD'] || [];
+                permissions.forEach(perm => {
+                    const checkbox = document.querySelector(`input[value="${perm}"]`);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading role defaults:', error);
+            }
+        }
+
+        // Open reset password modal
+        function openResetPassword(adminId, adminEmail) {
+            selectedAdmin = adminId;
+            document.getElementById('resetEmailDisplay').textContent = adminEmail;
+            document.getElementById('newPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+            document.getElementById('resetAlert').style.display = 'none';
+            document.getElementById('resetPasswordModal').classList.add('active');
+        }
+
+        // Open revoke modal
+        function openRevoke(adminId, adminEmail) {
+            selectedAdmin = adminId;
+            document.getElementById('revokeEmailDisplay').textContent = adminEmail;
+            document.getElementById('revocationReason').value = '';
+            document.getElementById('revokeAlert').style.display = 'none';
+            document.getElementById('revokeModal').classList.add('active');
+        }
+
+        // Open change role modal
+        function openChangeRole(adminId, adminEmail) {
+            selectedAdmin = adminId;
+            document.getElementById('changeRoleEmailDisplay').textContent = adminEmail;
+            document.getElementById('newRole').value = '';
+            document.getElementById('changeRoleAlert').style.display = 'none';
+            document.getElementById('changeRoleModal').classList.add('active');
+        }
+
+        // Close modal
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        // Confirm reset password
+        async function confirmResetPassword() {
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (!newPassword) {
+                showAlert('resetAlert', 'Please enter a password', 'danger');
+                return;
+            }
+
+            if (newPassword !== confirmPassword) {
+                showAlert('resetAlert', 'Passwords do not match', 'danger');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/reset-password/${selectedAdmin}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getAuthToken()}`
+                    },
+                    body: JSON.stringify({ password: newPassword })
+                });
+
+                if (response.ok) {
+                    showAlert('resetAlert', '✓ Password reset successfully!', 'success');
+                    setTimeout(() => closeModal('resetPasswordModal'), 1000);
+                } else {
+                    const data = await response.json();
+                    showAlert('resetAlert', 'Error: ' + (data.detail || 'Failed to reset password'), 'danger');
+                }
+            } catch (error) {
+                showAlert('resetAlert', 'Error: ' + error.message, 'danger');
+            }
+        }
+
+        // Confirm revoke
+        async function confirmRevoke() {
+            try {
+                const response = await fetch(`${API_BASE}/admin/revoke/${selectedAdmin}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getAuthToken()}`
+                    }
+                });
+
+                if (response.ok) {
+                    showAlert('revokeAlert', '✓ Admin access revoked!', 'success');
+                    setTimeout(() => closeModal('revokeModal'), 1000);
+                    loadAdmins();
+                    loadAdminList();
+                } else {
+                    const data = await response.json();
+                    showAlert('revokeAlert', 'Error: ' + (data.detail || 'Failed to revoke admin'), 'danger');
+                }
+            } catch (error) {
+                showAlert('revokeAlert', 'Error: ' + error.message, 'danger');
+            }
+        }
+
+        // Confirm change role
+        async function confirmChangeRole() {
+            const newRole = document.getElementById('newRole').value;
+            if (!newRole) {
+                showAlert('changeRoleAlert', 'Please select a role', 'danger');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/change-role/${selectedAdmin}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getAuthToken()}`
+                    },
+                    body: JSON.stringify({ admin_role: newRole })
+                });
+
+                if (response.ok) {
+                    showAlert('changeRoleAlert', '✓ Role updated successfully!', 'success');
+                    setTimeout(() => closeModal('changeRoleModal'), 1000);
+                    loadAdmins();
+                } else {
+                    const data = await response.json();
+                    showAlert('changeRoleAlert', 'Error: ' + (data.detail || 'Failed to change role'), 'danger');
+                }
+            } catch (error) {
+                showAlert('changeRoleAlert', 'Error: ' + error.message, 'danger');
+            }
+        }
+
+        // Save permissions
+        async function savePermissions() {
+            const adminId = document.getElementById('permissionAdmin').value;
+            if (!adminId) {
+                showAlert('permAlert', 'Please select an admin first', 'danger');
+                return;
+            }
+
+            // Get selected permissions
+            const selectedPermissions = Array.from(document.querySelectorAll('.permission-checkbox:checked'))
+                .map(cb => cb.value);
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/permissions/${adminId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getAuthToken()}`
+                    },
+                    body: JSON.stringify({ permissions: selectedPermissions })
+                });
+
+                if (response.ok) {
+                    showAlert('permAlert', `✓ Permissions saved for ${selectedPermissions.length} items!`, 'success');
+                } else {
+                    const data = await response.json();
+                    showAlert('permAlert', 'Error: ' + (data.detail || 'Failed to save permissions'), 'danger');
+                }
+            } catch (error) {
+                showAlert('permAlert', 'Error: ' + error.message, 'danger');
+            }
+        }
+
+        // Reset permissions
+        async function resetPermissions() {
+            const adminId = document.getElementById('permissionAdmin').value;
+            if (!adminId) {
+                showAlert('permAlert', 'Please select an admin first', 'danger');
+                return;
+            }
+
+            if (!confirm('Reset permissions to role defaults? This will remove any custom permissions.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/permissions/${adminId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${getAuthToken()}`
+                    }
+                });
+
+                if (response.ok) {
+                    showAlert('permAlert', '✓ Permissions reset to role defaults!', 'success');
+                    // Reload the role defaults
+                    await loadRoleDefaultPermissions(adminId);
+                } else {
+                    const data = await response.json();
+                    showAlert('permAlert', 'Error: ' + (data.detail || 'Failed to reset permissions'), 'danger');
+                }
+            } catch (error) {
+                showAlert('permAlert', 'Error: ' + error.message, 'danger');
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadAdmins();
+            loadAdminList();
+        });
+    </script>
+</body>
+</html>

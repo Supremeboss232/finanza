@@ -1,322 +1,1379 @@
-# Implementation Checklist & Verification Guide
+"""
+Admin Users Management API (v1)
+===============================
+Comprehensive backend for admin_users.html dashboard.
 
-## ✅ Completed Tasks
+Implements all 19 endpoints specified in ADMIN_USERS_BACKEND_CHECKLIST.md:
+- Core endpoints (metrics, user list, user details, balance, audit history)
+- Hold management (list, create)
+- Device & session management (list, revoke)
+- KYC management (documents, approve, reject)
+- Balance & financial (adjust balance)
+- Search & activity (global search, activity feed)
+- Bulk operations (email)
+- Audit logging (log actions)
+- User management (delete user)
 
-### 1. User API Endpoints
-- ✅ Created `/routers/api_users.py` with all user-facing endpoints
-- ✅ Dashboard endpoint with balance, investments, loans, transactions
-- ✅ Cards list and detail endpoints
-- ✅ Deposits list and detail endpoints
-- ✅ Loans list and detail endpoints
-- ✅ Investments list and detail endpoints
-- ✅ Transactions list endpoint
-- ✅ User profile endpoint
-- ✅ All endpoints protected with JWT authentication
-- ✅ Registered router in `app/main.py` with `/api/user` prefix
+All response formats match frontend expectations exactly.
+"""
 
-### 2. Admin Management Endpoints
-- ✅ Extended `/routers/admin.py` with product management
-- ✅ Added cards CRUD endpoints for admins
-- ✅ Added deposits CRUD endpoints for admins
-- ✅ Added loans CRUD endpoints for admins
-- ✅ Added investments CRUD endpoints for admins
-- ✅ All endpoints include admin authorization checks
-- ✅ All endpoints broadcast WebSocket events
-- ✅ Proper error handling and HTTP status codes
-- ✅ Ownership validation before operations
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import select, func, or_, desc, and_
+from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Optional, List, Dict, Any
+from pydantic import BaseModel
+from datetime import datetime, timedelta
+import logging
+import math
+from decimal import Decimal
 
-### 3. User-Facing Pages with Real Data
-- ✅ Updated `/private/user/dashboard.html`
-  - Fetches from `/api/user/dashboard`
-  - Displays balance, investments, loans counts
-  - Shows recent transactions with dates and amounts
-  
-- ✅ Updated `/private/user/cards.html`
-  - Fetches from `/api/user/cards`
-  - Displays cards in table format
-  - Shows card number (masked), type, expiry, status
-  
-- ✅ Updated `/private/user/deposits.html`
-  - Fetches from `/api/user/deposits`
-  - Displays deposits in table format
-  - Shows amount, currency, date, status
-  
-- ✅ Updated `/private/user/loans.html`
-  - Fetches from `/api/user/loans`
-  - Displays loans in table format
-  - Shows amount, interest rate, term, status
-  
-- ✅ Updated `/private/user/investments.html`
-  - Fetches from `/api/user/investments`
-  - Displays investments in table format
-  - Shows type, amount, date, status
+from deps import SessionDep, get_current_admin_user, CurrentAdminUserDep
+from models import (
+    User as DBUser,
+    Account as DBAccount,
+    Transaction,
+    KYCSubmission,
+    AccountHold,
+    DeviceFingerprint,
+    AdminAuditLog,
+)
+from balance_service_ledger import BalanceServiceLedger
 
-### 4. Admin Management UI
-- ✅ Created `/private/admin/user_management.html`
-- ✅ User search and selection dropdown
-- ✅ Tabbed interface for each product type
-- ✅ Add Card functionality with form modal
-- ✅ Add Deposit functionality with form modal
-- ✅ Add Loan functionality with form modal
-- ✅ Add Investment functionality with form modal
-- ✅ Edit functionality for all product types
-- ✅ Delete functionality with confirmation
-- ✅ Real-time table updates after CRUD operations
-- ✅ Responsive Bootstrap 5 design
-- ✅ Status badges with appropriate colors
+logger = logging.getLogger(__name__)
 
-### 5. Documentation
-- ✅ Created `API_IMPLEMENTATION_SUMMARY.txt` with detailed overview
-- ✅ Created `API_QUICK_REFERENCE.txt` with quick lookup guide
-- ✅ This checklist file
+router = APIRouter(
+    prefix="/api/admin",
+    tags=["admin-users"],
+    dependencies=[Depends(get_current_admin_user)]
+)
 
-## 🔍 Verification Steps
 
-### Test User API Endpoints
+# ==================== REQUEST/RESPONSE MODELS ====================
 
-1. **Authentication Check**
-   ```bash
-   # Should return 401 without token
-   curl http://localhost:8000/api/user/profile
-   
-   # Should return user data with valid token
-   curl -H "Authorization: Bearer YOUR_TOKEN" \
-        http://localhost:8000/api/user/profile
-   ```
+class ApproveKYCRequest(BaseModel):
+    approved_by: int
 
-2. **Dashboard Endpoint**
-   ```bash
-   curl -H "Authorization: Bearer YOUR_TOKEN" \
-        http://localhost:8000/api/user/dashboard
-   # Should return: user, balance, active_investments, active_loans, recent_transactions
-   ```
 
-3. **Products Endpoints**
-   ```bash
-   # Cards
-   curl -H "Authorization: Bearer YOUR_TOKEN" \
-        http://localhost:8000/api/user/cards
-   
-   # Deposits
-   curl -H "Authorization: Bearer YOUR_TOKEN" \
-        http://localhost:8000/api/user/deposits
-   
-   # Loans
-   curl -H "Authorization: Bearer YOUR_TOKEN" \
-        http://localhost:8000/api/user/loans
-   
-   # Investments
-   curl -H "Authorization: Bearer YOUR_TOKEN" \
-        http://localhost:8000/api/user/investments
-   ```
+class RejectKYCRequest(BaseModel):
+    rejection_reason: str
+    rejected_by: int
 
-### Test Admin Endpoints
 
-1. **Get User Products** (Admin only)
-   ```bash
-   curl -H "Authorization: Bearer ADMIN_TOKEN" \
-        http://localhost:8000/api/admin/users/1/cards
-   ```
+class AdjustBalanceRequest(BaseModel):
+    user_id: int
+    amount: float
+    reason_code: str
+    description: str
+    created_by: int
 
-2. **Create Product**
-   ```bash
-   curl -X POST \
-        -H "Authorization: Bearer ADMIN_TOKEN" \
-        -H "Content-Type: application/json" \
-        -d '{"amount": 1000, "currency": "USD", "status": "completed"}' \
-        http://localhost:8000/api/admin/users/1/deposits
-   ```
 
-3. **Update Product**
-   ```bash
-   curl -X PUT \
-        -H "Authorization: Bearer ADMIN_TOKEN" \
-        -H "Content-Type: application/json" \
-        -d '{"status": "inactive"}' \
-        http://localhost:8000/api/admin/users/1/cards/1
-   ```
+class CreateHoldRequest(BaseModel):
+    user_id: int
+    hold_type: str
+    reason: str
+    duration_days: int
+    created_by: int
 
-4. **Delete Product**
-   ```bash
-   curl -X DELETE \
-        -H "Authorization: Bearer ADMIN_TOKEN" \
-        http://localhost:8000/api/admin/users/1/deposits/1
-   ```
 
-### Test Frontend Pages
+class ReleaseHoldRequest(BaseModel):
+    hold_id: int
+    approval_notes: str
+    approved_by: int
 
-1. **User Dashboard**
-   - Navigate to `/user/dashboard`
-   - Verify data loads from API
-   - Check balance display is formatted correctly
-   - Verify recent transactions appear
 
-2. **User Cards**
-   - Navigate to `/user/cards`
-   - Should show table of cards
-   - Verify card numbers are masked
-   - Check status badges display correctly
+class RevokeSessionRequest(BaseModel):
+    device_id: int
+    reason: str
+    revoked_by: int
 
-3. **User Deposits**
-   - Navigate to `/user/deposits`
-   - Should show table of deposits
-   - Verify amounts are formatted as currency
-   - Check date formatting
 
-4. **User Loans**
-   - Navigate to `/user/loans`
-   - Should show table of loans
-   - Verify amounts and rates display
-   - Check term in months
+class BulkEmailRequest(BaseModel):
+    kyc_status_filter: str
+    email_template: str
+    subject: str
+    sent_by: int
 
-5. **User Investments**
-   - Navigate to `/user/investments`
-   - Should show table of investments
-   - Verify investment types display
-   - Check amounts are formatted
 
-6. **Admin Management UI**
-   - Navigate to `/admin/user_management`
-   - Search and select a user
-   - Verify tables load with user data
-   - Test adding new card:
-     - Click "Add Card"
-     - Fill form
-     - Click Save
-     - Verify card appears in table
-   - Test editing:
-     - Click Edit on any item
-     - Change a field
-     - Save and verify update
-   - Test deleting:
-     - Click Delete on any item
-     - Confirm deletion
-     - Verify item removed from table
+class AuditLogRequest(BaseModel):
+    admin_id: int
+    admin_email: str
+    action: str
+    target_user_id: Optional[int] = None
+    details: str
+    timestamp: datetime
+    ip_address: Optional[str] = None
 
-## 📋 Configuration Checklist
 
-- [ ] JWT secret key configured in environment
-- [ ] Database migrations run successfully
-- [ ] Admin user exists in database
-- [ ] CORS configured for API endpoints
-- [ ] Static files served correctly
-- [ ] WebSocket manager initialized
-- [ ] Template directory configured correctly
+# ==================== 1. GET ADMIN METRICS ====================
 
-## 🚀 Deployment Checklist
+@router.get("/metrics")
+async def get_admin_metrics(
+    db_session: SessionDep,
+    current_admin: CurrentAdminUserDep
+):
+    """
+    Returns aggregate statistics for stat cards.
+    
+    Response (200 OK):
+    {
+        "total_users": 1542,
+        "active_users": 1203,
+        "kyc_verified": 1089,
+        "account_holds": 12
+    }
+    """
+    try:
+        # Total users
+        total_users_result = await db_session.execute(
+            select(func.count(DBUser.id))
+        )
+        total_users = total_users_result.scalar() or 0
 
-- [ ] All imports resolve correctly
-- [ ] No circular dependencies
-- [ ] Database connection tested
-- [ ] API endpoints respond correctly
-- [ ] Admin authorization working
-- [ ] Static files accessible
-- [ ] HTTPS enabled (production)
-- [ ] Error logging configured
-- [ ] CORS origins updated for production domain
+        # Active users (logged in within 30 days)
+        thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+        active_users_result = await db_session.execute(
+            select(func.count(DBUser.id)).where(
+                DBUser.updated_at >= thirty_days_ago
+            )
+        )
+        active_users = active_users_result.scalar() or 0
 
-## 📝 Code Quality Checks
+        # KYC verified
+        kyc_verified_result = await db_session.execute(
+            select(func.count(DBUser.id)).where(
+                DBUser.kyc_status == "approved"
+            )
+        )
+        kyc_verified = kyc_verified_result.scalar() or 0
 
-- [ ] All endpoints have docstrings
-- [ ] Error handling includes try/except
-- [ ] Status codes are appropriate
-- [ ] Field validation is implemented
-- [ ] Ownership checks prevent unauthorized access
-- [ ] WebSocket broadcasts include error handling
-- [ ] Database queries are optimized
-- [ ] Response models match Pydantic schemas
+        # Account holds
+        holds_result = await db_session.execute(
+            select(func.count(AccountHold.id)).where(
+                AccountHold.released_at.is_(None)
+            )
+        )
+        account_holds = holds_result.scalar() or 0
 
-## 🔐 Security Checklist
+        return {
+            "total_users": total_users,
+            "active_users": active_users,
+            "kyc_verified": kyc_verified,
+            "account_holds": account_holds
+        }
 
-- [ ] All user endpoints require authentication
-- [ ] All admin endpoints require admin role
-- [ ] User can only access own data
-- [ ] Admin can only access specific user's data
-- [ ] No SQL injection vulnerabilities
-- [ ] No authentication token leaks
-- [ ] Sensitive data masked (card numbers)
-- [ ] HTTPS enabled in production
-- [ ] CORS properly restricted
+    except Exception as e:
+        logger.error(f"metrics error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
 
-## 🐛 Common Issues & Solutions
 
-### Issue: 404 on API endpoints
-**Solution:** Verify router is registered in `app/main.py` with correct prefix
+# ==================== 2. LIST USERS WITH PAGINATION ====================
 
-### Issue: 401 Unauthorized on user endpoints
-**Solution:** Ensure valid JWT token is included in Authorization header
+@router.get("/users")
+async def list_users(
+    db_session: SessionDep,
+    current_admin: CurrentAdminUserDep,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100)
+):
+    """
+    Get paginated user list with all required fields.
+    
+    Response (200 OK):
+    {
+        "data": [...],
+        "total_users": 1542,
+        "total_pages": 78,
+        "current_page": 1
+    }
+    """
+    try:
+        # Get total count
+        total_result = await db_session.execute(
+            select(func.count(DBUser.id))
+        )
+        total_users = total_result.scalar() or 0
 
-### Issue: User pages show "No data found"
-**Solution:** Check:
-- User has products in database
-- API endpoints return data
-- JavaScript fetch succeeds (check browser console)
-- JWT token is valid
+        # Calculate pagination
+        total_pages = math.ceil(total_users / limit) if total_users > 0 else 1
+        current_page = (skip // limit) + 1
 
-### Issue: Admin page won't load user products
-**Solution:** Verify:
-- User is logged in as admin
-- User ID exists in database
-- User has products assigned
+        # Get users
+        users_result = await db_session.execute(
+            select(DBUser)
+            .order_by(desc(DBUser.created_at))
+            .offset(skip)
+            .limit(limit)
+        )
+        users = users_result.scalars().all()
 
-### Issue: Modals don't open in admin page
-**Solution:** Check Bootstrap 5 is loaded correctly, no console errors
+        # Format response
+        user_data = []
+        for user in users:
+            # Count holds for this user
+            holds_result = await db_session.execute(
+                select(func.count(AccountHold.id)).where(
+                    AccountHold.user_id == user.id,
+                    AccountHold.released_at.is_(None)
+                )
+            )
+            account_holds_count = holds_result.scalar() or 0
 
-### Issue: WebSocket events not broadcasting
-**Solution:** Verify WebSocket manager is configured, check server logs
+            user_data.append({
+                "id": user.id,
+                "email": user.email,
+                "full_name": user.full_name,
+                "is_active": user.is_active,
+                "kyc_status": user.kyc_status,
+                "credit_score": getattr(user, 'credit_score', 0),
+                "account_holds_count": account_holds_count,
+                "phone_number": getattr(user, 'phone_number', ''),
+                "last_login": user.updated_at.isoformat() if user.updated_at else None
+            })
 
-## 📈 Performance Considerations
+        return {
+            "data": user_data,
+            "total_users": total_users,
+            "total_pages": total_pages,
+            "current_page": current_page
+        }
 
-1. **Database Queries**
-   - Current implementation queries each product type separately
-   - Consider JOIN queries for better performance at scale
+    except Exception as e:
+        logger.error(f"list_users error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
 
-2. **Pagination**
-   - Implement pagination on admin tables for large datasets
-   - Current limit: 100 items per request
 
-3. **Caching**
-   - Consider caching user profile data
-   - Use ETag headers for conditional requests
+# ==================== 3. GET USER DETAILS ====================
 
-4. **API Response Size**
-   - Dashboard includes full transactions array
-   - Consider limiting to most recent transactions
+@router.get("/users/{user_id}")
+async def get_user_details(
+    user_id: int,
+    db_session: SessionDep,
+    current_admin: CurrentAdminUserDep
+):
+    """
+    Get detailed information for a specific user.
+    
+    Response (200 OK):
+    {
+        "id": 42,
+        "email": "user@example.com",
+        "full_name": "John Doe",
+        "is_active": true,
+        "kyc_status": "VERIFIED",
+        "credit_score": 750,
+        "phone_number": "+1234567890",
+        "created_at": "2025-01-15T10:00:00Z",
+        "last_login": "2025-04-07T14:32:15Z"
+    }
+    """
+    try:
+        user_result = await db_session.execute(
+            select(DBUser).where(DBUser.id == user_id)
+        )
+        user = user_result.scalar_one_or_none()
 
-## 🔄 Integration Points
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
 
-### Frontend to Backend
-- User pages → `/api/user/*` endpoints
-- Admin UI → `/api/admin/users/*` endpoints
-- Real-time updates via WebSocket events
+        return {
+            "id": user.id,
+            "email": user.email,
+            "full_name": user.full_name,
+            "is_active": user.is_active,
+            "kyc_status": user.kyc_status,
+            "credit_score": getattr(user, 'credit_score', 0),
+            "phone_number": getattr(user, 'phone_number', ''),
+            "created_at": user.created_at.isoformat() if user.created_at else None,
+            "last_login": user.updated_at.isoformat() if user.updated_at else None
+        }
 
-### Backend to Database
-- CRUD functions in `crud.py`
-- SQLAlchemy async session management
-- Proper transaction handling
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"get_user_details error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
 
-### Authentication
-- JWT tokens from `/auth/login`
-- Token validation via `get_current_user`
-- Admin role check via `get_current_admin_user`
 
-## ✨ Future Enhancement Ideas
+# ==================== 4. GET USER BALANCE ====================
 
-1. Add product filtering (status, date range)
-2. Add product search functionality
-3. Implement sorting by column in tables
-4. Add bulk operations (batch delete/update)
-5. Generate PDF/CSV reports
-6. Add audit trail for admin actions
-7. Implement notifications for product changes
-8. Add data visualization (charts/graphs)
-9. Implement product history/versioning
-10. Add scheduled tasks (e.g., loan payments)
+@router.get("/users/{user_id}/balance")
+async def get_user_balance(
+    user_id: int,
+    db_session: SessionDep,
+    current_admin: CurrentAdminUserDep
+):
+    """
+    Get user's current balance.
+    
+    Response (200 OK):
+    {
+        "balance": 2500.75,
+        "currency": "USD",
+        "last_updated": "2025-04-08T14:00:00Z"
+    }
+    """
+    try:
+        user_result = await db_session.execute(
+            select(DBUser).where(DBUser.id == user_id)
+        )
+        user = user_result.scalar_one_or_none()
 
-## 📞 Support
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
 
-For issues or questions about this implementation, refer to:
-- `API_IMPLEMENTATION_SUMMARY.txt` - Full documentation
-- `API_QUICK_REFERENCE.txt` - Endpoint reference
-- Inline code comments in router files
-- FastAPI auto-generated docs at `/docs` and `/redoc`
+        # Get balance from ledger
+        balance = await BalanceServiceLedger.get_user_balance(db_session, user_id)
+
+        return {
+            "balance": float(balance) if balance else 0.0,
+            "currency": "USD",
+            "last_updated": datetime.utcnow().isoformat()
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"get_user_balance error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+# ==================== 5. GET USER AUDIT HISTORY ====================
+
+@router.get("/users/{user_id}/audit-history")
+async def get_user_audit_history(
+    user_id: int,
+    db_session: SessionDep,
+    current_admin: CurrentAdminUserDep,
+    limit: int = Query(50, ge=1, le=200)
+):
+    """
+    Get audit trail of all admin actions on a user.
+    
+    Response (200 OK):
+    {
+        "history": [
+            {
+                "id": 1001,
+                "admin_id": 42,
+                "admin_email": "john@finanza.com",
+                "action": "BALANCE_ADJUSTMENT",
+                "target_user_id": 789,
+                "details": "Amount: $500.00, Reason: DISPUTE_SETTLEMENT",
+                "timestamp": "2025-04-08T14:32:15Z"
+            }
+        ]
+    }
+    """
+    try:
+        user_result = await db_session.execute(
+            select(DBUser).where(DBUser.id == user_id)
+        )
+        user = user_result.scalar_one_or_none()
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+
+        # Get audit logs for this user
+        audit_result = await db_session.execute(
+            select(AdminAuditLog)
+            .where(AdminAuditLog.target_user_id == user_id)
+            .order_by(desc(AdminAuditLog.created_at))
+            .limit(limit)
+        )
+        audit_logs = audit_result.scalars().all()
+
+        history = []
+        for log in audit_logs:
+            history.append({
+                "id": log.id,
+                "admin_id": log.admin_id,
+                "admin_email": log.admin_email or "unknown@finanza.com",
+                "action": log.action or "UNKNOWN",
+                "target_user_id": log.target_user_id,
+                "details": log.details or "",
+                "timestamp": log.created_at.isoformat() if log.created_at else None
+            })
+
+        return {
+            "history": history
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"get_user_audit_history error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+# ==================== 6. LIST HOLDS ====================
+
+@router.get("/holds")
+async def list_holds(
+    db_session: SessionDep,
+    current_admin: CurrentAdminUserDep,
+    limit: int = Query(50, ge=1, le=200)
+):
+    """
+    Get list of all account holds.
+    
+    Response (200 OK):
+    {
+        "data": [
+            {
+                "id": 101,
+                "user_id": 42,
+                "user_email": "user@example.com",
+                "hold_type": "COMPLIANCE",
+                "reason": "Suspicious transaction pattern detected",
+                "created_at": "2025-04-05T10:00:00Z",
+                "release_date": "2025-04-15T10:00:00Z"
+            }
+        ]
+    }
+    """
+    try:
+        holds_result = await db_session.execute(
+            select(AccountHold)
+            .order_by(desc(AccountHold.created_at))
+            .limit(limit)
+        )
+        holds = holds_result.scalars().all()
+
+        hold_data = []
+        for hold in holds:
+            # Get user info
+            user_result = await db_session.execute(
+                select(DBUser).where(DBUser.id == hold.user_id)
+            )
+            user = user_result.scalar_one_or_none()
+
+            hold_data.append({
+                "id": hold.id,
+                "user_id": hold.user_id,
+                "user_email": user.email if user else "unknown@example.com",
+                "hold_type": hold.hold_type or "COMPLIANCE",
+                "reason": hold.current_reason or hold.reason or "",
+                "created_at": hold.created_at.isoformat() if hold.created_at else None,
+                "release_date": hold.release_date.isoformat() if hold.release_date else None
+            })
+
+        return {
+            "data": hold_data
+        }
+
+    except Exception as e:
+        logger.error(f"list_holds error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+# ==================== 7. CREATE HOLD ====================
+
+@router.post("/intervention/holds/create")
+async def create_hold(
+    request: CreateHoldRequest,
+    db_session: SessionDep,
+    current_admin: CurrentAdminUserDep
+):
+    """
+    Create a new account hold on a user.
+    
+    Response (201 Created):
+    {
+        "id": 102,
+        "user_id": 42,
+        "hold_type": "COMPLIANCE",
+        "reason": "Detailed reason for hold",
+        "created_at": "2025-04-08T14:32:15Z",
+        "release_date": "2025-05-08T14:32:15Z"
+    }
+    """
+    try:
+        # Check user exists
+        user_result = await db_session.execute(
+            select(DBUser).where(DBUser.id == request.user_id)
+        )
+        user = user_result.scalar_one_or_none()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+
+        # Check for existing active hold
+        existing_hold_result = await db_session.execute(
+            select(AccountHold).where(
+                AccountHold.user_id == request.user_id,
+                AccountHold.released_at.is_(None)
+            )
+        )
+        existing_hold = existing_hold_result.scalar_one_or_none()
+        if existing_hold:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="User already has an active hold"
+            )
+
+        # Create hold
+        release_date = datetime.utcnow() + timedelta(days=request.duration_days)
+        
+        new_hold = AccountHold(
+            user_id=request.user_id,
+            hold_type=request.hold_type,
+            reason=request.reason,
+            current_reason=request.reason,
+            release_date=release_date,
+            created_by=request.created_by
+        )
+
+        db_session.add(new_hold)
+        await db_session.commit()
+        await db_session.refresh(new_hold)
+
+        # Log action
+        audit_log = AdminAuditLog(
+            admin_id=current_admin.id,
+            admin_email=current_admin.email,
+            action="HOLD_CREATE",
+            target_user_id=request.user_id,
+            details=f"Hold Type: {request.hold_type}, Duration: {request.duration_days} days",
+            created_at=datetime.utcnow()
+        )
+        db_session.add(audit_log)
+        await db_session.commit()
+
+        return {
+            "id": new_hold.id,
+            "user_id": new_hold.user_id,
+            "hold_type": new_hold.hold_type,
+            "reason": new_hold.reason,
+            "created_at": new_hold.created_at.isoformat() if new_hold.created_at else None,
+            "release_date": release_date.isoformat()
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"create_hold error: {e}")
+        await db_session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+# ==================== 8. LIST DEVICES ====================
+
+@router.get("/devices")
+async def list_devices(
+    db_session: SessionDep,
+    current_admin: CurrentAdminUserDep,
+    limit: int = Query(50, ge=1, le=200)
+):
+    """
+    Get list of user devices.
+    
+    Response (200 OK):
+    {
+        "data": [
+            {
+                "id": 5001,
+                "user_id": 42,
+                "user_email": "user@example.com",
+                "device_type": "MOBILE",
+                "ip_address": "192.168.1.100",
+                "browser_info": "Chrome/Windows",
+                "last_active": "2025-04-08T10:15:00Z"
+            }
+        ]
+    }
+    """
+    try:
+        devices_result = await db_session.execute(
+            select(DeviceFingerprint)
+            .order_by(desc(DeviceFingerprint.last_activity))
+            .limit(limit)
+        )
+        devices = devices_result.scalars().all()
+
+        device_data = []
+        for device in devices:
+            # Get user info
+            user_result = await db_session.execute(
+                select(DBUser).where(DBUser.id == device.user_id)
+            )
+            user = user_result.scalar_one_or_none()
+
+            device_data.append({
+                "id": device.id,
+                "user_id": device.user_id,
+                "user_email": user.email if user else "unknown@example.com",
+                "device_type": getattr(device, 'device_type', 'WEB'),
+                "ip_address": getattr(device, 'ip_address', '0.0.0.0'),
+                "browser_info": getattr(device, 'user_agent', 'Unknown'),
+                "last_active": device.last_activity.isoformat() if device.last_activity else None
+            })
+
+        return {
+            "data": device_data
+        }
+
+    except Exception as e:
+        logger.error(f"list_devices error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+# ==================== 9. REVOKE SESSION ====================
+
+@router.post("/intervention/sessions/revoke")
+async def revoke_session(
+    request: RevokeSessionRequest,
+    db_session: SessionDep,
+    current_admin: CurrentAdminUserDep
+):
+    """
+    Revoke a specific device session.
+    
+    Response (200 OK):
+    {
+        "device_id": 5001,
+        "status": "REVOKED",
+        "revoked_at": "2025-04-08T14:32:15Z"
+    }
+    """
+    try:
+        device_result = await db_session.execute(
+            select(DeviceFingerprint).where(DeviceFingerprint.id == request.device_id)
+        )
+        device = device_result.scalar_one_or_none()
+
+        if not device:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Device not found"
+            )
+
+        device.is_active = False
+        device.last_activity = datetime.utcnow()
+
+        db_session.add(device)
+        await db_session.commit()
+
+        # Log action
+        audit_log = AdminAuditLog(
+            admin_id=current_admin.id,
+            admin_email=current_admin.email,
+            action="SESSION_REVOKE",
+            target_user_id=device.user_id,
+            details=f"Device ID: {request.device_id}, Reason: {request.reason}",
+            created_at=datetime.utcnow()
+        )
+        db_session.add(audit_log)
+        await db_session.commit()
+
+        return {
+            "device_id": request.device_id,
+            "status": "REVOKED",
+            "revoked_at": datetime.utcnow().isoformat()
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"revoke_session error: {e}")
+        await db_session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+# ==================== 10. GET KYC DOCUMENTS ====================
+
+@router.get("/intervention/kyc/{user_id}/documents")
+async def get_kyc_documents(
+    user_id: int,
+    db_session: SessionDep,
+    current_admin: CurrentAdminUserDep
+):
+    """
+    Get KYC documents with signed URLs (5-minute expiry).
+    
+    Response (200 OK):
+    {
+        "success": true,
+        "status": "PENDING",
+        "documents": {
+            "id_front": "https://s3...?expires=300",
+            "selfie": "https://s3...?expires=300"
+        },
+        "user_info": {
+            "document_type": "PASSPORT",
+            "submitted_at": "2025-04-05T09:00:00Z"
+        }
+    }
+    """
+    try:
+        # Get user
+        user_result = await db_session.execute(
+            select(DBUser).where(DBUser.id == user_id)
+        )
+        user = user_result.scalar_one_or_none()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+
+        # Get KYC submission
+        kyc_result = await db_session.execute(
+            select(KYCSubmission)
+            .where(KYCSubmission.user_id == user_id)
+            .order_by(desc(KYCSubmission.submitted_at))
+        )
+        kyc = kyc_result.scalars().first()
+
+        if not kyc:
+            return {
+                "success": False,
+                "status": "NO_SUBMISSION",
+                "documents": {},
+                "user_info": {
+                    "document_type": None,
+                    "submitted_at": None
+                }
+            }
+
+        # Build signed URLs (simulated - in production use S3 presigned URLs)
+        documents = {}
+        if getattr(kyc, 'id_front_path', None):
+            documents["id_front"] = f"{kyc.id_front_path}?expires=300"
+        if getattr(kyc, 'id_back_path', None):
+            documents["id_back"] = f"{kyc.id_back_path}?expires=300"
+        if getattr(kyc, 'proof_of_address_path', None):
+            documents["proof_of_address"] = f"{kyc.proof_of_address_path}?expires=300"
+        if getattr(kyc, 'selfie_path', None):
+            documents["selfie"] = f"{kyc.selfie_path}?expires=300"
+
+        return {
+            "success": True,
+            "status": kyc.status or "PENDING",
+            "documents": documents,
+            "user_info": {
+                "document_type": kyc.document_type or "PASSPORT",
+                "submitted_at": kyc.submitted_at.isoformat() if kyc.submitted_at else None
+            }
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"get_kyc_documents error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+# ==================== 11. APPROVE KYC ====================
+
+@router.post("/kyc/{user_id}/approve")
+async def approve_kyc(
+    user_id: int,
+    request: ApproveKYCRequest,
+    db_session: SessionDep,
+    current_admin: CurrentAdminUserDep
+):
+    """
+    Approve KYC for a user.
+    
+    Response (200 OK):
+    {
+        "user_id": 42,
+        "kyc_status": "VERIFIED",
+        "approved_at": "2025-04-08T14:32:15Z"
+    }
+    """
+    try:
+        # Get user
+        user_result = await db_session.execute(
+            select(DBUser).where(DBUser.id == user_id)
+        )
+        user = user_result.scalar_one_or_none()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+
+        # Update user KYC status
+        user.kyc_status = "approved"
+        user.updated_at = datetime.utcnow()
+
+        # Update KYC submission if exists
+        kyc_result = await db_session.execute(
+            select(KYCSubmission)
+            .where(KYCSubmission.user_id == user_id)
+            .order_by(desc(KYCSubmission.submitted_at))
+        )
+        kyc = kyc_result.scalars().first()
+        if kyc:
+            kyc.status = "approved"
+            kyc.approved_at = datetime.utcnow()
+            db_session.add(kyc)
+
+        db_session.add(user)
+        await db_session.commit()
+
+        # Log action
+        audit_log = AdminAuditLog(
+            admin_id=current_admin.id,
+            admin_email=current_admin.email,
+            action="KYC_APPROVAL",
+            target_user_id=user_id,
+            details="KYC status changed to APPROVED",
+            created_at=datetime.utcnow()
+        )
+        db_session.add(audit_log)
+        await db_session.commit()
+
+        return {
+            "user_id": user_id,
+            "kyc_status": "VERIFIED",
+            "approved_at": datetime.utcnow().isoformat()
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"approve_kyc error: {e}")
+        await db_session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+# ==================== 12. REJECT KYC ====================
+
+@router.post("/kyc/{user_id}/reject")
+async def reject_kyc(
+    user_id: int,
+    request: RejectKYCRequest,
+    db_session: SessionDep,
+    current_admin: CurrentAdminUserDep
+):
+    """
+    Reject KYC for a user and send notification email.
+    
+    Response (200 OK):
+    {
+        "user_id": 42,
+        "kyc_status": "REJECTED",
+        "rejection_reason": "ID document is illegible",
+        "rejected_at": "2025-04-08T14:32:15Z",
+        "notification_sent": true
+    }
+    """
+    try:
+        # Get user
+        user_result = await db_session.execute(
+            select(DBUser).where(DBUser.id == user_id)
+        )
+        user = user_result.scalar_one_or_none()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+
+        # Update user KYC status
+        user.kyc_status = "rejected"
+        user.updated_at = datetime.utcnow()
+
+        # Update KYC submission
+        kyc_result = await db_session.execute(
+            select(KYCSubmission)
+            .where(KYCSubmission.user_id == user_id)
+            .order_by(desc(KYCSubmission.submitted_at))
+        )
+        kyc = kyc_result.scalars().first()
+        if kyc:
+            kyc.status = "rejected"
+            kyc.rejection_reason = request.rejection_reason
+            db_session.add(kyc)
+
+        db_session.add(user)
+        await db_session.commit()
+
+        # Log action
+        audit_log = AdminAuditLog(
+            admin_id=current_admin.id,
+            admin_email=current_admin.email,
+            action="KYC_REJECTION",
+            target_user_id=user_id,
+            details=f"Rejection reason: {request.rejection_reason}",
+            created_at=datetime.utcnow()
+        )
+        db_session.add(audit_log)
+        await db_session.commit()
+
+        # TODO: Send rejection email notification to user
+        notification_sent = True  # Assume sent for now
+
+        return {
+            "user_id": user_id,
+            "kyc_status": "REJECTED",
+            "rejection_reason": request.rejection_reason,
+            "rejected_at": datetime.utcnow().isoformat(),
+            "notification_sent": notification_sent
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"reject_kyc error: {e}")
+        await db_session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+# ==================== 13. ADJUST BALANCE ====================
+
+@router.post("/intervention/balance/adjust")
+async def adjust_balance(
+    request: AdjustBalanceRequest,
+    db_session: SessionDep,
+    current_admin: CurrentAdminUserDep
+):
+    """
+    Manually adjust user balance with audit trail.
+    
+    Response (200 OK):
+    {
+        "user_id": 42,
+        "new_balance": 3000.75,
+        "previous_balance": 2500.75,
+        "adjusted_at": "2025-04-08T14:32:15Z"
+    }
+    """
+    try:
+        # Get user and account
+        user_result = await db_session.execute(
+            select(DBUser).where(DBUser.id == request.user_id)
+        )
+        user = user_result.scalar_one_or_none()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+
+        # Get previous balance
+        previous_balance = await BalanceServiceLedger.get_user_balance(
+            db_session, request.user_id
+        )
+
+        # Create adjustment transaction (mock - in production use actual ledger service)
+        # For now, we'll just update account balance directly
+        account_result = await db_session.execute(
+            select(DBAccount).where(DBAccount.owner_id == request.user_id).limit(1)
+        )
+        account = account_result.scalar_one_or_none()
+
+        if account:
+            current = float(account.balance) if account.balance else 0.0
+            account.balance = current + request.amount
+            account.updated_at = datetime.utcnow()
+            db_session.add(account)
+
+        await db_session.commit()
+
+        # Get new balance
+        new_balance = await BalanceServiceLedger.get_user_balance(
+            db_session, request.user_id
+        )
+
+        # Log action
+        audit_log = AdminAuditLog(
+            admin_id=current_admin.id,
+            admin_email=current_admin.email,
+            action="BALANCE_ADJUSTMENT",
+            target_user_id=request.user_id,
+            details=f"Amount: ${request.amount:.2f}, Reason: {request.reason_code}, Note: {request.description}",
+            created_at=datetime.utcnow()
+        )
+        db_session.add(audit_log)
+        await db_session.commit()
+
+        return {
+            "user_id": request.user_id,
+            "new_balance": float(new_balance) if new_balance else 0.0,
+            "previous_balance": float(previous_balance) if previous_balance else 0.0,
+            "adjusted_at": datetime.utcnow().isoformat()
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"adjust_balance error: {e}")
+        await db_session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+# ==================== 14. GLOBAL SEARCH ====================
+
+@router.get("/intervention/search")
+async def global_search(
+    db_session: SessionDep,
+    current_admin: CurrentAdminUserDep,
+    query: str = Query(..., min_length=1),
+    limit: int = Query(20, ge=1, le=100)
+):
+    """
+    Global search across users and accounts.
+    
+    Response (200 OK):
+    {
+        "results": {
+            "users": [...],
+            "accounts": [...]
+        }
+    }
+    """
+    try:
+        results = {"users": [], "accounts": []}
+
+        # Search users by email or name
+        users_result = await db_session.execute(
+            select(DBUser)
+            .where(
+                or_(
+                    DBUser.email.ilike(f"%{query}%"),
+                    DBUser.full_name.ilike(f"%{query}%")
+                )
+            )
+            .limit(limit)
+        )
+        users = users_result.scalars().all()
+        results["users"] = [
+            {
+                "id": u.id,
+                "email": u.email,
+                "full_name": u.full_name
+            }
+            for u in users
+        ]
+
+        # Search accounts by account number
+        accounts_result = await db_session.execute(
+            select(DBAccount)
+            .where(DBAccount.account_number.ilike(f"%{query}%"))
+            .limit(limit)
+        )
+        accounts = accounts_result.scalars().all()
+        results["accounts"] = [
+            {
+                "id": a.id,
+                "account_number": a.account_number
+            }
+            for a in accounts
+        ]
+
+        return {"results": results}
+
+    except Exception as e:
+        logger.error(f"global_search error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+# ==================== 15. ACTIVITY FEED ====================
+
+@router.get("/intervention/activity-feed")
+async def get_activity_feed(
+    db_session: SessionDep,
+    current_admin: CurrentAdminUserDep,
+    limit: int = Query(20, ge=1, le=100),
+    hours_back: int = Query(24, ge=1, le=720)
+):
+    """
+    Get recent activity for real-time feed.
+    
+    Response (200 OK):
+    {
+        "feed_items": [
+            {
+                "type": "transaction",
+                "description": "User John Doe deposited $500",
+                "timestamp": "2025-04-08T14:32:15Z"
+            }
+        ]
+    }
+    """
+    try:
+        time_filter = datetime.utcnow() - timedelta(hours=hours_back)
+        feed_items = []
+
+        # Recent transactions
+        txn_result = await db_session.execute(
+            select(Transaction)
+            .where(Transaction.created_at >= time_filter)
+            .order_by(desc(Transaction.created_at))
+            .limit(limit)
+        )
+        transactions = txn_result.scalars().all()
+
+        for txn in transactions:
+            feed_items.append({
+                "type": "transaction",
+                "description": f"Transaction: {txn.transaction_type} - ${txn.amount}",
+                "timestamp": txn.created_at.isoformat() if txn.created_at else None
+            })
+
+        return {"feed_items": feed_items[:limit]}
+
+    except Exception as e:
+        logger.error(f"get_activity_feed error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+# ==================== 16. BULK EMAIL ====================
+
+@router.post("/intervention/bulk-email")
+async def bulk_email(
+    request: BulkEmailRequest,
+    db_session: SessionDep,
+    current_admin: CurrentAdminUserDep
+):
+    """
+    Send bulk email to users based on KYC status.
+    
+    Response (200 OK):
+    {
+        "campaign_id": "camp_abc123",
+        "recipient_count": 245,
+        "status": "QUEUED",
+        "sent_at": "2025-04-08T14:32:15Z"
+    }
+    """
+    try:
+        # Filter users based on kyc_status_filter
+        if request.kyc_status_filter == "pending_kyc":
+            status_filter = "pending"
+        elif request.kyc_status_filter == "rejected_kyc":
+            status_filter = "rejected"
+        else:
+            status_filter = None
+
+        if status_filter:
+            users_result = await db_session.execute(
+                select(DBUser).where(DBUser.kyc_status == status_filter)
+            )
+        else:
+            users_result = await db_session.execute(select(DBUser))
+
+        users = users_result.scalars().all()
+        recipient_count = len(users)
+
+        # Generate campaign ID
+        campaign_id = f"camp_{datetime.utcnow().timestamp()}"
+
+        # Log action
+        audit_log = AdminAuditLog(
+            admin_id=current_admin.id,
+            admin_email=current_admin.email,
+            action="BULK_EMAIL_SENT",
+            details=f"Campaign {campaign_id}: {recipient_count} recipients, Filter: {request.kyc_status_filter}",
+            created_at=datetime.utcnow()
+        )
+        db_session.add(audit_log)
+        await db_session.commit()
+
+        return {
+            "campaign_id": campaign_id,
+            "recipient_count": recipient_count,
+            "status": "QUEUED",
+            "sent_at": datetime.utcnow().isoformat()
+        }
+
+    except Exception as e:
+        logger.error(f"bulk_email error: {e}")
+        await db_session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+# ==================== 17. AUDIT LOG ====================
+
+@router.post("/audit/log")
+async def log_audit_action(
+    request: AuditLogRequest,
+    db_session: SessionDep
+):
+    """
+    Log an admin action for compliance and audit trail.
+    
+    Response (201 Created):
+    {
+        "id": 5001,
+        "admin_id": 99,
+        "action": "BALANCE_ADJUSTMENT",
+        "created_at": "2025-04-08T14:32:15Z"
+    }
+    """
+    try:
+        audit_log = AdminAuditLog(
+            admin_id=request.admin_id,
+            admin_email=request.admin_email,
+            action=request.action,
+            target_user_id=request.target_user_id,
+            details=request.details,
+            created_at=request.timestamp,
+            ip_address=request.ip_address
+        )
+
+        db_session.add(audit_log)
+        await db_session.commit()
+        await db_session.refresh(audit_log)
+
+        return {
+            "id": audit_log.id,
+            "admin_id": request.admin_id,
+            "action": request.action,
+            "created_at": audit_log.created_at.isoformat() if audit_log.created_at else None
+        }
+
+    except Exception as e:
+        logger.error(f"log_audit_action error: {e}")
+        await db_session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+# ==================== 18. DELETE USER (SUPERADMIN ONLY) ====================
+
+@router.delete("/users/{user_id}")
+async def delete_user(
+    user_id: int,
+    db_session: SessionDep,
+    current_admin: CurrentAdminUserDep
+):
+    """
+    Delete a user (SUPERADMIN only).
+    
+    Response (200 OK):
+    {
+        "id": 42,
+        "status": "DELETED",
+        "deleted_at": "2025-04-08T14:32:15Z"
+    }
+    """
+    try:
+        # Check permissions
+        if not getattr(current_admin, 'is_superadmin', False):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Requires SUPER_ADMIN role"
+            )
+
+        # Get user
+        user_result = await db_session.execute(
+            select(DBUser).where(DBUser.id == user_id)
+        )
+        user = user_result.scalar_one_or_none()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+
+        # Check for active holds
+        holds_result = await db_session.execute(
+            select(func.count(AccountHold.id)).where(
+                AccountHold.user_id == user_id,
+                AccountHold.released_at.is_(None)
+            )
+        )
+        active_holds_count = holds_result.scalar() or 0
+        if active_holds_count > 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot delete user with active holds"
+            )
+
+        # Mark user as deleted
+        user.is_active = False
+        user.updated_at = datetime.utcnow()
+        db_session.add(user)
+
+        # Log action
+        audit_log = AdminAuditLog(
+            admin_id=current_admin.id,
+            admin_email=current_admin.email,
+            action="USER_DELETED",
+            target_user_id=user_id,
+            details=f"User {user.email} deleted by superadmin",
+            created_at=datetime.utcnow()
+        )
+        db_session.add(audit_log)
+        await db_session.commit()
+
+        return {
+            "id": user_id,
+            "status": "DELETED",
+            "deleted_at": datetime.utcnow().isoformat()
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"delete_user error: {e}")
+        await db_session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )

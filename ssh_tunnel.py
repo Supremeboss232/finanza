@@ -15,14 +15,16 @@ class SSHTunnelManager:
     
     def __init__(
         self,
-        ec2_host: str = "51.20.190.13",
-        key_path: str = "BankingBackendKey.pem",
-        rds_host: str = "finanza-bank.cluster-cxo2eume87bz.eu-north-1.rds.amazonaws.com",
+        ec2_host: str = "13.60.249.107",
+        key_path: str = "Super.pem",
+        ssh_user: str = "Administrator",
+        rds_host: str = "database-1.cf2w2gwcmvc8.eu-north-1.rds.amazonaws.com",
         rds_port: int = 5432,
         local_port: int = 5432
     ):
         self.ec2_host = ec2_host
         self.key_path = key_path
+        self.ssh_user = ssh_user
         self.rds_host = rds_host
         self.rds_port = rds_port
         self.local_port = local_port
@@ -35,7 +37,7 @@ class SSHTunnelManager:
             "ssh",
             "-i", self.key_path,
             "-L", f"{self.local_port}:{self.rds_host}:{self.rds_port}",
-            f"ec2-user@{self.ec2_host}",
+            f"{self.ssh_user}@{self.ec2_host}",
             "-N"  # Don't execute remote command
         ]
         
@@ -86,14 +88,16 @@ class SSHTunnelManager:
 
 
 def create_tunnel(
-    ec2_host: str = "51.20.190.13",
-    key_path: str = "BankingBackendKey.pem",
+    ec2_host: str = "13.60.249.107",
+    key_path: str = "Super.pem",
+    ssh_user: str = "Administrator",
     local_port: int = 5432
 ) -> SSHTunnelManager:
     """Create and start SSH tunnel"""
     tunnel = SSHTunnelManager(
         ec2_host=ec2_host,
         key_path=key_path,
+        ssh_user=ssh_user,
         local_port=local_port
     )
     if tunnel.start():

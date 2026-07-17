@@ -3,474 +3,569 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Loan Management - Finanza Admin</title>
+    <title>Loan Portfolio Management - Finanza Admin</title>
     <link href="/static/css/style.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
+    <script src="/static/js/toast-utils.js"></script>
     <style>
-        body { background: #f8f9fa; }
-        .admin-nav { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .admin-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; }
-        .stat-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        body { background: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .admin-nav { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .admin-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px 30px; border-radius: 10px; margin-bottom: 30px; }
+        
+        .stat-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         .stat-number { font-size: 2rem; font-weight: bold; color: #667eea; }
-        .stat-label { color: #666; font-size: 0.9rem; margin-top: 5px; }
-        .dashboard-section { background: white; border-radius: 10px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 30px; }
-        .loan-card { border-left: 4px solid #667eea; }
-        .chart-container { position: relative; height: 300px; margin-bottom: 20px; }
-        .status-badge { padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
-        .status-active { background: #d4edda; color: #155724; }
-        .status-paid { background: #cfe2ff; color: #084298; }
-        .status-delinquent { background: #f8d7da; color: #721c24; }
-        .status-defaulted { background: #f5c2c7; color: #661d1e; }
-        .modal-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
-        .form-control:focus { border-color: #667eea; box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25); }
-        .btn-primary { background: #667eea; border: none; }
-        .btn-primary:hover { background: #5568d3; }
-        .table-responsive { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .stat-label { color: #666; font-size: 0.85rem; margin-top: 5px; text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px; }
+        
+        .dashboard-section { background: white; border-radius: 10px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 30px; }
+        .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #e9ecef; padding-bottom: 15px; }
+        
+        .table th { font-weight: 600; text-transform: uppercase; font-size: 0.78rem; letter-spacing: 0.5px; color: #64748b; background: #f8fafc; }
+        .table td { font-size: 0.85rem; }
+        
+        .status-badge { padding: 4px 10px; border-radius: 50px; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; }
+        .status-active { background: #d1fae5; color: #065f46; }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-approved { background: #e0f2fe; color: #0369a1; }
+        .status-paid { background: #e0e7ff; color: #4338ca; }
+        .status-delinquent { background: #ffebee; color: #c62828; }
+        .status-defaulted { background: #f1f5f9; color: #475569; }
+        
+        .chart-container { position: relative; height: 220px; }
+        .masked-text { font-family: 'Courier New', monospace; color: #475569; font-weight: 600; }
     </style>
 </head>
 <body>
-    <!-- Navigation -->
+    <!-- Navbar -->
     <nav class="admin-nav navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="/user/admin/dashboard">
-                <i class="fas fa-chart-line"></i> Finanza Admin
+                <i class="fas fa-shield-alt me-2"></i> Finanza Control Center
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarAdmin">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
+            <div class="collapse navbar-collapse" id="navbarAdmin">
                 <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="/user/admin/dashboard">Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/user/admin/dashboard">Collections</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/user/admin/dashboard">HMDA</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/dashboard"><i class="fas fa-th-large me-1"></i> Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/lending_compliance"><i class="fas fa-balance-scale me-1"></i> Collections</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/hmda"><i class="fas fa-file-invoice me-1"></i> HMDA</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/user/admin/lending"><i class="fas fa-file-contract me-1"></i> Lending</a></li>
+                    <li class="nav-item"><a class="nav-link text-danger" href="/logout"><i class="fas fa-sign-out-alt me-1"></i> Logout</a></li>
                 </ul>
             </div>
         </div>
     </nav>
 
-    <div class="container-fluid mt-5 mb-5">
+    <div class="container-fluid py-4 px-4">
         <!-- Header -->
-        <div class="admin-header">
-            <h1><i class="fas fa-file-contract"></i> Loan Management</h1>
-            <p class="mb-0">Manage loans, payments, schedules, and modifications</p>
+        <div class="admin-header d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h1 class="h2 mb-1"><i class="fas fa-file-contract me-2"></i> Loan Portfolio Management</h1>
+                <p class="mb-0">Manage lending services, approve applications, modify payment schedules, and view portfolios</p>
+            </div>
+            <a href="/user/admin/dashboard" class="btn btn-light btn-sm"><i class="fas fa-arrow-left me-1"></i> Back</a>
         </div>
 
         <!-- Quick Stats -->
-        <div class="row g-4 mb-5">
-            <div class="col-lg-3 col-md-6">
+        <div class="row g-4 mb-4">
+            <div class="col-md-3">
                 <div class="stat-card">
-                    <div class="stat-number" id="totalLoans">-</div>
+                    <div class="stat-number" id="totalLoans">0</div>
                     <div class="stat-label">Total Loans</div>
                 </div>
             </div>
-            <div class="col-lg-3 col-md-6">
+            <div class="col-md-3">
                 <div class="stat-card">
-                    <div class="stat-number" id="activeLoans">-</div>
+                    <div class="stat-number text-success" id="activeLoans">0</div>
                     <div class="stat-label">Active Loans</div>
                 </div>
             </div>
-            <div class="col-lg-3 col-md-6">
+            <div class="col-md-3">
                 <div class="stat-card">
-                    <div class="stat-number" id="totalBalance">-</div>
+                    <div class="stat-number" id="outstandingBalance">$0.00</div>
                     <div class="stat-label">Outstanding Balance</div>
                 </div>
             </div>
-            <div class="col-lg-3 col-md-6">
+            <div class="col-md-3">
                 <div class="stat-card">
-                    <div class="stat-number" id="pendingPayments">-</div>
-                    <div class="stat-label">Pending Payments</div>
+                    <div class="stat-number text-warning" id="pendingApplicationsCount">0</div>
+                    <div class="stat-label">Pending Applications</div>
                 </div>
             </div>
         </div>
 
         <!-- Charts Row -->
-        <div class="row mb-5">
-            <div class="col-lg-6">
-                <div class="dashboard-section">
-                    <h5>Loan Status Distribution</h5>
+        <div class="row g-4 mb-4">
+            <div class="col-md-6">
+                <div class="dashboard-section h-100">
+                    <h5 class="font-bold mb-3"><i class="fas fa-chart-pie text-muted me-2"></i> Loan Status Distribution</h5>
                     <div class="chart-container">
-                        <canvas id="loanStatusChart"></canvas>
+                        <canvas id="statusChart"></canvas>
                     </div>
                 </div>
             </div>
-            <div class="col-lg-6">
-                <div class="dashboard-section">
-                    <h5>Payment Performance</h5>
+            <div class="col-md-6">
+                <div class="dashboard-section h-100">
+                    <h5 class="font-bold mb-3"><i class="fas fa-chart-bar text-muted me-2"></i> Loan Repayment Performance</h5>
                     <div class="chart-container">
-                        <canvas id="paymentPerformanceChart"></canvas>
+                        <canvas id="performanceChart"></canvas>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Loan Management -->
+        <!-- Loan Applications Tab/Section -->
         <div class="dashboard-section">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h5><i class="fas fa-list"></i> Loans</h5>
-                <button class="btn btn-primary btn-sm" onclick="openModal('createLoanModal')">
-                    <i class="fas fa-plus"></i> New Loan
-                </button>
+            <h5 class="font-bold mb-3"><i class="fas fa-file-signature text-warning me-2"></i> Pending Loan Applications</h5>
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Application ID</th>
+                            <th>Applicant ID</th>
+                            <th>Amount Requested</th>
+                            <th>Term</th>
+                            <th>Purpose</th>
+                            <th>Created Date</th>
+                            <th>Status</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="applicationsTable">
+                        <tr><td colspan="8" class="text-center py-3 text-muted">Loading pending applications...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Active Loans -->
+        <div class="dashboard-section">
+            <div class="section-header">
+                <h5 class="font-bold mb-0"><i class="fas fa-hand-holding-usd text-success me-2"></i> Managed Loan Portfolio</h5>
+                <div class="d-flex align-items-center gap-2">
+                    <input type="text" id="loanSearchInput" class="form-control form-control-sm" placeholder="Search Borrower ID..." style="width: 180px;">
+                    <select id="loanStatusFilter" class="form-select form-select-sm" style="width: 150px;">
+                        <option value="">All Statuses</option>
+                        <option value="active">Active</option>
+                        <option value="approved">Approved</option>
+                        <option value="paid">Paid Off</option>
+                        <option value="delinquent">Delinquent</option>
+                    </select>
+                    <button class="btn btn-primary btn-sm" onclick="searchLoans()"><i class="fas fa-search"></i> Search</button>
+                </div>
             </div>
             <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
+                <table class="table align-middle">
+                    <thead>
                         <tr>
                             <th>Loan ID</th>
-                            <th>Borrower</th>
+                            <th>Borrower ID</th>
                             <th>Amount</th>
                             <th>Rate</th>
                             <th>Term</th>
-                            <th>Balance</th>
+                            <th>Remaining Balance</th>
                             <th>Status</th>
                             <th>Next Payment</th>
-                            <th>Actions</th>
+                            <th class="text-end">Actions</th>
                         </tr>
                     </thead>
                     <tbody id="loansTable">
-                        <tr><td colspan="9" class="text-center text-muted">Loading loans...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Payment Schedules -->
-        <div class="dashboard-section">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h5><i class="fas fa-calendar"></i> Payment Schedules</h5>
-                <button class="btn btn-primary btn-sm" onclick="openModal('modifyScheduleModal')">
-                    <i class="fas fa-pencil-alt"></i> Modify Schedule
-                </button>
-            </div>
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Schedule ID</th>
-                            <th>Loan ID</th>
-                            <th>Payment Date</th>
-                            <th>Amount</th>
-                            <th>Principal</th>
-                            <th>Interest</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="schedulesTable">
-                        <tr><td colspan="8" class="text-center text-muted">Loading schedules...</td></tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Loan Modifications -->
-        <div class="dashboard-section">
-            <h5><i class="fas fa-edit"></i> Recent Loan Modifications</h5>
-            <div id="modificationsContainer">
-                <p class="text-muted">Loading modifications...</p>
-            </div>
-        </div>
-
-        <!-- Loan Payments -->
-        <div class="dashboard-section">
-            <h5><i class="fas fa-money-bill"></i> Recent Payments</h5>
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Payment ID</th>
-                            <th>Loan ID</th>
-                            <th>Borrower</th>
-                            <th>Amount</th>
-                            <th>Date</th>
-                            <th>Type</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="paymentsTable">
-                        <tr><td colspan="8" class="text-center text-muted">Loading payments...</td></tr>
+                        <tr><td colspan="9" class="text-center py-3 text-muted">Loading loans...</td></tr>
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
 
-    <!-- Create Loan Modal -->
-    <div class="modal fade" id="createLoanModal" tabindex="-1">
+    <!-- Loan Modifications Modal -->
+    <div class="modal fade" id="modificationsModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Create New Loan</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <h5 class="modal-title font-bold"><i class="fas fa-history me-2"></i> Modification History</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <form id="createLoanForm" onsubmit="handleCreateLoan(event)">
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">Borrower</label>
-                            <select class="form-control" id="borrowerId" required>
-                                <option value="">Select borrower...</option>
-                            </select>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Loan Amount</label>
-                                <input type="number" class="form-control" id="loanAmount" step="0.01" required>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Interest Rate (%)</label>
-                                <input type="number" class="form-control" id="interestRate" step="0.01" required>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Loan Term (months)</label>
-                                <input type="number" class="form-control" id="loanTerm" required>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Loan Type</label>
-                                <select class="form-control" id="loanType" required>
-                                    <option value="personal">Personal</option>
-                                    <option value="home">Home</option>
-                                    <option value="auto">Auto</option>
-                                    <option value="student">Student</option>
-                                    <option value="business">Business</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Description</label>
-                            <textarea class="form-control" id="loanDescription" rows="3"></textarea>
-                        </div>
+                <div class="modal-body p-4">
+                    <div class="table-responsive">
+                        <table class="table align-middle">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Type</th>
+                                    <th>Requested By</th>
+                                    <th>Effective Date</th>
+                                    <th>Reason</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="modalModificationsTable">
+                                <tr><td colspan="6" class="text-center py-3 text-muted">No modification entries.</td></tr>
+                            </tbody>
+                        </table>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Create Loan</button>
-                    </div>
-                </form>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Modify Schedule Modal -->
-    <div class="modal fade" id="modifyScheduleModal" tabindex="-1">
+    <!-- Approve Loan Application Modal -->
+    <div class="modal fade" id="approveLoanModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Modify Payment Schedule</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title font-bold"><i class="fas fa-check-circle me-2"></i> Approve Loan Application</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <form id="modifyScheduleForm" onsubmit="handleModifySchedule(event)">
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">Loan</label>
-                            <select class="form-control" id="modifyLoanId" required>
-                                <option value="">Select loan...</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Modification Type</label>
-                            <select class="form-control" id="modificationType" required>
-                                <option value="">Select type...</option>
-                                <option value="deferment">Deferment</option>
-                                <option value="forbearance">Forbearance</option>
-                                <option value="rate_reduction">Rate Reduction</option>
-                                <option value="term_extension">Term Extension</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Effective Date</label>
-                            <input type="date" class="form-control" id="effectiveDate" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Details</label>
-                            <textarea class="form-control" id="modificationDetails" rows="3"></textarea>
-                        </div>
+                <div class="modal-body p-4">
+                    <input type="hidden" id="approveLoanId">
+                    <div class="mb-3">
+                        <label class="form-label small font-bold">Approved Annual Interest Rate (%)</label>
+                        <input type="number" id="approveInterestRate" class="form-control" placeholder="e.g. 5.5" step="0.01">
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Apply Modification</button>
+                    <div class="mb-3">
+                        <label class="form-label small font-bold">Monthly Repayment Amount ($) (Optional)</label>
+                        <input type="number" id="approveMonthlyPayment" class="form-control" placeholder="Leave blank to calculate automatically">
                     </div>
-                </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-success" onclick="submitApproveLoan()">Approve &amp; Set Terms</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/admin_static/js/auth-helper.js"></script>
+    <!-- Reject Loan Application Modal -->
+    <div class="modal fade" id="rejectLoanModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title font-bold"><i class="fas fa-times-circle me-2"></i> Reject Loan Application</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <input type="hidden" id="rejectLoanId">
+                    <div class="mb-3">
+                        <label class="form-label small font-bold">Reason for Denial</label>
+                        <select id="rejectReason" class="form-select border-danger">
+                            <option value="CREDIT_SCORE">Credit Score does not meet requirements</option>
+                            <option value="DTI_TOO_HIGH">Debt-to-Income (DTI) ratio too high</option>
+                            <option value="INCOME_UNVERIFIED">Unable to verify income</option>
+                            <option value="POLICY_VIOLATION">Compliance or Lending Policy Violation</option>
+                            <option value="FRAUD_RISK">Identified high fraud risk indicators</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="submitRejectLoan()">Reject Application</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
-        const token = localStorage.getItem('token');
-        let loanStatusChart = null;
-        let paymentPerformanceChart = null;
+        const API_BASE = '/api/admin';
+        let loansData = [];
+        let pendingApplications = [];
+        let statusChart = null;
+        let performanceChart = null;
 
-        document.addEventListener('DOMContentLoaded', async function() {
-            await loadLoanMetrics();
-            await loadLoans();
-            await loadPaymentSchedules();
-            await loadPayments();
-            initCharts();
-        });
-
-        async function loadLoanMetrics() {
+        async function loadLendingDashboard() {
             try {
-                const response = await fetch('/api/v1/loans/metrics', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                // Fetch stats and lists
+                const statsResp = await fetch('/api/admin/data/metrics', {
+                    headers: { 'Authorization': 'Bearer ' + getAuthToken() }
                 });
-                if (!response.ok) throw new Error('Failed to load metrics');
-                const data = await response.json();
                 
-                document.getElementById('totalLoans').textContent = data.total_loans || 0;
-                document.getElementById('activeLoans').textContent = data.active_loans || 0;
-                document.getElementById('totalBalance').textContent = '$' + (data.total_balance || 0).toFixed(2);
-                document.getElementById('pendingPayments').textContent = data.pending_payments || 0;
-            } catch (error) {
-                console.error('Error loading metrics:', error);
+                const loansResp = await fetch('/api/admin/kyc', { // fetch all loans in project logic or similar list
+                    headers: { 'Authorization': 'Bearer ' + getAuthToken() }
+                });
+                
+                // Fetch pending loan applications
+                const pendingResp = await fetch('/api/admin/data/loans/pending', {
+                    headers: { 'Authorization': 'Bearer ' + getAuthToken() }
+                });
+                
+                if (pendingResp.ok) {
+                    const res = await pendingResp.json();
+                    pendingApplications = res.data || [];
+                    renderPendingApplications();
+                    document.getElementById('pendingApplicationsCount').textContent = pendingApplications.length;
+                }
+                
+                // Let's also load the actual loans table
+                const actualLoansResp = await fetch('/api/v1/loans?limit=100', {
+                    headers: { 'Authorization': 'Bearer ' + getAuthToken() }
+                });
+                if (actualLoansResp.ok) {
+                    const res = await actualLoansResp.json();
+                    loansData = res.data || [];
+                    renderLoansTable(loansData);
+                    updateStats();
+                    renderCharts();
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('Failed to load lending data', 'error');
             }
         }
 
-        async function loadLoans() {
-            try {
-                const response = await fetch('/api/v1/loans?limit=50', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (!response.ok) throw new Error('Failed to load loans');
-                const loans = await response.json();
+        function updateStats() {
+            document.getElementById('totalLoans').textContent = loansData.length;
+            document.getElementById('activeLoans').textContent = loansData.filter(l => l.status === 'active').length;
+            
+            const totalOutstanding = loansData.reduce((sum, l) => sum + (parseFloat(l.balance) || 0), 0);
+            document.getElementById('outstandingBalance').textContent = `$${totalOutstanding.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+        }
+
+        function renderPendingApplications() {
+            const tbody = document.getElementById('applicationsTable');
+            tbody.innerHTML = '';
+            
+            if (pendingApplications.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-3 text-muted">No pending loan applications.</td></tr>`;
+                return;
+            }
+            
+            pendingApplications.forEach(a => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${a.id}</strong></td>
+                    <td class="font-monospace">${a.owner_id || a.user_id}</td>
+                    <td>$${(a.amount || 0).toLocaleString()}</td>
+                    <td>${a.term_months} Months</td>
+                    <td>${a.purpose || 'Personal Loan'}</td>
+                    <td>${a.created_at ? new Date(a.created_at).toLocaleDateString() : 'N/A'}</td>
+                    <td><span class="status-badge status-pending">${a.status}</span></td>
+                    <td class="text-end">
+                        <button class="btn btn-xs btn-success me-1" onclick="openApproveModal(${a.id})"><i class="fas fa-check"></i> Approve</button>
+                        <button class="btn btn-xs btn-danger me-1" onclick="openRejectModal(${a.id})"><i class="fas fa-times"></i> Reject</button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderLoansTable(loans) {
+            const tbody = document.getElementById('loansTable');
+            tbody.innerHTML = '';
+            
+            if (loans.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center py-3 text-muted">No loans matches filters.</td></tr>`;
+                return;
+            }
+            
+            loans.forEach(l => {
+                const tr = document.createElement('tr');
+                const statusClass = `status-${(l.status || 'pending').toLowerCase()}`;
                 
-                const tbody = document.getElementById('loansTable');
-                tbody.innerHTML = loans.data?.map(loan => `
-                    <tr>
-                        <td><strong>${loan.id}</strong></td>
-                        <td>${loan.borrower_name || 'N/A'}</td>
-                        <td>$${loan.principal_amount?.toFixed(2) || 0}</td>
-                        <td>${loan.interest_rate?.toFixed(2) || 0}%</td>
-                        <td>${loan.term_months} months</td>
-                        <td>$${loan.balance?.toFixed(2) || 0}</td>
-                        <td><span class="status-badge status-${loan.status}">${loan.status}</span></td>
-                        <td>${loan.next_payment_date || 'N/A'}</td>
-                        <td>
-                            <button class="btn btn-sm btn-info" onclick="viewLoanDetails(${loan.id})">
-                                <i class="fas fa-eye"></i>
+                tr.innerHTML = `
+                    <td><strong>${l.id}</strong></td>
+                    <td class="font-monospace">${l.owner_id || '—'}</td>
+                    <td>$${parseFloat(l.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                    <td>${parseFloat(l.interest_rate || 0).toFixed(2)}%</td>
+                    <td>${l.term_months} months</td>
+                    <td class="fw-bold">$${parseFloat(l.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                    <td><span class="status-badge ${statusClass}">${l.status}</span></td>
+                    <td>${l.next_payment_date || 'N/A'}</td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-info" onclick="viewLoanModifications(${l.id})">
+                            <i class="fas fa-history"></i> History
+                        </button>
+                        ${l.status === 'approved' ? `
+                            <button class="btn btn-sm btn-success" onclick="activateLoan(${l.id})">
+                                <i class="fas fa-coins"></i> Disburse
                             </button>
-                        </td>
-                    </tr>
-                `).join('') || '<tr><td colspan="9" class="text-center text-muted">No loans found</td></tr>';
-            } catch (error) {
-                console.error('Error loading loans:', error);
-            }
+                        ` : ''}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
         }
 
-        async function loadPaymentSchedules() {
+        async function searchLoans() {
+            const query = document.getElementById('loanSearchInput').value.trim();
+            const status = document.getElementById('loanStatusFilter').value;
+            
+            let filtered = loansData;
+            if (query) {
+                filtered = filtered.filter(l => String(l.owner_id).includes(query) || String(l.id).includes(query));
+            }
+            if (status) {
+                filtered = filtered.filter(l => l.status === status);
+            }
+            renderLoansTable(filtered);
+        }
+
+        async function viewLoanModifications(loanId) {
+            const tbody = document.getElementById('modalModificationsTable');
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-3 text-muted"><span class="spinner-border spinner-border-sm me-2"></span> Loading...</td></tr>`;
+            
+            const modal = new bootstrap.Modal(document.getElementById('modificationsModal'));
+            modal.show();
+            
             try {
-                const response = await fetch('/api/v1/loans/schedules?limit=20', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                const response = await fetch(`/api/v1/loans/${loanId}/modifications?limit=10`, {
+                    headers: { 'Authorization': 'Bearer ' + getAuthToken() }
                 });
-                if (!response.ok) throw new Error('Failed to load schedules');
-                const schedules = await response.json();
+                if (!response.ok) throw new Error('API failed');
                 
-                const tbody = document.getElementById('schedulesTable');
-                tbody.innerHTML = schedules.data?.map(schedule => `
+                const data = await response.json();
+                const items = data.data || [];
+                
+                if (items.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-center py-3 text-muted">No modification logs for this loan.</td></tr>`;
+                    return;
+                }
+                
+                tbody.innerHTML = items.map(item => `
                     <tr>
-                        <td>${schedule.id}</td>
-                        <td>${schedule.loan_id}</td>
-                        <td>${schedule.payment_date}</td>
-                        <td>$${schedule.payment_amount?.toFixed(2)}</td>
-                        <td>$${schedule.principal_amount?.toFixed(2)}</td>
-                        <td>$${schedule.interest_amount?.toFixed(2)}</td>
-                        <td><span class="status-badge status-${schedule.status}">${schedule.status}</span></td>
-                        <td><button class="btn btn-sm btn-primary">Edit</button></td>
+                        <td>${item.id}</td>
+                        <td><span class="badge bg-secondary">${item.modification_type}</span></td>
+                        <td>${item.requested_by || 'Admin'}</td>
+                        <td>${item.effective_date ? new Date(item.effective_date).toLocaleDateString() : 'N/A'}</td>
+                        <td>${item.reason || 'N/A'}</td>
+                        <td><span class="badge bg-success">Approved</span></td>
                     </tr>
-                `).join('') || '<tr><td colspan="8" class="text-center text-muted">No schedules found</td></tr>';
-            } catch (error) {
-                console.error('Error loading schedules:', error);
+                `).join('');
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-center py-3 text-danger">Failed to load modifications.</td></tr>`;
             }
         }
 
-        async function loadPayments() {
+        // Origination controls
+        function openApproveModal(id) {
+            document.getElementById('approveLoanId').value = id;
+            document.getElementById('approveInterestRate').value = '5.0';
+            document.getElementById('approveMonthlyPayment').value = '';
+            new bootstrap.Modal(document.getElementById('approveLoanModal')).show();
+        }
+
+        async function submitApproveLoan() {
+            const id = document.getElementById('approveLoanId').value;
+            const rate = parseFloat(document.getElementById('approveInterestRate').value);
+            const monthly = parseFloat(document.getElementById('approveMonthlyPayment').value) || 0;
+            
             try {
-                const response = await fetch('/api/v1/loans/payments?limit=20', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                const response = await fetch(`/api/admin/loans/${id}/approve?interest_rate=${rate}&monthly_payment=${monthly}`, {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + getAuthToken() }
                 });
-                if (!response.ok) throw new Error('Failed to load payments');
-                const payments = await response.json();
+                if (!response.ok) throw new Error('Approval failed');
                 
-                const tbody = document.getElementById('paymentsTable');
-                tbody.innerHTML = payments.data?.map(payment => `
-                    <tr>
-                        <td>${payment.id}</td>
-                        <td>${payment.loan_id}</td>
-                        <td>${payment.borrower_name || 'N/A'}</td>
-                        <td>$${payment.amount?.toFixed(2)}</td>
-                        <td>${payment.payment_date}</td>
-                        <td>${payment.payment_type}</td>
-                        <td><span class="status-badge status-${payment.status}">${payment.status}</span></td>
-                        <td><button class="btn btn-sm btn-info">Details</button></td>
-                    </tr>
-                `).join('') || '<tr><td colspan="8" class="text-center text-muted">No payments found</td></tr>';
-            } catch (error) {
-                console.error('Error loading payments:', error);
+                showToast('Loan approved successfully', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('approveLoanModal')).hide();
+                loadLendingDashboard();
+            } catch (err) {
+                showToast(err.message, 'error');
             }
         }
 
-        function initCharts() {
-            // Loan Status Distribution
-            const statusCtx = document.getElementById('loanStatusChart')?.getContext('2d');
-            if (statusCtx) {
-                loanStatusChart = new Chart(statusCtx, {
+        function openRejectModal(id) {
+            document.getElementById('rejectLoanId').value = id;
+            new bootstrap.Modal(document.getElementById('rejectLoanModal')).show();
+        }
+
+        async function submitRejectLoan() {
+            const id = document.getElementById('rejectLoanId').value;
+            const reason = document.getElementById('rejectReason').value;
+            
+            try {
+                const response = await fetch(`/api/admin/loans/${id}/reject?reason=${encodeURIComponent(reason)}`, {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + getAuthToken() }
+                });
+                if (!response.ok) throw new Error('Rejection failed');
+                
+                showToast('Application rejected', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('rejectLoanModal')).hide();
+                loadLendingDashboard();
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        async function activateLoan(id) {
+            if (!confirm('Are you sure you want to disburse the funds and activate this loan?')) return;
+            try {
+                const response = await fetch(`/api/admin/loans/${id}/activate`, {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + getAuthToken() }
+                });
+                if (!response.ok) throw new Error('Activation failed');
+                
+                showToast('Loan activated and funds disbursed successfully!', 'success');
+                loadLendingDashboard();
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        function renderCharts() {
+            const statuses = {};
+            loansData.forEach(l => {
+                const s = l.status || 'pending';
+                statuses[s] = (statuses[s] || 0) + 1;
+            });
+
+            // Status distribution doughnut
+            const ctxStatus = document.getElementById('statusChart');
+            if (ctxStatus) {
+                if (statusChart) statusChart.destroy();
+                statusChart = new Chart(ctxStatus.getContext('2d'), {
                     type: 'doughnut',
                     data: {
-                        labels: ['Active', 'Paid Off', 'Delinquent', 'Defaulted'],
+                        labels: Object.keys(statuses),
                         datasets: [{
-                            data: [45, 30, 15, 10],
-                            backgroundColor: ['#28a745', '#cfe2ff', '#f8d7da', '#f5c2c7']
+                            data: Object.values(statuses),
+                            backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#64748b']
                         }]
                     },
-                    options: { responsive: true, maintainAspectRatio: false }
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'bottom' } }
+                    }
                 });
             }
 
-            // Payment Performance
-            const perfCtx = document.getElementById('paymentPerformanceChart')?.getContext('2d');
-            if (perfCtx) {
-                paymentPerformanceChart = new Chart(perfCtx, {
+            // Performance bar chart (Repayments vs balance)
+            const ctxPerf = document.getElementById('performanceChart');
+            if (ctxPerf) {
+                if (performanceChart) performanceChart.destroy();
+                performanceChart = new Chart(ctxPerf.getContext('2d'), {
                     type: 'bar',
                     data: {
-                        labels: ['On Time', 'Late', 'Missed'],
+                        labels: ['Active Loans', 'Paid Off', 'Delinquent'],
                         datasets: [{
-                            label: 'Payments',
-                            data: [85, 12, 3],
-                            backgroundColor: ['#28a745', '#ffc107', '#dc3545']
+                            label: 'Loan Count',
+                            data: [
+                                loansData.filter(l => l.status === 'active').length,
+                                loansData.filter(l => l.status === 'paid').length,
+                                loansData.filter(l => l.status === 'delinquent').length
+                            ],
+                            backgroundColor: ['#10b981', '#3b82f6', '#ef4444']
                         }]
                     },
-                    options: { responsive: true, maintainAspectRatio: false }
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } }
+                    }
                 });
             }
         }
 
-        async function handleCreateLoan(event) {
-            event.preventDefault();
-            // Implementation for creating loan
-            alert('Loan creation submitted');
-            bootstrap.Modal.getInstance(document.getElementById('createLoanModal')).hide();
+        function getAuthToken() {
+            return localStorage.getItem('token') || '';
         }
 
-        async function handleModifySchedule(event) {
-            event.preventDefault();
-            // Implementation for modifying schedule
-            alert('Schedule modification submitted');
-            bootstrap.Modal.getInstance(document.getElementById('modifyScheduleModal')).hide();
-        }
-
-        function openModal(modalId) {
-            new bootstrap.Modal(document.getElementById(modalId)).show();
-        }
-
-        function viewLoanDetails(loanId) {
-            // Implementation for viewing loan details
-            alert(`Viewing loan ${loanId}`);
-        }
+        // Init
+        window.addEventListener('load', loadLendingDashboard);
     </script>
-    <script src="/static/js/admin-guard.js"></script>
 </body>
 </html>

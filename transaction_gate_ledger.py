@@ -150,11 +150,8 @@ class TransactionGate:
                     reference_number=transaction.reference_number
                 )
             
-            # 6. Sync account balance from ledger
-            new_balance = await LedgerService.get_user_balance(db, transaction.user_id)
-            account.balance = float(new_balance)
-            db.add(account)
-            await db.flush()
+            # 6. Account balance calculated from ledger (do not update stored balance)
+            # Balance is now a calculated property from ledger entries
             
             # 7. Verify ledger integrity
             reconciliation = await LedgerService.reconcile_ledger(db)

@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Search - Finanza Admin</title>
+    <link href="/static/css/style.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/toast-utils.js"></script>
+    <style>
+        body { background: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .admin-nav { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .admin-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 25px 30px; border-radius: 10px; margin-bottom: 30px; }
+        
+        .search-card { background: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); }
+        .filter-section { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 25px; }
+        .filter-group { display: flex; flex-direction: column; }
+        
+        label { font-size: 13px; font-weight: 600; color: #333; margin-bottom: 8px; }
+        input, select { padding: 10px 12px; border: 2px solid #e2e8f0; border-radius: 6px; font-size: 13px; transition: all 0.3s; }
+        input:focus, select:focus { outline: none; border-color: #667eea; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
+        
+        .advanced-toggle-btn { background: none; border: none; color: #667eea; font-weight: 600; cursor: pointer; padding: 0; display: flex; align-items: center; gap: 5px; font-size: 0.9rem; }
+        
+        .results-section { background: white; border-radius: 10px; padding: 25px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); }
+        .table th { font-weight: 600; text-transform: uppercase; font-size: 0.78rem; letter-spacing: 0.5px; color: #64748b; background: #f8fafc; }
+        .table td { font-size: 0.85rem; vertical-align: middle; }
+        
+        .status-badge { padding: 4px 10px; border-radius: 50px; font-size: 0.75rem; font-weight: 600; }
+        .status-active { background: #d1fae5; color: #065f46; }
+        .status-suspended { background: #fff3cd; color: #856404; }
+        .status-frozen { background: #fee2e2; color: #b91c1c; }
+        
+        .kyc-badge { padding: 4px 10px; border-radius: 50px; font-size: 0.75rem; font-weight: 600; }
+        .kyc-approved { background: #d1fae5; color: #065f46; }
+        .kyc-pending { background: #fff3cd; color: #856404; }
+        .kyc-rejected { background: #fee2e2; color: #b91c1c; }
+        .kyc-not-started { background: #f1f5f9; color: #475569; }
+
+        .chip { display: inline-flex; align-items: center; background: #e0e7ff; color: #4338ca; padding: 4px 10px; border-radius: 50px; font-size: 0.75rem; margin-right: 8px; margin-bottom: 8px; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="admin-nav navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/user/admin/dashboard">
+                <i class="fas fa-shield-alt me-2"></i> Finanza Control Center
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarAdmin">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarAdmin">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/dashboard"><i class="fas fa-th-large me-1"></i> Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/users"><i class="fas fa-users me-1"></i> Users</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/kyc"><i class="fas fa-file-signature me-1"></i> KYC</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/transactions"><i class="fas fa-exchange-alt me-1"></i> Transactions</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/user/admin/advanced_search"><i class="fas fa-search me-1"></i> Search</a></li>
+                    <li class="nav-item"><a class="nav-link text-danger" href="/logout"><i class="fas fa-sign-out-alt me-1"></i> Logout</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4 px-4">
+        <!-- Header -->
+        <div class="admin-header d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h1 class="h2 mb-1"><i class="fas fa-search-plus me-2"></i> Advanced User Query Center</h1>
+                <p class="mb-0">Run multi-parameter filtering, lookup users by accounts, check MFA configurations, and export compliance reports</p>
+            </div>
+            <a href="/user/admin/dashboard" class="btn btn-light btn-sm">
+                <i class="fas fa-arrow-left me-1"></i> Back
+            </a>
+        </div>
+
+        <!-- Search panel -->
+        <div class="search-card">
+            <div class="filter-section">
+                <div class="filter-group">
+                    <label>Global Keyword</label>
+                    <input type="text" id="searchText" placeholder="Name, email, account..." />
+                </div>
+                <div class="filter-group">
+                    <label>Email Address</label>
+                    <input type="email" id="filterEmail" placeholder="e.g. user@email.com" />
+                </div>
+                <div class="filter-group">
+                    <label>Phone Number</label>
+                    <input type="text" id="filterPhone" placeholder="e.g. +12345678" />
+                </div>
+                <div class="filter-group">
+                    <label>Account Number</label>
+                    <input type="text" id="filterAccountNumber" placeholder="10-digit account number" />
+                </div>
+            </div>
+
+            <div class="filter-section">
+                <div class="filter-group">
+                    <label>KYC Status</label>
+                    <select id="filterKyc">
+                        <option value="">All</option>
+                        <option value="not_started">Not Started</option>
+                        <option value="pending">Pending Review</option>
+                        <option value="approved">Approved</option>
+                        <option value="rejected">Rejected</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Account Status</label>
+                    <select id="filterStatus">
+                        <option value="">All</option>
+                        <option value="active">Active</option>
+                        <option value="suspended">Suspended</option>
+                        <option value="frozen">Frozen</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Geographic Region</label>
+                    <input type="text" id="filterRegion" placeholder="e.g. US, EU, UK" />
+                </div>
+                <div class="filter-group">
+                    <label>Account Type</label>
+                    <select id="filterAccountType">
+                        <option value="">All</option>
+                        <option value="Checking">Checking</option>
+                        <option value="Savings">Savings</option>
+                        <option value="Business">Business</option>
+                        <option value="Investment">Investment</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Advanced Collapse -->
+            <div class="mb-3">
+                <button class="advanced-toggle-btn" type="button" data-bs-toggle="collapse" data-bs-target="#advancedOptions" aria-expanded="false">
+                    <i class="fas fa-sliders-h"></i> Advanced Criteria &amp; Limits
+                </button>
+            </div>
+            
+            <div class="collapse" id="advancedOptions">
+                <div class="card card-body border-light bg-light mb-3">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label font-bold small">MFA Setup Status</label>
+                            <select id="filterMfa" class="form-select">
+                                <option value="">All</option>
+                                <option value="true">Enabled Only</option>
+                                <option value="false">Disabled Only</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label font-bold small">Email Verified</label>
+                            <select id="filterVerified" class="form-select">
+                                <option value="">All</option>
+                                <option value="true">Verified Only</option>
+                                <option value="false">Unverified Only</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label font-bold small">Balance Min ($)</label>
+                            <input type="number" id="filterBalanceMin" class="form-control" placeholder="Min Balance">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label font-bold small">Balance Max ($)</label>
+                            <input type="number" id="filterBalanceMax" class="form-control" placeholder="Max Balance">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label font-bold small">Registered After</label>
+                            <input type="date" id="filterDateFrom" class="form-control">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label font-bold small">Registered Before</label>
+                            <input type="date" id="filterDateTo" class="form-control">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-4">
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary px-4" onclick="performSearch()">
+                        <i class="fas fa-search me-1"></i> Run Query
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="clearFilters()">
+                        <i class="fas fa-undo me-1"></i> Clear Filters
+                    </button>
+                </div>
+                <button class="btn btn-outline-success" id="exportBtn" onclick="exportResults()" style="display: none;">
+                    <i class="fas fa-file-csv me-1"></i> Export CSV
+                </button>
+            </div>
+        </div>
+
+        <!-- Results section -->
+        <div class="results-section" id="resultsSection" style="display: none;">
+            <div id="filterChips" class="mb-3"></div>
+            
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="font-bold mb-0">Query Match Results</h5>
+                <div class="small text-muted" id="resultsInfoText"></div>
+            </div>
+
+            <div class="alert alert-warning small py-2" id="limitWarning" style="display: none;">
+                <i class="fas fa-exclamation-triangle me-1"></i> <strong>Search Limit Hit:</strong> Showing first 50 results. Please apply tighter filter conditions to isolate specific user profiles.
+            </div>
+
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>User Name / Email</th>
+                            <th>Account #</th>
+                            <th>KYC Status</th>
+                            <th>Account Status</th>
+                            <th>Region</th>
+                            <th>Total Balance</th>
+                            <th>MFA Enabled</th>
+                            <th>Registration Date</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsTableBody">
+                        <!-- Dynamic rows -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <nav class="d-flex justify-content-between align-items-center mt-3">
+                <div id="paginationSummary" class="small text-muted"></div>
+                <ul class="pagination pagination-sm mb-0" id="pagination">
+                    <!-- Pagination buttons -->
+                </ul>
+            </nav>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api/admin/advanced';
+        let currentResults = [];
+        let currentPage = 1;
+        const resultsPerPage = 15;
+
+        async function performSearch() {
+            const tableBody = document.getElementById('resultsTableBody');
+            tableBody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-2"></span> Searching database...</td></tr>`;
+            document.getElementById('resultsSection').style.display = 'block';
+            
+            try {
+                const filters = {};
+                const fieldsToCheck = [
+                    ['searchText', 'search'],
+                    ['filterEmail', 'email'],
+                    ['filterPhone', 'phone'],
+                    ['filterAccountNumber', 'account_number'],
+                    ['filterKyc', 'kyc_status'],
+                    ['filterStatus', 'account_status'],
+                    ['filterRegion', 'region'],
+                    ['filterAccountType', 'account_type'],
+                    ['filterMfa', 'mfa_enabled'],
+                    ['filterVerified', 'email_verified'],
+                    ['filterBalanceMin', 'balance_min'],
+                    ['filterBalanceMax', 'balance_max'],
+                    ['filterDateFrom', 'created_after'],
+                    ['filterDateTo', 'created_before']
+                ];
+
+                fieldsToCheck.forEach(([elementId, paramName]) => {
+                    const el = document.getElementById(elementId);
+                    if (el && el.value !== "") {
+                        filters[paramName] = el.value;
+                    }
+                });
+
+                const params = new URLSearchParams(filters);
+                const response = await fetch(`${API_BASE}/users/advanced-search?${params}`, {
+                    headers: { 'Authorization': 'Bearer ' + getAuthToken() }
+                });
+                
+                if (!response.ok) throw new Error('Search failed');
+                
+                const data = await response.json();
+                currentResults = data.users || [];
+                currentPage = 1;
+                
+                document.getElementById('exportBtn').style.display = currentResults.length > 0 ? 'block' : 'none';
+                
+                // Show limit warning if total hits is at 50 limit
+                document.getElementById('limitWarning').style.display = currentResults.length >= 50 ? 'block' : 'none';
+                document.getElementById('resultsInfoText').textContent = `Total matches found: ${currentResults.length}`;
+                
+                renderResultsTable();
+                renderFilterChips(filters);
+            } catch (err) {
+                console.error(err);
+                tableBody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-danger"><i class="fas fa-exclamation-circle me-1"></i> Failed to run query. Check console logs.</td></tr>`;
+            }
+        }
+
+        function renderResultsTable() {
+            const tbody = document.getElementById('resultsTableBody');
+            tbody.innerHTML = '';
+            
+            if (currentResults.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-muted">No matching user profiles found.</td></tr>`;
+                document.getElementById('paginationSummary').textContent = '';
+                document.getElementById('pagination').innerHTML = '';
+                return;
+            }
+            
+            const start = (currentPage - 1) * resultsPerPage;
+            const end = start + resultsPerPage;
+            const pageData = currentResults.slice(start, end);
+            
+            pageData.forEach(u => {
+                const tr = document.createElement('tr');
+                
+                // KYC status color
+                let kycBadge = `<span class="kyc-badge kyc-not-started">Not Started</span>`;
+                if (u.kyc_status === 'approved') kycBadge = `<span class="kyc-badge kyc-approved">Approved</span>`;
+                else if (u.kyc_status === 'pending') kycBadge = `<span class="kyc-badge kyc-pending">Pending Review</span>`;
+                else if (u.kyc_status === 'rejected') kycBadge = `<span class="kyc-badge kyc-rejected">Rejected</span>`;
+                
+                // Account status color
+                let statusBadge = `<span class="status-badge status-active">Active</span>`;
+                if (u.is_frozen) statusBadge = `<span class="status-badge status-frozen">Frozen</span>`;
+                else if (u.is_suspended) statusBadge = `<span class="status-badge status-suspended">Suspended</span>`;
+                else if (!u.is_active) statusBadge = `<span class="status-badge bg-secondary text-white">Inactive</span>`;
+                
+                // MFA Indicator
+                const mfaIndicator = u.mfa_enabled 
+                    ? `<span class="text-success small"><i class="fas fa-check-circle"></i> Enabled</span>` 
+                    : `<span class="text-muted small"><i class="fas fa-times-circle"></i> Disabled</span>`;
+                
+                tr.innerHTML = `
+                    <td>
+                        <div class="fw-bold text-dark">${u.full_name || 'N/A'}</div>
+                        <div class="text-muted small font-monospace">${u.email}</div>
+                    </td>
+                    <td class="font-monospace">${u.account_number || '—'}</td>
+                    <td>${kycBadge}</td>
+                    <td>${statusBadge}</td>
+                    <td class="text-uppercase">${u.region || '—'}</td>
+                    <td class="fw-bold">$${parseFloat(u.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                    <td>${mfaIndicator}</td>
+                    <td>${new Date(u.created_at).toLocaleDateString()}</td>
+                    <td class="text-end">
+                        <a href="/user/admin/users?user_id=${u.id}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-user-cog"></i> View Profile
+                        </a>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            
+            renderPagination(currentResults.length);
+        }
+
+        function renderPagination(totalItems) {
+            const pagination = document.getElementById('pagination');
+            const summary = document.getElementById('paginationSummary');
+            
+            pagination.innerHTML = '';
+            
+            const totalPages = Math.ceil(totalItems / resultsPerPage);
+            if (totalPages <= 1) {
+                summary.textContent = `Showing all ${totalItems} result(s)`;
+                return;
+            }
+            
+            const startItem = (currentPage - 1) * resultsPerPage + 1;
+            const endItem = Math.min(currentPage * resultsPerPage, totalItems);
+            summary.textContent = `Showing ${startItem}-${endItem} of ${totalItems}`;
+            
+            // Previous
+            const prevLi = document.createElement('li');
+            prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
+            prevLi.innerHTML = `<button class="page-link" onclick="changePage(${currentPage - 1})">Prev</button>`;
+            pagination.appendChild(prevLi);
+            
+            // Pages
+            for (let i = 1; i <= totalPages; i++) {
+                const li = document.createElement('li');
+                li.className = `page-item ${i === currentPage ? 'active' : ''}`;
+                li.innerHTML = `<button class="page-link" onclick="changePage(${i})">${i}</button>`;
+                pagination.appendChild(li);
+            }
+            
+            // Next
+            const nextLi = document.createElement('li');
+            nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
+            nextLi.innerHTML = `<button class="page-link" onclick="changePage(${currentPage + 1})">Next</button>`;
+            pagination.appendChild(nextLi);
+        }
+
+        function changePage(page) {
+            currentPage = page;
+            renderResultsTable();
+        }
+
+        function renderFilterChips(filters) {
+            const container = document.getElementById('filterChips');
+            container.innerHTML = '';
+            
+            Object.entries(filters).forEach(([key, val]) => {
+                const chip = document.createElement('span');
+                chip.className = 'chip';
+                chip.innerHTML = `${key}: ${val}`;
+                container.appendChild(chip);
+            });
+        }
+
+        function clearFilters() {
+            document.querySelectorAll('input, select').forEach(el => {
+                el.value = '';
+            });
+            document.getElementById('resultsSection').style.display = 'none';
+            document.getElementById('exportBtn').style.display = 'none';
+            document.getElementById('limitWarning').style.display = 'none';
+            currentResults = [];
+        }
+
+        function exportResults() {
+            if (currentResults.length === 0) return;
+            
+            let csv = 'Name,Email,Account Number,KYC Status,Status,Region,Balance,MFA Enabled,Registration Date\n';
+            currentResults.forEach(u => {
+                csv += `"${u.full_name || ''}","${u.email}","${u.account_number || ''}","${u.kyc_status}","${u.is_frozen?'frozen':(u.is_suspended?'suspended':'active')}","${u.region || ''}","${u.balance}","${u.mfa_enabled ? 'TRUE':'FALSE'}","${new Date(u.created_at).toLocaleDateString()}"\n`;
+            });
+            
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.setAttribute('download', `finanza_query_export_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function getAuthToken() {
+            return localStorage.getItem('token') || '';
+        }
+    </script>
+</body>
+</html>

@@ -9,6 +9,7 @@ Enforces all validation rules at API layer before transaction creation:
 5. For transfers: both parties must have accounts + sufficient balance
 
 This service complements TransactionGate by validating at creation time.
+Rules are enforced at the service layer before any database commit.
 """
 
 from decimal import Decimal
@@ -18,6 +19,20 @@ from sqlalchemy import select, and_
 from models import User, Account, Transaction
 from balance_service_ledger import BalanceServiceLedger
 from account_id_enforcement import account_id_enforcement
+import logging
+
+logger = logging.getLogger(__name__)
+
+# Rule violation events logged for audit trail
+class RuleViolationEvent:
+    INSUFFICIENT_KYC = "INSUFFICIENT_KYC"
+    INSUFFICIENT_BALANCE = "INSUFFICIENT_BALANCE"
+    NO_ACCOUNT = "NO_ACCOUNT"
+    INACTIVE_USER = "INACTIVE_USER"
+    INACTIVE_ACCOUNT = "INACTIVE_ACCOUNT"
+    REJECTED_KYC = "REJECTED_KYC"
+    INVALID_AMOUNT = "INVALID_AMOUNT"
+    ACCOUNT_MISMATCH = "ACCOUNT_MISMATCH"
 
 
 class TransactionValidator:
@@ -59,24 +74,19 @@ class TransactionValidator:
         if account_id:
             account = await db.get(Account, account_id)
         else:
-            # Try to get user's primary account
+            # Use the first account owned by the user when no account_id is supplied.
             result = await db.execute(
-                select(Account).where(
-                    and_(
-                        Account.user_id == user_id,
-                        Account.is_default == True
-                    )
-                )
+                select(Account).where(Account.owner_id == user_id).limit(1)
             )
             account = result.scalar_one_or_none()
 
         if not account:
             return False, f"User has no account. Cannot deposit without account (RULE 1)"
 
-        if account.user_id != user_id:
+        if account.owner_id != user_id:
             return False, f"Account does not belong to user"
 
-        if not account.is_active:
+        if account.status != "active":
             return False, f"Account is not active"
 
         # 4. Check KYC status (RULE 2: No KYC, no completed transactions)
@@ -202,22 +212,17 @@ class TransactionValidator:
             account = await db.get(Account, account_id)
         else:
             result = await db.execute(
-                select(Account).where(
-                    and_(
-                        Account.user_id == user_id,
-                        Account.is_default == True
-                    )
-                )
+                select(Account).where(Account.owner_id == user_id).limit(1)
             )
             account = result.scalar_one_or_none()
 
         if not account:
             return False, f"User has no account for withdrawal"
 
-        if account.user_id != user_id:
+        if account.owner_id != user_id:
             return False, f"Account does not belong to user"
 
-        if not account.is_active:
+        if account.status != "active":
             return False, f"Account is not active"
 
         # 4. Check sufficient balance (RULE 3: derived from ledger)

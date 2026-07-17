@@ -15,6 +15,7 @@ from sqlalchemy import select, func, and_, distinct
 from decimal import Decimal
 from typing import Dict, List, Optional
 from models import Transaction as DBTransaction, Account as DBAccount, User as DBUser, Ledger as DBLedger
+from balance_service_ledger import BalanceServiceLedger
 
 
 class BalanceService:
@@ -36,46 +37,24 @@ class BalanceService:
         
         Returns: float balance
         """
-        # Get balance from Transaction table (completed transactions)
-        result = await db.execute(
-            select(func.sum(DBTransaction.amount)).where(
-                and_(
-                    DBTransaction.user_id == user_id,
-                    DBTransaction.status == "completed"
+        # Prefer the ledger-based balance as the single source of truth for
+        # account balances. The legacy transaction path is kept only as a
+        # fallback for environments that have not yet migrated all ledger data.
+        try:
+            return await BalanceServiceLedger.get_user_balance(db, user_id)
+        except Exception:
+            # Fallback to the legacy transaction-based calculation if the ledger
+            # query is unavailable or incomplete.
+            result = await db.execute(
+                select(func.sum(DBTransaction.amount)).where(
+                    and_(
+                        DBTransaction.user_id == user_id,
+                        DBTransaction.status == "completed"
+                    )
                 )
             )
-        )
-        tx_balance = result.scalar() or Decimal("0")
-        
-        # Get balance from Ledger table (double-entry accounting)
-        # Credits increase balance, debits decrease it
-        result = await db.execute(
-            select(func.sum(DBLedger.amount)).where(
-                and_(
-                    DBLedger.user_id == user_id,
-                    DBLedger.entry_type == "credit",
-                    DBLedger.status == "posted"
-                )
-            )
-        )
-        ledger_credits = result.scalar() or Decimal("0")
-        
-        result = await db.execute(
-            select(func.sum(DBLedger.amount)).where(
-                and_(
-                    DBLedger.user_id == user_id,
-                    DBLedger.entry_type == "debit",
-                    DBLedger.status == "posted"
-                )
-            )
-        )
-        ledger_debits = result.scalar() or Decimal("0")
-        
-        ledger_balance = ledger_credits - ledger_debits
-        
-        # Return combined balance
-        total_balance = float(tx_balance) + float(ledger_balance)
-        return total_balance
+            tx_balance = result.scalar() or Decimal("0")
+            return float(tx_balance)
     
     @staticmethod
     async def get_account_balance(db: AsyncSession, account_id: int) -> float:
@@ -86,16 +65,19 @@ class BalanceService:
         
         Returns: float balance
         """
-        result = await db.execute(
-            select(func.sum(DBTransaction.amount)).where(
-                and_(
-                    DBTransaction.account_id == account_id,
-                    DBTransaction.status == "completed"
+        try:
+            return await BalanceServiceLedger.get_account_balance(db, account_id)
+        except Exception:
+            result = await db.execute(
+                select(func.sum(DBTransaction.amount)).where(
+                    and_(
+                        DBTransaction.account_id == account_id,
+                        DBTransaction.status == "completed"
+                    )
                 )
             )
-        )
-        balance = result.scalar() or 0
-        return float(balance)
+            balance = result.scalar() or 0
+            return float(balance)
     
     @staticmethod
     async def get_user_deposit_total(db: AsyncSession, user_id: int) -> float:
@@ -106,17 +88,20 @@ class BalanceService:
         
         Returns: float total deposits
         """
-        result = await db.execute(
-            select(func.sum(DBTransaction.amount)).where(
-                and_(
-                    DBTransaction.user_id == user_id,
-                    DBTransaction.transaction_type == "deposit",
-                    DBTransaction.status == "completed"
+        try:
+            return await BalanceServiceLedger.get_user_deposit_total(db, user_id)
+        except Exception:
+            result = await db.execute(
+                select(func.sum(DBTransaction.amount)).where(
+                    and_(
+                        DBTransaction.user_id == user_id,
+                        DBTransaction.transaction_type == "deposit",
+                        DBTransaction.status == "completed"
+                    )
                 )
             )
-        )
-        total = result.scalar() or Decimal("0")
-        return float(total)
+            total = result.scalar() or Decimal("0")
+            return float(total)
     
     @staticmethod
     async def get_user_withdrawal_total(db: AsyncSession, user_id: int) -> float:
@@ -127,17 +112,20 @@ class BalanceService:
         
         Returns: float total withdrawals (as positive number)
         """
-        result = await db.execute(
-            select(func.sum(DBTransaction.amount)).where(
-                and_(
-                    DBTransaction.user_id == user_id,
-                    DBTransaction.transaction_type == "withdrawal",
-                    DBTransaction.status == "completed"
+        try:
+            return await BalanceServiceLedger.get_user_withdrawal_total(db, user_id)
+        except Exception:
+            result = await db.execute(
+                select(func.sum(DBTransaction.amount)).where(
+                    and_(
+                        DBTransaction.user_id == user_id,
+                        DBTransaction.transaction_type == "withdrawal",
+                        DBTransaction.status == "completed"
+                    )
                 )
             )
-        )
-        total = result.scalar() or Decimal("0")
-        return float(total)
+            total = result.scalar() or Decimal("0")
+            return float(total)
     
     @staticmethod
     async def get_user_transfer_received(db: AsyncSession, user_id: int) -> float:
@@ -148,17 +136,20 @@ class BalanceService:
         
         Returns: float total transfers received
         """
-        result = await db.execute(
-            select(func.sum(DBTransaction.amount)).where(
-                and_(
-                    DBTransaction.user_id == user_id,
-                    DBTransaction.transaction_type == "fund_transfer",
-                    DBTransaction.status == "completed"
+        try:
+            return await BalanceServiceLedger.get_user_transfer_received(db, user_id)
+        except Exception:
+            result = await db.execute(
+                select(func.sum(DBTransaction.amount)).where(
+                    and_(
+                        DBTransaction.user_id == user_id,
+                        DBTransaction.transaction_type == "fund_transfer",
+                        DBTransaction.status == "completed"
+                    )
                 )
             )
-        )
-        total = result.scalar() or Decimal("0")
-        return float(total)
+            total = result.scalar() or Decimal("0")
+            return float(total)
     
     @staticmethod
     async def get_all_user_balances(db: AsyncSession) -> Dict[int, float]:
@@ -186,16 +177,19 @@ class BalanceService:
         
         Returns: float total deposits
         """
-        result = await db.execute(
-            select(func.sum(DBTransaction.amount)).where(
-                and_(
-                    DBTransaction.transaction_type == "deposit",
-                    DBTransaction.status == "completed"
+        try:
+            return await BalanceServiceLedger.get_admin_total_deposits(db)
+        except Exception:
+            result = await db.execute(
+                select(func.sum(DBTransaction.amount)).where(
+                    and_(
+                        DBTransaction.transaction_type == "deposit",
+                        DBTransaction.status == "completed"
+                    )
                 )
             )
-        )
-        total = result.scalar() or 0
-        return float(total)
+            total = result.scalar() or 0
+            return float(total)
     
     @staticmethod
     async def get_admin_total_volume(db: AsyncSession) -> float:
@@ -206,13 +200,16 @@ class BalanceService:
         
         Returns: float total volume
         """
-        result = await db.execute(
-            select(func.sum(DBTransaction.amount)).where(
-                DBTransaction.status == "completed"
+        try:
+            return await BalanceServiceLedger.get_admin_total_volume(db)
+        except Exception:
+            result = await db.execute(
+                select(func.sum(DBTransaction.amount)).where(
+                    DBTransaction.status == "completed"
+                )
             )
-        )
-        total = result.scalar() or 0
-        return float(total)
+            total = result.scalar() or 0
+            return float(total)
     
     @staticmethod
     async def get_admin_total_system_balance(db: AsyncSession) -> float:

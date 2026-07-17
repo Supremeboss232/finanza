@@ -1,8 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Pay your bills quickly and securely with Finanza Bill Pay.">
     <title>Bill Pay - Finanza</title>
     <link href="/static/css/style.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -14,6 +15,8 @@
         .status-pending { background: #fff3cd; color: #856404; }
         .status-scheduled { background: #d1ecf1; color: #0c5460; }
     </style>
+
+    <script src="/static/js/toast-utils.js"></script>
 </head>
 <body>
     <!-- Navigation -->
@@ -54,7 +57,7 @@
                         </a>
                         <ul class="dropdown-menu">
                             <li><a class="dropdown-item" href="/user/profile">Profile</a></li>
-                            <li><a class="dropdown-item" href="/user/profile">Settings</a></li>
+                            <li><a class="dropdown-item" href="/user/settings">Settings</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="/logout">Logout</a></li>
                         </ul>
@@ -117,15 +120,23 @@
                 <h5 class="mb-0"><i class="fas fa-credit-card"></i> Pay a Bill</h5>
             </div>
             <div class="card-body">
+                <!-- Inline notification -->
+                <div id="payBillNotification" class="alert d-none mb-3" role="alert"></div>
                 <form id="payBillForm">
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label class="form-label">Payee</label>
-                            <input type="text" class="form-control" id="payee" placeholder="e.g., Electric Company" required>
+                            <select class="form-control" id="payeeSelect" required>
+                                <option value="">Select payee</option>
+                            </select>
+                            <!-- Hidden payee_id populated by quickPay or select -->
+                            <input type="hidden" id="payee_id">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Payee Account</label>
-                            <input type="text" class="form-control" id="payeeAccount" placeholder="Enter payee account number">
+                            <label class="form-label">Pay From Account</label>
+                            <select class="form-control" id="fromAccount" required>
+                                <option value="">Select account</option>
+                            </select>
                         </div>
                     </div>
                     <div class="row mb-3">
@@ -135,18 +146,6 @@
                                 <span class="input-group-text">$</span>
                                 <input type="number" class="form-control" id="amount" step="0.01" placeholder="0.00" required>
                             </div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Due Date</label>
-                            <input type="date" class="form-control" id="dueDate">
-                        </div>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Pay From Account</label>
-                            <select class="form-control" id="fromAccount" required>
-                                <option value="">Select account</option>
-                            </select>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Payment Date</label>
@@ -277,6 +276,16 @@
     <script>
         const token = localStorage.getItem('token');
 
+        // Inline notification helper
+        function showNotification(message, type) {
+            const el = document.getElementById('payBillNotification');
+            if (!el) return;
+            el.textContent = message;
+            el.className = 'alert mb-3 alert-' + (type === 'success' ? 'success' : 'danger');
+            el.classList.remove('d-none');
+            setTimeout(() => { el.classList.add('d-none'); }, 5000);
+        }
+
         document.addEventListener('DOMContentLoaded', async function() {
             if (!token) {
                 window.location.href = '/signin';
@@ -284,47 +293,86 @@
             }
 
             try {
-                await loadBillStats();
                 await loadAccounts();
+                await loadPayees();          // payees needed to populate select first
+                await loadBillStats();
                 await loadPendingBills();
                 await loadRecentPayments();
-                await loadPayees();
             } catch (error) {
                 console.error('Error loading bill data:', error);
             }
 
+            // Sync hidden payee_id when the select changes
+            document.getElementById('payeeSelect').addEventListener('change', function() {
+                document.getElementById('payee_id').value = this.value;
+            });
+
             document.getElementById('payBillForm').addEventListener('submit', handlePayBill);
         });
 
+        // Derive stats from the payments list (no /stats endpoint exists)
         async function loadBillStats() {
             try {
-                const response = await fetch('/api/v1/bill_pay/stats', {
+                const response = await fetch('/api/v1/bill-pay/payments', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
                 if (response.ok) {
                     const data = await response.json();
-                    
-                    document.getElementById('billsCount').textContent = data.total_bills || '0';
-                    document.getElementById('billsTotal').textContent = '$' + (data.total_amount || 0).toLocaleString('en-US', {maximumFractionDigits: 2});
-                    
-                    document.getElementById('paidCount').textContent = data.paid_count || '0';
-                    document.getElementById('paidAmount').textContent = '$' + (data.paid_amount || 0).toLocaleString('en-US', {maximumFractionDigits: 2});
-                    
-                    document.getElementById('pendingCount').textContent = data.pending_count || '0';
-                    document.getElementById('pendingAmount').textContent = '$' + (data.pending_amount || 0).toLocaleString('en-US', {maximumFractionDigits: 2});
-                    
-                    document.getElementById('overdueCount').textContent = data.overdue_count || '0';
-                    document.getElementById('overdueAmount').textContent = 'Amount: $' + (data.overdue_amount || 0).toLocaleString('en-US', {maximumFractionDigits: 2});
+                    const payments = data.payments || data || [];
+                    const now = new Date();
+                    const thisMonth = now.getMonth();
+                    const thisYear = now.getFullYear();
+
+                    let billsCount = 0, billsTotal = 0;
+                    let paidCount = 0, paidAmount = 0;
+                    let pendingCount = 0, pendingAmount = 0;
+                    let overdueCount = 0, overdueAmount = 0;
+
+                    payments.forEach(p => {
+                        const d = new Date(p.payment_date || p.created_at || now);
+                        if (d.getMonth() === thisMonth && d.getFullYear() === thisYear) {
+                            billsCount++;
+                            billsTotal += parseFloat(p.amount) || 0;
+                        }
+                        const status = (p.status || '').toLowerCase();
+                        if (status === 'paid' || status === 'completed') {
+                            paidCount++;
+                            paidAmount += parseFloat(p.amount) || 0;
+                        } else if (status === 'pending') {
+                            pendingCount++;
+                            pendingAmount += parseFloat(p.amount) || 0;
+                        } else if (status === 'overdue') {
+                            overdueCount++;
+                            overdueAmount += parseFloat(p.amount) || 0;
+                        }
+                    });
+
+                    document.getElementById('billsCount').textContent = billsCount;
+                    document.getElementById('billsTotal').textContent = '$' + billsTotal.toLocaleString('en-US', {maximumFractionDigits: 2});
+                    document.getElementById('paidCount').textContent = paidCount;
+                    document.getElementById('paidAmount').textContent = '$' + paidAmount.toLocaleString('en-US', {maximumFractionDigits: 2});
+                    document.getElementById('pendingCount').textContent = pendingCount;
+                    document.getElementById('pendingAmount').textContent = '$' + pendingAmount.toLocaleString('en-US', {maximumFractionDigits: 2});
+                    document.getElementById('overdueCount').textContent = overdueCount;
+                    document.getElementById('overdueAmount').textContent = 'Amount: $' + overdueAmount.toLocaleString('en-US', {maximumFractionDigits: 2});
+                } else {
+                    // If endpoint fails, show graceful dashes
+                    ['billsCount','paidCount','pendingCount','overdueCount'].forEach(id => document.getElementById(id).textContent = '--');
+                    ['billsTotal','paidAmount','pendingAmount'].forEach(id => document.getElementById(id).textContent = '$--');
+                    document.getElementById('overdueAmount').textContent = 'Amount: $--';
                 }
             } catch (error) {
                 console.error('Error loading bill stats:', error);
+                ['billsCount','paidCount','pendingCount','overdueCount'].forEach(id => document.getElementById(id).textContent = '--');
+                ['billsTotal','paidAmount','pendingAmount'].forEach(id => document.getElementById(id).textContent = '$--');
+                document.getElementById('overdueAmount').textContent = 'Amount: $--';
             }
         }
 
         async function loadAccounts() {
             try {
-                const response = await fetch('/api/v1/accounts', {
+                const response = await fetch('/api/user/accounts', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
@@ -351,7 +399,7 @@
 
         async function loadPendingBills() {
             try {
-                const response = await fetch('/api/v1/bill_pay/pending', {
+                const response = await fetch('/api/v1/bill-pay/payments?status=pending', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
@@ -359,19 +407,21 @@
                     const data = await response.json();
                     const tbody = document.getElementById('pendingBillsBody');
                     tbody.innerHTML = '';
+                    const bills = data.payments || data || [];
 
-                    if (data.bills && data.bills.length > 0) {
-                        data.bills.forEach(bill => {
-                            const daysUntil = Math.ceil((new Date(bill.due_date) - new Date()) / (1000 * 60 * 60 * 24));
-                            const statusClass = daysUntil < 0 ? 'status-paid' : daysUntil <= 3 ? 'status-pending' : 'status-scheduled';
+                    if (bills.length > 0) {
+                        bills.forEach(bill => {
+                            const dueDate = bill.due_date || bill.payment_date;
+                            const daysUntil = dueDate ? Math.ceil((new Date(dueDate) - new Date()) / (1000 * 60 * 60 * 24)) : null;
+                            const statusClass = daysUntil === null ? 'status-scheduled' : daysUntil < 0 ? 'status-paid' : daysUntil <= 3 ? 'status-pending' : 'status-scheduled';
                             
                             tbody.innerHTML += `
                                 <tr>
-                                    <td><strong>${bill.payee}</strong></td>
-                                    <td>$${bill.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}</td>
-                                    <td>${new Date(bill.due_date).toLocaleDateString()}</td>
-                                    <td><span class="badge ${statusClass}">${bill.status}</span></td>
-                                    <td>${daysUntil > 0 ? daysUntil + ' days' : 'Due today'}</td>
+                                    <td><strong>${bill.payee_name || bill.payee || '--'}</strong></td>
+                                    <td>$${parseFloat(bill.amount || 0).toLocaleString('en-US', {maximumFractionDigits: 2})}</td>
+                                    <td>${dueDate ? new Date(dueDate).toLocaleDateString() : '--'}</td>
+                                    <td><span class="badge ${statusClass}">${bill.status || 'pending'}</span></td>
+                                    <td>${daysUntil !== null ? (daysUntil > 0 ? daysUntil + ' days' : 'Due today') : '--'}</td>
                                     <td>
                                         <button class="btn btn-sm btn-primary">Pay Now</button>
                                     </td>
@@ -389,7 +439,7 @@
 
         async function loadRecentPayments() {
             try {
-                const response = await fetch('/api/v1/bill_pay/history?limit=15', {
+                const response = await fetch('/api/v1/bill-pay/payments?limit=15', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
@@ -397,16 +447,17 @@
                     const data = await response.json();
                     const tbody = document.getElementById('recentPaymentsBody');
                     tbody.innerHTML = '';
+                    const payments = data.payments || data || [];
 
-                    if (data.payments && data.payments.length > 0) {
-                        data.payments.forEach(payment => {
+                    if (payments.length > 0) {
+                        payments.forEach(payment => {
                             tbody.innerHTML += `
                                 <tr>
-                                    <td>${payment.payee}</td>
-                                    <td>$${payment.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}</td>
-                                    <td>${new Date(payment.payment_date).toLocaleDateString()}</td>
-                                    <td><span class="badge bg-success">${payment.status}</span></td>
-                                    <td>${payment.confirmation_number}</td>
+                                    <td>${payment.payee_name || payment.payee || '--'}</td>
+                                    <td>$${parseFloat(payment.amount || 0).toLocaleString('en-US', {maximumFractionDigits: 2})}</td>
+                                    <td>${payment.payment_date ? new Date(payment.payment_date).toLocaleDateString() : '--'}</td>
+                                    <td><span class="badge bg-success">${payment.status || '--'}</span></td>
+                                    <td>${payment.confirmation_number || payment.id || '--'}</td>
                                     <td>
                                         <button class="btn btn-sm btn-outline-primary">View</button>
                                     </td>
@@ -422,26 +473,33 @@
             }
         }
 
+        // Saved payees (also populates the payee select in the form)
         async function loadPayees() {
             try {
-                const response = await fetch('/api/v1/bill_pay/payees', {
+                const response = await fetch('/api/v1/bill-pay/payees', {
                     headers: { 'Authorization': `Bearer ${token}` }
                 });
 
                 if (response.ok) {
                     const data = await response.json();
                     const container = document.getElementById('payeesList');
+                    const payeeSelect = document.getElementById('payeeSelect');
                     container.innerHTML = '';
+                    payeeSelect.innerHTML = '<option value="">Select payee</option>';
 
-                    if (data.payees && data.payees.length > 0) {
-                        data.payees.forEach(payee => {
+                    const payees = data.payees || data || [];
+                    if (payees.length > 0) {
+                        payees.forEach(payee => {
+                            // Populate form select
+                            payeeSelect.innerHTML += `<option value="${payee.id}">${payee.name}</option>`;
+                            // Populate saved payees cards
                             container.innerHTML += `
                                 <div class="col-md-4">
                                     <div class="card bill-card">
                                         <div class="card-body">
                                             <h6 class="card-title">${payee.name}</h6>
-                                            <p class="text-muted small">${payee.account_number}</p>
-                                            <button class="btn btn-sm btn-primary w-100" onclick="quickPay('${payee.id}')">Pay</button>
+                                            <p class="text-muted small">${payee.account_number || ''}</p>
+                                            <button class="btn btn-sm btn-primary w-100" onclick="quickPay(${payee.id})">Pay</button>
                                         </div>
                                     </div>
                                 </div>
@@ -459,18 +517,28 @@
         async function handlePayBill(e) {
             e.preventDefault();
 
+            const payeeIdVal = parseInt(document.getElementById('payee_id').value || document.getElementById('payeeSelect').value, 10);
+            const accountIdVal = parseInt(document.getElementById('fromAccount').value, 10);
+
+            if (!payeeIdVal) {
+                showNotification('Please select a payee.', 'error');
+                return;
+            }
+            if (!accountIdVal) {
+                showNotification('Please select a payment account.', 'error');
+                return;
+            }
+
             const payment = {
-                payee: document.getElementById('payee').value,
-                payee_account: document.getElementById('payeeAccount').value,
+                account_id: accountIdVal,
+                payee_id: payeeIdVal,
                 amount: parseFloat(document.getElementById('amount').value),
-                from_account_id: document.getElementById('fromAccount').value,
                 payment_date: document.getElementById('paymentDate').value,
-                due_date: document.getElementById('dueDate').value,
-                memo: document.getElementById('memo').value
+                memo: document.getElementById('memo').value || ''
             };
 
             try {
-                const response = await fetch('/api/v1/bill_pay/submit', {
+                const response = await fetch('/api/v1/bill-pay/payments', {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -480,21 +548,38 @@
                 });
 
                 if (response.ok) {
-                    alert('Bill payment submitted successfully!');
+                    showNotification('Bill payment submitted successfully!', 'success');
                     document.getElementById('payBillForm').reset();
+                    document.getElementById('payee_id').value = '';
                     await loadBillStats();
                     await loadPendingBills();
+                    await loadRecentPayments();
                 } else {
-                    alert('Error submitting payment');
+                    const err = await response.json().catch(() => ({}));
+                    showNotification(err.detail || 'Error submitting payment. Please try again.', 'error');
+                    console.error('Payment error:', err);
                 }
             } catch (error) {
                 console.error('Error submitting payment:', error);
-                alert('Error submitting payment');
+                showNotification('Network error. Please check your connection and try again.', 'error');
             }
         }
 
+        // Populate the pay bill form with the chosen payee and scroll to the form
         function quickPay(payeeId) {
-            alert('Quick pay functionality for payee: ' + payeeId);
+            const payeeSelect = document.getElementById('payeeSelect');
+            const payeeIdInput = document.getElementById('payee_id');
+            if (payeeSelect) {
+                payeeSelect.value = payeeId;
+                payeeIdInput.value = payeeId;
+            }
+            // Set today as default payment date if empty
+            const paymentDateInput = document.getElementById('paymentDate');
+            if (paymentDateInput && !paymentDateInput.value) {
+                paymentDateInput.value = new Date().toISOString().split('T')[0];
+            }
+            // Scroll to the pay bill form
+            document.getElementById('payBillForm').scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
     </script>
 </body>

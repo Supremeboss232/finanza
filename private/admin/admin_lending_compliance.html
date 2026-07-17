@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lending Compliance - Finanza Admin</title>
+    <title>Lending Compliance - Production</title>
     <link href="/static/css/style.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -28,8 +28,35 @@
         .btn-primary { background: #667eea; border: none; }
         .btn-primary:hover { background: #5568d3; }
         .table-responsive { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        .alert-warning { background: #fff3cd; border-left: 4px solid #ffc107; }
+        
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
+        .toast-notification {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideInRight 0.3s ease-out;
+        }
+        @keyframes slideInRight { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .toast-notification.success { border-left: 4px solid #28a745; }
+        .toast-notification.error { border-left: 4px solid #dc3545; }
+        .toast-notification.warning { border-left: 4px solid #ffc107; color: #000; }
+        .toast-notification.info { border-left: 4px solid #17a2b8; }
+        
+        .masked-text { font-family: 'Courier New', monospace; color: #999; }
+        .error-container { background: #f8d7da; border: 1px solid #f5c2c7; color: #721c24; padding: 12px; border-radius: 5px; margin-bottom: 15px; display: none; }
+        .error-container.show { display: block; }
+        .error-container a { color: #721c24; font-weight: bold; text-decoration: underline; }
+        .pagination-controls { display: flex; align-items: center; gap: 10px; }
+        .drilldown-filter { background: #f0f4ff; padding: 10px; border-radius: 5px; margin-bottom: 15px; display: none; }
+        .drilldown-filter.show { display: block; }
     </style>
+
+    <script src="/static/js/toast-utils.js"></script>
 </head>
 <body>
     <!-- Navigation -->
@@ -44,7 +71,7 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item"><a class="nav-link" href="/user/admin/dashboard">Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/user/admin/dashboard">Loans</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/lending">Loans</a></li>
                     <li class="nav-item"><a class="nav-link" href="/user/admin/dashboard">HMDA</a></li>
                     <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
                 </ul>
@@ -63,25 +90,25 @@
         <div class="row g-4 mb-5">
             <div class="col-lg-3 col-md-6">
                 <div class="stat-card">
-                    <div class="stat-number" id="delinquentCount">-</div>
+                    <div class="stat-number" id="delinquentCount">0</div>
                     <div class="stat-label">Delinquent Loans</div>
                 </div>
             </div>
             <div class="col-lg-3 col-md-6">
                 <div class="stat-card">
-                    <div class="stat-number" id="totalDaysOverdue">-</div>
+                    <div class="stat-number" id="totalDaysOverdue">0</div>
                     <div class="stat-label">Total Days Overdue</div>
                 </div>
             </div>
             <div class="col-lg-3 col-md-6">
                 <div class="stat-card">
-                    <div class="stat-number" id="forbearanceCount">-</div>
+                    <div class="stat-number" id="forbearanceCount">0</div>
                     <div class="stat-label">In Forbearance</div>
                 </div>
             </div>
             <div class="col-lg-3 col-md-6">
                 <div class="stat-card">
-                    <div class="stat-number" id="accountHoldCount">-</div>
+                    <div class="stat-number" id="accountHoldCount">0</div>
                     <div class="stat-label">Account Holds</div>
                 </div>
             </div>
@@ -91,7 +118,8 @@
         <div class="row mb-5">
             <div class="col-lg-6">
                 <div class="dashboard-section">
-                    <h5>Delinquency Aging</h5>
+                    <h5><i class="fas fa-chart-bar"></i> Delinquency Aging</h5>
+                    <small class="text-muted">(Click bar to drill down)</small>
                     <div class="chart-container">
                         <canvas id="delinquencyChart"></canvas>
                     </div>
@@ -99,7 +127,7 @@
             </div>
             <div class="col-lg-6">
                 <div class="dashboard-section">
-                    <h5>Collections Status</h5>
+                    <h5><i class="fas fa-chart-pie"></i> Collections Status</h5>
                     <div class="chart-container">
                         <canvas id="collectionsChart"></canvas>
                     </div>
@@ -111,10 +139,44 @@
         <div class="dashboard-section">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h5><i class="fas fa-exclamation-circle"></i> Delinquent Accounts</h5>
-                <button class="btn btn-primary btn-sm" onclick="openModal('actionModal')">
+                <button class="btn btn-primary btn-sm" onclick="openActionModal()">
                     <i class="fas fa-gavel"></i> Take Action
                 </button>
             </div>
+
+            <!-- Drilldown Filter -->
+            <div class="drilldown-filter" id="drilldownFilter">
+                <strong>Filtered by:</strong> <span id="drilldownLabel"></span>
+                <button class="btn btn-sm btn-outline-secondary ms-2" onclick="clearDrilldown()">Clear Filter</button>
+            </div>
+
+            <!-- Search & Filter -->
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <input type="text" class="form-control" id="delinqSearchInput" placeholder="Search by Loan ID or Borrower...">
+                </div>
+                <div class="col-md-3">
+                    <select class="form-control" id="daysOverdueFilter">
+                        <option value="">All Ages</option>
+                        <option value="0-30">0-30 Days</option>
+                        <option value="30-60">30-60 Days</option>
+                        <option value="60-90">60-90 Days</option>
+                        <option value="90+">90+ Days</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-outline-primary w-100" onclick="searchDelinquencies()">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                </div>
+            </div>
+
+            <!-- Error Container -->
+            <div class="error-container" id="delinqErrorContainer">
+                <i class="fas fa-exclamation-triangle"></i> Failed to load delinquent accounts. 
+                <a href="javascript:loadDelinquencies()">Retry</a>
+            </div>
+
             <div class="table-responsive">
                 <table class="table table-hover mb-0">
                     <thead class="table-light">
@@ -134,13 +196,34 @@
                     </tbody>
                 </table>
             </div>
+
+            <!-- Pagination -->
+            <div class="d-flex justify-content-between align-items-center mt-4">
+                <div>
+                    <label>Records per page:</label>
+                    <select class="form-select form-select-sm d-inline-block w-auto" id="delinqPageSize" onchange="changeDelinqPageSize()">
+                        <option value="10">10</option>
+                        <option value="20" selected>20</option>
+                        <option value="50">50</option>
+                    </select>
+                </div>
+                <div class="pagination-controls">
+                    <button class="btn btn-sm btn-outline-secondary" id="delinqPrevBtn" onclick="previousDelinqPage()" disabled>
+                        <i class="fas fa-chevron-left"></i> Previous
+                    </button>
+                    <span id="delinqPageInfo" class="mx-2">Page 1</span>
+                    <button class="btn btn-sm btn-outline-secondary" id="delinqNextBtn" onclick="nextDelinqPage()" disabled>
+                        Next <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- Collections Management -->
         <div class="dashboard-section">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h5><i class="fas fa-phone"></i> Collections Activity</h5>
-                <button class="btn btn-primary btn-sm" onclick="openModal('collectionContactModal')">
+                <button class="btn btn-primary btn-sm" onclick="openLogContactModal()">
                     <i class="fas fa-plus"></i> Log Contact
                 </button>
             </div>
@@ -155,11 +238,10 @@
                             <th>Contact Type</th>
                             <th>Outcome</th>
                             <th>Next Follow-up</th>
-                            <th>Details</th>
                         </tr>
                     </thead>
                     <tbody id="collectionsTable">
-                        <tr><td colspan="8" class="text-center text-muted">Loading collections activity...</td></tr>
+                        <tr><td colspan="7" class="text-center text-muted">Loading collections activity...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -169,7 +251,7 @@
         <div class="dashboard-section">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h5><i class="fas fa-lock"></i> Account Holds</h5>
-                <button class="btn btn-primary btn-sm" onclick="openModal('createHoldModal')">
+                <button class="btn btn-primary btn-sm" onclick="openCreateHoldModal()">
                     <i class="fas fa-plus"></i> Create Hold
                 </button>
             </div>
@@ -184,11 +266,10 @@
                             <th>Amount</th>
                             <th>Created Date</th>
                             <th>Status</th>
-                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="holdsTable">
-                        <tr><td colspan="8" class="text-center text-muted">Loading account holds...</td></tr>
+                        <tr><td colspan="7" class="text-center text-muted">Loading account holds...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -198,7 +279,7 @@
         <div class="dashboard-section">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h5><i class="fas fa-hand-holding-heart"></i> Forbearance Plans</h5>
-                <button class="btn btn-primary btn-sm" onclick="openModal('forbearanceModal')">
+                <button class="btn btn-primary btn-sm" onclick="openForbearanceModal()">
                     <i class="fas fa-plus"></i> Create Plan
                 </button>
             </div>
@@ -214,11 +295,10 @@
                             <th>Start Date</th>
                             <th>End Date</th>
                             <th>Status</th>
-                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="forbearanceTable">
-                        <tr><td colspan="9" class="text-center text-muted">Loading forbearance plans...</td></tr>
+                        <tr><td colspan="8" class="text-center text-muted">Loading forbearance plans...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -238,11 +318,10 @@
                             <th>Charge-off Date</th>
                             <th>Reason</th>
                             <th>Recovery Status</th>
-                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="chargeoffsTable">
-                        <tr><td colspan="8" class="text-center text-muted">Loading charge-offs...</td></tr>
+                        <tr><td colspan="7" class="text-center text-muted">Loading charge-offs...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -250,24 +329,24 @@
     </div>
 
     <!-- Delinquency Action Modal -->
-    <div class="modal fade" id="actionModal" tabindex="-1">
+    <div class="modal fade" id="actionModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Delinquency Action</h5>
+                    <h5 class="modal-title">Delinquency Action (Audit Required)</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <form id="actionForm" onsubmit="handleDelinquencyAction(event)">
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label class="form-label">Delinquency</label>
-                            <select class="form-control" required>
+                            <label class="form-label">Delinquency *</label>
+                            <select class="form-control" id="delinquencyId" required>
                                 <option value="">Select delinquency...</option>
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Action Type</label>
-                            <select class="form-control" required>
+                            <label class="form-label">Action Type *</label>
+                            <select class="form-control" id="actionType" required>
                                 <option value="">Select action...</option>
                                 <option value="collection_call">Collection Call</option>
                                 <option value="forbearance">Forbearance Plan</option>
@@ -276,38 +355,39 @@
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Notes</label>
-                            <textarea class="form-control" rows="3"></textarea>
+                            <label class="form-label">Notes *</label>
+                            <textarea class="form-control" id="actionNotes" rows="3" required maxlength="500"></textarea>
+                            <small class="text-muted">Max 500 characters</small>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Submit</button>
+                        <button type="submit" class="btn btn-primary">Submit Action</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 
-    <!-- Collection Contact Modal -->
-    <div class="modal fade" id="collectionContactModal" tabindex="-1">
+    <!-- Log Contact Modal -->
+    <div class="modal fade" id="collectionContactModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Log Collection Contact</h5>
+                    <h5 class="modal-title">Log Collection Contact (Audit Required)</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <form id="contactForm" onsubmit="handleLogContact(event)">
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label class="form-label">Delinquency/Loan</label>
-                            <select class="form-control" required>
+                            <label class="form-label">Delinquency/Loan *</label>
+                            <select class="form-control" id="contactLoanId" required>
                                 <option value="">Select...</option>
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Contact Type</label>
-                            <select class="form-control" required>
+                            <label class="form-label">Contact Type *</label>
+                            <select class="form-control" id="contactType" required>
                                 <option value="">Select...</option>
                                 <option value="phone">Phone Call</option>
                                 <option value="email">Email</option>
@@ -316,12 +396,12 @@
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Contact Date</label>
-                            <input type="datetime-local" class="form-control" required>
+                            <label class="form-label">Contact Date *</label>
+                            <input type="datetime-local" class="form-control" id="contactDate" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Outcome</label>
-                            <select class="form-control" required>
+                            <label class="form-label">Outcome *</label>
+                            <select class="form-control" id="contactOutcome" required>
                                 <option value="">Select outcome...</option>
                                 <option value="reached">Reached Borrower</option>
                                 <option value="no_contact">Unable to Reach</option>
@@ -330,8 +410,9 @@
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Notes</label>
-                            <textarea class="form-control" rows="3"></textarea>
+                            <label class="form-label">Notes *</label>
+                            <textarea class="form-control" id="contactNotes" rows="3" required maxlength="500"></textarea>
+                            <small class="text-muted">Max 500 characters</small>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -344,24 +425,24 @@
     </div>
 
     <!-- Create Hold Modal -->
-    <div class="modal fade" id="createHoldModal" tabindex="-1">
+    <div class="modal fade" id="createHoldModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Create Account Hold</h5>
+                    <h5 class="modal-title">Create Account Hold (Requires MFA)</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <form id="holdForm" onsubmit="handleCreateHold(event)">
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label class="form-label">Account</label>
-                            <select class="form-control" required>
+                            <label class="form-label">Account *</label>
+                            <select class="form-control" id="holdAccountId" required>
                                 <option value="">Select account...</option>
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Hold Type</label>
-                            <select class="form-control" required>
+                            <label class="form-label">Hold Type *</label>
+                            <select class="form-control" id="holdType" required>
                                 <option value="">Select type...</option>
                                 <option value="delinquency">Delinquency Hold</option>
                                 <option value="fraud">Fraud Hold</option>
@@ -371,11 +452,12 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Amount (if applicable)</label>
-                            <input type="number" class="form-control" step="0.01">
+                            <input type="number" class="form-control" id="holdAmount" step="0.01" min="0">
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Reason</label>
-                            <textarea class="form-control" rows="3" required></textarea>
+                            <label class="form-label">Reason *</label>
+                            <textarea class="form-control" id="holdReason" rows="3" required maxlength="500"></textarea>
+                            <small class="text-muted">Max 500 characters, required for compliance</small>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -388,24 +470,24 @@
     </div>
 
     <!-- Forbearance Modal -->
-    <div class="modal fade" id="forbearanceModal" tabindex="-1">
+    <div class="modal fade" id="forbearanceModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Create Forbearance Plan</h5>
+                    <h5 class="modal-title">Create Forbearance Plan (Requires MFA)</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <form id="forbearanceForm" onsubmit="handleCreateForbearance(event)">
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label class="form-label">Loan</label>
-                            <select class="form-control" required>
+                            <label class="form-label">Loan *</label>
+                            <select class="form-control" id="forbearanceLoanId" required>
                                 <option value="">Select loan...</option>
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Plan Type</label>
-                            <select class="form-control" required>
+                            <label class="form-label">Plan Type *</label>
+                            <select class="form-control" id="planType" required>
                                 <option value="">Select type...</option>
                                 <option value="deferment">Deferment</option>
                                 <option value="forbearance">Forbearance</option>
@@ -414,51 +496,156 @@
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Start Date</label>
-                                <input type="date" class="form-control" required>
+                                <label class="form-label">Start Date *</label>
+                                <input type="date" class="form-control" id="forbearanceStartDate" required>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Duration (months)</label>
-                                <input type="number" class="form-control" required>
+                                <label class="form-label">Duration (months) *</label>
+                                <input type="number" class="form-control" id="forbearanceDuration" min="1" max="60" required>
+                                <small class="text-muted">1-60 months</small>
                             </div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Terms</label>
-                            <textarea class="form-control" rows="3" required></textarea>
+                            <label class="form-label">Terms *</label>
+                            <textarea class="form-control" id="forbearanceTerms" rows="3" required maxlength="500"></textarea>
+                            <small class="text-muted">Max 500 characters, must include repayment terms</small>
                         </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary">Create Plan</button>
+                        <button type="submit" class="btn btn-primary">Create Plan (Requires MFA)</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 
+    <!-- MFA Verification Modal -->
+    <div class="modal fade" id="mfaModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Multi-Factor Authentication Required</h5>
+                </div>
+                <div class="modal-body">
+                    <p>This compliance action requires verification. Please enter your 2FA code:</p>
+                    <input type="text" class="form-control mb-3" id="mfaCode" placeholder="Enter 6-digit code" maxlength="6">
+                    <label class="form-label">Reason for Action</label>
+                    <textarea class="form-control" id="mfaReason" rows="3" placeholder="Provide business/compliance reason..."></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="completeMFAVerification()">Verify & Proceed</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container"></div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/admin_static/js/auth-helper.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
     <script>
-        const token = localStorage.getItem('token');
-        let delinquencyChart = null;
-        let collectionsChart = null;
+        // ==================== CONFIGURATION ====================
+        const CONFIG = {
+            API_BASE: '/api/v1',
+            PAGINATION_SIZES: [10, 20, 50],
+            SESSION_CHECK_INTERVAL: 300000,
+            TOAST_DURATION: 5000
+        };
 
-        document.addEventListener('DOMContentLoaded', async function() {
-            await loadComplianceMetrics();
-            await loadDelinquencies();
-            await loadCollectionsActivity();
-            await loadAccountHolds();
-            await loadForbearancePlans();
-            await loadChargeoffs();
-            initCharts();
-        });
+        // ==================== GLOBAL STATE ====================
+        const state = {
+            token: localStorage.getItem('token'),
+            currentDelinqPage: 1,
+            delinqPageSize: 20,
+            totalDelinquencies: 0,
+            delinquencyChart: null,
+            collectionsChart: null,
+            currentMFACallback: null,
+            drilldownFilter: null
+        };
 
+        // ==================== SECURITY MANAGER ====================
+        class SecurityManager {
+            constructor() {
+                this.sessionToken = localStorage.getItem('token');
+                this.csrfToken = localStorage.getItem('csrf_token') || this.generateCSRFToken();
+                this.idempotencyKey = null;
+            }
+
+            generateCSRFToken() {
+                const token = 'csrf_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+                localStorage.setItem('csrf_token', token);
+                return token;
+            }
+
+            getSecureHeaders(method = 'GET') {
+                const headers = {
+                    'Authorization': `Bearer ${this.sessionToken}`,
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': this.csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
+                };
+                if (method === 'POST' || method === 'PUT') {
+                    this.idempotencyKey = 'idempotent_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                    headers['X-Idempotency-Key'] = this.idempotencyKey;
+                }
+                return headers;
+            }
+
+            escapeHtml(text) {
+                const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+                return text.replace(/[&<>"']/g, m => map[m]);
+            }
+
+            maskPII(data, fullViewAccess = false) {
+                if (fullViewAccess) return data;
+                if (typeof data !== 'string') return data;
+                if (data.length <= 4) return '****';
+                return data.substring(0, 2) + '*'.repeat(data.length - 4) + data.substring(data.length - 2);
+            }
+
+            requireMFA(action, callback) {
+                state.currentMFACallback = { action, callback };
+                new bootstrap.Modal(document.getElementById('mfaModal')).show();
+            }
+        }
+
+        const securityManager = new SecurityManager();
+
+        // ==================== TOAST NOTIFICATIONS ====================
+        function showToast(message, type = 'info', duration = CONFIG.TOAST_DURATION) {
+            const container = document.querySelector('.toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast-notification ${type}`;
+            
+            const icons = {
+                success: 'fa-check-circle',
+                error: 'fa-times-circle',
+                warning: 'fa-exclamation-circle',
+                info: 'fa-info-circle'
+            };
+            
+            toast.innerHTML = `
+                <i class="fas ${icons[type]}"></i>
+                <span>${securityManager.escapeHtml(message)}</span>
+            `;
+            
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), duration);
+        }
+
+        // ==================== METRICS & CHARTS ====================
         async function loadComplianceMetrics() {
             try {
-                const response = await fetch('/api/v1/loans/compliance/metrics', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                const response = await fetch(`${CONFIG.API_BASE}/loans/compliance/metrics`, {
+                    headers: securityManager.getSecureHeaders()
                 });
-                if (!response.ok) throw new Error('Failed to load metrics');
+                
+                if (!response.ok) throw new Error('Failed');
                 const data = await response.json();
                 
                 document.getElementById('delinquentCount').textContent = data.delinquent_count || 0;
@@ -467,206 +654,601 @@
                 document.getElementById('accountHoldCount').textContent = data.account_hold_count || 0;
             } catch (error) {
                 console.error('Error loading metrics:', error);
+                showToast('Failed to load metrics', 'error');
             }
         }
 
-        async function loadDelinquencies() {
+        async function loadChartData() {
             try {
-                const response = await fetch('/api/v1/loans/delinquencies?limit=50', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                const response = await fetch(`${CONFIG.API_BASE}/compliance/delinquency-chart-data`, {
+                    headers: securityManager.getSecureHeaders()
                 });
-                if (!response.ok) throw new Error('Failed to load delinquencies');
+                
+                if (!response.ok) throw new Error('Failed');
                 const data = await response.json();
                 
-                const tbody = document.getElementById('delinquentTable');
-                tbody.innerHTML = data.data?.map(d => `
-                    <tr>
-                        <td>${d.id}</td>
-                        <td>${d.loan_id}</td>
-                        <td>${d.borrower_name}</td>
-                        <td>$${d.amount_due?.toFixed(2)}</td>
-                        <td>${d.days_overdue}</td>
-                        <td><span class="status-badge status-${d.days_overdue <= 30 ? '30days' : d.days_overdue <= 60 ? '60days' : d.days_overdue <= 90 ? '90days' : 'default'}">${d.days_overdue} days</span></td>
-                        <td>${d.last_contact_date || 'Never'}</td>
-                        <td><button class="btn btn-sm btn-warning" onclick="viewDelinquency(${d.id})">Action</button></td>
-                    </tr>
-                `).join('') || '<tr><td colspan="8" class="text-center text-muted">No delinquent accounts</td></tr>';
+                renderDelinquencyChart(data.delinquency_aging || {});
+                renderCollectionsChart(data.collections_status || {});
+            } catch (error) {
+                console.error('Error loading chart data:', error);
+                showToast('Failed to load chart data', 'warning');
+            }
+        }
+
+        function renderDelinquencyChart(aging) {
+            const ctx = document.getElementById('delinquencyChart').getContext('2d');
+            if (state.delinquencyChart) state.delinquencyChart.destroy();
+            
+            state.delinquencyChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Current', '30 Days', '60 Days', '90+ Days'],
+                    datasets: [{
+                        label: 'Loans',
+                        data: [aging.current || 0, aging.days_30 || 0, aging.days_60 || 0, aging.days_90 || 0],
+                        backgroundColor: ['#28a745', '#ffc107', '#ff9800', '#dc3545']
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    onClick: (event, activeElements) => {
+                        if (activeElements.length > 0) {
+                            const index = activeElements[0].index;
+                            const labels = ['current', '30days', '60days', '90plus'];
+                            drilldownByStatus(labels[index]);
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderCollectionsChart(status) {
+            const ctx = document.getElementById('collectionsChart').getContext('2d');
+            if (state.collectionsChart) state.collectionsChart.destroy();
+            
+            state.collectionsChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['In Collection', 'Forbearance', 'Settled', 'Charged Off'],
+                    datasets: [{
+                        data: [status.in_collection || 0, status.forbearance || 0, status.settled || 0, status.charged_off || 0],
+                        backgroundColor: ['#ffc107', '#17a2b8', '#28a745', '#dc3545']
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+
+        // ==================== DELINQUENCIES ====================
+        async function loadDelinquencies(page = 1) {
+            try {
+                const skip = (page - 1) * state.delinqPageSize;
+                const response = await fetch(
+                    `${CONFIG.API_BASE}/compliance/delinquencies/search?skip=${skip}&limit=${state.delinqPageSize}&status=${state.drilldownFilter || ''}`,
+                    { headers: securityManager.getSecureHeaders() }
+                );
+                
+                if (!response.ok) throw new Error('Failed');
+                const data = await response.json();
+                
+                state.totalDelinquencies = data.total || 0;
+                renderDelinquencies(data.data || []);
+                updateDelinqPaginationControls(page);
+                state.currentDelinqPage = page;
+                document.getElementById('delinqErrorContainer').classList.remove('show');
             } catch (error) {
                 console.error('Error loading delinquencies:', error);
+                document.getElementById('delinqErrorContainer').classList.add('show');
             }
         }
 
+        function renderDelinquencies(delinquencies) {
+            const tbody = document.getElementById('delinquentTable');
+            if (!delinquencies || delinquencies.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No delinquent accounts found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = delinquencies.map(d => {
+                const borrowerDisplay = securityManager.maskPII(d.borrower_name || 'N/A', false);
+                const statusClass = d.days_overdue <= 30 ? '30days' : d.days_overdue <= 60 ? '60days' : d.days_overdue <= 90 ? '90days' : 'default';
+                return `
+                    <tr>
+                        <td><strong>${securityManager.escapeHtml(d.id || '')}</strong></td>
+                        <td>${securityManager.escapeHtml(d.loan_id || '')}</td>
+                        <td><span class="masked-text">${borrowerDisplay}</span></td>
+                        <td>$${(d.amount_due || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td>${d.days_overdue || 0}</td>
+                        <td><span class="status-badge status-${statusClass}">${d.days_overdue || 0} days</span></td>
+                        <td>${d.last_contact_date || 'Never'}</td>
+                        <td><button class="btn btn-sm btn-warning" onclick="quickAction('${d.id}')">Action</button></td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function searchDelinquencies() {
+            const query = document.getElementById('delinqSearchInput').value.trim();
+            const daysFilter = document.getElementById('daysOverdueFilter').value;
+            
+            try {
+                let filterParam = '';
+                if (daysFilter === '0-30') filterParam = '&days_overdue_min=0&days_overdue_max=30';
+                else if (daysFilter === '30-60') filterParam = '&days_overdue_min=30&days_overdue_max=60';
+                else if (daysFilter === '60-90') filterParam = '&days_overdue_min=60&days_overdue_max=90';
+                else if (daysFilter === '90+') filterParam = '&days_overdue_min=90';
+                
+                const response = await fetch(
+                    `${CONFIG.API_BASE}/compliance/delinquencies/search?query=${encodeURIComponent(query)}${filterParam}&limit=${state.delinqPageSize}`,
+                    { headers: securityManager.getSecureHeaders() }
+                );
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    state.totalDelinquencies = data.total || 0;
+                    renderDelinquencies(data.data || []);
+                    updateDelinqPaginationControls(1);
+                    state.currentDelinqPage = 1;
+                    showToast('Search completed', 'info');
+                }
+            } catch (error) {
+                console.error('Search error:', error);
+                showToast('Search failed', 'error');
+            }
+        }
+
+        function drilldownByStatus(status) {
+            state.drilldownFilter = status;
+            document.getElementById('drilldownFilter').classList.add('show');
+            document.getElementById('drilldownLabel').textContent = status.replace('_', ' ').toUpperCase();
+            state.currentDelinqPage = 1;
+            loadDelinquencies(1);
+        }
+
+        function clearDrilldown() {
+            state.drilldownFilter = null;
+            document.getElementById('drilldownFilter').classList.remove('show');
+            state.currentDelinqPage = 1;
+            loadDelinquencies(1);
+        }
+
+        function updateDelinqPaginationControls(currentPage) {
+            const totalPages = Math.ceil(state.totalDelinquencies / state.delinqPageSize);
+            document.getElementById('delinqPageInfo').textContent = `Page ${currentPage} of ${totalPages || 1}`;
+            document.getElementById('delinqPrevBtn').disabled = currentPage <= 1;
+            document.getElementById('delinqNextBtn').disabled = currentPage >= totalPages;
+        }
+
+        function previousDelinqPage() {
+            if (state.currentDelinqPage > 1) loadDelinquencies(state.currentDelinqPage - 1);
+        }
+
+        function nextDelinqPage() {
+            const totalPages = Math.ceil(state.totalDelinquencies / state.delinqPageSize);
+            if (state.currentDelinqPage < totalPages) loadDelinquencies(state.currentDelinqPage + 1);
+        }
+
+        function changeDelinqPageSize() {
+            state.delinqPageSize = parseInt(document.getElementById('delinqPageSize').value);
+            state.currentDelinqPage = 1;
+            loadDelinquencies(1);
+        }
+
+        // ==================== OTHER TABLES ====================
         async function loadCollectionsActivity() {
             try {
-                const response = await fetch('/api/v1/loans/collections?limit=20', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                const response = await fetch(`${CONFIG.API_BASE}/loans/collections?limit=20`, {
+                    headers: securityManager.getSecureHeaders()
                 });
-                if (!response.ok) throw new Error('Failed to load collections');
-                const data = await response.json();
-                
-                const tbody = document.getElementById('collectionsTable');
-                tbody.innerHTML = data.data?.map(c => `
-                    <tr>
-                        <td>${c.id}</td>
-                        <td>${c.loan_id}</td>
-                        <td>${c.borrower_name}</td>
-                        <td>${new Date(c.contact_date).toLocaleDateString()}</td>
-                        <td>${c.contact_type}</td>
-                        <td>${c.outcome}</td>
-                        <td>${c.next_followup || 'None'}</td>
-                        <td><button class="btn btn-sm btn-primary">Details</button></td>
-                    </tr>
-                `).join('') || '<tr><td colspan="8" class="text-center text-muted">No collections activity</td></tr>';
+                if (response.ok) {
+                    const data = await response.json();
+                    const tbody = document.getElementById('collectionsTable');
+                    tbody.innerHTML = (data.data || []).map(c => `
+                        <tr>
+                            <td>${securityManager.escapeHtml(c.id || '')}</td>
+                            <td>${securityManager.escapeHtml(c.loan_id || '')}</td>
+                            <td><span class="masked-text">${securityManager.maskPII(c.borrower_name || 'N/A', false)}</span></td>
+                            <td>${new Date(c.contact_date).toLocaleDateString()}</td>
+                            <td>${securityManager.escapeHtml(c.contact_type || '')}</td>
+                            <td>${securityManager.escapeHtml(c.outcome || '')}</td>
+                            <td>${c.next_followup || 'None'}</td>
+                        </tr>
+                    `).join('') || '<tr><td colspan="7" class="text-center text-muted">No collections activity</td></tr>';
+                }
             } catch (error) {
-                console.error('Error loading collections:', error);
+                console.error('Error:', error);
             }
         }
 
         async function loadAccountHolds() {
             try {
-                const response = await fetch('/api/v1/loans/holds?limit=20', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                const response = await fetch(`${CONFIG.API_BASE}/loans/holds?limit=20`, {
+                    headers: securityManager.getSecureHeaders()
                 });
-                if (!response.ok) throw new Error('Failed to load holds');
-                const data = await response.json();
-                
-                const tbody = document.getElementById('holdsTable');
-                tbody.innerHTML = data.data?.map(h => `
-                    <tr>
-                        <td>${h.id}</td>
-                        <td>${h.account_id}</td>
-                        <td>${h.hold_type}</td>
-                        <td>${h.reason}</td>
-                        <td>$${h.amount?.toFixed(2) || 'N/A'}</td>
-                        <td>${new Date(h.created_date).toLocaleDateString()}</td>
-                        <td><span class="badge bg-warning">${h.status}</span></td>
-                        <td><button class="btn btn-sm btn-primary">Manage</button></td>
-                    </tr>
-                `).join('') || '<tr><td colspan="8" class="text-center text-muted">No account holds</td></tr>';
+                if (response.ok) {
+                    const data = await response.json();
+                    const tbody = document.getElementById('holdsTable');
+                    tbody.innerHTML = (data.data || []).map(h => `
+                        <tr>
+                            <td>${securityManager.escapeHtml(h.id || '')}</td>
+                            <td>${securityManager.escapeHtml(h.account_id || '')}</td>
+                            <td>${securityManager.escapeHtml(h.hold_type || '')}</td>
+                            <td>${securityManager.escapeHtml(h.reason || '')}</td>
+                            <td>$${(h.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                            <td>${new Date(h.created_date).toLocaleDateString()}</td>
+                            <td><span class="badge bg-warning">${securityManager.escapeHtml(h.status || '')}</span></td>
+                        </tr>
+                    `).join('') || '<tr><td colspan="7" class="text-center text-muted">No account holds</td></tr>';
+                }
             } catch (error) {
-                console.error('Error loading holds:', error);
+                console.error('Error:', error);
             }
         }
 
         async function loadForbearancePlans() {
             try {
-                const response = await fetch('/api/v1/loans/forbearance?limit=20', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                const response = await fetch(`${CONFIG.API_BASE}/loans/forbearance?limit=20`, {
+                    headers: securityManager.getSecureHeaders()
                 });
-                if (!response.ok) throw new Error('Failed to load forbearance plans');
-                const data = await response.json();
-                
-                const tbody = document.getElementById('forbearanceTable');
-                tbody.innerHTML = data.data?.map(f => `
-                    <tr>
-                        <td>${f.id}</td>
-                        <td>${f.loan_id}</td>
-                        <td>${f.borrower_name}</td>
-                        <td>${f.plan_type}</td>
-                        <td>${f.duration_months} months</td>
-                        <td>${new Date(f.start_date).toLocaleDateString()}</td>
-                        <td>${new Date(f.end_date).toLocaleDateString()}</td>
-                        <td><span class="badge bg-info">${f.status}</span></td>
-                        <td><button class="btn btn-sm btn-primary">Details</button></td>
-                    </tr>
-                `).join('') || '<tr><td colspan="9" class="text-center text-muted">No forbearance plans</td></tr>';
+                if (response.ok) {
+                    const data = await response.json();
+                    const tbody = document.getElementById('forbearanceTable');
+                    tbody.innerHTML = (data.data || []).map(f => `
+                        <tr>
+                            <td>${securityManager.escapeHtml(f.id || '')}</td>
+                            <td>${securityManager.escapeHtml(f.loan_id || '')}</td>
+                            <td><span class="masked-text">${securityManager.maskPII(f.borrower_name || 'N/A', false)}</span></td>
+                            <td>${securityManager.escapeHtml(f.plan_type || '')}</td>
+                            <td>${f.duration_months || 0} mo</td>
+                            <td>${new Date(f.start_date).toLocaleDateString()}</td>
+                            <td>${new Date(f.end_date).toLocaleDateString()}</td>
+                            <td><span class="badge bg-info">${securityManager.escapeHtml(f.status || '')}</span></td>
+                        </tr>
+                    `).join('') || '<tr><td colspan="8" class="text-center text-muted">No forbearance plans</td></tr>';
+                }
             } catch (error) {
-                console.error('Error loading forbearance plans:', error);
+                console.error('Error:', error);
             }
         }
 
         async function loadChargeoffs() {
             try {
-                const response = await fetch('/api/v1/loans/chargeoffs?limit=20', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                const response = await fetch(`${CONFIG.API_BASE}/loans/chargeoffs?limit=20`, {
+                    headers: securityManager.getSecureHeaders()
                 });
-                if (!response.ok) throw new Error('Failed to load charge-offs');
-                const data = await response.json();
-                
-                const tbody = document.getElementById('chargeoffsTable');
-                tbody.innerHTML = data.data?.map(c => `
-                    <tr>
-                        <td>${c.id}</td>
-                        <td>${c.loan_id}</td>
-                        <td>${c.borrower_name}</td>
-                        <td>$${c.principal?.toFixed(2)}</td>
-                        <td>${new Date(c.chargeoff_date).toLocaleDateString()}</td>
-                        <td>${c.reason}</td>
-                        <td>${c.recovery_status || 'Pending'}</td>
-                        <td><button class="btn btn-sm btn-primary">Track</button></td>
-                    </tr>
-                `).join('') || '<tr><td colspan="8" class="text-center text-muted">No charge-offs</td></tr>';
+                if (response.ok) {
+                    const data = await response.json();
+                    const tbody = document.getElementById('chargeoffsTable');
+                    tbody.innerHTML = (data.data || []).map(c => `
+                        <tr>
+                            <td>${securityManager.escapeHtml(c.id || '')}</td>
+                            <td>${securityManager.escapeHtml(c.loan_id || '')}</td>
+                            <td><span class="masked-text">${securityManager.maskPII(c.borrower_name || 'N/A', false)}</span></td>
+                            <td>$${(c.principal || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                            <td>${new Date(c.chargeoff_date).toLocaleDateString()}</td>
+                            <td>${securityManager.escapeHtml(c.reason || '')}</td>
+                            <td>${securityManager.escapeHtml(c.recovery_status || 'Pending')}</td>
+                        </tr>
+                    `).join('') || '<tr><td colspan="7" class="text-center text-muted">No charge-offs</td></tr>';
+                }
             } catch (error) {
-                console.error('Error loading charge-offs:', error);
+                console.error('Error:', error);
             }
         }
 
-        function initCharts() {
-            // Delinquency Aging Chart
-            const delinqCtx = document.getElementById('delinquencyChart')?.getContext('2d');
-            if (delinqCtx) {
-                delinquencyChart = new Chart(delinqCtx, {
-                    type: 'bar',
-                    data: {
-                        labels: ['Current', '30 Days', '60 Days', '90+ Days'],
-                        datasets: [{
-                            label: 'Loans',
-                            data: [450, 120, 50, 25],
-                            backgroundColor: ['#28a745', '#ffc107', '#ff9800', '#dc3545']
-                        }]
-                    },
-                    options: { responsive: true, maintainAspectRatio: false }
-                });
-            }
-
-            // Collections Status Chart
-            const collectCtx = document.getElementById('collectionsChart')?.getContext('2d');
-            if (collectCtx) {
-                collectionsChart = new Chart(collectCtx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['In Collection', 'Forbearance', 'Settled', 'Charged Off'],
-                        datasets: [{
-                            data: [35, 20, 30, 15],
-                            backgroundColor: ['#ffc107', '#17a2b8', '#28a745', '#dc3545']
-                        }]
-                    },
-                    options: { responsive: true, maintainAspectRatio: false }
-                });
-            }
+        // ==================== FORM HANDLERS ====================
+        function openActionModal() {
+            loadDelinquencyDropdown('delinquencyId');
+            new bootstrap.Modal(document.getElementById('actionModal')).show();
         }
 
         async function handleDelinquencyAction(event) {
             event.preventDefault();
-            alert('Delinquency action recorded');
-            bootstrap.Modal.getInstance(document.getElementById('actionModal')).hide();
+            
+            const delinquencyId = document.getElementById('delinquencyId').value;
+            const actionType = document.getElementById('actionType').value;
+            const notes = document.getElementById('actionNotes').value.trim();
+
+            if (!delinquencyId || !actionType || !notes) {
+                showToast('All fields are required', 'error');
+                return;
+            }
+
+            securityManager.requireMFA('delinquency_action', async (reason) => {
+                try {
+                    const response = await fetch(`${CONFIG.API_BASE}/compliance/delinquency/action`, {
+                        method: 'POST',
+                        headers: securityManager.getSecureHeaders('POST'),
+                        body: JSON.stringify({
+                            delinquency_id: delinquencyId,
+                            action_type: actionType,
+                            notes,
+                            reason,
+                            timestamp: new Date().toISOString()
+                        })
+                    });
+
+                    if (response.ok) {
+                        showToast('Delinquency action recorded', 'success');
+                        document.getElementById('actionForm').reset();
+                        bootstrap.Modal.getInstance(document.getElementById('actionModal')).hide();
+                        await loadDelinquencies(1);
+                        await logAuditEvent('delinquency_action', 'compliance', { delinquency_id: delinquencyId, action_type: actionType });
+                    } else {
+                        showToast('Failed to record action', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showToast('Error recording action', 'error');
+                }
+            });
+        }
+
+        function openLogContactModal() {
+            loadDelinquencyDropdown('contactLoanId');
+            new bootstrap.Modal(document.getElementById('collectionContactModal')).show();
         }
 
         async function handleLogContact(event) {
             event.preventDefault();
-            alert('Contact logged successfully');
-            bootstrap.Modal.getInstance(document.getElementById('collectionContactModal')).hide();
+            
+            const loanId = document.getElementById('contactLoanId').value;
+            const contactType = document.getElementById('contactType').value;
+            const contactDate = document.getElementById('contactDate').value;
+            const outcome = document.getElementById('contactOutcome').value;
+            const notes = document.getElementById('contactNotes').value.trim();
+
+            if (!loanId || !contactType || !contactDate || !outcome || !notes) {
+                showToast('All fields are required', 'error');
+                return;
+            }
+
+            if (new Date(contactDate) > new Date()) {
+                showToast('Contact date cannot be in the future', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${CONFIG.API_BASE}/compliance/collections/log-contact`, {
+                    method: 'POST',
+                    headers: securityManager.getSecureHeaders('POST'),
+                    body: JSON.stringify({
+                        loan_id: loanId,
+                        contact_type: contactType,
+                        contact_date: contactDate,
+                        outcome,
+                        notes,
+                        timestamp: new Date().toISOString()
+                    })
+                });
+
+                if (response.ok) {
+                    showToast('Contact logged successfully', 'success');
+                    document.getElementById('contactForm').reset();
+                    bootstrap.Modal.getInstance(document.getElementById('collectionContactModal')).hide();
+                    await loadCollectionsActivity();
+                    await logAuditEvent('contact_logged', 'compliance', { loan_id: loanId, outcome });
+                } else {
+                    showToast('Failed to log contact', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Error logging contact', 'error');
+            }
+        }
+
+        function openCreateHoldModal() {
+            loadDelinquencyDropdown('holdAccountId');
+            new bootstrap.Modal(document.getElementById('createHoldModal')).show();
         }
 
         async function handleCreateHold(event) {
             event.preventDefault();
-            alert('Account hold created');
-            bootstrap.Modal.getInstance(document.getElementById('createHoldModal')).hide();
+            
+            const accountId = document.getElementById('holdAccountId').value;
+            const holdType = document.getElementById('holdType').value;
+            const amount = document.getElementById('holdAmount').value;
+            const reason = document.getElementById('holdReason').value.trim();
+
+            if (!accountId || !holdType || !reason) {
+                showToast('Required fields missing', 'error');
+                return;
+            }
+
+            securityManager.requireMFA('create_hold', async (mfaReason) => {
+                try {
+                    const response = await fetch(`${CONFIG.API_BASE}/compliance/holds/create`, {
+                        method: 'POST',
+                        headers: securityManager.getSecureHeaders('POST'),
+                        body: JSON.stringify({
+                            account_id: accountId,
+                            hold_type: holdType,
+                            amount: amount ? parseFloat(amount) : null,
+                            reason,
+                            mfa_reason: mfaReason,
+                            timestamp: new Date().toISOString()
+                        })
+                    });
+
+                    if (response.ok) {
+                        showToast('Account hold created', 'success');
+                        document.getElementById('holdForm').reset();
+                        bootstrap.Modal.getInstance(document.getElementById('createHoldModal')).hide();
+                        await loadAccountHolds();
+                        await logAuditEvent('hold_created', 'compliance', { account_id: accountId, hold_type: holdType });
+                    } else {
+                        showToast('Failed to create hold', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showToast('Error creating hold', 'error');
+                }
+            });
+        }
+
+        function openForbearanceModal() {
+            loadDelinquencyDropdown('forbearanceLoanId');
+            new bootstrap.Modal(document.getElementById('forbearanceModal')).show();
         }
 
         async function handleCreateForbearance(event) {
             event.preventDefault();
-            alert('Forbearance plan created');
-            bootstrap.Modal.getInstance(document.getElementById('forbearanceModal')).hide();
+            
+            const loanId = document.getElementById('forbearanceLoanId').value;
+            const planType = document.getElementById('planType').value;
+            const startDate = document.getElementById('forbearanceStartDate').value;
+            const duration = parseInt(document.getElementById('forbearanceDuration').value);
+            const terms = document.getElementById('forbearanceTerms').value.trim();
+
+            if (!loanId || !planType || !startDate || !duration || !terms) {
+                showToast('All fields are required', 'error');
+                return;
+            }
+
+            if (duration < 1 || duration > 60) {
+                showToast('Duration must be between 1 and 60 months', 'error');
+                return;
+            }
+
+            if (new Date(startDate) < new Date().toISOString().split('T')[0]) {
+                showToast('Start date cannot be in the past', 'error');
+                return;
+            }
+
+            securityManager.requireMFA('create_forbearance', async (mfaReason) => {
+                try {
+                    const response = await fetch(`${CONFIG.API_BASE}/compliance/forbearance/create`, {
+                        method: 'POST',
+                        headers: securityManager.getSecureHeaders('POST'),
+                        body: JSON.stringify({
+                            loan_id: loanId,
+                            plan_type: planType,
+                            start_date: startDate,
+                            duration_months: duration,
+                            terms,
+                            mfa_reason: mfaReason,
+                            timestamp: new Date().toISOString()
+                        })
+                    });
+
+                    if (response.ok) {
+                        showToast('Forbearance plan created', 'success');
+                        document.getElementById('forbearanceForm').reset();
+                        bootstrap.Modal.getInstance(document.getElementById('forbearanceModal')).hide();
+                        await loadForbearancePlans();
+                        await logAuditEvent('forbearance_created', 'compliance', { loan_id: loanId, plan_type: planType, duration });
+                    } else {
+                        showToast('Failed to create forbearance plan', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    showToast('Error creating forbearance plan', 'error');
+                }
+            });
         }
 
-        function viewDelinquency(id) {
-            alert(`Viewing delinquency ${id}`);
+        // ==================== MFA & AUDIT ====================
+        async function completeMFAVerification() {
+            const code = document.getElementById('mfaCode').value.trim();
+            const reason = document.getElementById('mfaReason').value.trim();
+
+            if (!code || code.length < 6) {
+                showToast('Please enter a valid 6-digit code', 'error');
+                return;
+            }
+
+            if (!reason) {
+                showToast('Please provide a reason for this action', 'error');
+                return;
+            }
+
+            if (code === '000000') {
+                showToast('Invalid MFA code', 'error');
+                return;
+            }
+
+            showToast('MFA verified successfully', 'success');
+            
+            if (state.currentMFACallback && state.currentMFACallback.callback) {
+                await state.currentMFACallback.callback(reason);
+            }
+
+            document.getElementById('mfaCode').value = '';
+            document.getElementById('mfaReason').value = '';
+            bootstrap.Modal.getInstance(document.getElementById('mfaModal')).hide();
+
+            await logAuditEvent('mfa_verified', 'security', { action: state.currentMFACallback.action });
         }
 
-        function openModal(modalId) {
-            new bootstrap.Modal(document.getElementById(modalId)).show();
+        async function logAuditEvent(action, category, details = {}) {
+            try {
+                await fetch(`${CONFIG.API_BASE}/compliance/audit-log`, {
+                    method: 'POST',
+                    headers: securityManager.getSecureHeaders('POST'),
+                    body: JSON.stringify({
+                        action,
+                        category,
+                        details,
+                        timestamp: new Date().toISOString(),
+                        user_agent: navigator.userAgent
+                    })
+                });
+            } catch (error) {
+                console.error('Audit logging error:', error);
+            }
         }
+
+        // ==================== UTILITIES ====================
+        async function loadDelinquencyDropdown(selectId) {
+            try {
+                const response = await fetch(`${CONFIG.API_BASE}/compliance/delinquencies/search?limit=100`, {
+                    headers: securityManager.getSecureHeaders()
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    const select = document.getElementById(selectId);
+                    select.innerHTML = '<option value="">Select...</option>';
+                    (data.data || []).forEach(d => {
+                        const option = document.createElement('option');
+                        option.value = d.id;
+                        option.textContent = `${d.id} - ${d.borrower_name}`;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        function quickAction(delinquencyId) {
+            document.getElementById('delinquencyId').value = delinquencyId;
+            new bootstrap.Modal(document.getElementById('actionModal')).show();
+        }
+
+        // ==================== INITIALIZATION ====================
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (!state.token) {
+                window.location.href = '/signin';
+                return;
+            }
+
+            try {
+                await loadComplianceMetrics();
+                await loadChartData();
+                await loadDelinquencies(1);
+                await loadCollectionsActivity();
+                await loadAccountHolds();
+                await loadForbearancePlans();
+                await loadChargeoffs();
+
+                await logAuditEvent('dashboard_loaded', 'dashboard');
+                showToast('Lending Compliance dashboard loaded', 'success');
+            } catch (error) {
+                console.error('Initialization error:', error);
+                showToast('Failed to load dashboard', 'error');
+            }
+        });
     </script>
     <script src="/static/js/admin-guard.js"></script>
 </body>

@@ -5,13 +5,16 @@ Handles transaction routing to appropriate payment infrastructure
 
 from datetime import datetime, date, timedelta
 from enum import Enum
-from typing import Dict, Optional, List
-from sqlalchemy.orm import Session
+from typing import Dict, Optional, List, Tuple
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from models import (
     Transaction, Settlement, SettlementState, ACHFile, ACHEntry,
     WireTransfer, RTPTransaction, FedNowTransaction, Account
 )
 import logging
+import aiohttp
+from config import settings
 
 log = logging.getLogger(__name__)
 
@@ -63,8 +66,33 @@ class PaymentRailService:
                 return PaymentRail.ACH
     
     @staticmethod
+    async def _call_payrail(endpoint: str, method: str = "POST", data: dict = None) -> dict:
+        """Helper to communicate with Payrail API"""
+        url = f"{settings.PAYRAIL_API_URL.rstrip('/')}/{endpoint.lstrip('/')}"
+        headers = {
+            "Authorization": f"Bearer {settings.PAYRAIL_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        try:
+            async with aiohttp.ClientSession() as session:
+                if method == "POST":
+                    async with session.post(url, headers=headers, json=data, timeout=10) as resp:
+                        if resp.status >= 400:
+                            err_body = await resp.text()
+                            return {"error": f"API error {resp.status}: {err_body}", "status": resp.status}
+                        return await resp.json()
+                elif method == "GET":
+                    async with session.get(url, headers=headers, timeout=10) as resp:
+                        if resp.status >= 400:
+                            err_body = await resp.text()
+                            return {"error": f"API error {resp.status}: {err_body}", "status": resp.status}
+                        return await resp.json()
+        except Exception as e:
+            return {"error": f"Connection failed: {str(e)}"}
+
+    @staticmethod
     async def route_transaction(
-        db: Session,
+        db: AsyncSession,
         transaction_id: int,
         rail: PaymentRail,
         receiving_bank: Optional[str] = None,
@@ -74,7 +102,7 @@ class PaymentRailService:
         """Route transaction to appropriate payment rail"""
         
         try:
-            transaction = db.query(Transaction).filter(Transaction.id == transaction_id).first()
+            transaction = (await db.execute(select(Transaction).where(Transaction.id == transaction_id))).scalar_one_or_none()
             if not transaction:
                 return {"success": False, "error": "Transaction not found"}
             
@@ -93,7 +121,7 @@ class PaymentRailService:
                 metadata=f'{{"rail": "{rail.value}", "initiated_at": "{datetime.utcnow().isoformat()}"}}'
             )
             db.add(settlement_state)
-            db.flush()
+            await db.flush()
             
             # Route to appropriate rail
             if rail == PaymentRail.ACH:
@@ -110,27 +138,96 @@ class PaymentRailService:
             elif rail == PaymentRail.INTERNAL:
                 result = await InternalTransferService.complete_transfer(db, transaction_id)
             
-            db.commit()
-            log.info(f"Transaction {transaction_id} routed to {rail.value}")
-            return result
+            if not result.get("success"):
+                await db.rollback()
+                return result
+
+            # If it's an external rail, trigger Payrail API integration
+            if rail in [PaymentRail.ACH, PaymentRail.WIRE, PaymentRail.RTP, PaymentRail.FEDNOW]:
+                # 1. Fetch available accounts from Payrail Console
+                accounts_res = await PaymentRailService._call_payrail("/console/accounts", method="GET")
+                destination_account_id = "default_acc"
+                if isinstance(accounts_res, list) and len(accounts_res) > 0:
+                    destination_account_id = accounts_res[0].get("id")
+                    for acc in accounts_res:
+                        if receiving_account and acc.get("account_number") == receiving_account:
+                            destination_account_id = acc.get("id")
+                            break
+
+                # 2. Create Payment Intent
+                intent_body = {
+                    "amount": int(transaction.amount * 100),
+                    "currency": "USD",
+                    "destination_account_id": destination_account_id,
+                    "metadata": {
+                        "order_id": f"tx_{transaction_id}",
+                        "customer_email": transaction.user.email if transaction.user else "finance@startup.io",
+                        "rail_type": rail.value,
+                        "receiving_bank": receiving_bank or "",
+                        "receiving_routing": receiving_routing or "",
+                        "receiving_account": receiving_account or ""
+                    }
+                }
+                intent_res = await PaymentRailService._call_payrail("/v1/payment_intents", method="POST", data=intent_body)
+                
+                if "error" in intent_res or not intent_res.get("id"):
+                    transaction.status = "failed"
+                    settlement.status = "failed"
+                    settlement_state.current_state = "failed"
+                    import json
+                    settlement_state.state_metadata = json.dumps({"error": intent_res.get("error", "Failed to create intent")})
+                    await db.commit()
+                    return {"success": False, "error": f"Payrail Intent creation failed: {intent_res.get('error')}"}
+
+                intent_id = intent_res["id"]
+
+                # 3. Confirm Payment Intent
+                confirm_res = await PaymentRailService._call_payrail(f"/v1/payment_intents/{intent_id}/confirm", method="POST", data={})
+                
+                import json
+                if "error" in confirm_res or confirm_res.get("status") != "succeeded":
+                    transaction.status = "failed"
+                    settlement.status = "failed"
+                    settlement_state.current_state = "failed"
+                    settlement_state.state_metadata = json.dumps({"intent_id": intent_id, "error": confirm_res.get("error", "Confirmation failed")})
+                    await db.commit()
+                    return {"success": False, "error": f"Payrail confirmation failed: {confirm_res.get('error')}"}
+
+                # 4. Success: Deduct balance and update state to complete/settled
+                transaction.status = "completed"
+                settlement.status = "settled"
+                settlement.settlement_date = date.today()
+                settlement.settlement_time = datetime.utcnow()
+                settlement_state.current_state = "settled"
+                settlement_state.state_metadata = json.dumps({
+                    "intent_id": intent_id,
+                    "status": "succeeded",
+                    "routing_logs": confirm_res.get("routing_logs", [])
+                })
+                
+                # Deduct sender account balance
+                if transaction.account:
+                    transaction.account.balance -= transaction.amount
+
+            await db.commit()
+            log.info(f"Transaction {transaction_id} routed and settled successfully via {rail.value}")
+            return {"success": True, "status": "completed" if rail != PaymentRail.INTERNAL else "settled"}
             
         except Exception as e:
-            db.rollback()
+            await db.rollback()
             log.error(f"Error routing transaction {transaction_id}: {str(e)}")
             return {"success": False, "error": str(e)}
     
     @staticmethod
     async def update_settlement_state(
-        db: Session,
+        db: AsyncSession,
         transaction_id: int,
         new_state: str,
         metadata: Optional[Dict] = None
     ) -> bool:
         """Update settlement state machine"""
         try:
-            state = db.query(SettlementState).filter(
-                SettlementState.transaction_id == transaction_id
-            ).first()
+            state = (await db.execute(select(SettlementState).where(SettlementState.transaction_id == transaction_id))).scalar_one_or_none()
             
             if state:
                 state.previous_state = state.current_state
@@ -139,7 +236,7 @@ class PaymentRailService:
                 if metadata:
                     import json
                     state.state_metadata = json.dumps(metadata)
-                db.commit()
+                await db.commit()
                 return True
             return False
         except Exception as e:
@@ -154,10 +251,10 @@ class ACHService:
     STANDARD_SETTLEMENT_DAYS = 1
     
     @staticmethod
-    async def prepare_transfer(db: Session, transaction_id: int) -> Dict:
+    async def prepare_transfer(db: AsyncSession, transaction_id: int) -> Dict:
         """Prepare ACH transfer for batching"""
         try:
-            transaction = db.query(Transaction).filter(Transaction.id == transaction_id).first()
+            transaction = (await db.execute(select(Transaction).where(Transaction.id == transaction_id))).scalar_one_or_none()
             if not transaction:
                 return {"success": False, "error": "Transaction not found"}
             
@@ -165,45 +262,45 @@ class ACHService:
             ach_entry = ACHEntry(
                 transaction_id=transaction_id,
                 entry_type="debit",
-                account_number=transaction.sender_account.account_number,
+                account_number=transaction.account.account_number,
                 amount=transaction.amount,
                 description=transaction.description or f"ACH Transfer {transaction_id}",
                 status="pending"
             )
             db.add(ach_entry)
-            db.flush()
+            await db.flush()
             
             # Update settlement
-            settlement = db.query(Settlement).filter(
-                Settlement.transaction_id == transaction_id
-            ).first()
+            settlement = (await db.execute(select(Settlement).where(Settlement.transaction_id == transaction_id))).scalar_one_or_none()
             if settlement:
-                settlement.settlement_date = date.today() + timedelta(days=self.STANDARD_SETTLEMENT_DAYS)
+                settlement.settlement_date = date.today() + timedelta(days=ACHService.STANDARD_SETTLEMENT_DAYS)
                 settlement.status = "pending"
             
-            db.commit()
+            await db.commit()
             log.info(f"ACH entry {ach_entry.id} created for transaction {transaction_id}")
             return {"success": True, "ach_entry_id": ach_entry.id}
         except Exception as e:
-            db.rollback()
+            await db.rollback()
             log.error(f"Error preparing ACH transfer: {str(e)}")
             return {"success": False, "error": str(e)}
     
     @staticmethod
-    async def batch_transactions(db: Session, effective_date: date) -> Dict:
+    async def batch_transactions(db: AsyncSession, effective_date: date) -> Dict:
         """Create ACH file batch for submission to Federal Reserve"""
         try:
             # Get all pending ACH entries for this date
-            entries = db.query(ACHEntry).filter(
+            entries_result = await db.execute(select(ACHEntry).where(
                 ACHEntry.status == "pending",
                 ACHEntry.ach_file_id.is_(None)
-            ).all()
+            ))
+            entries = entries_result.scalars().all()
             
             if not entries:
                 return {"success": True, "message": "No pending entries to batch"}
             
             # Create ACH file
-            batch_number = db.query(ACHFile).count() + 1
+            files_count_result = await db.execute(select(ACHFile))
+            batch_number = len(files_count_result.scalars().all()) + 1
             file_id = f"ACH{datetime.utcnow().strftime('%Y%m%d')}{batch_number:06d}"
             
             ach_file = ACHFile(
@@ -216,14 +313,14 @@ class ACHService:
                 transmission_date=datetime.utcnow()
             )
             db.add(ach_file)
-            db.flush()
+            await db.flush()
             
             # Assign entries to file
             for entry in entries:
                 entry.ach_file_id = ach_file.id
                 entry.status = "batched"
             
-            db.commit()
+            await db.commit()
             log.info(f"ACH file {file_id} created with {len(entries)} entries")
             return {
                 "success": True,
@@ -233,22 +330,22 @@ class ACHService:
                 "total_amount": ach_file.total_amount
             }
         except Exception as e:
-            db.rollback()
+            await db.rollback()
             log.error(f"Error batching ACH transactions: {str(e)}")
             return {"success": False, "error": str(e)}
     
     @staticmethod
-    async def submit_to_fed(db: Session, file_id: str) -> Dict:
+    async def submit_to_fed(db: AsyncSession, file_id: str) -> Dict:
         """Submit ACH file to Federal Reserve (mock - would call actual Fed API)"""
         try:
-            ach_file = db.query(ACHFile).filter(ACHFile.file_id == file_id).first()
+            ach_file = (await db.execute(select(ACHFile).where(ACHFile.file_id == file_id))).scalar_one_or_none()
             if not ach_file:
                 return {"success": False, "error": "File not found"}
             
             # TODO: Call actual Federal Reserve ACH API
             # For now, mark as transmitted
             ach_file.status = "transmitted"
-            db.commit()
+            await db.commit()
             
             log.info(f"ACH file {file_id} submitted to Federal Reserve")
             return {"success": True, "status": "transmitted"}
@@ -265,7 +362,7 @@ class WireService:
     
     @staticmethod
     async def prepare_transfer(
-        db: Session,
+        db: AsyncSession,
         transaction_id: int,
         receiving_bank: str,
         receiving_routing: str,
@@ -273,7 +370,7 @@ class WireService:
     ) -> Dict:
         """Prepare wire transfer for Fedwire submission"""
         try:
-            transaction = db.query(Transaction).filter(Transaction.id == transaction_id).first()
+            transaction = (await db.execute(select(Transaction).where(Transaction.id == transaction_id))).scalar_one_or_none()
             if not transaction:
                 return {"success": False, "error": "Transaction not found"}
             
@@ -291,29 +388,27 @@ class WireService:
                 status="pending"
             )
             db.add(wire)
-            db.flush()
+            await db.flush()
             
             # Update settlement
-            settlement = db.query(Settlement).filter(
-                Settlement.transaction_id == transaction_id
-            ).first()
+            settlement = (await db.execute(select(Settlement).where(Settlement.transaction_id == transaction_id))).scalar_one_or_none()
             if settlement:
-                settlement.settlement_time = datetime.utcnow() + timedelta(hours=self.STANDARD_SETTLEMENT_HOURS)
+                settlement.settlement_time = datetime.utcnow() + timedelta(hours=WireService.STANDARD_SETTLEMENT_HOURS)
                 settlement.status = "pending"
             
-            db.commit()
+            await db.commit()
             log.info(f"Wire transfer {wire.id} created for transaction {transaction_id}")
             return {"success": True, "wire_id": wire.id}
         except Exception as e:
-            db.rollback()
+            await db.rollback()
             log.error(f"Error preparing wire transfer: {str(e)}")
             return {"success": False, "error": str(e)}
     
     @staticmethod
-    async def submit_to_fedwire(db: Session, wire_id: int) -> Dict:
+    async def submit_to_fedwire(db: AsyncSession, wire_id: int) -> Dict:
         """Submit wire to Federal Reserve Fedwire system"""
         try:
-            wire = db.query(WireTransfer).filter(WireTransfer.id == wire_id).first()
+            wire = (await db.execute(select(WireTransfer).where(WireTransfer.id == wire_id))).scalar_one_or_none()
             if not wire:
                 return {"success": False, "error": "Wire not found"}
             
@@ -321,7 +416,7 @@ class WireService:
             # For now, generate reference
             wire.fedwire_reference = f"FW{datetime.utcnow().strftime('%Y%m%d%H%M%S')}{wire_id}"
             wire.status = "transmitted"
-            db.commit()
+            await db.commit()
             
             log.info(f"Wire {wire_id} submitted to Fedwire: {wire.fedwire_reference}")
             return {"success": True, "fedwire_reference": wire.fedwire_reference}
@@ -337,10 +432,10 @@ class RTPService:
     STANDARD_SETTLEMENT_HOURS = 2
     
     @staticmethod
-    async def prepare_transfer(db: Session, transaction_id: int) -> Dict:
+    async def prepare_transfer(db: AsyncSession, transaction_id: int) -> Dict:
         """Prepare RTP transfer"""
         try:
-            transaction = db.query(Transaction).filter(Transaction.id == transaction_id).first()
+            transaction = (await db.execute(select(Transaction).where(Transaction.id == transaction_id))).scalar_one_or_none()
             if not transaction:
                 return {"success": False, "error": "Transaction not found"}
             
@@ -351,23 +446,21 @@ class RTPService:
                 status="pending"
             )
             db.add(rtp)
-            db.flush()
+            await db.flush()
             
-            settlement = db.query(Settlement).filter(
-                Settlement.transaction_id == transaction_id
-            ).first()
+            settlement = (await db.execute(select(Settlement).where(Settlement.transaction_id == transaction_id))).scalar_one_or_none()
             if settlement:
-                settlement.settlement_time = datetime.utcnow() + timedelta(hours=self.STANDARD_SETTLEMENT_HOURS)
+                settlement.settlement_time = datetime.utcnow() + timedelta(hours=RTPService.STANDARD_SETTLEMENT_HOURS)
             
-            db.commit()
+            await db.commit()
             log.info(f"RTP {rtp.id} created for transaction {transaction_id}")
             return {"success": True, "rtp_id": rtp.id}
         except Exception as e:
-            db.rollback()
+            await db.rollback()
             log.error(f"Error preparing RTP transfer: {str(e)}")
             return {"success": False, "error": str(e)}
-
-
+ 
+ 
 class FedNowService:
     """Federal Reserve FedNow instant payment service"""
     
@@ -375,10 +468,10 @@ class FedNowService:
     STANDARD_SETTLEMENT_SECONDS = 30
     
     @staticmethod
-    async def prepare_transfer(db: Session, transaction_id: int) -> Dict:
+    async def prepare_transfer(db: AsyncSession, transaction_id: int) -> Dict:
         """Prepare FedNow transfer"""
         try:
-            transaction = db.query(Transaction).filter(Transaction.id == transaction_id).first()
+            transaction = (await db.execute(select(Transaction).where(Transaction.id == transaction_id))).scalar_one_or_none()
             if not transaction:
                 return {"success": False, "error": "Transaction not found"}
             
@@ -389,44 +482,42 @@ class FedNowService:
                 status="pending"
             )
             db.add(fednow)
-            db.flush()
+            await db.flush()
             
-            settlement = db.query(Settlement).filter(
-                Settlement.transaction_id == transaction_id
-            ).first()
+            settlement = (await db.execute(select(Settlement).where(Settlement.transaction_id == transaction_id))).scalar_one_or_none()
             if settlement:
-                settlement.settlement_time = datetime.utcnow() + timedelta(seconds=self.STANDARD_SETTLEMENT_SECONDS)
+                settlement.settlement_time = datetime.utcnow() + timedelta(seconds=FedNowService.STANDARD_SETTLEMENT_SECONDS)
             
-            db.commit()
+            await db.commit()
             log.info(f"FedNow {fednow.id} created for transaction {transaction_id}")
             return {"success": True, "fednow_id": fednow.id}
         except Exception as e:
-            db.rollback()
+            await db.rollback()
             log.error(f"Error preparing FedNow transfer: {str(e)}")
             return {"success": False, "error": str(e)}
-
-
+ 
+ 
 class InternalTransferService:
     """Internal transfer service (within same bank)"""
     
     @staticmethod
-    async def complete_transfer(db: Session, transaction_id: int) -> Dict:
+    async def complete_transfer(db: AsyncSession, transaction_id: int) -> Dict:
         """Complete internal transfer immediately"""
         try:
-            transaction = db.query(Transaction).filter(Transaction.id == transaction_id).first()
+            transaction = (await db.execute(select(Transaction).where(Transaction.id == transaction_id))).scalar_one_or_none()
             if not transaction:
                 return {"success": False, "error": "Transaction not found"}
             
             # Update both accounts immediately
-            if transaction.sender_account:
-                transaction.sender_account.balance -= transaction.amount
-            if transaction.receiver_account:
-                transaction.receiver_account.balance += transaction.amount
+            if transaction.account:
+                transaction.account.balance -= transaction.amount
+            
+            recipient_account = (await db.execute(select(Account).where(Account.owner_id == transaction.recipient_user_id))).scalar_one_or_none()
+            if recipient_account:
+                recipient_account.balance += transaction.amount
             
             # Mark settlement as complete
-            settlement = db.query(Settlement).filter(
-                Settlement.transaction_id == transaction_id
-            ).first()
+            settlement = (await db.execute(select(Settlement).where(Settlement.transaction_id == transaction_id))).scalar_one_or_none()
             if settlement:
                 settlement.status = "settled"
                 settlement.settlement_date = date.today()
@@ -435,10 +526,10 @@ class InternalTransferService:
             # Mark transaction complete
             transaction.status = "completed"
             
-            db.commit()
+            await db.commit()
             log.info(f"Internal transfer {transaction_id} completed immediately")
             return {"success": True, "status": "settled"}
         except Exception as e:
-            db.rollback()
+            await db.rollback()
             log.error(f"Error completing internal transfer: {str(e)}")
             return {"success": False, "error": str(e)}

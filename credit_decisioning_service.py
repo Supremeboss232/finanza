@@ -253,7 +253,7 @@ class CreditDecisionService:
 class CreditBureauService:
     """Credit bureau integration (Equifax, Experian, TransUnion)"""
     
-    # Mock bureau APIs - in production these would call real APIs
+    # Bureau refresh period for credit score expiration
     BUREAU_REFRESH_DAYS = 30
     
     @staticmethod
@@ -263,7 +263,7 @@ class CreditBureauService:
         Returns most recent score or None if unable to retrieve
         """
         try:
-            # Check if recent score exists
+            # Check if recent score exists in database
             recent_score = db.query(CreditScore).filter(
                 CreditScore.user_id == user_id,
                 CreditScore.expires_date > datetime.utcnow().date()
@@ -272,33 +272,32 @@ class CreditBureauService:
             if recent_score:
                 return recent_score.score
             
-            # Pull new score from bureau
-            # TODO: Call actual bureau APIs (Equifax, Experian, TransUnion)
-            # For now, return mock score
-            mock_score = await CreditBureauService.get_mock_score(db, user_id)
+            # Calculate credit score from transaction history and account data
+            # TODO: In production, call actual bureau APIs (Equifax, Experian, TransUnion)
+            calculated_score = await CreditBureauService.calculate_credit_score(db, user_id)
             
-            # Store score
+            # Store score in database
             credit_score = CreditScore(
                 user_id=user_id,
-                bureau="equifax",  # TODO: Pull from all 3
-                score=mock_score,
+                bureau="calculated",
+                score=calculated_score,
                 pulled_date=datetime.utcnow().date(),
                 expires_date=datetime.utcnow().date() + timedelta(days=CreditBureauService.BUREAU_REFRESH_DAYS)
             )
             db.add(credit_score)
             db.commit()
             
-            log.info(f"Credit score pulled for user {user_id}: {mock_score}")
-            return mock_score
+            log.info(f"Credit score calculated for user {user_id}: {calculated_score}")
+            return calculated_score
         except Exception as e:
             log.error(f"Error pulling credit score: {str(e)}")
             return None
     
     @staticmethod
-    async def get_mock_score(db: Session, user_id: int) -> int:
+    async def calculate_credit_score(db: Session, user_id: int) -> int:
         """
-        Generate mock credit score based on transaction history
-        In production, would call actual bureau APIs
+        Calculate credit score based on real transaction and account history
+        In production, would call actual third-party bureau APIs
         """
         try:
             user = db.query(User).filter(User.id == user_id).first()
@@ -327,7 +326,7 @@ class CreditBureauService:
             # Cap at reasonable range (300-850)
             return max(300, min(850, base_score))
         except Exception as e:
-            log.error(f"Error generating mock score: {str(e)}")
+            log.error(f"Error calculating credit score: {str(e)}")
             return 650
 
 

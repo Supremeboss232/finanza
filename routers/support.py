@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from deps import get_current_user, SessionDep, get_current_admin_user
 from models import User
+from rbac import require_permission
 from crud import (
     create_support_ticket,
     get_support_ticket,
@@ -71,6 +72,7 @@ async def admin_all_tickets(
     status_filter: Optional[str] = None,
     db_session: SessionDep = None,
     current_user: User = Depends(get_current_admin_user),
+    _perm=Depends(require_permission("support:manage")),
 ):
     """Get all support tickets (admin only)."""
     return await get_all_support_tickets(db_session, skip, limit, status_filter)
@@ -81,6 +83,7 @@ async def update_ticket(
     ticket_data: dict,
     db_session: SessionDep,
     current_user: User = Depends(get_current_admin_user),
+    _perm=Depends(require_permission("support:manage")),
 ):
     """Update a support ticket (admin only)."""
     ticket = await get_support_ticket(db_session, ticket_id)
@@ -98,6 +101,7 @@ async def delete_ticket(
     ticket_id: int,
     db_session: SessionDep,
     current_user: User = Depends(get_current_admin_user),
+    _perm=Depends(require_permission("support:manage")),
 ):
     """Delete a support ticket (admin only)."""
     ticket = await get_support_ticket(db_session, ticket_id)

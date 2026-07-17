@@ -7,6 +7,7 @@ from schemas import User as PydanticUser, UserCreate
 from crud import get_user, get_users, create_user, get_user_by_username
 from typing import Annotated
 from balance_service_ledger import BalanceServiceLedger
+from rbac import require_permission
 
 users_router = APIRouter(prefix="/users", tags=["users"])
 
@@ -188,6 +189,7 @@ async def read_user(user_id: int, db_session: SessionDep, current_user: CurrentU
 async def read_all_users(
     db_session: SessionDep, 
     current_user: CurrentAdminUserDep,
+    _perm=Depends(require_permission("users:view")),
     skip: int = 0, 
     limit: int = 100
 ):
@@ -196,7 +198,7 @@ async def read_all_users(
     
     SECURITY:
     - Admin-only endpoint
-    - Requires get_current_admin_user dependency
+    - Requires RBAC permission `users:view`
     - Returns list of all users in the system
     """
     users = await get_users(db_session, skip=skip, limit=limit)

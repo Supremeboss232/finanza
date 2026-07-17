@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -33,6 +33,8 @@
         .activity-item .activity-desc { color: #333; margin-top: 5px; }
         .alert-info { background: #e3f2fd; border: 1px solid #2196f3; color: #1565c0; }
     </style>
+
+    <script src="/static/js/toast-utils.js"></script>
 </head>
 <body>
     <nav class="admin-nav navbar navbar-expand-lg navbar-dark">
@@ -118,6 +120,7 @@
                         <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Changes</button>
                         <button type="button" class="btn btn-secondary" onclick="resetForm()"><i class="fas fa-times"></i> Cancel</button>
                     </div>
+                    <div id="profileMsg" class="mt-2" style="display:none;"></div>
                 </form>
             </div>
 
@@ -154,13 +157,28 @@
         // Load Admin Profile Data
         async function loadAdminProfile() {
             try {
-                const response = await fetch('/api/admin/metrics');
+                const token = localStorage.getItem('token');
+                const response = await fetch('/user/admin/user-info', {
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                    credentials: 'include'
+                });
                 if (response.ok) {
-                    // Profile data would typically come from /users/me endpoint
-                    // For now, we display placeholder data
-                    loadProfileFromStorage();
+                    const data = await response.json();
+                    if (data.success && data.user) {
+                        const u = data.user;
+                        ['adminName','displayName'].forEach(id => {
+                            const el = document.getElementById(id);
+                            if (el) el.textContent = u.full_name || 'Administrator';
+                        });
+                        ['adminEmail','displayEmail'].forEach(id => {
+                            const el = document.getElementById(id);
+                            if (el) el.textContent = u.email || '';
+                        });
+                        const joined = document.getElementById('displayJoined');
+                        if (joined) joined.textContent = u.created_at ? new Date(u.created_at).toLocaleDateString() : '--';
+                    }
                 } else {
-                    console.error('Failed to load profile');
+                    loadProfileFromStorage();
                 }
             } catch (error) {
                 console.error('Error loading profile:', error);
@@ -200,24 +218,31 @@
 
             // Send update request to API
             try {
+                const token = localStorage.getItem('token');
                 const payload = { full_name: name, email: email };
                 if (password) payload.password = password;
 
-                const response = await fetch('/api/users/me', {
+                const response = await fetch('/api/user/profile', {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                    },
+                    credentials: 'include',
                     body: JSON.stringify(payload)
                 });
 
+                const msgEl = document.getElementById('profileMsg');
                 if (response.ok) {
-                    alert('Profile updated successfully!');
-                    location.reload();
+                    if (msgEl) { msgEl.textContent = 'Profile updated successfully!'; msgEl.className = 'alert alert-success mt-2'; msgEl.style.display = 'block'; }
+                    setTimeout(() => location.reload(), 1500);
                 } else {
-                    alert('Failed to update profile');
+                    if (msgEl) { msgEl.textContent = 'Failed to update profile. Please try again.'; msgEl.className = 'alert alert-danger mt-2'; msgEl.style.display = 'block'; }
                 }
             } catch (error) {
                 console.error('Error updating profile:', error);
-                alert('Error updating profile');
+                const msgEl = document.getElementById('profileMsg');
+                if (msgEl) { msgEl.textContent = 'Error updating profile. Please check your connection.'; msgEl.className = 'alert alert-danger mt-2'; msgEl.style.display = 'block'; }
             }
         });
 

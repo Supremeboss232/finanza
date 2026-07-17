@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -64,7 +64,20 @@
         .threat-alert { background: #fee2e2; border-left: 4px solid #ef4444; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem; }
         .threat-alert strong { color: #7f1d1d; }
         .threat-alert p { color: #b91c1c; margin-bottom: 0; font-size: 0.9rem; }
+
+        @keyframes slideIn {
+            from { transform: translateX(400px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
     </style>
+
+    <script src="/static/js/toast-utils.js"></script>
 </head>
 <body>
     <!-- Navbar -->
@@ -92,7 +105,7 @@
         <!-- Threat Alert -->
         <div class="threat-alert">
             <strong><i class="fas fa-exclamation-circle"></i> Current Threats:</strong>
-            <p>Active blocked transactions: 8 | Flagged users: 12 | Rules triggered: 5 in last 24h</p>
+            <p id="threatAlertText">Loading threat data...</p>
         </div>
 
         <!-- Metrics Row -->
@@ -158,6 +171,28 @@
         </div>
 
         <div class="data-table">
+            <div style="padding: 1rem; border-bottom: 1px solid #e5e7eb;">
+                <div class="row g-3">
+                    <div class="col-md-2">
+                        <label class="form-label small">Min Risk Score</label>
+                        <input type="number" class="form-control form-control-sm" id="riskScoreFilter" min="0" max="100" placeholder="0-100" onchange="loadBlockedTransactions(1)">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small">Country</label>
+                        <select class="form-select form-select-sm" id="countryFilterSelect" onchange="countryFilter = this.value; loadBlockedTransactions(1)">
+                            <option value="">All Countries</option>
+                            <option value="US">United States</option>
+                            <option value="GB">United Kingdom</option>
+                            <option value="CA">Canada</option>
+                            <option value="AU">Australia</option>
+                        </select>
+                    </div>
+                    <div class="col-md-8 d-flex align-items-end">
+                        <button class="btn btn-sm btn-secondary" onclick="loadBlockedTransactions(1)">Apply Filters</button>
+                        <span class="ms-3 text-muted small" id="txnPageInfo">Loading...</span>
+                    </div>
+                </div>
+            </div>
             <table class="table">
                 <thead>
                     <tr>
@@ -175,6 +210,17 @@
                     <tr><td colspan="8" class="text-center text-muted py-4">Loading transactions...</td></tr>
                 </tbody>
             </table>
+            <div style="padding: 1rem; border-top: 1px solid #e5e7eb;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <small id="txnPageInfo" class="text-muted">Page 1 | 0 transactions</small>
+                    <nav>
+                        <ul class="pagination mb-0">
+                            <li class="page-item"><button class="page-link" id="txnPrevBtn" onclick="loadBlockedTransactions(currentPage - 1)">Previous</button></li>
+                            <li class="page-item"><button class="page-link" id="txnNextBtn" onclick="loadBlockedTransactions(currentPage + 1)">Next</button></li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
         </div>
 
         <!-- Device Fingerprints Table -->
@@ -293,32 +339,55 @@
 
     <!-- Create Fraud Rule Modal -->
     <div class="modal fade" id="createRuleModal" tabindex="-1">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title"><i class="fas fa-shield-alt"></i> Create Fraud Rule</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
+                    <div class="alert alert-info mb-3">
+                        <i class="fas fa-info-circle"></i> Rules created in <strong>Shadow Mode</strong> are tested against live data but don't block real transactions. Switch to production mode after validating.
+                    </div>
                     <form id="createRuleForm">
-                        <div class="mb-3">
-                            <label class="form-label">Rule Name</label>
-                            <input type="text" class="form-control" id="ruleName" placeholder="e.g., High Value Transfer" required>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Rule Name</label>
+                                    <input type="text" class="form-control" id="ruleName" placeholder="e.g., High Value Transfer" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Rule Mode</label>
+                                    <select class="form-select" id="ruleMode" required>
+                                        <option value="shadow">Shadow Mode (Test Only)</option>
+                                        <option value="production">Production Mode (Live)</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">Trigger Type</label>
-                            <select class="form-select" id="triggerType" required>
-                                <option value="">Select Type...</option>
-                                <option value="amount_threshold">Amount Threshold</option>
-                                <option value="transaction_count">Transaction Count</option>
-                                <option value="velocity_check">Velocity Check</option>
-                                <option value="geographic_anomaly">Geographic Anomaly</option>
-                                <option value="device_change">Device Change</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Threshold Value</label>
-                            <input type="number" class="form-control" id="threshold" placeholder="e.g., 10000" required>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Trigger Type</label>
+                                    <select class="form-select" id="triggerType" required>
+                                        <option value="">Select Type...</option>
+                                        <option value="amount_threshold">Amount Threshold</option>
+                                        <option value="transaction_count">Transaction Count</option>
+                                        <option value="velocity_check">Velocity Check</option>
+                                        <option value="geographic_anomaly">Geographic Anomaly</option>
+                                        <option value="device_change">Device Change</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Threshold Value (numeric)</label>
+                                    <input type="number" class="form-control" id="threshold" placeholder="e.g., 10000" min="0" step="0.01" required>
+                                    <small class="text-muted">Must be a valid number</small>
+                                </div>
+                            </div>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Action on Trigger</label>
@@ -329,6 +398,9 @@
                                 <option value="require_verification">Require Verification</option>
                             </select>
                         </div>
+                        <div id="shadowModeWarning" class="alert alert-warning">
+                            <small><i class="fas fa-exclamation-triangle"></i> This rule will run in shadow mode. No real transactions will be blocked. Check false positives before promoting to production.</small>
+                        </div>
                         <button type="submit" class="btn btn-primary w-100">Create Rule</button>
                     </form>
                 </div>
@@ -336,83 +408,352 @@
         </div>
     </div>
 
+    <!-- Forensic Evidence Modal -->
+    <div class="modal fade" id="forensicModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-microscope"></i> Forensic Evidence</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6>Device Information</h6>
+                            <table class="table table-sm">
+                                <tr><td><strong>Device ID:</strong></td><td id="forensicDeviceId">---</td></tr>
+                                <tr><td><strong>Browser:</strong></td><td id="forensicBrowser">---</td></tr>
+                                <tr><td><strong>OS:</strong></td><td id="forensicOS">---</td></tr>
+                                <tr><td><strong>Device Risk:</strong></td><td id="forensicDeviceRisk">---</td></tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Network Information</h6>
+                            <table class="table table-sm">
+                                <tr><td><strong>IP Address:</strong></td><td id="forensicIP">---</td></tr>
+                                <tr><td><strong>Geolocation:</strong></td><td id="forensicGeo">---</td></tr>
+                                <tr><td><strong>ISP:</strong></td><td id="forensicISP">---</td></tr>
+                                <tr><td><strong>VPN/Proxy:</strong></td><td id="forensicVPN">---</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6>Behavioral Analysis</h6>
+                            <table class="table table-sm">
+                                <tr><td><strong>Typing Pattern:</strong></td><td id="forensicTyping">---</td></tr>
+                                <tr><td><strong>Mouse Movement:</strong></td><td id="forensicMouse">---</td></tr>
+                                <tr><td><strong>Login Pattern:</strong></td><td id="forensicLogin">---</td></tr>
+                                <tr><td><strong>Anomaly Score:</strong></td><td id="forensicAnomaly">---</td></tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Velocity Checks</h6>
+                            <table class="table table-sm">
+                                <tr><td><strong>Txns in 5 min:</strong></td><td id="forensicVelocity5">---</td></tr>
+                                <tr><td><strong>Txns in 1 hour:</strong></td><td id="forensicVelocity60">---</td></tr>
+                                <tr><td><strong>Txns in 24h:</strong></td><td id="forensicVelocity1440">---</td></tr>
+                                <tr><td><strong>Velocity Risk:</strong></td><td id="forensicVelocityRisk">---</td></tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" style="position: fixed; top: 20px; right: 20px; z-index: 10000;"></div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
     <script src="/admin_static/js/admin-utils.js"></script>
 
     <script>
-        let threatChart, blockedChart;
+        // ==================== SECURITY & UTILS ====================
+        class SecurityManager {
+            constructor() {
+                this.token = localStorage.getItem('token');
+            }
 
+            generateCSRFToken() {
+                return 'csrf_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+            }
+
+            generateIdempotencyKey() {
+                return 'req_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+            }
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            validateRuleInput(threshold) {
+                const num = parseFloat(threshold);
+                if (isNaN(num) || !isFinite(num) || num < 0) {
+                    return { valid: false, error: 'Threshold must be a positive number' };
+                }
+                return { valid: true, value: num };
+            }
+
+            getSecureHeaders(method = 'GET') {
+                return {
+                    'Authorization': `Bearer ${this.token}`,
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': this.generateCSRFToken(),
+                    'X-Idempotency-Key': this.generateIdempotencyKey(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                };
+            }
+
+            async auditLog(action, category, details = {}) {
+                try {
+                    await fetch('/api/v1/fraud/audit-log', {
+                        method: 'POST',
+                        headers: this.getSecureHeaders('POST'),
+                        body: JSON.stringify({
+                            action,
+                            category,
+                            timestamp: new Date().toISOString(),
+                            user_agent: navigator.userAgent,
+                            ...details
+                        })
+                    });
+                } catch (error) {
+                    console.error('Audit log error:', error);
+                }
+            }
+        }
+
+        // ==================== TOAST NOTIFICATIONS ====================
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                background: white;
+                border-radius: 6px;
+                padding: 1rem 1.5rem;
+                margin-bottom: 0.5rem;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                min-width: 300px;
+                animation: slideIn 0.3s ease-out;
+            `;
+
+            const icons = {
+                success: { icon: '✓', color: '#10b981' },
+                error: { icon: '✕', color: '#ef4444' },
+                warning: { icon: '⚠', color: '#f59e0b' },
+                info: { icon: 'ℹ', color: '#3b82f6' }
+            };
+
+            const config = icons[type] || icons.info;
+            toast.innerHTML = `
+                <span style="color: ${config.color}; font-weight: bold; font-size: 1.2rem;">${config.icon}</span>
+                <span>${securityManager.escapeHtml(message)}</span>
+            `;
+
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.animation = 'slideIn 0.3s ease-out reverse';
+                setTimeout(() => toast.remove(), 300);
+            }, 5000);
+        }
+
+        // ==================== GLOBAL STATE ====================
+        const securityManager = new SecurityManager();
+        let token = localStorage.getItem('token');
+        let wsConnection = null;
+        let threatChart, blockedChart;
+        let currentPage = 1;
+        let pageSize = 20;
+        let riskFilterMin = 0;
+        let countryFilter = '';
+
+        // ==================== WEBSOCKET FOR REAL-TIME ALERTS ====================
+        function initWebSocket() {
+            // WebSocket is optional - fall back to polling if not available
+            try {
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${protocol}//${window.location.host}/ws/fraud-alerts`;
+                
+                wsConnection = new WebSocket(wsUrl);
+
+                wsConnection.onopen = () => {
+                    console.log('WebSocket connected for real-time fraud alerts');
+                    // Authenticate WebSocket
+                    wsConnection.send(JSON.stringify({
+                        type: 'auth',
+                        token: token
+                    }));
+                };
+
+                wsConnection.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    
+                    if (data.type === 'fraud_alert') {
+                        // Flash new alert row in red
+                        const row = document.querySelector(`tr[data-txn-id="${data.transaction_id}"]`);
+                        if (row) {
+                            row.style.backgroundColor = '#fee2e2';
+                            row.style.animation = 'pulse 0.5s';
+                            setTimeout(() => { row.style.backgroundColor = 'white'; }, 1000);
+                        }
+                        
+                        showToast(`🚨 NEW FRAUD ALERT: ${data.threat_type} - Risk Score ${data.risk_score}`, 'error');
+                        securityManager.auditLog('websocket_alert_received', 'fraud', { transaction_id: data.transaction_id });
+                    }
+                };
+
+                wsConnection.onerror = (error) => {
+                    console.log('WebSocket unavailable - using polling fallback');
+                    // Don't spam console - just silently use polling
+                };
+
+                wsConnection.onclose = () => {
+                    // Don't auto-reconnect - polling is sufficient
+                    wsConnection = null;
+                };
+            } catch (e) {
+                console.log('WebSocket not available - using polling');
+            }
+        }
+
+        // ==================== PAGE INITIALIZATION ====================
         document.addEventListener('DOMContentLoaded', function() {
             checkAdminAccess();
+            initWebSocket();
             loadFraudMetrics();
             loadBlockedTransactions();
             loadDevices();
             loadFraudRules();
             loadSanctionsMatches();
             initCharts();
+            setupEventListeners();
         });
 
+        function setupEventListeners() {
+            // Rule mode change warning
+            document.getElementById('ruleMode').addEventListener('change', function(e) {
+                const warning = document.getElementById('shadowModeWarning');
+                if (e.target.value === 'shadow') {
+                    warning.style.display = 'block';
+                } else {
+                    warning.innerHTML = '<small><i class="fas fa-exclamation-triangle"></i> <strong>Production Mode:</strong> This rule will block real transactions immediately. Ensure it has been tested in shadow mode first.</small>';
+                }
+            });
+        }
+
+        // ==================== LOAD METRICS ====================
         async function loadFraudMetrics() {
             try {
-                const response = await fetchAPI('/api/v1/fraud/metrics');
-                if (response.success) {
-                    document.getElementById('blockedTransactions').textContent = response.data.blocked_today || 0;
-                    document.getElementById('flaggedCount').textContent = response.data.flagged_users || 0;
-                    document.getElementById('rulesActive').textContent = response.data.active_rules || 0;
-                    document.getElementById('sanctionsCount').textContent = response.data.sanctions_matches || 0;
+                const response = await fetch('/api/v1/fraud/summary', {
+                    headers: securityManager.getSecureHeaders('GET')
+                });
+
+                if (!response.ok) {
+                    showToast('Failed to load fraud metrics', 'error');
+                    return;
                 }
+
+                const data = await response.json();
+                document.getElementById('blockedTransactions').textContent = data.blocked_today || 0;
+                document.getElementById('flaggedCount').textContent = data.flagged_users || 0;
+                document.getElementById('rulesActive').textContent = data.active_rules || 0;
+                document.getElementById('sanctionsCount').textContent = data.sanctions_matches || 0;
+                
+                // Update threat alert with dynamic data
+                const threatText = `Active blocked transactions: ${data.blocked_today || 0} | Flagged users: ${data.flagged_users || 0} | Rules triggered: ${data.rules_triggered_24h || 0} in last 24h`;
+                document.getElementById('threatAlertText').textContent = threatText;
             } catch (error) {
                 console.error('Error loading metrics:', error);
+                showToast('Error loading fraud metrics', 'error');
             }
         }
 
-        async function loadBlockedTransactions() {
+        // ==================== SERVER-SIDE PAGINATION & FILTERING ====================
+        async function loadBlockedTransactions(page = 1) {
             try {
-                const response = await fetchAPI('/api/v1/fraud/blocked-transactions');
+                currentPage = page;
+                const skip = (page - 1) * pageSize;
+                let url = `/api/v1/fraud/blocked-transactions?limit=${pageSize}&skip=${skip}`;
+                
+                if (riskFilterMin > 0) {
+                    url += `&risk_score_min=${riskFilterMin}`;
+                }
+                if (countryFilter) {
+                    url += `&country=${encodeURIComponent(countryFilter)}`;
+                }
+
+                const response = await fetch(url, {
+                    headers: securityManager.getSecureHeaders('GET')
+                });
+
+                if (!response.ok) {
+                    showToast('Failed to load blocked transactions', 'error');
+                    return;
+                }
+
+                const result = await response.json();
                 const table = document.getElementById('blockedTable');
                 
-                if (!response.success || !response.data?.length) {
+                if (!result.success || !result.transactions?.length) {
                     table.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No blocked transactions</td></tr>';
                     return;
                 }
 
-                table.innerHTML = response.data.map(txn => `
-                    <tr>
-                        <td><strong>#${txn.id}</strong></td>
-                        <td>${txn.user_email}</td>
-                        <td>${formatCurrency(txn.amount)}</td>
+                table.innerHTML = result.transactions.map(txn => `
+                    <tr data-txn-id="${txn.id}" style="cursor: pointer;" onclick="showForensicEvidence('${txn.id}')">
+                        <td><strong>#${txn.id.substring(0, 12)}</strong></td>
+                        <td>${securityManager.escapeHtml(txn.user_email)}</td>
+                        <td>$${parseFloat(txn.amount).toFixed(2)}</td>
                         <td><span class="badge bg-danger">${txn.threat_type}</span></td>
-                        <td><strong>${txn.risk_score}/100</strong></td>
-                        <td>${formatDate(txn.blocked_date)}</td>
+                        <td><strong style="color: ${txn.risk_score > 80 ? '#ef4444' : txn.risk_score > 60 ? '#f59e0b' : '#10b981'}">${txn.risk_score}/100</strong></td>
+                        <td>${new Date(txn.blocked_date).toLocaleDateString()}</td>
                         <td><span class="badge badge-blocked">Blocked</span></td>
-                        <td><button class="btn btn-sm btn-primary" onclick="unblockTransaction('${txn.id}')">Review</button></td>
+                        <td><button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); unblockTransaction('${txn.id}')">Review</button></td>
                     </tr>
                 `).join('');
+
+                // Update pagination
+                document.getElementById('txnPageInfo').textContent = `Page ${page} | ${result.total} transactions`;
+                document.getElementById('txnPrevBtn').disabled = page === 1;
+                document.getElementById('txnNextBtn').disabled = result.total <= (page * pageSize);
             } catch (error) {
                 console.error('Error loading blocked transactions:', error);
+                showToast('Error loading transactions', 'error');
             }
         }
 
         async function loadDevices() {
             try {
-                const response = await fetchAPI('/api/v1/fraud/devices');
+                const response = await fetch('/api/v1/fraud/devices', {
+                    headers: securityManager.getSecureHeaders('GET')
+                });
+
+                if (!response.ok) return;
+
+                const result = await response.json();
                 const table = document.getElementById('devicesTable');
                 
-                if (!response.success || !response.data?.length) {
+                if (!result.devices?.length) {
                     table.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No device records</td></tr>';
                     return;
                 }
 
-                table.innerHTML = response.data.map(dev => `
+                table.innerHTML = result.devices.map(dev => `
                     <tr>
-                        <td><strong>${dev.device_id}</strong></td>
-                        <td>${dev.user_email}</td>
+                        <td><strong>${dev.device_id.substring(0, 12)}</strong></td>
+                        <td>${securityManager.escapeHtml(dev.user_email)}</td>
                         <td>${dev.browser}</td>
                         <td>${dev.ip_address}</td>
                         <td>${dev.location}</td>
                         <td><span class="badge ${dev.risk_level === 'high' ? 'bg-danger' : dev.risk_level === 'medium' ? 'bg-warning' : 'bg-success'}">${dev.risk_level}</span></td>
-                        <td>${formatDate(dev.last_active)}</td>
+                        <td>${new Date(dev.last_active).toLocaleDateString()}</td>
                         <td><button class="btn btn-sm btn-warning" onclick="flagDevice('${dev.device_id}')">Flag</button></td>
                     </tr>
                 `).join('');
@@ -421,25 +762,31 @@
             }
         }
 
-        async function loadFraudRules() {
+        async function loadFraudRules(page = 1) {
             try {
-                const response = await fetchAPI('/api/v1/fraud/rules');
+                const response = await fetch(`/api/v1/fraud/rules?limit=${pageSize}&skip=${(page - 1) * pageSize}`, {
+                    headers: securityManager.getSecureHeaders('GET')
+                });
+
+                if (!response.ok) return;
+
+                const result = await response.json();
                 const table = document.getElementById('rulesTable');
                 
-                if (!response.success || !response.data?.length) {
+                if (!result.rules?.length) {
                     table.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No fraud rules</td></tr>';
                     return;
                 }
 
-                table.innerHTML = response.data.map(rule => `
+                table.innerHTML = result.rules.map(rule => `
                     <tr>
-                        <td><strong>#${rule.id}</strong></td>
-                        <td>${rule.rule_name}</td>
+                        <td><strong>#${rule.id.substring(0, 12)}</strong></td>
+                        <td>${securityManager.escapeHtml(rule.rule_name)}</td>
                         <td>${rule.trigger_condition}</td>
                         <td><span class="badge bg-info">${rule.action}</span></td>
                         <td><strong>${rule.matches_24h}</strong></td>
                         <td><span class="badge ${rule.is_active ? 'bg-success' : 'bg-secondary'}">${rule.is_active ? 'Active' : 'Inactive'}</span></td>
-                        <td>${formatDate(rule.last_modified)}</td>
+                        <td>${new Date(rule.last_modified).toLocaleDateString()}</td>
                         <td><button class="btn btn-sm btn-primary" onclick="editRule('${rule.id}')">Edit</button></td>
                     </tr>
                 `).join('');
@@ -450,22 +797,28 @@
 
         async function loadSanctionsMatches() {
             try {
-                const response = await fetchAPI('/api/v1/fraud/sanctions');
+                const response = await fetch('/api/v1/fraud/sanctions', {
+                    headers: securityManager.getSecureHeaders('GET')
+                });
+
+                if (!response.ok) return;
+
+                const result = await response.json();
                 const table = document.getElementById('sanctionsTable');
                 
-                if (!response.success || !response.data?.length) {
+                if (!result.matches?.length) {
                     table.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No sanctions matches</td></tr>';
                     return;
                 }
 
-                table.innerHTML = response.data.map(match => `
+                table.innerHTML = result.matches.map(match => `
                     <tr>
-                        <td><strong>#${match.id}</strong></td>
-                        <td>${match.user_name}</td>
+                        <td><strong>#${match.id.substring(0, 12)}</strong></td>
+                        <td>${securityManager.escapeHtml(match.user_name)}</td>
                         <td><span class="badge bg-warning">${match.sanction_list}</span></td>
                         <td>${match.match_score}%</td>
                         <td><strong>${match.confidence}%</strong></td>
-                        <td>${formatDate(match.detection_date)}</td>
+                        <td>${new Date(match.detection_date).toLocaleDateString()}</td>
                         <td><span class="badge badge-flagged">Under Review</span></td>
                         <td><button class="btn btn-sm btn-primary" onclick="reviewSanctions('${match.id}')">Review</button></td>
                     </tr>
@@ -475,6 +828,7 @@
             }
         }
 
+        // ==================== CHARTS ====================
         function initCharts() {
             const threatCtx = document.getElementById('threatChart').getContext('2d');
             threatChart = new Chart(threatCtx, {
@@ -482,7 +836,7 @@
                 data: {
                     labels: ['Suspicious Activity', 'Device Anomaly', 'Velocity Check', 'Geographic'],
                     datasets: [{
-                        data: [35, 25, 20, 20],
+                        data: [0, 0, 0, 0],
                         backgroundColor: ['#ef4444', '#f59e0b', '#06b6d4', '#8b5cf6'],
                         borderColor: 'white',
                         borderWidth: 2
@@ -502,7 +856,7 @@
                     labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
                     datasets: [{
                         label: 'Blocked Transactions',
-                        data: [8, 12, 6, 15, 11, 5, 3],
+                        data: [0, 0, 0, 0, 0, 0, 0],
                         backgroundColor: '#ef4444',
                         borderRadius: 4
                     }]
@@ -516,66 +870,159 @@
             });
         }
 
+        // ==================== FORENSIC EVIDENCE ====================
+        async function showForensicEvidence(txnId) {
+            try {
+                const response = await fetch(`/api/v1/fraud/forensics/${txnId}`, {
+                    headers: securityManager.getSecureHeaders('GET')
+                });
+
+                if (!response.ok) {
+                    showToast('Failed to load forensic data', 'error');
+                    return;
+                }
+
+                const data = await response.json();
+
+                document.getElementById('forensicDeviceId').textContent = data.device_id || '---';
+                document.getElementById('forensicBrowser').textContent = data.browser || '---';
+                document.getElementById('forensicOS').textContent = data.os || '---';
+                document.getElementById('forensicDeviceRisk').textContent = data.device_risk_level || '---';
+                
+                document.getElementById('forensicIP').textContent = data.ip_address || '---';
+                document.getElementById('forensicGeo').textContent = `${data.city}, ${data.country}` || '---';
+                document.getElementById('forensicISP').textContent = data.isp || '---';
+                document.getElementById('forensicVPN').textContent = data.vpn_detected ? 'YES ⚠️' : 'NO ✓' || '---';
+                
+                document.getElementById('forensicTyping').textContent = `${data.typing_confidence}% confidence` || '---';
+                document.getElementById('forensicMouse').textContent = `${data.mouse_confidence}% confidence` || '---';
+                document.getElementById('forensicLogin').textContent = data.login_anomaly ? 'ANOMALY ⚠️' : 'NORMAL ✓' || '---';
+                document.getElementById('forensicAnomaly').textContent = `${data.overall_anomaly_score}/100` || '---';
+                
+                document.getElementById('forensicVelocity5').textContent = `${data.velocity_5min} txns` || '---';
+                document.getElementById('forensicVelocity60').textContent = `${data.velocity_60min} txns` || '---';
+                document.getElementById('forensicVelocity1440').textContent = `${data.velocity_1440min} txns` || '---';
+                document.getElementById('forensicVelocityRisk').textContent = data.velocity_risk_level || '---';
+
+                new bootstrap.Modal(document.getElementById('forensicModal')).show();
+                securityManager.auditLog('forensic_evidence_viewed', 'fraud', { transaction_id: txnId });
+            } catch (error) {
+                console.error('Error loading forensic evidence:', error);
+                showToast('Error loading forensic data', 'error');
+            }
+        }
+
+        // ==================== ACTIONS ====================
         async function unblockTransaction(txnId) {
             document.getElementById('blockTxnId').value = txnId;
             new bootstrap.Modal(document.getElementById('blockTransactionModal')).show();
         }
 
-        function flagDevice(deviceId) {
-            showAlert(`Device ${deviceId} flagged for review`, 'warning');
+        async function flagDevice(deviceId) {
+            try {
+                const response = await fetch(`/api/v1/fraud/devices/${deviceId}/flag`, {
+                    method: 'POST',
+                    headers: securityManager.getSecureHeaders('POST'),
+                    body: JSON.stringify({ reason: 'Flagged via admin dashboard' })
+                });
+
+                if (response.ok) {
+                    showToast(`Device ${deviceId} flagged successfully`, 'success');
+                    securityManager.auditLog('device_flagged', 'fraud', { device_id: deviceId });
+                    loadDevices();
+                }
+            } catch (error) {
+                showToast('Error flagging device', 'error');
+            }
         }
 
         function editRule(ruleId) {
-            showAlert(`Editing rule #${ruleId}`, 'info');
+            showToast(`Editing rule #${ruleId}. Full editor coming soon.`, 'info');
         }
 
         function reviewSanctions(matchId) {
-            showAlert(`Reviewing sanctions match #${matchId}`, 'info');
+            showToast(`Reviewing sanctions match #${matchId}`, 'info');
         }
 
+        // ==================== FORM SUBMISSIONS ====================
         document.getElementById('blockTransactionForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             try {
-                const response = await fetchAPI('/api/v1/fraud/blocked-transactions', {
+                const response = await fetch('/api/v1/fraud/blocked-transactions', {
                     method: 'POST',
+                    headers: securityManager.getSecureHeaders('POST'),
                     body: JSON.stringify({
                         transaction_id: document.getElementById('blockTxnId').value,
                         reason: document.getElementById('blockReason').value,
                         notes: document.getElementById('blockNotes').value
                     })
                 });
-                if (response.success) {
-                    showAlert('Transaction blocked successfully', 'success');
+
+                if (response.ok) {
+                    showToast('Transaction blocked successfully', 'success');
+                    securityManager.auditLog('transaction_blocked', 'fraud', {
+                        transaction_id: document.getElementById('blockTxnId').value,
+                        reason: document.getElementById('blockReason').value
+                    });
                     bootstrap.Modal.getInstance(document.getElementById('blockTransactionModal')).hide();
                     loadBlockedTransactions();
+                } else {
+                    showToast('Failed to block transaction', 'error');
                 }
             } catch (error) {
-                showAlert('Error blocking transaction', 'danger');
+                showToast('Error blocking transaction', 'error');
             }
         });
 
         document.getElementById('createRuleForm').addEventListener('submit', async function(e) {
             e.preventDefault();
+            
+            // Validate threshold input
+            const validation = securityManager.validateRuleInput(document.getElementById('threshold').value);
+            if (!validation.valid) {
+                showToast(validation.error, 'error');
+                return;
+            }
+
             try {
-                const response = await fetchAPI('/api/v1/fraud/rules', {
+                const mode = document.getElementById('ruleMode').value;
+                const response = await fetch('/api/v1/fraud/rules', {
                     method: 'POST',
+                    headers: securityManager.getSecureHeaders('POST'),
                     body: JSON.stringify({
                         rule_name: document.getElementById('ruleName').value,
                         trigger_type: document.getElementById('triggerType').value,
-                        threshold: document.getElementById('threshold').value,
-                        action: document.getElementById('ruleAction').value
+                        threshold: validation.value,
+                        action: document.getElementById('ruleAction').value,
+                        mode: mode,
+                        false_positive_count: 0
                     })
                 });
-                if (response.success) {
-                    showAlert('Fraud rule created successfully', 'success');
+
+                if (response.ok) {
+                    const msg = mode === 'shadow' 
+                        ? 'Fraud rule created in Shadow Mode (testing)' 
+                        : 'Fraud rule created in Production Mode (LIVE)';
+                    showToast(msg, 'success');
+                    
+                    securityManager.auditLog('fraud_rule_created', 'fraud', {
+                        rule_name: document.getElementById('ruleName').value,
+                        mode: mode,
+                        trigger_type: document.getElementById('triggerType').value
+                    });
+                    
                     bootstrap.Modal.getInstance(document.getElementById('createRuleModal')).hide();
+                    this.reset();
                     loadFraudRules();
+                } else {
+                    showToast('Failed to create fraud rule', 'error');
                 }
             } catch (error) {
-                showAlert('Error creating fraud rule', 'danger');
+                showToast('Error creating fraud rule', 'error');
             }
         });
     </script>
     <script src="/static/js/admin-guard.js"></script>
+
 </body>
 </html>

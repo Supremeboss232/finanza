@@ -1,0 +1,251 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Bulk Operations - Finanza Admin Dashboard. Perform batch actions on users, transactions, and accounts.">
+    <title>Bulk Operations - Finanza Admin</title>
+    <link href="/static/css/style.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; }
+        .admin-nav { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .page-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 25px; }
+        .op-card { background: white; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.07); padding: 25px; margin-bottom: 20px; border-left: 4px solid #667eea; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .op-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.12); }
+        .op-card h5 { color: #333; font-weight: 600; margin-bottom: 8px; }
+        .op-card p { color: #666; font-size: 0.9rem; margin-bottom: 15px; }
+        .op-card.danger { border-left-color: #dc3545; }
+        .op-card.warning { border-left-color: #ffc107; }
+        .op-card.success { border-left-color: #28a745; }
+        .badge-count { font-size: 0.75rem; background: #667eea; color: white; padding: 3px 8px; border-radius: 12px; }
+        .section-title { font-size: 1.1rem; font-weight: 700; color: #444; border-bottom: 2px solid #667eea; padding-bottom: 8px; margin: 25px 0 15px; }
+        .result-log { background: #1e1e2e; color: #cdd6f4; font-family: monospace; font-size: 0.85rem; border-radius: 8px; padding: 15px; min-height: 120px; max-height: 300px; overflow-y: auto; }
+        .result-log .log-success { color: #a6e3a1; }
+        .result-log .log-error { color: #f38ba8; }
+        .result-log .log-info { color: #89b4fa; }
+    </style>
+
+    <script src="/static/js/toast-utils.js"></script>
+</head>
+<body>
+    <nav class="admin-nav navbar navbar-expand-lg navbar-dark px-4">
+        <a class="navbar-brand fw-bold" href="/user/admin/dashboard"><i class="fas fa-chart-line me-2"></i>Finanza Admin</a>
+        <div class="collapse navbar-collapse">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item"><a class="nav-link" href="/user/admin/dashboard"><i class="fas fa-home me-1"></i>Dashboard</a></li>
+                <li class="nav-item"><a class="nav-link" href="/user/admin/users"><i class="fas fa-users me-1"></i>Users</a></li>
+                <li class="nav-item"><a class="nav-link" href="/logout"><i class="fas fa-sign-out-alt me-1"></i>Logout</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container-fluid py-4 px-4">
+        <div class="page-header d-flex align-items-center justify-content-between">
+            <div>
+                <h1 class="mb-1"><i class="fas fa-layer-group me-2"></i>Bulk Operations</h1>
+                <p class="mb-0 opacity-75">Perform batch actions across users, transactions, and accounts</p>
+            </div>
+            <span class="badge bg-warning text-dark fs-6"><i class="fas fa-shield-alt me-1"></i>SUPER_ADMIN Only</span>
+        </div>
+
+        <!-- Notifications -->
+        <div id="bulkAlert" class="alert d-none mb-3" role="alert"></div>
+
+        <div class="row">
+            <!-- Left Column: Operation Types -->
+            <div class="col-lg-8">
+
+                <div class="section-title"><i class="fas fa-users me-2"></i>User Operations</div>
+
+                <div class="op-card">
+                    <h5><i class="fas fa-user-check text-success me-2"></i>Bulk KYC Approval</h5>
+                    <p>Approve all pending KYC submissions that have been under review for more than 72 hours.</p>
+                    <div class="input-group mb-3" style="max-width: 300px;">
+                        <input type="number" id="kycThresholdHours" class="form-control" value="72" min="1" max="720" placeholder="Hours threshold">
+                        <span class="input-group-text">hours</span>
+                    </div>
+                    <button class="btn btn-success btn-sm" onclick="runOperation('bulk_kyc_approve')">
+                        <i class="fas fa-play me-1"></i>Run Operation
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm ms-2" onclick="previewOperation('bulk_kyc_approve')">
+                        <i class="fas fa-eye me-1"></i>Preview
+                    </button>
+                </div>
+
+                <div class="op-card warning">
+                    <h5><i class="fas fa-user-lock text-warning me-2"></i>Bulk Suspend Inactive Users</h5>
+                    <p>Suspend user accounts that have had no login activity for a specified number of days.</p>
+                    <div class="input-group mb-3" style="max-width: 300px;">
+                        <input type="number" id="inactiveDays" class="form-control" value="180" min="30" max="730" placeholder="Days inactive">
+                        <span class="input-group-text">days</span>
+                    </div>
+                    <button class="btn btn-warning btn-sm" onclick="runOperation('bulk_suspend_inactive')">
+                        <i class="fas fa-play me-1"></i>Run Operation
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm ms-2" onclick="previewOperation('bulk_suspend_inactive')">
+                        <i class="fas fa-eye me-1"></i>Preview
+                    </button>
+                </div>
+
+                <div class="section-title"><i class="fas fa-exchange-alt me-2"></i>Transaction Operations</div>
+
+                <div class="op-card">
+                    <h5><i class="fas fa-clock text-primary me-2"></i>Release Held Transactions</h5>
+                    <p>Release all "pending" transactions older than a threshold that have passed compliance checks.</p>
+                    <div class="input-group mb-3" style="max-width: 300px;">
+                        <input type="number" id="holdHours" class="form-control" value="48" min="1" max="240" placeholder="Hold hours">
+                        <span class="input-group-text">hours old</span>
+                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="runOperation('release_held_transactions')">
+                        <i class="fas fa-play me-1"></i>Run Operation
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm ms-2" onclick="previewOperation('release_held_transactions')">
+                        <i class="fas fa-eye me-1"></i>Preview
+                    </button>
+                </div>
+
+                <div class="op-card danger">
+                    <h5><i class="fas fa-trash-alt text-danger me-2"></i>Purge Failed Transactions</h5>
+                    <p>Permanently archive failed/cancelled transactions older than 90 days. This action cannot be undone.</p>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" id="confirmPurge">
+                        <label class="form-check-label text-danger fw-semibold" for="confirmPurge">
+                            I understand this action is irreversible
+                        </label>
+                    </div>
+                    <button class="btn btn-danger btn-sm" onclick="runOperation('purge_failed_transactions')" id="purgeBtn" disabled>
+                        <i class="fas fa-play me-1"></i>Run Operation
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- Right Column: Operation Log -->
+            <div class="col-lg-4">
+                <div class="section-title"><i class="fas fa-terminal me-2"></i>Operation Log</div>
+                <div class="result-log" id="operationLog">
+                    <span class="log-info">&gt; Bulk Operations Console ready.</span><br>
+                    <span class="log-info">&gt; Select an operation and click Run to begin.</span>
+                </div>
+                <button class="btn btn-outline-secondary btn-sm mt-2 w-100" onclick="clearLog()">
+                    <i class="fas fa-trash me-1"></i>Clear Log
+                </button>
+
+                <div class="section-title mt-4"><i class="fas fa-history me-2"></i>Recent Operations</div>
+                <div id="recentOps" class="text-muted small">
+                    <i>No operations run this session.</i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/admin-guard.js"></script>
+    <script>
+        const opLog = document.getElementById('operationLog');
+        const recentOps = document.getElementById('recentOps');
+        let opHistory = [];
+
+        // Enable purge button only when confirmed
+        document.getElementById('confirmPurge').addEventListener('change', function() {
+            document.getElementById('purgeBtn').disabled = !this.checked;
+        });
+
+        function log(message, type = 'info') {
+            const line = document.createElement('span');
+            line.className = `log-${type}`;
+            line.textContent = `> [${new Date().toLocaleTimeString()}] ${message}`;
+            opLog.appendChild(line);
+            opLog.appendChild(document.createElement('br'));
+            opLog.scrollTop = opLog.scrollHeight;
+        }
+
+        function clearLog() {
+            opLog.innerHTML = '<span class="log-info">> Log cleared.</span><br>';
+        }
+
+        function showAlert(message, type = 'info') {
+            const alert = document.getElementById('bulkAlert');
+            alert.className = `alert alert-${type} d-block`;
+            alert.innerHTML = `<i class="fas fa-info-circle me-2"></i>${message}`;
+            setTimeout(() => alert.classList.add('d-none'), 5000);
+        }
+
+        async function previewOperation(opType) {
+            log(`Previewing operation: ${opType}...`, 'info');
+            const token = localStorage.getItem('token');
+            try {
+                const response = await fetch(`/api/v1/admin/bulk/${opType}/preview`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `Bearer ${token}` },
+                    credentials: 'include'
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`Preview: ${data.affected_count || 0} records would be affected.`, 'info');
+                } else {
+                    log(`Preview not available for ${opType} (${response.status})`, 'error');
+                }
+            } catch (e) {
+                log(`Preview error: ${e.message}`, 'error');
+            }
+        }
+
+        async function runOperation(opType) {
+            const confirmMsg = `Are you sure you want to run: ${opType.replace(/_/g, ' ')}?`;
+            if (!confirm(confirmMsg)) return;
+
+            log(`Starting operation: ${opType}...`, 'info');
+            showAlert(`Running ${opType}...`, 'info');
+
+            const token = localStorage.getItem('token');
+            const params = {
+                kyc_threshold_hours: parseInt(document.getElementById('kycThresholdHours')?.value || 72),
+                inactive_days: parseInt(document.getElementById('inactiveDays')?.value || 180),
+                hold_hours: parseInt(document.getElementById('holdHours')?.value || 48),
+            };
+
+            try {
+                const response = await fetch(`/api/v1/admin/bulk/${opType}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify(params)
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`Operation complete: ${data.affected_count || 0} records affected.`, 'success');
+                    showAlert(`Operation ${opType} completed successfully!`, 'success');
+                    addToHistory(opType, 'success', data.affected_count || 0);
+                } else {
+                    const err = await response.json().catch(() => ({}));
+                    log(`Operation failed: ${err.detail || response.statusText}`, 'error');
+                    showAlert(`Operation failed: ${err.detail || 'Unknown error'}`, 'danger');
+                    addToHistory(opType, 'failed', 0);
+                }
+            } catch (e) {
+                log(`Network error: ${e.message}`, 'error');
+                showAlert(`Network error: ${e.message}`, 'danger');
+                addToHistory(opType, 'error', 0);
+            }
+        }
+
+        function addToHistory(opType, status, count) {
+            opHistory.unshift({ op: opType, status, count, time: new Date().toLocaleTimeString() });
+            const html = opHistory.slice(0, 5).map(h =>
+                `<div class="d-flex justify-content-between border-bottom py-1">
+                    <small class="text-truncate">${h.op.replace(/_/g, ' ')}</small>
+                    <small class="badge bg-${h.status === 'success' ? 'success' : 'danger'} ms-2">${h.status}</small>
+                </div>`
+            ).join('');
+            recentOps.innerHTML = html || '<i>No operations run this session.</i>';
+        }
+    </script>
+</body>
+</html>

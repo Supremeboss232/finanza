@@ -1,30 +1,91 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Treasury Management - Finanza Admin</title>
     <link href="/static/css/style.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.0/dist/chart.min.js"></script>
     <style>
-        .admin-nav { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .admin-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; }
+        :root {
+            --primary: #667eea;
+            --secondary: #764ba2;
+            --success: #28a745;
+            --warning: #ffc107;
+            --danger: #dc3545;
+        }
+
+        .admin-nav { background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); }
+        .admin-header { background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; }
         .stat-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
         .dashboard-section { background: white; border-radius: 10px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 30px; }
-        .portfolio-card { border-left: 4px solid #667eea; }
+        .portfolio-card { border-left: 4px solid var(--primary); }
         .chart-container { position: relative; height: 300px; margin-bottom: 20px; }
+
+        /* Skeleton Loading Animation */
+        .skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: loading 1.5s infinite; }
+        @keyframes loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .skeleton-line { height: 12px; border-radius: 4px; margin-bottom: 8px; }
+        .skeleton-text { height: 20px; border-radius: 4px; margin-bottom: 10px; }
+        .skeleton-card { height: 100px; border-radius: 8px; margin-bottom: 15px; }
+
+        /* Toast Notifications */
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 1050; width: 100%; max-width: 400px; }
+        .toast { margin-bottom: 10px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); animation: slideIn 0.3s ease-out; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .toast.toast-success { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .toast.toast-error { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .toast.toast-warning { background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; }
+        .close-toast { cursor: pointer; opacity: 0.7; }
+        .close-toast:hover { opacity: 1; }
+
+        /* Mobile Card View for Portfolios */
+        @media (max-width: 768px) {
+            .portfolio-mobile-card { background: white; border-radius: 8px; padding: 15px; margin-bottom: 15px; border-left: 4px solid var(--primary); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+            .portfolio-mobile-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
+            .portfolio-mobile-label { font-weight: 600; color: #666; font-size: 0.9rem; }
+            .portfolio-mobile-value { color: #333; }
+            .table { display: none; }
+        }
+
+        /* Empty State */
+        .empty-state { text-align: center; padding: 60px 20px; }
+        .empty-state-icon { font-size: 4rem; color: #ddd; margin-bottom: 20px; }
+        .empty-state-text { color: #999; font-size: 1rem; margin-bottom: 20px; }
+
+        /* Pagination */
+        .pagination-controls { display: flex; align-items: center; justify-content: space-between; margin-top: 15px; }
+        .pagination-info { font-size: 0.9rem; color: #666; }
+
+        /* Action Buttons */
+        .btn-icon { width: 36px; height: 36px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; }
+        .btn-icon:hover { background-color: rgba(102, 126, 234, 0.1); }
+
+        /* Modal Improvements */
+        .modal-header { border-bottom: 2px solid #f0f0f0; background: #f9f9f9; }
+        .modal-backdrop { background-color: rgba(0,0,0,0.3); }
+
+        /* Data Table Enhancements */
+        .table-sticky-header { max-height: 500px; overflow-y: auto; }
+        .table th { position: sticky; top: 0; background: #f9f9f9; border-top: none; }
     </style>
+
+    <script src="/static/js/toast-utils.js"></script>
 </head>
 <body>
+    <!-- Toast Notification Container -->
+    <div class="toast-container" id="toastContainer" role="region" aria-live="polite" aria-label="Notifications"></div>
+
     <!-- Admin Navigation -->
     <nav class="admin-nav navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="/user/admin/dashboard">
                 <i class="fas fa-landmark"></i> Treasury Management
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarAdmin">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarAdmin" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarAdmin">
@@ -98,9 +159,40 @@
         <div class="dashboard-section">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h4><i class="fas fa-briefcase"></i> Managed Portfolios</h4>
-                <button class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> Create Portfolio</button>
+                <div>
+                    <button class="btn btn-primary btn-sm me-2" id="createPortfolioBtn" aria-label="Create new portfolio">
+                        <i class="fas fa-plus"></i> Create Portfolio
+                    </button>
+                    <button class="btn btn-secondary btn-sm" id="exportPortfoliosBtn" aria-label="Export portfolios as CSV">
+                        <i class="fas fa-download"></i> Export CSV
+                    </button>
+                </div>
             </div>
-            <div class="table-responsive">
+
+            <!-- Search & Filter Controls -->
+            <div class="row mb-4">
+                <div class="col-md-4 mb-3">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" class="form-control" id="portfolioSearch" placeholder="Search by name..." aria-label="Search portfolios">
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <select class="form-control" id="portfolioStrategyFilter" aria-label="Filter by strategy">
+                        <option value="">All Strategies</option>
+                    </select>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <select class="form-control" id="portfolioStatusFilter" aria-label="Filter by status">
+                        <option value="">All Status</option>
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Desktop Table View -->
+            <div class="table-responsive d-none d-md-block">
                 <table class="table table-hover">
                     <thead>
                         <tr>
@@ -116,10 +208,36 @@
                     </thead>
                     <tbody id="portfoliosBody">
                         <tr>
-                            <td colspan="8" class="text-center text-muted">Loading...</td>
+                            <td colspan="8" class="text-center">
+                                <div class="skeleton skeleton-line" style="width: 100%;"></div>
+                                <div class="skeleton skeleton-line" style="width: 100%;"></div>
+                            </td>
                         </tr>
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Mobile Card View -->
+            <div class="d-md-none" id="portfoliosMobileContainer"></div>
+
+            <!-- Empty State -->
+            <div id="portfoliosEmptyState" style="display: none;">
+                <div class="empty-state">
+                    <div class="empty-state-icon"><i class="fas fa-briefcase"></i></div>
+                    <div class="empty-state-text">No portfolios found</div>
+                    <button class="btn btn-primary btn-sm" id="createPortfolioBtn2">
+                        <i class="fas fa-plus"></i> Create Your First Portfolio
+                    </button>
+                </div>
+            </div>
+
+            <!-- Pagination Controls -->
+            <div class="pagination-controls" id="portfolioPagination" style="display: none;">
+                <span class="pagination-info" id="portfolioPageInfo"></span>
+                <div>
+                    <button class="btn btn-sm btn-outline-primary me-2" id="portfolioPrevBtn" aria-label="Previous page">Previous</button>
+                    <button class="btn btn-sm btn-outline-primary" id="portfolioNextBtn" aria-label="Next page">Next</button>
+                </div>
             </div>
         </div>
 
@@ -172,8 +290,22 @@
 
         <!-- Investment Strategy Templates -->
         <div class="dashboard-section">
-            <h4 class="mb-4"><i class="fas fa-chess"></i> Investment Strategies</h4>
-            <div class="table-responsive">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4><i class="fas fa-chess"></i> Investment Strategies</h4>
+                <button class="btn btn-secondary btn-sm" id="exportStrategiesBtn" aria-label="Export strategies as CSV">
+                    <i class="fas fa-download"></i> Export CSV
+                </button>
+            </div>
+
+            <!-- Search Controls -->
+            <div class="mb-4">
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="text" class="form-control" id="strategySearch" placeholder="Search by strategy name..." aria-label="Search strategies">
+                </div>
+            </div>
+
+            <div class="table-responsive d-none d-md-block">
                 <table class="table table-striped">
                     <thead>
                         <tr>
@@ -188,10 +320,32 @@
                     </thead>
                     <tbody id="strategiesBody">
                         <tr>
-                            <td colspan="7" class="text-center text-muted">Loading...</td>
+                            <td colspan="7" class="text-center">
+                                <div class="skeleton skeleton-line" style="width: 100%;"></div>
+                            </td>
                         </tr>
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Mobile Card View -->
+            <div class="d-md-none" id="strategiesMobileContainer"></div>
+
+            <!-- Empty State -->
+            <div id="strategiesEmptyState" style="display: none;">
+                <div class="empty-state">
+                    <div class="empty-state-icon"><i class="fas fa-chess"></i></div>
+                    <div class="empty-state-text">No strategies found</div>
+                </div>
+            </div>
+
+            <!-- Pagination Controls -->
+            <div class="pagination-controls" id="strategiesPagination" style="display: none;">
+                <span class="pagination-info" id="strategyPageInfo"></span>
+                <div>
+                    <button class="btn btn-sm btn-outline-primary me-2" id="strategyPrevBtn" aria-label="Previous page">Previous</button>
+                    <button class="btn btn-sm btn-outline-primary" id="strategyNextBtn" aria-label="Next page">Next</button>
+                </div>
             </div>
         </div>
 
@@ -263,186 +417,504 @@
         <!-- Risk Management -->
         <div class="dashboard-section">
             <h4 class="mb-4"><i class="fas fa-exclamation-triangle"></i> Risk Management</h4>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Max Concentration Risk (%)</label>
-                    <input type="number" class="form-control" value="20">
+            <form id="riskManagementForm" novalidate>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Max Concentration Risk (%)
+                            <span class="text-danger" title="Required field">*</span>
+                        </label>
+                        <input type="number" class="form-control" id="maxConcentration" 
+                               value="20" min="0" max="100" required
+                               aria-label="Max concentration risk"
+                               aria-describedby="concentrationHelp">
+                        <small id="concentrationHelp" class="form-text text-muted">0-100%</small>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">VaR Limit (95% Confidence)
+                            <span class="text-danger" title="Required field">*</span>
+                        </label>
+                        <input type="number" class="form-control" id="varLimit" 
+                               value="100000" min="0" required
+                               aria-label="VaR limit"
+                               aria-describedby="varHelp">
+                        <small id="varHelp" class="form-text text-muted">In USD</small>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Sector Concentration Limit (%)
+                            <span class="text-danger" title="Required field">*</span>
+                        </label>
+                        <input type="number" class="form-control" id="sectorLimit" 
+                               value="15" min="0" max="100" required
+                               aria-label="Sector concentration limit"
+                               aria-describedby="sectorHelp">
+                        <small id="sectorHelp" class="form-text text-muted">0-100%</small>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Correlation Threshold
+                            <span class="text-danger" title="Required field">*</span>
+                        </label>
+                        <input type="number" class="form-control" id="correlationThreshold" 
+                               value="0.7" step="0.1" min="0" max="1" required
+                               aria-label="Correlation threshold"
+                               aria-describedby="correlationHelp">
+                        <small id="correlationHelp" class="form-text text-muted">0.0 - 1.0</small>
+                    </div>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">VaR Limit (95% Confidence)</label>
-                    <input type="number" class="form-control" value="100000">
+                <div class="border-top pt-3 mt-3">
+                    <button type="button" class="btn btn-primary" id="updateRiskParamsBtn" aria-label="Update risk parameters">
+                        <i class="fas fa-save"></i> Update Risk Parameters
+                    </button>
+                    <button type="reset" class="btn btn-secondary ms-2">Reset to Defaults</button>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Sector Concentration Limit (%)</label>
-                    <input type="number" class="form-control" value="15">
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Correlation Threshold</label>
-                    <input type="number" class="form-control" step="0.1" value="0.7">
-                </div>
-            </div>
-            <button class="btn btn-primary">Update Risk Parameters</button>
+            </form>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Create Portfolio Modal -->
+    <div class="modal fade" id="createPortfolioModal" tabindex="-1" aria-labelledby="createPortfolioLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createPortfolioLabel">
+                        <i class="fas fa-plus-circle"></i> Create New Portfolio
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="createPortfolioForm" novalidate>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Portfolio Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="portfolioName" required aria-label="Portfolio name">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Investor Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="portfolioInvestor" required aria-label="Investor name">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Strategy <span class="text-danger">*</span></label>
+                            <select class="form-control" id="portfolioStrategy" required aria-label="Select strategy"></select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Initial Value ($) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" id="portfolioValue" min="0" step="0.01" required aria-label="Initial portfolio value">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Risk Level <span class="text-danger">*</span></label>
+                            <select class="form-control" id="portfolioRisk" required aria-label="Select risk level">
+                                <option value="">Select Risk Level</option>
+                                <option value="Low">Low</option>
+                                <option value="Medium">Medium</option>
+                                <option value="High">High</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-check"></i> Create Portfolio
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rebalance Confirmation Modal -->
+    <div class="modal fade" id="rebalanceConfirmModal" tabindex="-1" aria-labelledby="rebalanceConfirmLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header border-danger">
+                    <h5 class="modal-title text-danger" id="rebalanceConfirmLabel">
+                        <i class="fas fa-exclamation-circle"></i> Confirm Rebalancing
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>You are about to rebalance portfolio: <strong id="rebalancePortfolioName"></strong></p>
+                    <p>Current Deviation: <strong id="rebalanceDeviation"></strong></p>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-info-circle"></i> This action will execute trades to realign the portfolio with its target allocation. Estimated execution time: 2-5 minutes.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmRebalanceBtn">
+                        <i class="fas fa-check"></i> Proceed with Rebalancing
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Manage Portfolio Modal -->
+    <div class="modal fade" id="managePortfolioModal" tabindex="-1" aria-labelledby="managePortfolioLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="managePortfolioLabel">
+                        <i class="fas fa-cog"></i> Manage Portfolio
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <ul class="nav nav-tabs mb-3" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="portfolio-details-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#portfolio-details" type="button" role="tab" aria-label="Portfolio details">
+                                Details
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="portfolio-holdings-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#portfolio-holdings" type="button" role="tab" aria-label="Portfolio holdings">
+                                Holdings
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="portfolio-performance-tab" data-bs-toggle="tab" 
+                                    data-bs-target="#portfolio-performance" type="button" role="tab" aria-label="Portfolio performance">
+                                Performance
+                            </button>
+                        </li>
+                    </ul>
+                    <div class="tab-content">
+                        <div class="tab-pane fade show active" id="portfolio-details" role="tabpanel">
+                            <p><strong>Name:</strong> <span id="managedPortfolioName"></span></p>
+                            <p><strong>Investor:</strong> <span id="managedPortfolioInvestor"></span></p>
+                            <p><strong>Current Value:</strong> $<span id="managedPortfolioValue"></span></p>
+                            <p><strong>YTD Return:</strong> <span id="managedPortfolioReturn"></span></p>
+                            <button class="btn btn-warning btn-sm" id="updatePortfolioBtn">
+                                <i class="fas fa-edit"></i> Edit Details
+                            </button>
+                        </div>
+                        <div class="tab-pane fade" id="portfolio-holdings" role="tabpanel">
+                            <div id="managedPortfolioHoldings">Loading...</div>
+                        </div>
+                        <div class="tab-pane fade" id="portfolio-performance" role="tabpanel">
+                            <div id="managedPortfolioPerformance">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
-        const token = localStorage.getItem('token');
-        let allocationChart, performanceChart;
+        // ============================================
+        // PRODUCTION-READY TREASURY DASHBOARD
+        // ============================================
 
-        document.addEventListener('DOMContentLoaded', async function() {
-            if (!token) {
-                window.location.href = '/signin';
-                return;
+        // ===== CONFIGURATION & GLOBALS =====
+        const CONFIG = {
+            apiBaseUrl: '/api/v1',
+            adminBaseUrl: '/api/admin',
+            sessionCheckInterval: 5 * 60 * 1000, // 5 minutes
+            tokenKey: 'token',
+            csrfTokenKey: 'csrf_token',
+            pageSize: 10, // Items per page
+            features: {
+                enableWebSockets: false, // Set to true when WebSocket support added
+                enableRealTimeUpdates: false,
+                enableExport: true
+            }
+        };
+
+        let state = {
+            portfolios: {
+                data: [],
+                page: 0,
+                totalPages: 0,
+                filteredCount: 0,
+                filters: { search: '', strategy: '', status: '' }
+            },
+            strategies: {
+                data: [],
+                page: 0,
+                totalPages: 0,
+                filteredCount: 0,
+                filters: { search: '' }
+            },
+            token: localStorage.getItem(CONFIG.tokenKey),
+            csrfToken: null,
+            sessionValid: false
+        };
+
+        // ===== SECURITY LAYER =====
+        class SecurityManager {
+            static async validateSession() {
+                try {
+                    const response = await fetch(`${CONFIG.adminBaseUrl}/verify-session`, {
+                        method: 'GET',
+                        headers: this.getSecureHeaders()
+                    });
+
+                    if (response.status === 401) {
+                        console.warn('Session expired, redirecting to login');
+                        SecurityManager.handleSessionExpired();
+                        return false;
+                    }
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        
+                        // Verify RBAC - Check for Treasury permission
+                        if (!data.permissions || !data.permissions.includes('treasury_admin')) {
+                            showToast('Insufficient permissions for Treasury module', 'error');
+                            window.location.href = '/user/admin/dashboard';
+                            return false;
+                        }
+
+                        state.sessionValid = true;
+                        state.csrfToken = data.csrf_token;
+                        return true;
+                    }
+
+                    return false;
+                } catch (error) {
+                    console.error('Session validation error:', error);
+                    return false;
+                }
             }
 
+            static getSecureHeaders() {
+                const headers = {
+                    'Authorization': `Bearer ${state.token}`,
+                    'Content-Type': 'application/json'
+                };
+
+                if (state.csrfToken) {
+                    headers['X-CSRF-Token'] = state.csrfToken;
+                }
+
+                return headers;
+            }
+
+            static handleSessionExpired() {
+                localStorage.removeItem(CONFIG.tokenKey);
+                showToast('Your session has expired. Please log in again.', 'warning');
+                setTimeout(() => {
+                    window.location.href = '/signin';
+                }, 2000);
+            }
+
+            static validateToken() {
+                if (!state.token) {
+                    window.location.href = '/signin';
+                    return false;
+                }
+                return true;
+            }
+        }
+
+        // ===== NOTIFICATION SYSTEM =====
+        function showToast(message, type = 'info', duration = 4000) {
+            const container = document.getElementById('toastContainer');
+            const toastId = 'toast-' + Date.now();
+
+            const toast = document.createElement('div');
+            toast.id = toastId;
+            toast.className = `toast toast-${type}`;
+            toast.setAttribute('role', 'alert');
+            toast.setAttribute('aria-live', 'assertive');
+
+            const iconClass = {
+                'success': 'fa-check-circle',
+                'error': 'fa-exclamation-circle',
+                'warning': 'fa-exclamation-triangle',
+                'info': 'fa-info-circle'
+            }[type] || 'fa-info-circle';
+
+            toast.innerHTML = `
+                <div style="padding: 12px 16px; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center;">
+                        <i class="fas ${iconClass}" style="margin-right: 10px;"></i>
+                        <span>${message}</span>
+                    </div>
+                    <button class="close-toast" onclick="document.getElementById('${toastId}').remove();" aria-label="Close notification">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+
+            container.appendChild(toast);
+
+            if (duration > 0) {
+                setTimeout(() => toast.remove(), duration);
+            }
+
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        // ===== DATA EXPORT UTILITY =====
+        function exportToCSV(data, filename, columns) {
             try {
-                await loadTreasuryData();
-                await loadPortfolios();
-                await loadStrategies();
-                await loadRebalanceInfo();
-                await loadLiquidityInfo();
-                initializeCharts();
-            } catch (error) {
-                console.error('Error loading treasury data:', error);
-            }
-        });
+                let csv = columns.join(',') + '\n';
+                data.forEach(row => {
+                    const values = columns.map(col => {
+                        const value = row[col] || '';
+                        // Escape quotes and wrap in quotes if contains comma
+                        return typeof value === 'string' && value.includes(',') 
+                            ? `"${value.replace(/"/g, '""')}"` 
+                            : value;
+                    });
+                    csv += values.join(',') + '\n';
+                });
 
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.click();
+                window.URL.revokeObjectURL(url);
+
+                showToast(`Exported ${data.length} records to ${filename}`, 'success');
+            } catch (error) {
+                console.error('Export error:', error);
+                showToast('Failed to export data', 'error');
+            }
+        }
+
+        // ===== DATA LOADING FUNCTIONS =====
         async function loadTreasuryData() {
             try {
-                const response = await fetch('/api/v1/treasury/dashboard', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                startLoadingState('stats');
+                const response = await fetch(`${CONFIG.apiBaseUrl}/treasury/dashboard`, {
+                    headers: SecurityManager.getSecureHeaders()
                 });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    
-                    document.getElementById('totalAssets').textContent = (data.total_aum / 1000000).toFixed(1);
-                    document.getElementById('portfoliosCount').textContent = data.active_portfolios || '-';
-                    document.getElementById('portfolioReturn').textContent = (data.average_return || 0).toFixed(1) + '%';
-                    document.getElementById('liquidityReserve').textContent = (data.liquidity_reserve / 1000000).toFixed(1);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-                    // Asset classes
-                    document.getElementById('equitiesValue').textContent = (data.equities_value / 1000000).toFixed(1);
-                    document.getElementById('equitiesPercent').textContent = (data.equities_percent || 0).toFixed(1) + '%';
-                    document.getElementById('equitiesCount').textContent = data.equities_count || '0';
+                const data = await response.json();
+                
+                document.getElementById('totalAssets').textContent = (data.total_aum / 1000000).toFixed(1);
+                document.getElementById('portfoliosCount').textContent = data.active_portfolios || '-';
+                document.getElementById('portfolioReturn').textContent = (data.average_return || 0).toFixed(1) + '%';
+                document.getElementById('liquidityReserve').textContent = (data.liquidity_reserve / 1000000).toFixed(1);
 
-                    document.getElementById('fixedValue').textContent = (data.fixed_income_value / 1000000).toFixed(1);
-                    document.getElementById('fixedPercent').textContent = (data.fixed_income_percent || 0).toFixed(1) + '%';
-                    document.getElementById('fixedCount').textContent = data.fixed_income_count || '0';
+                // Asset classes
+                document.getElementById('equitiesValue').textContent = (data.equities_value / 1000000).toFixed(1);
+                document.getElementById('equitiesPercent').textContent = (data.equities_percent || 0).toFixed(1) + '%';
+                document.getElementById('equitiesCount').textContent = data.equities_count || '0';
+                document.getElementById('fixedValue').textContent = (data.fixed_income_value / 1000000).toFixed(1);
+                document.getElementById('fixedPercent').textContent = (data.fixed_income_percent || 0).toFixed(1) + '%';
+                document.getElementById('fixedCount').textContent = data.fixed_income_count || '0';
+                document.getElementById('reValue').textContent = (data.real_estate_value / 1000000).toFixed(1);
+                document.getElementById('rePercent').textContent = (data.real_estate_percent || 0).toFixed(1) + '%';
+                document.getElementById('reCount').textContent = data.real_estate_count || '0';
+                document.getElementById('altValue').textContent = (data.alternative_value / 1000000).toFixed(1);
+                document.getElementById('altPercent').textContent = (data.alternative_percent || 0).toFixed(1) + '%';
+                document.getElementById('altCount').textContent = data.alternative_count || '0';
 
-                    document.getElementById('reValue').textContent = (data.real_estate_value / 1000000).toFixed(1);
-                    document.getElementById('rePercent').textContent = (data.real_estate_percent || 0).toFixed(1) + '%';
-                    document.getElementById('reCount').textContent = data.real_estate_count || '0';
+                // Update charts with real data
+                updateAllocationChart({
+                    labels: ['Equities', 'Fixed Income', 'Real Estate', 'Alternative'],
+                    data: [data.equities_value, data.fixed_income_value, data.real_estate_value, data.alternative_value]
+                });
 
-                    document.getElementById('altValue').textContent = (data.alternative_value / 1000000).toFixed(1);
-                    document.getElementById('altPercent').textContent = (data.alternative_percent || 0).toFixed(1) + '%';
-                    document.getElementById('altCount').textContent = data.alternative_count || '0';
-                }
+                endLoadingState('stats');
             } catch (error) {
                 console.error('Error loading treasury data:', error);
+                showToast('Failed to load treasury data: ' + error.message, 'error');
+                endLoadingState('stats');
             }
         }
 
-        async function loadPortfolios() {
+        async function loadPortfolios(page = 0) {
             try {
-                const response = await fetch('/api/v1/treasury/portfolios', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                startLoadingState('portfolios');
+                const params = new URLSearchParams({
+                    skip: page * CONFIG.pageSize,
+                    limit: CONFIG.pageSize,
+                    search: state.portfolios.filters.search,
+                    strategy: state.portfolios.filters.strategy,
+                    status: state.portfolios.filters.status
                 });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    const tbody = document.getElementById('portfoliosBody');
-                    tbody.innerHTML = '';
+                const response = await fetch(`${CONFIG.apiBaseUrl}/treasury/portfolios?${params}`, {
+                    headers: SecurityManager.getSecureHeaders()
+                });
 
-                    if (data.portfolios && data.portfolios.length > 0) {
-                        data.portfolios.forEach(portfolio => {
-                            tbody.innerHTML += `
-                                <tr>
-                                    <td><strong>${portfolio.name}</strong></td>
-                                    <td>${portfolio.investor}</td>
-                                    <td>${portfolio.strategy}</td>
-                                    <td>$${portfolio.value.toLocaleString('en-US', {maximumFractionDigits: 0})}</td>
-                                    <td class="${portfolio.return >= 0 ? 'text-success' : 'text-danger'}">${portfolio.return >= 0 ? '+' : ''}${portfolio.return.toFixed(2)}%</td>
-                                    <td><span class="badge bg-${portfolio.risk_level === 'Low' ? 'success' : portfolio.risk_level === 'Medium' ? 'warning' : 'danger'}">${portfolio.risk_level}</span></td>
-                                    <td><span class="badge bg-info">${portfolio.status}</span></td>
-                                    <td>
-                                        <button class="btn btn-sm btn-primary">Manage</button>
-                                    </td>
-                                </tr>
-                            `;
-                        });
-                    } else {
-                        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No portfolios found</td></tr>';
-                    }
-                }
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                state.portfolios.data = data.portfolios || [];
+                state.portfolios.totalPages = Math.ceil((data.total || 0) / CONFIG.pageSize);
+                state.portfolios.filteredCount = data.total || 0;
+                state.portfolios.page = page;
+
+                renderPortfolios();
+                updatePortfolioPagination();
+                endLoadingState('portfolios');
             } catch (error) {
                 console.error('Error loading portfolios:', error);
+                showToast('Failed to load portfolios: ' + error.message, 'error');
+                endLoadingState('portfolios');
             }
         }
 
-        async function loadStrategies() {
+        async function loadStrategies(page = 0) {
             try {
-                const response = await fetch('/api/v1/treasury/strategies', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                startLoadingState('strategies');
+                const params = new URLSearchParams({
+                    skip: page * CONFIG.pageSize,
+                    limit: CONFIG.pageSize,
+                    search: state.strategies.filters.search
                 });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    const tbody = document.getElementById('strategiesBody');
-                    tbody.innerHTML = '';
+                const response = await fetch(`${CONFIG.apiBaseUrl}/treasury/strategies?${params}`, {
+                    headers: SecurityManager.getSecureHeaders()
+                });
 
-                    if (data.strategies && data.strategies.length > 0) {
-                        data.strategies.forEach(strategy => {
-                            tbody.innerHTML += `
-                                <tr>
-                                    <td>${strategy.name}</td>
-                                    <td>${strategy.target_return}%</td>
-                                    <td><span class="badge bg-info">${strategy.risk_profile}</span></td>
-                                    <td>${strategy.rebalance_frequency}</td>
-                                    <td>${strategy.portfolio_count}</td>
-                                    <td class="${strategy.performance >= 0 ? 'text-success' : 'text-danger'}">${strategy.performance >= 0 ? '+' : ''}${strategy.performance.toFixed(2)}%</td>
-                                    <td>
-                                        <button class="btn btn-sm btn-primary">Edit</button>
-                                    </td>
-                                </tr>
-                            `;
-                        });
-                    }
-                }
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                state.strategies.data = data.strategies || [];
+                state.strategies.totalPages = Math.ceil((data.total || 0) / CONFIG.pageSize);
+                state.strategies.filteredCount = data.total || 0;
+                state.strategies.page = page;
+
+                renderStrategies();
+                updateStrategiesPagination();
+                endLoadingState('strategies');
             } catch (error) {
                 console.error('Error loading strategies:', error);
+                showToast('Failed to load strategies: ' + error.message, 'error');
+                endLoadingState('strategies');
             }
         }
 
         async function loadRebalanceInfo() {
             try {
-                const response = await fetch('/api/v1/treasury/rebalancing', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                const response = await fetch(`${CONFIG.apiBaseUrl}/treasury/rebalancing`, {
+                    headers: SecurityManager.getSecureHeaders()
                 });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    const tbody = document.getElementById('rebalanceBody');
-                    tbody.innerHTML = '';
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-                    if (data.portfolios && data.portfolios.length > 0) {
-                        data.portfolios.forEach(portfolio => {
-                            tbody.innerHTML += `
-                                <tr>
-                                    <td>${portfolio.name}</td>
-                                    <td>${new Date(portfolio.last_rebalanced).toLocaleDateString()}</td>
-                                    <td>${new Date(portfolio.next_rebalance).toLocaleDateString()}</td>
-                                    <td class="${Math.abs(portfolio.deviation) > 5 ? 'text-danger' : 'text-success'}">${portfolio.deviation > 0 ? '+' : ''}${portfolio.deviation.toFixed(2)}%</td>
-                                    <td>${portfolio.recommendation}</td>
-                                    <td>
-                                        <button class="btn btn-sm btn-success">Rebalance Now</button>
-                                    </td>
-                                </tr>
-                            `;
-                        });
-                    }
+                const data = await response.json();
+                const tbody = document.getElementById('rebalanceBody');
+                tbody.innerHTML = '';
+
+                if (data.portfolios && data.portfolios.length > 0) {
+                    data.portfolios.forEach(portfolio => {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${escapeHtml(portfolio.name)}</td>
+                                <td>${new Date(portfolio.last_rebalanced).toLocaleDateString()}</td>
+                                <td>${new Date(portfolio.next_rebalance).toLocaleDateString()}</td>
+                                <td class="${Math.abs(portfolio.deviation) > 5 ? 'text-danger' : 'text-success'}">${portfolio.deviation > 0 ? '+' : ''}${portfolio.deviation.toFixed(2)}%</td>
+                                <td>${escapeHtml(portfolio.recommendation)}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-success" onclick="triggerRebalanceConfirm('${portfolio.id}', '${escapeHtml(portfolio.name)}', ${portfolio.deviation})" title="Rebalance this portfolio">
+                                        Rebalance Now
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No rebalance data available</td></tr>';
                 }
             } catch (error) {
                 console.error('Error loading rebalance info:', error);
@@ -451,75 +923,509 @@
 
         async function loadLiquidityInfo() {
             try {
-                const response = await fetch('/api/v1/treasury/liquidity', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                const response = await fetch(`${CONFIG.apiBaseUrl}/treasury/liquidity`, {
+                    headers: SecurityManager.getSecureHeaders()
                 });
 
-                if (response.ok) {
-                    const data = await response.json();
-                    const tbody = document.getElementById('liquidityBody');
-                    tbody.innerHTML = '';
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-                    if (data.accounts && data.accounts.length > 0) {
-                        data.accounts.forEach(account => {
-                            const statusClass = account.liquidity >= account.threshold ? 'success' : 'danger';
-                            tbody.innerHTML += `
-                                <tr>
-                                    <td>${account.name}</td>
-                                    <td>${account.liquidity.toFixed(1)}%</td>
-                                    <td>${account.threshold}%</td>
-                                    <td><span class="badge bg-${statusClass}">${account.liquidity >= account.threshold ? 'OK' : 'LOW'}</span></td>
-                                    <td>${account.liquidity >= account.threshold ? 'None' : '<button class="btn btn-sm btn-warning">Review</button>'}</td>
-                                </tr>
-                            `;
-                        });
-                    }
+                const data = await response.json();
+                const tbody = document.getElementById('liquidityBody');
+                tbody.innerHTML = '';
+
+                if (data.accounts && data.accounts.length > 0) {
+                    data.accounts.forEach(account => {
+                        const statusClass = account.liquidity >= account.threshold ? 'success' : 'danger';
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${escapeHtml(account.name)}</td>
+                                <td>${account.liquidity.toFixed(1)}%</td>
+                                <td>${account.threshold}%</td>
+                                <td><span class="badge bg-${statusClass}">${account.liquidity >= account.threshold ? 'OK' : 'LOW'}</span></td>
+                                <td>${account.liquidity >= account.threshold ? 'None' : '<button class="btn btn-sm btn-warning">Review</button>'}</td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No liquidity data available</td></tr>';
                 }
             } catch (error) {
                 console.error('Error loading liquidity info:', error);
             }
         }
 
+        // ===== RENDER FUNCTIONS =====
+        function renderPortfolios() {
+            const tbody = document.getElementById('portfoliosBody');
+            const emptyState = document.getElementById('portfoliosEmptyState');
+
+            if (state.portfolios.data.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            tbody.innerHTML = '';
+
+            state.portfolios.data.forEach(portfolio => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>
+                            <strong>${escapeHtml(portfolio.name)}</strong>
+                            <br><small class="text-muted">${escapeHtml(portfolio.id)}</small>
+                        </td>
+                        <td>${escapeHtml(portfolio.investor)}</td>
+                        <td>${escapeHtml(portfolio.strategy)}</td>
+                        <td>$${portfolio.value.toLocaleString('en-US', {maximumFractionDigits: 0})}</td>
+                        <td class="${portfolio.return >= 0 ? 'text-success' : 'text-danger'}">${portfolio.return >= 0 ? '+' : ''}${portfolio.return.toFixed(2)}%</td>
+                        <td><span class="badge bg-${portfolio.risk_level === 'Low' ? 'success' : portfolio.risk_level === 'Medium' ? 'warning' : 'danger'}">${portfolio.risk_level}</span></td>
+                        <td><span class="badge bg-info">${portfolio.status}</span></td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" onclick="triggerManagePortfolio('${portfolio.id}')" title="Manage portfolio" aria-label="Manage ${escapeHtml(portfolio.name)} portfolio">
+                                <i class="fas fa-cog"></i> Manage
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            // Mobile view
+            const mobileContainer = document.getElementById('portfoliosMobileContainer');
+            mobileContainer.innerHTML = state.portfolios.data.map(p => `
+                <div class="portfolio-mobile-card">
+                    <div class="portfolio-mobile-row"><span class="portfolio-mobile-label">Name:</span><span class="portfolio-mobile-value">${escapeHtml(p.name)}</span></div>
+                    <div class="portfolio-mobile-row"><span class="portfolio-mobile-label">Investor:</span><span class="portfolio-mobile-value">${escapeHtml(p.investor)}</span></div>
+                    <div class="portfolio-mobile-row"><span class="portfolio-mobile-label">Value:</span><span class="portfolio-mobile-value">$${p.value.toLocaleString()}</span></div>
+                    <div class="portfolio-mobile-row"><span class="portfolio-mobile-label">Return:</span><span class="portfolio-mobile-value">${p.return >= 0 ? '+' : ''}${p.return.toFixed(2)}%</span></div>
+                    <div class="mt-2">
+                        <button class="btn btn-sm btn-primary w-100" onclick="triggerManagePortfolio('${p.id}')">
+                            <i class="fas fa-cog"></i> Manage
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderStrategies() {
+            const tbody = document.getElementById('strategiesBody');
+            const emptyState = document.getElementById('strategiesEmptyState');
+
+            if (state.strategies.data.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            tbody.innerHTML = '';
+
+            state.strategies.data.forEach(strategy => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td><strong>${escapeHtml(strategy.name)}</strong></td>
+                        <td>${strategy.target_return}%</td>
+                        <td><span class="badge bg-info">${strategy.risk_profile}</span></td>
+                        <td>${strategy.rebalance_frequency}</td>
+                        <td>${strategy.portfolio_count}</td>
+                        <td class="${strategy.performance >= 0 ? 'text-success' : 'text-danger'}">${strategy.performance >= 0 ? '+' : ''}${strategy.performance.toFixed(2)}%</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" onclick="editStrategy('${strategy.id}')" title="Edit strategy" aria-label="Edit ${escapeHtml(strategy.name)}">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function updatePortfolioPagination() {
+            const pagination = document.getElementById('portfolioPagination');
+            const info = document.getElementById('portfolioPageInfo');
+            const prevBtn = document.getElementById('portfolioPrevBtn');
+            const nextBtn = document.getElementById('portfolioNextBtn');
+
+            if (state.portfolios.totalPages <= 1) {
+                pagination.style.display = 'none';
+                return;
+            }
+
+            pagination.style.display = 'flex';
+            const start = state.portfolios.page * CONFIG.pageSize + 1;
+            const end = Math.min((state.portfolios.page + 1) * CONFIG.pageSize, state.portfolios.filteredCount);
+            info.textContent = `Showing ${start}-${end} of ${state.portfolios.filteredCount}`;
+
+            prevBtn.disabled = state.portfolios.page === 0;
+            nextBtn.disabled = state.portfolios.page >= state.portfolios.totalPages - 1;
+        }
+
+        function updateStrategiesPagination() {
+            const pagination = document.getElementById('strategiesPagination');
+            const info = document.getElementById('strategyPageInfo');
+            const prevBtn = document.getElementById('strategyPrevBtn');
+            const nextBtn = document.getElementById('strategyNextBtn');
+
+            if (state.strategies.totalPages <= 1) {
+                pagination.style.display = 'none';
+                return;
+            }
+
+            pagination.style.display = 'flex';
+            const start = state.strategies.page * CONFIG.pageSize + 1;
+            const end = Math.min((state.strategies.page + 1) * CONFIG.pageSize, state.strategies.filteredCount);
+            info.textContent = `Showing ${start}-${end} of ${state.strategies.filteredCount}`;
+
+            prevBtn.disabled = state.strategies.page === 0;
+            nextBtn.disabled = state.strategies.page >= state.strategies.totalPages - 1;
+        }
+
+        // ===== LOADING STATE MANAGEMENT =====
+        function startLoadingState(section) {
+            // Skeleton loaders for tables
+            const skeleton = '<div class="skeleton skeleton-line" style="width: 100%; height: 20px;"></div>';
+            if (section === 'portfolios' || section === 'stats') {
+                // Handled by showToast and visual feedback
+            }
+        }
+
+        function endLoadingState(section) {
+            // Remove skeleton loaders
+        }
+
+        // ===== FORM VALIDATION =====
+        function validatePortfolioForm() {
+            const form = document.getElementById('createPortfolioForm');
+            const fields = ['portfolioName', 'portfolioInvestor', 'portfolioStrategy', 'portfolioValue', 'portfolioRisk'];
+
+            for (let field of fields) {
+                const el = document.getElementById(field);
+                if (!el || !el.value) {
+                    showToast(`Please fill in all required fields`, 'warning');
+                    return false;
+                }
+            }
+
+            // Additional validation
+            const value = parseFloat(document.getElementById('portfolioValue').value);
+            if (value <= 0) {
+                showToast('Portfolio value must be greater than 0', 'warning');
+                return false;
+            }
+
+            return true;
+        }
+
+        function validateRiskForm() {
+            const form = document.getElementById('riskManagementForm');
+            const fields = ['maxConcentration', 'varLimit', 'sectorLimit', 'correlationThreshold'];
+            const values = {};
+
+            for (let field of fields) {
+                const el = document.getElementById(field);
+                if (!el || el.value === '') {
+                    showToast('Please fill in all required fields', 'warning');
+                    return false;
+                }
+                values[field] = parseFloat(el.value);
+            }
+
+            // Validation logic
+            if (values.maxConcentration < 0 || values.maxConcentration > 100) {
+                showToast('Max Concentration must be between 0 and 100%', 'warning');
+                return false;
+            }
+
+            if (values.sectorLimit < 0 || values.sectorLimit > 100) {
+                showToast('Sector Limit must be between 0 and 100%', 'warning');
+                return false;
+            }
+
+            if (values.correlationThreshold < 0 || values.correlationThreshold > 1) {
+                showToast('Correlation Threshold must be between 0 and 1', 'warning');
+                return false;
+            }
+
+            return true;
+        }
+
+        // ===== MODAL TRIGGERS =====
+        function triggerManagePortfolio(portfolioId) {
+            const portfolio = state.portfolios.data.find(p => p.id === portfolioId);
+            if (!portfolio) return;
+
+            document.getElementById('managedPortfolioName').textContent = escapeHtml(portfolio.name);
+            document.getElementById('managedPortfolioInvestor').textContent = escapeHtml(portfolio.investor);
+            document.getElementById('managedPortfolioValue').textContent = portfolio.value.toLocaleString('en-US', {maximumFractionDigits: 2});
+            document.getElementById('managedPortfolioReturn').innerHTML = `<span class="${portfolio.return >= 0 ? 'text-success' : 'text-danger'}">${portfolio.return >= 0 ? '+' : ''}${portfolio.return.toFixed(2)}%</span>`;
+
+            new bootstrap.Modal(document.getElementById('managePortfolioModal')).show();
+        }
+
+        function triggerRebalanceConfirm(portfolioId, portfolioName, deviation) {
+            document.getElementById('rebalancePortfolioName').textContent = escapeHtml(portfolioName);
+            document.getElementById('rebalanceDeviation').textContent = (deviation > 0 ? '+' : '') + deviation.toFixed(2) + '%';
+
+            const modal = new bootstrap.Modal(document.getElementById('rebalanceConfirmModal'));
+            modal.show();
+
+            document.getElementById('confirmRebalanceBtn').onclick = async function() {
+                await executeRebalance(portfolioId);
+                modal.hide();
+            };
+        }
+
+        async function executeRebalance(portfolioId) {
+            try {
+                showToast('Initiating rebalance...', 'info', 0);
+
+                const response = await fetch(`${CONFIG.apiBaseUrl}/treasury/rebalance`, {
+                    method: 'POST',
+                    headers: SecurityManager.getSecureHeaders(),
+                    body: JSON.stringify({ portfolio_id: portfolioId })
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const data = await response.json();
+                showToast('Rebalance initiated successfully', 'success');
+                
+                // Reload data after slight delay
+                setTimeout(() => loadPortfolios(), 1000);
+            } catch (error) {
+                console.error('Rebalance error:', error);
+                showToast('Failed to initiate rebalance: ' + error.message, 'error');
+            }
+        }
+
+        // ===== CHART FUNCTIONS =====
+        let allocationChart, performanceChart;
+
         function initializeCharts() {
-            // Asset Allocation
-            const allocationCtx = document.getElementById('allocationChart').getContext('2d');
-            allocationChart = new Chart(allocationCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Equities', 'Fixed Income', 'Real Estate', 'Alternative'],
-                    datasets: [{
-                        data: [40, 30, 20, 10],
-                        backgroundColor: ['#667eea', '#764ba2', '#f093fb', '#4facfe']
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false
+            const allocationCtx = document.getElementById('allocationChart');
+            const performanceCtx = document.getElementById('performanceChart');
+
+            if (allocationCtx) {
+                allocationChart = new Chart(allocationCtx.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Equities', 'Fixed Income', 'Real Estate', 'Alternative'],
+                        datasets: [{
+                            data: [40, 30, 20, 10],
+                            backgroundColor: ['#667eea', '#764ba2', '#f093fb', '#4facfe']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.label || '';
+                                        const value = context.parsed || 0;
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = ((value / total) * 100).toFixed(1);
+                                        return `${label}: $${value.toLocaleString()} (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            if (performanceCtx) {
+                performanceChart = new Chart(performanceCtx.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                        datasets: [{
+                            label: 'Portfolio Value',
+                            data: [100, 102, 101, 105, 103, 107, 110, 108, 112, 115, 118, 120],
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'top' },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const value = context.parsed.y || 0;
+                                        const change = value - 100;
+                                        return `Value: $${value.toLocaleString()} (${change >= 0 ? '+' : ''}${change.toFixed(2)}%)`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: { beginAtZero: false }
+                        }
+                    }
+                });
+            }
+        }
+
+        function updateAllocationChart(data) {
+            if (allocationChart && data.data && data.data.length > 0) {
+                allocationChart.data.datasets[0].data = data.data;
+                allocationChart.update('none');
+            }
+        }
+
+        // ===== EVENT LISTENERS =====
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (!SecurityManager.validateToken()) return;
+
+            if (!await SecurityManager.validateSession()) {
+                showToast('Session validation failed', 'error');
+                return;
+            }
+
+            try {
+                // Load all data
+                await Promise.all([
+                    loadTreasuryData(),
+                    loadPortfolios(),
+                    loadStrategies(),
+                    loadRebalanceInfo(),
+                    loadLiquidityInfo()
+                ]);
+
+                initializeCharts();
+                setupEventListeners();
+
+                // Periodic session check
+                setInterval(() => SecurityManager.validateSession(), CONFIG.sessionCheckInterval);
+            } catch (error) {
+                console.error('Initialization error:', error);
+                showToast('Failed to initialize dashboard: ' + error.message, 'error');
+            }
+        });
+
+        function setupEventListeners() {
+            // Portfolio buttons
+            document.querySelectorAll('#createPortfolioBtn, #createPortfolioBtn2').forEach(btn => {
+                btn.addEventListener('click', () => new bootstrap.Modal(document.getElementById('createPortfolioModal')).show());
+            });
+
+            document.getElementById('createPortfolioForm')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (!validatePortfolioForm()) return;
+
+                try {
+                    showToast('Creating portfolio...', 'info', 0);
+                    const response = await fetch(`${CONFIG.apiBaseUrl}/treasury/portfolios`, {
+                        method: 'POST',
+                        headers: SecurityManager.getSecureHeaders(),
+                        body: JSON.stringify({
+                            name: document.getElementById('portfolioName').value,
+                            investor: document.getElementById('portfolioInvestor').value,
+                            strategy: document.getElementById('portfolioStrategy').value,
+                            value: parseFloat(document.getElementById('portfolioValue').value),
+                            risk_level: document.getElementById('portfolioRisk').value
+                        })
+                    });
+
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                    showToast('Portfolio created successfully', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('createPortfolioModal')).hide();
+                    document.getElementById('createPortfolioForm').reset();
+                    await loadPortfolios();
+                } catch (error) {
+                    console.error('Create portfolio error:', error);
+                    showToast('Failed to create portfolio: ' + error.message, 'error');
                 }
             });
 
-            // Portfolio Performance
-            const performanceCtx = document.getElementById('performanceChart').getContext('2d');
-            performanceChart = new Chart(performanceCtx, {
-                type: 'line',
-                data: {
-                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
-                    datasets: [{
-                        label: 'Portfolio Value',
-                        data: [100, 102, 101, 105, 103, 107, 110, 108, 112, 115, 118, 120],
-                        borderColor: '#667eea',
-                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { position: 'top' }
-                    }
+            // Risk Parameters
+            document.getElementById('updateRiskParamsBtn')?.addEventListener('click', async () => {
+                if (!validateRiskForm()) return;
+
+                try {
+                    showToast('Updating risk parameters...', 'info', 0);
+                    const response = await fetch(`${CONFIG.apiBaseUrl}/treasury/risk-parameters`, {
+                        method: 'POST',
+                        headers: SecurityManager.getSecureHeaders(),
+                        body: JSON.stringify({
+                            max_concentration: parseFloat(document.getElementById('maxConcentration').value),
+                            var_limit: parseFloat(document.getElementById('varLimit').value),
+                            sector_limit: parseFloat(document.getElementById('sectorLimit').value),
+                            correlation_threshold: parseFloat(document.getElementById('correlationThreshold').value)
+                        })
+                    });
+
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                    showToast('Risk parameters updated successfully', 'success');
+                } catch (error) {
+                    console.error('Update risk error:', error);
+                    showToast('Failed to update risk parameters: ' + error.message, 'error');
                 }
             });
+
+            // Search and Filter
+            document.getElementById('portfolioSearch')?.addEventListener('input', (e) => {
+                state.portfolios.filters.search = e.target.value;
+                loadPortfolios(0);
+            });
+
+            document.getElementById('strategySearch')?.addEventListener('input', (e) => {
+                state.strategies.filters.search = e.target.value;
+                loadStrategies(0);
+            });
+
+            // Pagination
+            document.getElementById('portfolioPrevBtn')?.addEventListener('click', () => {
+                if (state.portfolios.page > 0) loadPortfolios(state.portfolios.page - 1);
+            });
+
+            document.getElementById('portfolioNextBtn')?.addEventListener('click', () => {
+                if (state.portfolios.page < state.portfolios.totalPages - 1) loadPortfolios(state.portfolios.page + 1);
+            });
+
+            document.getElementById('strategyPrevBtn')?.addEventListener('click', () => {
+                if (state.strategies.page > 0) loadStrategies(state.strategies.page - 1);
+            });
+
+            document.getElementById('strategyNextBtn')?.addEventListener('click', () => {
+                if (state.strategies.page < state.strategies.totalPages - 1) loadStrategies(state.strategies.page + 1);
+            });
+
+            // Export buttons
+            document.getElementById('exportPortfoliosBtn')?.addEventListener('click', () => {
+                if (state.portfolios.data.length === 0) {
+                    showToast('No portfolios to export', 'warning');
+                    return;
+                }
+                exportToCSV(state.portfolios.data, 'portfolios.csv', 
+                    ['id', 'name', 'investor', 'strategy', 'value', 'return', 'risk_level', 'status']);
+            });
+
+            document.getElementById('exportStrategiesBtn')?.addEventListener('click', () => {
+                if (state.strategies.data.length === 0) {
+                    showToast('No strategies to export', 'warning');
+                    return;
+                }
+                exportToCSV(state.strategies.data, 'strategies.csv',
+                    ['id', 'name', 'target_return', 'risk_profile', 'rebalance_frequency', 'portfolio_count', 'performance']);
+            });
+        }
+
+        // ===== UTILITY FUNCTIONS =====
+        function escapeHtml(text) {
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+            return text.replace(/[&<>"']/g, c => map[c]);
+        }
+
+        function editStrategy(strategyId) {
+            showToast('Strategy editing feature coming soon', 'info');
         }
     </script>
     <script src="/static/js/admin-guard.js"></script>

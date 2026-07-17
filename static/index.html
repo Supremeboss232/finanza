@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -26,6 +26,8 @@
 
     <!-- Template Stylesheet -->
     <link href="/static/css/style.css" rel="stylesheet">
+
+    <script src="/static/js/toast-utils.js"></script>
 </head>
 
 <body>
@@ -40,11 +42,11 @@
     <div class="container-fluid fixed-top px-0 wow fadeIn" data-wow-delay="0.1s">
         <div class="top-bar row gx-0 align-items-center d-none d-lg-flex">
             <div class="col-lg-6 px-5 text-start">
-                <small><i class="fa fa-map-marker-alt text-primary me-2"></i>123 Street, New York, USA</small>
-                <small class="ms-4"><i class="fa fa-clock text-primary me-2"></i>9.00 am - 9.00 pm</small>
+                <small><i class="fa fa-map-marker-alt text-primary me-2"></i>100 Financial Ave, New York, NY 10001</small>
+                <small class="ms-4"><i class="fa fa-clock text-primary me-2"></i>8:00 AM - 8:00 PM ET</small>
             </div>
             <div class="col-lg-6 px-5 text-end">
-                <small><i class="fa fa-envelope text-primary me-2"></i>info@example.com</small>
+                <small><i class="fa fa-envelope text-primary me-2"></i>support@finanzabank.com</small>
                 <small class="ms-4"><i class="fa fa-phone-alt text-primary me-2"></i>+012 345 6789</small>
             </div>
         </div>
@@ -61,21 +63,21 @@
                     <div class="nav-item dropdown">
                         <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Banking</a>
                         <div class="dropdown-menu border-light m-0">
-                            <a href="personal.html" class="dropdown-item">Personal Banking</a>
-                            <a href="corporate.html" class="dropdown-item">Corporate Banking</a>
+                            <a href="/personal" class="dropdown-item">Personal Banking</a>
+                            <a href="/corporate" class="dropdown-item">Corporate Banking</a>
                         </div>
                     </div>
-                    <a href="deposits.html" class="nav-item nav-link">Deposits</a>
-                    <a href="credits.html" class="nav-item nav-link">Credits</a>
-                    <a href="cards.html" class="nav-item nav-link">Cards</a>
-                    <a href="investments.html" class="nav-item nav-link">Investments</a>
-                    <a href="loans.html" class="nav-item nav-link">Loans</a>
-                    <a href="insurance.html" class="nav-item nav-link">Insurance</a>
+                    <a href="/deposits" class="nav-item nav-link">Deposits</a>
+                    <a href="/credits" class="nav-item nav-link">Credits</a>
+                    <a href="/cards" class="nav-item nav-link">Cards</a>
+                    <a href="/investments" class="nav-item nav-link">Investments</a>
+                    <a href="/loans" class="nav-item nav-link">Loans</a>
+                    <a href="/insurance" class="nav-item nav-link">Insurance</a>
                     <div class="nav-item dropdown">
                         <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Account</a>
                         <div class="dropdown-menu border-light m-0">
-                            <a href="signin.html" class="dropdown-item">Sign In</a>
-                            <a href="signup.html" class="dropdown-item">Sign Up</a>
+                            <a href="/signin" class="dropdown-item">Sign In</a>
+                            <a href="/signup" class="dropdown-item">Sign Up</a>
                         </div>
                     </div>
                 </div>
@@ -102,7 +104,7 @@
                                 <div class="col-lg-8">
                                     <p class="d-inline-block border border-white rounded text-primary fw-semi-bold py-1 px-3 animated slideInDown">Welcome to Finanza</p>
                                     <h1 class="display-1 mb-4 animated slideInDown">Your Financial Status Is Our Goal</h1>
-                                    <a href="about.html" class="btn btn-primary py-3 px-5 animated slideInDown">Explore More</a>
+                                    <a href="/about" class="btn btn-primary py-3 px-5 animated slideInDown">Explore More</a>
                                 </div>
                             </div>
                         </div>
@@ -116,7 +118,7 @@
                                 <div class="col-lg-7">
                                     <p class="d-inline-block border border-white rounded text-primary fw-semi-bold py-1 px-3 animated slideInDown">Welcome to Finanza</p>
                                     <h1 class="display-1 mb-4 animated slideInDown">True Financial Support For You</h1>
-                                    <a href="about.html" class="btn btn-primary py-3 px-5 animated slideInDown">Explore More</a>
+                                    <a href="/about" class="btn btn-primary py-3 px-5 animated slideInDown">Explore More</a>
                                 </div>
                             </div>
                         </div>
@@ -268,7 +270,7 @@
                     <p class="d-inline-block border rounded text-primary fw-semi-bold py-1 px-3">Why Choosing Us!</p>
                     <h1 class="display-5 mb-4">Few Reasons Why People Choosing Us!</h1>
                     <p class="mb-4">We are a trusted partner for businesses of all sizes. Our commitment to excellence, combined with our deep industry knowledge, makes us the ideal choice for your financial needs.</p>
-                    <a class="btn btn-primary py-3 px-5" href="service.html">Explore More</a>
+                    <a class="btn btn-primary py-3 px-5" href="/service">Explore More</a>
                 </div>
                 <div class="col-lg-6">
                     <div class="row g-4 align-items-center">
@@ -279,7 +281,7 @@
                                         <i class="fa fa-check fa-3x text-primary mb-3"></i>
                                         <h4 class="mb-3">Fast Executions</h4>
                                         <p class="mb-3">We pride ourselves on our ability to provide fast and efficient financial solutions, ensuring you get the support you need, when you need it.</p>
-                                                                                <a class="fw-semi-bold" href="feature.html">Read More <i class="fa fa-arrow-right ms-1"></i></a>
+                                                                                <a class="fw-semi-bold" href="/feature">Read More <i class="fa fa-arrow-right ms-1"></i></a>
                                     </div>
                                 </div>
                                 <div class="col-12 wow fadeIn" data-wow-delay="0.5s">
@@ -287,7 +289,7 @@
                                         <i class="fa fa-check fa-3x text-primary mb-3"></i>
                                         <h4 class="mb-3">Guide & Support</h4>
                                         <p class="mb-3">Our team provides expert guidance and unwavering support to help you navigate your financial journey with confidence.</p>
-                                                                                <a class="fw-semi-bold" href="feature.html">Read More <i class="fa fa-arrow-right ms-1"></i></a>
+                                                                                <a class="fw-semi-bold" href="/feature">Read More <i class="fa fa-arrow-right ms-1"></i></a>
                                     </div>
                                 </div>
                             </div>
@@ -297,7 +299,7 @@
                                 <i class="fa fa-check fa-3x text-primary mb-3"></i>
                                 <h4 class="mb-3">Financial Secure</h4>
                                 <p class="mb-3">We prioritize the security of your assets, employing robust strategies to protect your financial well-being.</p>
-                                                                        <a class="fw-semi-bold" href="feature.html">Read More <i class="fa fa-arrow-right ms-1"></i></a>
+                                                                        <a class="fw-semi-bold" href="/feature">Read More <i class="fa fa-arrow-right ms-1"></i></a>
                             </div>
                         </div>
                     </div>
@@ -348,7 +350,7 @@
                                     <p><i class="fa fa-check text-primary me-3"></i>Secured Loans</p>
                                     <p><i class="fa fa-check text-primary me-3"></i>Credit Facilities</p>
                                     <p><i class="fa fa-check text-primary me-3"></i>Cash Advanced</p>
-                                    <a href="service.html" class="btn btn-primary py-3 px-5 mt-3">Read More</a>
+                                    <a href="/service" class="btn btn-primary py-3 px-5 mt-3">Read More</a>
                                 </div>
                             </div>
                         </div>
@@ -366,7 +368,7 @@
                                     <p><i class="fa fa-check text-primary me-3"></i>Secured Loans</p>
                                     <p><i class="fa fa-check text-primary me-3"></i>Credit Facilities</p>
                                     <p><i class="fa fa-check text-primary me-3"></i>Cash Advanced</p>
-                                    <a href="service.html" class="btn btn-primary py-3 px-5 mt-3">Read More</a>
+                                    <a href="/service" class="btn btn-primary py-3 px-5 mt-3">Read More</a>
                                 </div>
                             </div>
                         </div>
@@ -384,7 +386,7 @@
                                     <p><i class="fa fa-check text-primary me-3"></i>Secured Loans</p>
                                     <p><i class="fa fa-check text-primary me-3"></i>Credit Facilities</p>
                                     <p><i class="fa fa-check text-primary me-3"></i>Cash Advanced</p>
-                                    <a href="service.html" class="btn btn-primary py-3 px-5 mt-3">Read More</a>
+                                    <a href="/service" class="btn btn-primary py-3 px-5 mt-3">Read More</a>
                                 </div>
                             </div>
                         </div>
@@ -402,7 +404,7 @@
                                     <p><i class="fa fa-check text-primary me-3"></i>Secured Loans</p>
                                     <p><i class="fa fa-check text-primary me-3"></i>Credit Facilities</p>
                                     <p><i class="fa fa-check text-primary me-3"></i>Cash Advanced</p>
-                                    <a href="service.html" class="btn btn-primary py-3 px-5 mt-3">Read More</a>
+                                    <a href="/service" class="btn btn-primary py-3 px-5 mt-3">Read More</a>
                                 </div>
                             </div>
                         </div>
@@ -649,17 +651,17 @@
                 </div>
                 <div class="col-lg-3 col-md-6">
                     <h4 class="text-white mb-4">Services</h4>
-                    <a class="btn btn-link" href="financial_planning.html">Financial Planning</a>
-                    <a class="btn btn-link" href="investments.html">Cash Investment</a>
-                    <a class="btn btn-link" href="financial_consultancy.html">Financial Consultancy</a>
-                    <a class="btn btn-link" href="loans.html">Business Loans</a>
-                    <a class="btn btn-link" href="business_analysis.html">Business Analysis</a>
+                    <a class="btn btn-link" href="/financial_planning">Financial Planning</a>
+                    <a class="btn btn-link" href="/investments">Cash Investment</a>
+                    <a class="btn btn-link" href="/financial_consultancy">Financial Consultancy</a>
+                    <a class="btn btn-link" href="/loans">Business Loans</a>
+                    <a class="btn btn-link" href="/business_analysis">Business Analysis</a>
                 </div>
                 <div class="col-lg-3 col-md-6">
                     <h4 class="text-white mb-4">Quick Links</h4>
-                    <a class="btn btn-link" href="about.html">About Us</a>
-                    <a class="btn btn-link" href="contact.html">Contact Us</a>
-                    <a class="btn btn-link" href="service.html">Our Services</a>
+                    <a class="btn btn-link" href="/about">About Us</a>
+                    <a class="btn btn-link" href="/contact">Contact Us</a>
+                    <a class="btn btn-link" href="/service">Our Services</a>
                     <a class="btn btn-link" href="#">Terms & Condition</a>
                     <a class="btn btn-link" href="#">Support</a>
                 </div>

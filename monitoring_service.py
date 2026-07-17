@@ -9,6 +9,10 @@ from sqlalchemy.orm import Session
 import logging
 from enum import Enum
 import json
+import asyncio
+
+from config import settings
+import email_utils
 
 log = logging.getLogger(__name__)
 
@@ -401,3 +405,53 @@ class PerformanceMonitor:
         except Exception as e:
             log.error(f"Error generating report: {e}")
             return {"success": False, "error": str(e)}
+
+
+class AlertService:
+    """Alerting helpers for critical monitoring events."""
+
+    @staticmethod
+    async def send_email_alert(
+        subject: str,
+        message: str,
+        recipients: Optional[List[str]] = None,
+        subtype: str = "html",
+    ) -> dict:
+        recipients = recipients or [settings.ADMIN_EMAIL]
+        if not recipients:
+            log.warning("No alert recipients configured; skipping email alert")
+            return {"success": False, "error": "no recipients"}
+
+        body = f"<h2>{subject}</h2><p>{message}</p>"
+        try:
+            log.warning(f"Sending alert email to {recipients}: {subject}")
+            return await email_utils.send_email(subject=subject, recipients=recipients, body=body, subtype=subtype)
+        except Exception as e:
+            log.error(f"Failed to send alert email: {e}", exc_info=True)
+            return {"success": False, "error": str(e)}
+
+    @staticmethod
+    async def alert_ledger_discrepancy(summary: str, details: str, recipients: Optional[List[str]] = None):
+        subject = f"Ledger Reconciliation Alert: {summary}"
+        message = (
+            f"<p><strong>Summary:</strong> {summary}</p>"
+            f"<p><strong>Details:</strong> {details}</p>"
+            f"<p>Action required: Investigate ledger entries and post corrections immediately.</p>"
+        )
+        result = await AlertService.send_email_alert(subject, message, recipients=recipients)
+        if not result.get("success"):
+            log.error("Ledger alert delivery failed: %s", result.get("error"))
+        return result
+
+    @staticmethod
+    async def alert_system_issue(summary: str, details: str, recipients: Optional[List[str]] = None):
+        subject = f"System Monitoring Alert: {summary}"
+        message = (
+            f"<p><strong>Summary:</strong> {summary}</p>"
+            f"<p><strong>Details:</strong> {details}</p>"
+            f"<p>Review system logs and metrics for abnormal behavior.</p>"
+        )
+        result = await AlertService.send_email_alert(subject, message, recipients=recipients)
+        if not result.get("success"):
+            log.error("System alert delivery failed: %s", result.get("error"))
+        return result

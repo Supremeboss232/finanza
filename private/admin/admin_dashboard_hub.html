@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -40,6 +40,8 @@
         .monitoring-icon { background: #fff3e0; color: #e65100; }
         .section-header { font-size: 1.3rem; font-weight: 700; color: #333; margin-top: 30px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid #667eea; }
     </style>
+
+    <script src="/static/js/toast-utils.js"></script>
 </head>
 <body>
     <nav class="admin-nav navbar navbar-expand-lg navbar-dark">
@@ -50,6 +52,11 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarAdmin">
                 <ul class="navbar-nav ms-auto">
+                    <li class="nav-item me-3">
+                        <span id="adminUserDisplay" class="text-white" style="display: flex; align-items: center; font-size: 0.9rem;">
+                            <i class="fas fa-user-circle me-2"></i>Loading...
+                        </span>
+                    </li>
                     <li class="nav-item"><a class="nav-link" href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
                 </ul>
             </div>
@@ -146,10 +153,10 @@
         </div>
 
         <!-- Lending & Loans Section -->
-        <div class="section-header">
+        <div class="section-header" data-section="lending" data-requires="admin_operations">
             <i class="fas fa-credit-card"></i> Lending Services
         </div>
-        <div class="dashboard-grid">
+        <div class="dashboard-grid" data-requires="admin_operations">
             <!-- Loan Management -->
             <div class="dashboard-card" onclick="navigateTo('/user/admin/lending')">
                 <div class="card-icon lending-icon">
@@ -192,10 +199,10 @@
         </div>
 
         <!-- Compliance & Risk Section -->
-        <div class="section-header">
+        <div class="section-header" data-section="compliance" data-requires="admin_operations">
             <i class="fas fa-lock"></i> Compliance & Risk Management
         </div>
-        <div class="dashboard-grid">
+        <div class="dashboard-grid" data-requires="admin_operations">
             <!-- Fraud Detection -->
             <div class="dashboard-card" onclick="navigateTo('/user/admin/fraud_detection')">
                 <div class="card-icon fraud-icon">
@@ -238,10 +245,10 @@
         </div>
 
         <!-- Treasury & Investment Section -->
-        <div class="section-header">
+        <div class="section-header" data-section="treasury" data-requires="treasury_operations">
             <i class="fas fa-piggy-bank"></i> Treasury & Investment
         </div>
-        <div class="dashboard-grid">
+        <div class="dashboard-grid" data-requires="treasury_operations">
             <!-- Treasury Management -->
             <div class="dashboard-card" onclick="navigateTo('/user/admin/treasury')">
                 <div class="card-icon treasury-icon">
@@ -329,8 +336,64 @@
             </div>
         </div>
 
-        <!-- Utility & Tools Section -->
-        <div class="section-header">
+        <!-- Admin Operations & Control Section -->
+        <div class="section-header" id="admin-management-section" data-section="admin-ops" data-requires="admin_operations">
+            <i class="fas fa-shield-alt"></i> Admin Operations & Control
+        </div>
+        <div class="dashboard-grid" data-requires="admin_operations">
+            <!-- Advanced User Search -->
+            <div class="dashboard-card" data-requires="advanced_search" onclick="navigateTo('/user/admin/advanced_search')">
+                <div class="card-icon" style="background: #e1f5fe; color: #0277bd;">
+                    <i class="fas fa-search"></i>
+                </div>
+                <h5>Advanced Search</h5>
+                <p>Multi-field user search with powerful filters</p>
+                <small class="text-muted">Email, KYC, balance, region, dates</small>
+            </div>
+
+            <!-- Admin Management Panel -->
+            <div class="dashboard-card" data-requires="management_panel" onclick="navigateTo('/user/admin/management_panel')">
+                <div class="card-icon" style="background: #f3e5f5; color: #6a1b9a;">
+                    <i class="fas fa-users-cog"></i>
+                </div>
+                <h5>Admin Management</h5>
+                <p>Create, manage, and control admin accounts</p>
+                <small class="text-muted">Roles, permissions, access control</small>
+            </div>
+
+            <!-- MFA Setup -->
+            <div class="dashboard-card" data-requires="management_panel" onclick="navigateTo('/user/admin/mfa_setup')">
+                <div class="card-icon" style="background: #fff3e0; color: #e65100;">
+                    <i class="fas fa-key"></i>
+                </div>
+                <h5>MFA/2FA Setup</h5>
+                <p>Setup and manage two-factor authentication</p>
+                <small class="text-muted">TOTP, backup codes, verification</small>
+            </div>
+
+            <!-- Bulk Operations -->
+            <div class="dashboard-card" data-requires="bulk_operations" onclick="navigateTo('/user/admin/bulk_operations')">
+                <div class="card-icon" style="background: #e8f5e9; color: #2e7d32;">
+                    <i class="fas fa-file-csv"></i>
+                </div>
+                <h5>Bulk Operations</h5>
+                <p>Import/export users and batch operations</p>
+                <small class="text-muted">CSV upload/download, batch updates</small>
+            </div>
+
+            <!-- Activity Dashboard -->
+            <div class="dashboard-card" onclick="navigateTo('/user/admin/activity_dashboard')">
+                <div class="card-icon" style="background: #fce4ec; color: #d81b60;">
+                    <i class="fas fa-chart-bar"></i>
+                </div>
+                <h5>Activity Dashboard</h5>
+                <p>Monitor admin actions and system analytics</p>
+                <small class="text-muted">Metrics, heatmaps, risk indicators</small>
+            </div>
+        </div>
+
+        <!-- Utility & Administration -->
+        <div class="section-header" data-section="utilities">
             <i class="fas fa-tools"></i> Utility & Administration
         </div>
         <div class="dashboard-grid">
@@ -371,11 +434,124 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/admin_static/js/auth-helper.js"></script>
     <script>
+        // ==================== ROLE-BASED ACCESS CONTROL ====================
+        let adminUserInfo = null;
+        let adminPermissions = null;
+
+        async function loadAdminUserInfo() {
+            try {
+                const response = await fetch('/user/admin/user-info', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    console.error('Failed to load admin user info:', response.status);
+                    return;
+                }
+
+                const data = await response.json();
+                if (data.success) {
+                    adminUserInfo = data.user;
+                    adminPermissions = data.permissions;
+                    console.log('[ADMIN DASHBOARD] User role:', adminUserInfo.admin_role);
+                    console.log('[ADMIN DASHBOARD] Permissions:', adminPermissions);
+                    
+                    // Apply role-based visibility
+                    applyRoleBasedAccess();
+                    
+                    // Update user display
+                    const userDisplay = document.getElementById('adminUserDisplay');
+                    if (userDisplay) {
+                        userDisplay.innerHTML = `
+                            <span class="text-white">${adminUserInfo.email}</span>
+                            <small class="text-muted ms-2">(${adminUserInfo.admin_role})</small>
+                        `;
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading admin user info:', error);
+            }
+        }
+
+        function applyRoleBasedAccess() {
+            if (!adminPermissions) return;
+
+            // Hide sections based on role
+            // Admin Operations sections (Lending, Compliance, Admin Ops) - ADMIN and SUPER_ADMIN only
+            if (!adminPermissions.can_manage_users) {
+                document.querySelectorAll('[data-requires="admin_operations"]').forEach(el => {
+                    el.style.display = 'none';
+                });
+            }
+
+            // Treasury Operations - TREASURY and SUPER_ADMIN only
+            if (!adminPermissions.can_manage_treasury) {
+                document.querySelectorAll('[data-requires="treasury_operations"]').forEach(el => {
+                    el.style.display = 'none';
+                });
+            }
+
+            // Hide specific cards based on permission
+            if (!adminPermissions.can_access_management_panel) {
+                document.querySelectorAll('[data-requires="management_panel"]').forEach(card => {
+                    card.style.display = 'none';
+                });
+            }
+
+            if (!adminPermissions.can_access_advanced_search) {
+                document.querySelectorAll('[data-requires="advanced_search"]').forEach(card => {
+                    card.style.display = 'none';
+                });
+            }
+
+            if (!adminPermissions.can_access_bulk_operations) {
+                document.querySelectorAll('[data-requires="bulk_operations"]').forEach(card => {
+                    card.style.display = 'none';
+                });
+            }
+
+            // Log visibility status
+            console.log('[ADMIN DASHBOARD] Access Control Applied:');
+            console.log('  - Can manage users:', adminPermissions.can_manage_users);
+            console.log('  - Can manage treasury:', adminPermissions.can_manage_treasury);
+            console.log('  - Advanced Search:', adminPermissions.can_access_advanced_search);
+            console.log('  - Management Panel:', adminPermissions.can_access_management_panel);
+            console.log('  - Bulk Operations:', adminPermissions.can_access_bulk_operations);
+        }
+
+        // ==================== AUTHORIZATION CHECK - MUST RUN FIRST ====================
+        (function() {
+            const isAdmin = localStorage.getItem('is_admin') === 'true';
+            console.log('[ADMIN DASHBOARD] Authorization check: is_admin =', isAdmin);
+            
+            if (!isAdmin) {
+                console.error('[ADMIN DASHBOARD] UNAUTHORIZED: Non-admin user detected. Redirecting...');
+                // Stop all further script execution
+                window.stop();
+                window.location.replace('/user/dashboard');
+                throw new Error('Unauthorized access to admin dashboard');
+            }
+        })();
+        
+        console.log('[ADMIN DASHBOARD] Admin user authorized. Loading admin scripts...');
+        
         const API_BASE = '/api/admin/data';
+        let autoRefreshInterval = null;
+        const AUTO_REFRESH_INTERVAL = 30000; // 30 seconds
+
+        // Load user info on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAdminUserInfo();
+        });
 
         async function loadDashboardStats() {
             try {
-                console.log('=== Dashboard Init ===');
+                console.log('=== Loading Dashboard Stats ===');
                 console.log('Cookie string:', document.cookie);
                 
                 const headers = {
@@ -480,11 +656,21 @@
             `;
         }
 
+        function startAutoRefresh() {
+            if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+            
+            autoRefreshInterval = setInterval(async () => {
+                console.log('[Admin Dashboard] Auto-refreshing stats...');
+                await loadDashboardStats();
+            }, AUTO_REFRESH_INTERVAL);
+        }
+
         // Initialize on page load
         window.addEventListener('load', () => {
             console.log('Dashboard page loaded, initializing...');
             loadDashboardStats();
             loadActivityLog();
+            startAutoRefresh();
         });
     </script>
     <script src="/static/js/admin-guard.js"></script>

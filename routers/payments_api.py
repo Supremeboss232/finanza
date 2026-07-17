@@ -72,8 +72,8 @@ async def submit_ach_transfer(
         
         # Create transaction
         transaction = Transaction(
-            sender_id=current_user.id,
-            sender_account_id=sender_account.id,
+            user_id=current_user.id,
+            account_id=sender_account.id,
             amount=request.amount,
             description=request.description or "ACH Transfer",
             status="pending",
@@ -181,8 +181,8 @@ async def submit_wire_transfer(
         
         # Create transaction
         transaction = Transaction(
-            sender_id=current_user.id,
-            sender_account_id=sender_account.id,
+            user_id=current_user.id,
+            account_id=sender_account.id,
             amount=request.amount,
             description=f"Wire to {request.receiving_bank}",
             status="pending",
@@ -258,8 +258,8 @@ async def submit_rtp_transfer(
             raise HTTPException(status_code=400, detail="Insufficient funds")
         
         transaction = Transaction(
-            sender_id=current_user.id,
-            sender_account_id=sender_account.id,
+            user_id=current_user.id,
+            account_id=sender_account.id,
             amount=request.amount,
             description=request.description or "RTP Transfer",
             status="pending",
@@ -305,8 +305,8 @@ async def submit_fednow_transfer(
             raise HTTPException(status_code=400, detail="Insufficient funds")
         
         transaction = Transaction(
-            sender_id=current_user.id,
-            sender_account_id=sender_account.id,
+            user_id=current_user.id,
+            account_id=sender_account.id,
             amount=request.amount,
             description=request.description or "FedNow Transfer",
             status="pending",

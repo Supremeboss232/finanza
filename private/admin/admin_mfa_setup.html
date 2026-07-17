@@ -1,0 +1,597 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MFA Setup - Admin Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .step-indicator {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+            height: 32px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .qr-code-container {
+            text-align: center;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px dashed #667eea;
+        }
+
+        .qr-code-container img {
+            max-width: 300px;
+            margin: 10px 0;
+        }
+
+        .qr-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+        }
+
+        .backup-codes {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+            margin-top: 15px;
+        }
+
+        .backup-codes-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .backup-code {
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            color: #333;
+            background: #f0f0f0;
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 4px;
+            word-break: break-all;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 30px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #d0d0d0;
+        }
+
+        .btn-small {
+            padding: 8px 12px;
+            font-size: 12px;
+            flex: none;
+        }
+
+        .copy-button {
+            background: #667eea;
+            color: white;
+            padding: 6px 10px;
+            font-size: 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        .copy-button:hover {
+            background: #5568d3;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .alert-info {
+            background: #e3f2fd;
+            color: #1565c0;
+            border-left: 4px solid #1565c0;
+        }
+
+        .alert-warning {
+            background: #fff3e0;
+            color: #e65100;
+            border-left: 4px solid #e65100;
+        }
+
+        .alert-success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border-left: 4px solid #2e7d32;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #667eea;
+            transition: width 0.3s;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status-pending {
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .status-complete {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .user-select {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .user-select input {
+            flex: 1;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 22px;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+
+    <script src="/static/js/toast-utils.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 MFA Setup</h1>
+        <p class="subtitle">Enable Two-Factor Authentication for a user account</p>
+
+        <div class="section">
+            <div class="section-title">
+                <span class="step-indicator">1</span>
+                Select User
+            </div>
+
+            <div class="form-group">
+                <label>User Email</label>
+                <div class="user-select">
+                    <input type="text" id="userEmail" placeholder="user@example.com" />
+                    <button class="btn-primary btn-small" onclick="searchUser()">Search</button>
+                </div>
+                <div id="userInfo" style="display:none; background:white; padding:10px; border-radius:5px; margin-top:10px;">
+                    <div><strong>Name:</strong> <span id="userName"></span></div>
+                    <div><strong>Email:</strong> <span id="userFoundEmail"></span></div>
+                    <div><strong>Current MFA Status:</strong> <span id="mfaStatus" class="status-badge status-pending">Not Enabled</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="setupSection" style="display:none;">
+            <div class="section">
+                <div class="section-title">
+                    <span class="step-indicator">2</span>
+                    Generate QR Code
+                </div>
+
+                <div class="alert alert-info">
+                    The user will scan this QR code with their authenticator app (Google Authenticator, Authy, Microsoft Authenticator, etc)
+                </div>
+
+                <div class="qr-code-container" id="qrContainer" style="display:none;">
+                    <p style="font-size:12px; color:#666; margin-bottom:10px;">Scan with authenticator app:</p>
+                    <img id="qrImage" src="" alt="QR Code" />
+                    <div class="qr-text">
+                        Or enter manually: <span id="secretKey" style="font-family:monospace; font-weight:bold;"></span>
+                        <button class="copy-button" onclick="copyToClipboard('secretKey')">Copy</button>
+                    </div>
+                </div>
+
+                <button class="btn-primary" onclick="generateQRCode()" id="generateBtn">Generate QR Code</button>
+            </div>
+
+            <div class="section">
+                <div class="section-title">
+                    <span class="step-indicator">3</span>
+                    Verify TOTP Code
+                </div>
+
+                <div class="alert alert-warning">
+                    Ask the user to enter the 6-digit code from their authenticator app
+                </div>
+
+                <div class="form-group">
+                    <label>6-Digit Verification Code</label>
+                    <input type="text" id="totpCode" placeholder="000000" maxlength="6" pattern="[0-9]{6}" />
+                </div>
+
+                <button class="btn-primary" onclick="verifyTOTP()">Verify & Enable MFA</button>
+            </div>
+
+            <div class="section" id="backupCodesSection" style="display:none;">
+                <div class="section-title">
+                    <span class="step-indicator">4</span>
+                    Backup Codes
+                </div>
+
+                <div class="alert alert-success">
+                    ✓ MFA has been successfully enabled! Save these backup codes in a secure location.
+                </div>
+
+                <div class="backup-codes">
+                    <div class="backup-codes-title">⚠️ Backup Recovery Codes (One-time use)</div>
+                    <div id="backupCodesList"></div>
+                    <button class="copy-button" onclick="downloadBackupCodes()" style="display:block; width:100%; margin-top:10px;">Download as PDF</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button class="btn-secondary" onclick="reset()">Reset</button>
+            <button class="btn-primary" onclick="goBack()" id="doneBtn" style="display:none;">Done</button>
+        </div>
+
+        <div id="loading" style="display:none; text-align:center; margin-top:20px;">
+            <p>Loading...</p>
+            <div class="progress-bar">
+                <div class="progress-fill" style="width:50%;"></div>
+            </div>
+        </div>
+
+        <div id="error" class="alert alert-warning" style="display:none; margin-top:20px;"></div>
+    </div>
+
+    <script>
+        const API_BASE = '/api/admin/advanced';
+        let selectedUserId = null;
+
+        async function searchUser() {
+            const email = document.getElementById('userEmail').value;
+            if (!email) {
+                showError('Please enter a user email');
+                return;
+            }
+
+            try {
+                showLoading(true);
+                // Search for user
+                const response = await fetch(`${API_BASE}/users/advanced-search?email=${email}`, {
+                    headers: { 
+                        'Authorization': `Bearer ${getAuthToken()}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const data = await response.json();
+
+                if (data.users && data.users.length > 0) {
+                    const user = data.users[0];
+                    selectedUserId = user.id;
+                    document.getElementById('userName').textContent = user.full_name || 'N/A';
+                    document.getElementById('userFoundEmail').textContent = user.email;
+                    document.getElementById('mfaStatus').textContent = user.mfa_enabled ? 'Enabled ✓' : 'Not Enabled';
+                    document.getElementById('mfaStatus').className = user.mfa_enabled ? 
+                        'status-badge status-complete' : 'status-badge status-pending';
+                    document.getElementById('userInfo').style.display = 'block';
+                    
+                    if (user.mfa_enabled) {
+                        showSuccess('This user already has MFA enabled. You can disable it here.');
+                        document.getElementById('disableMFASection').style.display = 'block';
+                    } else {
+                        document.getElementById('setupSection').style.display = 'block';
+                    }
+                } else {
+                    showError('User not found');
+                }
+            } catch (error) {
+                showError('Error searching user: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function generateQRCode() {
+            if (!selectedUserId) {
+                showError('Please select a user first');
+                return;
+            }
+
+            try {
+                showLoading(true);
+                const response = await fetch(`${API_BASE}/mfa/setup`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getAuthToken()}`
+                    },
+                    body: JSON.stringify({ user_id: selectedUserId })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || 'Failed to setup MFA');
+                }
+
+                const data = await response.json();
+                if (data.secret) {
+                    document.getElementById('secretKey').textContent = data.secret;
+                }
+                if (data.qr_code) {
+                    document.getElementById('qrImage').src = data.qr_code;
+                }
+                document.getElementById('qrContainer').style.display = 'block';
+                document.getElementById('generateBtn').style.display = 'none';
+                showSuccess('QR code generated! User can now scan with authenticator app.');
+            } catch (error) {
+                showError('Error generating QR code: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function verifyTOTP() {
+            const totpCode = document.getElementById('totpCode').value;
+            if (!totpCode || totpCode.length !== 6) {
+                showError('Please enter a valid 6-digit code');
+                return;
+            }
+
+            try {
+                showLoading(true);
+                const response = await fetch(`${API_BASE}/mfa/verify`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getAuthToken()}`
+                    },
+                    body: JSON.stringify({ 
+                        totp_code: totpCode,
+                        user_id: selectedUserId 
+                    })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    showSuccess('✓ MFA enabled successfully!');
+                    if (data.backup_codes && Array.isArray(data.backup_codes)) {
+                        document.getElementById('backupCodesList').innerHTML = data.backup_codes
+                            .map(code => `<div class="backup-code">${code}</div>`)
+                            .join('');
+                        document.getElementById('backupCodesSection').style.display = 'block';
+                    }
+                    document.getElementById('doneBtn').style.display = 'block';
+                } else {
+                    showError(data.detail || 'Invalid verification code');
+                }
+            } catch (error) {
+                showError('Error verifying code: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function disableMFA() {
+            if (!confirm('Are you sure? This will disable MFA for this user.')) return;
+            
+            try {
+                showLoading(true);
+                const response = await fetch(`${API_BASE}/mfa/disable`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${getAuthToken()}`
+                    },
+                    body: JSON.stringify({ user_id: selectedUserId })
+                });
+
+                if (response.ok) {
+                    showSuccess('✓ MFA disabled for this user');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    const error = await response.json();
+                    showError(error.detail || 'Failed to disable MFA');
+                }
+            } catch (error) {
+                showError('Error disabling MFA: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function copyToClipboard(elementId) {
+            const text = document.getElementById(elementId).textContent;
+            navigator.clipboard.writeText(text);
+            showSuccess('Copied to clipboard!');
+        }
+
+        function downloadBackupCodes() {
+            const codes = Array.from(document.querySelectorAll('.backup-code'))
+                .map(el => el.textContent)
+                .join('\n');
+            const element = document.createElement('a');
+            element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(codes));
+            element.setAttribute('download', `backup-codes-${new Date().toISOString()}.txt`);
+            element.style.display = 'none';
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => { errorDiv.style.display = 'none'; }, 5000);
+        }
+
+        function showSuccess(message) {
+            alert(message);
+        }
+
+        function reset() {
+            location.reload();
+        }
+
+        function goBack() {
+            window.location.href = '/user/admin/dashboard';
+        }
+
+        function getAuthToken() {
+            return localStorage.getItem('token') || localStorage.getItem('access_token') || '';
+        }
+    </script>
+</body>
+</html>

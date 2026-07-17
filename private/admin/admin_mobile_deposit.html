@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -38,12 +38,17 @@
         .badge-processed { background: #d1fae5; color: #065f46; }
         .badge-pending { background: #fef3c7; color: #78350f; }
         .badge-rejected { background: #fee2e2; color: #7f1d1d; }
+        .badge-critical { background: #fee2e2; color: #7f1d1d; animation: pulse 2s infinite; }
+        .badge-warning { background: #fef3c7; color: #78350f; }
+        .badge-passed { background: #d1fae5; color: #065f46; }
+        .badge-duplicate { background: #fecaca; color: #991b1b; font-weight: 700; }
 
         .action-buttons { display: flex; gap: 0.5rem; }
         .btn-sm { padding: 0.4rem 0.8rem; font-size: 0.75rem; }
 
         .btn-primary { background: #667eea; border-color: #667eea; }
         .btn-primary:hover { background: #5568d3; border-color: #5568d3; }
+        .btn-primary:disabled { background: #9ca3af; border-color: #9ca3af; cursor: not-allowed; opacity: 0.65; }
 
         .modal-header { background: var(--primary-gradient); color: white; }
         .modal-header .btn-close { filter: brightness(0) invert(1); }
@@ -56,10 +61,50 @@
         .section-divider h3 { margin: 0; font-weight: 700; color: #1f2937; font-size: 1.25rem; }
         .section-divider hr { flex: 1; border-color: #e5e7eb; }
 
-        .image-preview { max-width: 200px; max-height: 200px; margin: 1rem 0; border-radius: 6px; border: 1px solid #e5e7eb; }
+        .image-preview { max-width: 100%; max-height: 600px; margin: 1rem 0; border-radius: 6px; border: 1px solid #e5e7eb; }
+
+        /* Image Viewer Enhancement */
+        .image-viewer-controls { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+        .image-viewer-controls button { padding: 0.4rem 0.8rem; font-size: 0.75rem; }
+        .zoom-level { background: #f3f4f6; padding: 0.5rem 0.75rem; border-radius: 4px; font-size: 0.75rem; }
+
+        /* MICR Comparison */
+        .micr-mismatch { background: #fee2e2; border-left: 4px solid #dc2626; padding: 0.75rem; margin: 0.5rem 0; border-radius: 4px; }
+        .micr-match { background: #d1fae5; border-left: 4px solid #059669; padding: 0.75rem; margin: 0.5rem 0; border-radius: 4px; }
+
+        /* Endorsement Badge */
+        .endorsement-verified { background: #d1fae5; color: #065f46; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.7rem; font-weight: 600; }
+        .endorsement-missing { background: #fee2e2; color: #7f1d1d; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.7rem; font-weight: 600; }
+
+        /* Toast System */
+        #toastContainer { position: fixed; top: 20px; right: 20px; z-index: 1050; max-width: 400px; }
+        .toast-notification { background: white; border-radius: 8px; padding: 1rem; margin-bottom: 0.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 1rem; animation: slideIn 0.3s ease-out; }
+        .toast-notification.success { border-left: 4px solid #10b981; }
+        .toast-notification.error { border-left: 4px solid #ef4444; }
+        .toast-notification.warning { border-left: 4px solid #f59e0b; }
+        .toast-notification.info { border-left: 4px solid #667eea; }
+        .toast-icon { font-size: 1.2rem; }
+        .toast-message { flex: 1; }
+        .toast-close { cursor: pointer; color: #9ca3af; }
+        @keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(400px); opacity: 0; } }
+
+        /* Pagination */
+        .pagination-controls { display: flex; justify-content: center; gap: 0.5rem; margin-top: 1rem; }
+        .pagination-controls button { padding: 0.4rem 0.8rem; font-size: 0.75rem; }
+        .pagination-info { text-align: center; font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem; }
+
+        /* Pulse animation */
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
     </style>
+
+    <script src="/static/js/toast-utils.js"></script>
 </head>
 <body>
+    <!-- Alert Container (Toast System) -->
+    <div id="toastContainer"></div>
+
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
@@ -145,23 +190,26 @@
         </div>
 
         <div class="data-table">
-            <table class="table">
+            <table class="table" style="font-size: 0.85rem;">
                 <thead>
                     <tr>
                         <th>Deposit ID</th>
                         <th>User</th>
-                        <th>Account</th>
                         <th>Amount</th>
                         <th>Check #</th>
-                        <th>Deposit Date</th>
+                        <th>IQA Score</th>
+                        <th>Duplicate</th>
+                        <th>Endorsement</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="depositsTable">
-                    <tr><td colspan="8" class="text-center text-muted py-4">Loading deposits...</td></tr>
+                    <tr><td colspan="9" class="text-center text-muted py-4">Loading deposits...</td></tr>
                 </tbody>
             </table>
+            <div class="pagination-controls" id="depositsPagination"></div>
+            <div class="pagination-info" id="depositsPageInfo"></div>
         </div>
 
         <!-- Check Images Table -->
@@ -171,15 +219,15 @@
         </div>
 
         <div class="data-table">
-            <table class="table">
+            <table class="table" style="font-size: 0.85rem;">
                 <thead>
                     <tr>
                         <th>Image ID</th>
                         <th>Deposit ID</th>
                         <th>Side</th>
-                        <th>Quality Score</th>
-                        <th>Clarity</th>
-                        <th>Size (KB)</th>
+                        <th>IQA Status</th>
+                        <th>Quality</th>
+                        <th>MICR Match</th>
                         <th>Uploaded</th>
                         <th>Actions</th>
                     </tr>
@@ -188,6 +236,8 @@
                     <tr><td colspan="8" class="text-center text-muted py-4">Loading images...</td></tr>
                 </tbody>
             </table>
+            <div class="pagination-controls" id="imagesPagination"></div>
+            <div class="pagination-info" id="imagesPageInfo"></div>
         </div>
 
         <!-- OCR Results Table -->
@@ -197,7 +247,7 @@
         </div>
 
         <div class="data-table">
-            <table class="table">
+            <table class="table" style="font-size: 0.85rem;">
                 <thead>
                     <tr>
                         <th>OCR ID</th>
@@ -205,8 +255,8 @@
                         <th>Check Amount</th>
                         <th>Routing #</th>
                         <th>Account #</th>
+                        <th>MICR Match</th>
                         <th>Confidence</th>
-                        <th>Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -214,33 +264,62 @@
                     <tr><td colspan="8" class="text-center text-muted py-4">Loading OCR results...</td></tr>
                 </tbody>
             </table>
+            <div class="pagination-controls" id="ocrPagination"></div>
+            <div class="pagination-info" id="ocrPageInfo"></div>
         </div>
     </div>
 
-    <!-- Review Image Modal -->
+    <!-- Forensic Image Viewer Modal -->
     <div class="modal fade" id="reviewImageModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-xl">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="fas fa-image"></i> Review Check Image</h5>
+                    <h5 class="modal-title"><i class="fas fa-microscope"></i> Forensic Image Analysis</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <img id="previewImage" class="image-preview w-100" src="" alt="Check image">
-                    <div class="mt-3">
-                        <p><strong>Quality Score:</strong> <span id="qualityScore">--</span>%</p>
-                        <p><strong>Clarity:</strong> <span id="imageclarity">--</span>%</p>
-                        <p><strong>Size:</strong> <span id="imageSize">--</span> KB</p>
+                    <!-- Image Viewer Controls -->
+                    <div class="image-viewer-controls">
+                        <button class="btn btn-sm btn-outline-secondary" onclick="zoomIn()"><i class="fas fa-search-plus"></i> Zoom In</button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="zoomOut()"><i class="fas fa-search-minus"></i> Zoom Out</button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="rotateImage(90)"><i class="fas fa-redo"></i> Rotate</button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="applyFilter('grayscale')">Grayscale</button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="applyFilter('contrast')">High Contrast</button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="resetImage()">Reset</button>
+                        <span class="zoom-level" id="zoomLevel">100%</span>
                     </div>
-                    <div class="mb-3">
+
+                    <!-- Image Display -->
+                    <div style="position: relative; overflow: auto; background: #f3f4f6; border-radius: 6px; aspect-ratio: 16/10;">
+                        <img id="previewImage" class="image-preview w-100" src="" alt="Check image" style="max-width: none; margin: 0; display: block;">
+                    </div>
+
+                    <!-- IQA Analysis Results -->
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-chart-bar"></i> Image Quality Analysis (IQA)</h6>
+                            <p><strong>Quality Score:</strong> <span id="qualityScore" class="badge bg-success">--</span>%</p>
+                            <p><strong>Blur Detection:</strong> <span id="blurStatus" class="badge bg-info">--</span></p>
+                            <p><strong>Corners Intact:</strong> <span id="cornersStatus" class="badge bg-info">--</span></p>
+                            <p><strong>Glare Detection:</strong> <span id="glareStatus" class="badge bg-info">--</span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-barcode"></i> MICR Verification</h6>
+                            <div id="micrComparison" class="micr-mismatch">Loading MICR data...</div>
+                            <h6 class="mt-2"><i class="fas fa-stamp"></i> Endorsement Check</h6>
+                            <p id="endorsementStatus" class="mt-1"><span class="badge bg-warning">Checking...</span></p>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 mt-3">
                         <label class="form-label">Review Notes</label>
-                        <textarea class="form-control" id="reviewNotes" rows="3" placeholder="Enter review notes..."></textarea>
+                        <textarea class="form-control" id="reviewNotes" rows="2" placeholder="Enter review findings..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-danger" onclick="rejectImage()">Reject</button>
-                    <button type="button" class="btn btn-success" onclick="approveImage()">Approve</button>
+                    <button type="button" class="btn btn-danger" id="rejectImageBtn" onclick="rejectImage()">Reject</button>
+                    <button type="button" class="btn btn-success" id="approveImageBtn" onclick="approveImage()">Approve</button>
                 </div>
             </div>
         </div>
@@ -248,7 +327,7 @@
 
     <!-- Approve Deposit Modal -->
     <div class="modal fade" id="approveDepositModal" tabindex="-1">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title"><i class="fas fa-check-circle"></i> Approve Deposit</h5>
@@ -257,15 +336,62 @@
                 <div class="modal-body">
                     <form id="approveDepositForm">
                         <input type="hidden" id="depositIdApprove">
-                        <div class="mb-3">
-                            <label class="form-label">Deposit Amount</label>
-                            <input type="text" class="form-control" id="depositAmount" readonly>
+                        <input type="hidden" id="idempotencyKey">
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Deposit Amount</label>
+                                    <input type="text" class="form-control" id="depositAmount" readonly>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Check #</label>
+                                    <input type="text" class="form-control" id="depositCheckNum" readonly>
+                                </div>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">Processing Notes</label>
-                            <textarea class="form-control" id="processingNotes" rows="3" placeholder="Enter processing notes..."></textarea>
+
+                        <!-- Compliance Checks -->
+                        <div class="alert alert-info" id="complianceAlert" style="display: none;">
+                            <strong>⚠️ Compliance Note:</strong> <span id="complianceMessage"></span>
                         </div>
-                        <button type="submit" class="btn btn-primary w-100">Approve Deposit</button>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="confirmIQA" disabled>
+                            <label class="form-check-label" for="confirmIQA">
+                                ✓ IQA Passed - Image quality meets standards
+                            </label>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="confirmMICR" disabled>
+                            <label class="form-check-label" for="confirmMICR">
+                                ✓ MICR Verified - Routing and account numbers match
+                            </label>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="confirmEndorsement" disabled>
+                            <label class="form-check-label" for="confirmEndorsement">
+                                ✓ Endorsement Present - "For Mobile Deposit Only" found
+                            </label>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="confirmNoDuplicate" disabled>
+                            <label class="form-check-label" for="confirmNoDuplicate">
+                                ✓ Duplicate Check - No previously processed matching check detected
+                            </label>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Admin Processing Notes</label>
+                            <textarea class="form-control" id="processingNotes" rows="2" placeholder="Document reason for approval..."></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-success w-100" id="submitApproveBtnDeposit"><i class="fas fa-check"></i> Approve & Process</button>
                     </form>
                 </div>
             </div>
@@ -277,226 +403,737 @@
     <script src="/admin_static/js/admin-utils.js"></script>
 
     <script>
-        let statusChart, ocrChart;
-        let currentImageId = null, currentDepositId = null;
+        // ============================================================================
+        // SECURITY MANAGER - CSRF, Idempotency, XSS Prevention, Input Validation
+        // ============================================================================
+        class SecurityManager {
+            constructor() {
+                this.csrfToken = this.generateCSRFToken();
+                this.requestCache = new Map();
+            }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            checkAdminAccess();
-            loadMobileDepositMetrics();
-            loadDeposits();
-            loadCheckImages();
-            loadOCRResults();
-            initCharts();
-        });
+            generateCSRFToken() {
+                const token = 'csrf_' + Math.random().toString(36).substr(2, 9);
+                sessionStorage.setItem('csrf_token', token);
+                return token;
+            }
 
-        async function loadMobileDepositMetrics() {
-            try {
-                const response = await fetchAPI('/api/v1/mobile-deposit/metrics');
-                if (response.success) {
-                    document.getElementById('processedDeposits').textContent = response.data.processed_today || 0;
-                    document.getElementById('pendingReview').textContent = response.data.pending_review || 0;
-                    document.getElementById('totalDeposited').textContent = formatCurrency(response.data.total_deposited || 0, true);
-                    document.getElementById('rejectedCount').textContent = response.data.rejected || 0;
+            generateIdempotencyKey() {
+                return 'idempotency_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            }
+
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            validateNumericInput(value, fieldName) {
+                if (!value || isNaN(Number(value)) || Number(value) < 0 || !isFinite(Number(value))) {
+                    throw new Error(`${fieldName} must be a valid positive number`);
                 }
-            } catch (error) {
-                console.error('Error loading metrics:', error);
+                return Number(value);
+            }
+
+            maskPII(accountNumber) {
+                if (!accountNumber) return '--';
+                const str = String(accountNumber);
+                return str.slice(0, 2) + '*'.repeat(str.length - 4) + str.slice(-2);
+            }
+
+            getSecureHeaders(method = 'GET') {
+                const headers = {
+                    'Authorization': `Bearer ${localStorage.getItem('access_token') || ''}`,
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': this.csrfToken,
+                    'X-Idempotency-Key': this.generateIdempotencyKey()
+                };
+                if (method === 'GET') delete headers['X-Idempotency-Key'];
+                return headers;
+            }
+
+            auditLog(action, category, details) {
+                const logEntry = {
+                    timestamp: new Date().toISOString(),
+                    action: action,
+                    category: category,
+                    details: details,
+                    user_agent: navigator.userAgent
+                };
+                console.log('[AUDIT]', logEntry);
+                return logEntry;
             }
         }
 
-        async function loadDeposits() {
-            try {
-                const response = await fetchAPI('/api/v1/mobile-deposit/deposits');
-                const table = document.getElementById('depositsTable');
+        // ============================================================================
+        // TOAST NOTIFICATION SYSTEM
+        // ============================================================================
+        class ToastSystem {
+            showToast(message, type = 'info', duration = 5000) {
+                const toastContainer = document.getElementById('toastContainer');
+                const toast = document.createElement('div');
+                toast.className = `toast-notification ${type}`;
                 
-                if (!response.success || !response.data?.length) {
-                    table.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No deposits found</td></tr>';
+                const icons = {
+                    success: '✓',
+                    error: '✕',
+                    warning: '⚠',
+                    info: 'ⓘ'
+                };
+                
+                toast.innerHTML = `
+                    <span class="toast-icon">${icons[type]}</span>
+                    <span class="toast-message">${securityManager.escapeHtml(message)}</span>
+                    <span class="toast-close" onclick="this.parentElement.remove()">✕</span>
+                `;
+                
+                toastContainer.appendChild(toast);
+                
+                if (duration > 0) {
+                    setTimeout(() => {
+                        toast.style.animation = 'slideOut 0.3s ease-out';
+                        setTimeout(() => toast.remove(), 300);
+                    }, duration);
+                }
+            }
+        }
+
+        // ============================================================================
+        // GLOBAL STATE & INITIALIZATION
+        // ============================================================================
+        const securityManager = new SecurityManager();
+        const toastSystem = new ToastSystem();
+        
+        let statusChart, ocrChart;
+        let currentImageId = null, currentDepositId = null;
+        let imageZoom = 1;
+        let imageRotation = 0;
+        let currentFilter = 'none';
+        
+        // Pagination state
+        const paginationState = {
+            deposits: { currentPage: 1, pageSize: 25, total: 0 },
+            images: { currentPage: 1, pageSize: 25, total: 0 },
+            ocr: { currentPage: 1, pageSize: 25, total: 0 }
+        };
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                // Check admin access with Treasury/Operations role requirement
+                await checkAdminAccessWithRole(['Treasury', 'Operations']);
+                
+                // Load all data
+                await loadMobileDepositMetrics();
+                await loadDeposits(1);
+                await loadCheckImages(1);
+                await loadOCRResults(1);
+                initCharts();
+                
+                toastSystem.showToast('Mobile Deposit dashboard loaded. Ready to process check deposits.', 'success');
+            } catch (error) {
+                console.error('Dashboard initialization failed:', error);
+                toastSystem.showToast('Failed to load dashboard. Please refresh.', 'error', 10000);
+            }
+        });
+
+        // ============================================================================
+        // SECURITY: Role-Based Access Control
+        // ============================================================================
+        async function checkAdminAccessWithRole(requiredRoles) {
+            try {
+                const response = await fetch('/api/v1/auth/verify', {
+                    headers: securityManager.getSecureHeaders('GET')
+                });
+                
+                if (!response.ok) {
+                    window.location.href = '/signin';
+                    return;
+                }
+                
+                const user = await response.json();
+                if (!requiredRoles.includes(user.role)) {
+                    toastSystem.showToast('Insufficient permissions. Treasury/Operations role required.', 'error');
+                    setTimeout(() => window.location.href = '/user/admin/', 3000);
+                }
+            } catch (error) {
+                console.error('Access check failed:', error);
+            }
+        }
+
+        // ============================================================================
+        // ASYNC FETCH WITH ERROR HANDLING
+        // ============================================================================
+        async function fetchAPI(path, options = {}) {
+            try {
+                const response = await fetch(`/api/v1${path}`, {
+                    ...options,
+                    headers: securityManager.getSecureHeaders(options.method || 'GET')
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error(`API Error: ${path}`, error);
+                toastSystem.showToast(`API Error: ${error.message}`, 'error');
+                return null;
+            }
+        }
+
+        // ============================================================================
+        // METRICS & DATA LOADING
+        // ============================================================================
+        async function loadMobileDepositMetrics() {
+            try {
+                const data = await fetchAPI('/mobile-deposit/metrics');
+                if (!data?.success) throw new Error('Failed to load metrics');
+                
+                // Set all metrics to real data (not hardcoded)
+                document.getElementById('processedDeposits').textContent = data.processed_today || 0;
+                document.getElementById('pendingReview').textContent = data.pending_review || 0;
+                document.getElementById('totalDeposited').textContent = formatCurrency(data.total_deposited || 0, true);
+                document.getElementById('rejectedCount').textContent = data.rejected || 0;
+            } catch (error) {
+                console.error('Error loading metrics:', error);
+                toastSystem.showToast('Error loading metrics', 'error');
+            }
+        }
+
+        async function loadDeposits(page = 1) {
+            try {
+                const skip = (page - 1) * paginationState.deposits.pageSize;
+                const data = await fetchAPI(`/mobile-deposit/deposits?skip=${skip}&limit=${paginationState.deposits.pageSize}`);
+                
+                if (!data?.success || !data.data?.length) {
+                    document.getElementById('depositsTable').innerHTML = '<tr><td colspan="9" class="text-center text-muted py-4">No deposits found</td></tr>';
+                    renderPagination('deposits', 0, page);
                     return;
                 }
 
-                table.innerHTML = response.data.map(deposit => `
+                paginationState.deposits.total = data.total || 0;
+                paginationState.deposits.currentPage = page;
+
+                const table = document.getElementById('depositsTable');
+                table.innerHTML = data.data.map(deposit => `
                     <tr>
-                        <td><strong>#${deposit.id}</strong></td>
-                        <td>${deposit.user_email}</td>
-                        <td>${deposit.account_number}</td>
+                        <td><strong>#${securityManager.escapeHtml(deposit.id)}</strong></td>
+                        <td>${securityManager.escapeHtml(deposit.user_email)}</td>
                         <td>${formatCurrency(deposit.amount)}</td>
-                        <td>${deposit.check_number}</td>
-                        <td>${formatDate(deposit.deposit_date)}</td>
+                        <td>${securityManager.escapeHtml(deposit.check_number)}</td>
+                        <td>
+                            <span class="badge ${getIQABadgeClass(deposit.iqa_score)}">
+                                ${deposit.iqa_score || 0}%
+                            </span>
+                        </td>
+                        <td>
+                            ${deposit.is_duplicate ? '<span class="badge-duplicate">⚠ DUPLICATE</span>' : '<span class="badge badge-passed">✓ Unique</span>'}
+                        </td>
+                        <td>
+                            ${deposit.endorsement_verified ? 
+                                '<span class="endorsement-verified">✓ Present</span>' : 
+                                '<span class="endorsement-missing">⚠ Missing</span>'}
+                        </td>
                         <td><span class="badge badge-${getStatusClass(deposit.status)}">${deposit.status}</span></td>
-                        <td><button class="btn btn-sm btn-primary" onclick="reviewDeposit('${deposit.id}', '${deposit.amount}')">Review</button></td>
+                        <td><button class="btn btn-sm btn-primary" onclick="reviewDeposit('${deposit.id}', '${deposit.amount}', '${deposit.check_number}')">Review</button></td>
                     </tr>
                 `).join('');
+
+                renderPagination('deposits', paginationState.deposits.total, page);
+                updateChartFromData(data.data);
             } catch (error) {
                 console.error('Error loading deposits:', error);
             }
         }
 
-        async function loadCheckImages() {
+        async function loadCheckImages(page = 1) {
             try {
-                const response = await fetchAPI('/api/v1/mobile-deposit/images');
-                const table = document.getElementById('imagesTable');
+                const skip = (page - 1) * paginationState.images.pageSize;
+                const data = await fetchAPI(`/mobile-deposit/images?skip=${skip}&limit=${paginationState.images.pageSize}`);
                 
-                if (!response.success || !response.data?.length) {
-                    table.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No images found</td></tr>';
+                if (!data?.success || !data.data?.length) {
+                    document.getElementById('imagesTable').innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No images found</td></tr>';
+                    renderPagination('images', 0, page);
                     return;
                 }
 
-                table.innerHTML = response.data.map(img => `
+                paginationState.images.total = data.total || 0;
+                paginationState.images.currentPage = page;
+
+                const table = document.getElementById('imagesTable');
+                table.innerHTML = data.data.map(img => `
                     <tr>
-                        <td><strong>#${img.id}</strong></td>
-                        <td>#${img.deposit_id}</td>
+                        <td><strong>#${securityManager.escapeHtml(img.id)}</strong></td>
+                        <td>#${securityManager.escapeHtml(img.deposit_id)}</td>
                         <td><span class="badge bg-info">${img.side}</span></td>
-                        <td><strong>${img.quality_score}%</strong></td>
-                        <td>${img.clarity}%</td>
-                        <td>${(img.file_size / 1024).toFixed(1)}</td>
+                        <td><span class="badge ${getIQAStatusBadgeClass(img.iqa_status)}">${img.iqa_status}</span></td>
+                        <td><strong>${img.quality_score || 0}%</strong></td>
+                        <td>
+                            ${img.micr_match ? 
+                                '<span class="badge bg-success">✓ Match</span>' : 
+                                '<span class="badge bg-danger">✕ Mismatch</span>'}
+                        </td>
                         <td>${formatDate(img.uploaded_date)}</td>
                         <td><button class="btn btn-sm btn-primary" onclick="viewImage('${img.id}')">View</button></td>
                     </tr>
                 `).join('');
+
+                renderPagination('images', paginationState.images.total, page);
             } catch (error) {
                 console.error('Error loading images:', error);
             }
         }
 
-        async function loadOCRResults() {
+        async function loadOCRResults(page = 1) {
             try {
-                const response = await fetchAPI('/api/v1/mobile-deposit/ocr-results');
-                const table = document.getElementById('ocrTable');
+                const skip = (page - 1) * paginationState.ocr.pageSize;
+                const data = await fetchAPI(`/mobile-deposit/ocr-results?skip=${skip}&limit=${paginationState.ocr.pageSize}`);
                 
-                if (!response.success || !response.data?.length) {
-                    table.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No OCR results</td></tr>';
+                if (!data?.success || !data.data?.length) {
+                    document.getElementById('ocrTable').innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No OCR results</td></tr>';
+                    renderPagination('ocr', 0, page);
                     return;
                 }
 
-                table.innerHTML = response.data.map(ocr => `
+                paginationState.ocr.total = data.total || 0;
+                paginationState.ocr.currentPage = page;
+
+                const table = document.getElementById('ocrTable');
+                table.innerHTML = data.data.map(ocr => `
                     <tr>
-                        <td><strong>#${ocr.id}</strong></td>
-                        <td>#${ocr.deposit_id}</td>
+                        <td><strong>#${securityManager.escapeHtml(ocr.id)}</strong></td>
+                        <td>#${securityManager.escapeHtml(ocr.deposit_id)}</td>
                         <td>${formatCurrency(ocr.check_amount)}</td>
-                        <td>${ocr.routing_number}</td>
-                        <td>${ocr.account_number}</td>
-                        <td><strong>${ocr.confidence}%</strong></td>
-                        <td><span class="badge ${ocr.status === 'verified' ? 'bg-success' : 'bg-warning'}">${ocr.status}</span></td>
-                        <td><button class="btn btn-sm btn-primary" onclick="verifyOCR('${ocr.id}')">Review</button></td>
+                        <td>${securityManager.escapeHtml(ocr.routing_number)}</td>
+                        <td>${securityManager.maskPII(ocr.account_number)}</td>
+                        <td>
+                            ${ocr.routing_match && ocr.account_match ? 
+                                '<span class="badge bg-success">✓ Match</span>' : 
+                                '<span class="badge bg-danger">✕ Mismatch</span>'}
+                        </td>
+                        <td><strong>${ocr.confidence || 0}%</strong></td>
+                        <td><button class="btn btn-sm btn-primary" onclick="reviewOCRResult('${ocr.id}', '${ocr.deposit_id}')">Review</button></td>
                     </tr>
                 `).join('');
+
+                renderPagination('ocr', paginationState.ocr.total, page);
+                updateOCRChart(data.data);
             } catch (error) {
                 console.error('Error loading OCR results:', error);
             }
         }
 
+        // ============================================================================
+        // PAGINATION CONTROLS
+        // ============================================================================
+        function renderPagination(tableType, total, currentPage) {
+            const pageSize = paginationState[tableType].pageSize;
+            const totalPages = Math.ceil(total / pageSize);
+            const paginationId = `${tableType}Pagination`;
+            const pageInfoId = `${tableType}PageInfo`;
+            
+            const container = document.getElementById(paginationId);
+            container.innerHTML = '';
+            
+            if (totalPages <= 1) return;
+            
+            // Previous button
+            const prevBtn = document.createElement('button');
+            prevBtn.className = 'btn btn-sm btn-outline-secondary';
+            prevBtn.textContent = '← Previous';
+            prevBtn.disabled = currentPage === 1;
+            prevBtn.onclick = () => {
+                if (currentPage > 1) {
+                    tableType === 'deposits' ? loadDeposits(currentPage - 1) :
+                    tableType === 'images' ? loadCheckImages(currentPage - 1) :
+                    loadOCRResults(currentPage - 1);
+                }
+            };
+            container.appendChild(prevBtn);
+            
+            // Page numbers
+            for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) {
+                const btn = document.createElement('button');
+                btn.className = `btn btn-sm ${i === currentPage ? 'btn-primary' : 'btn-outline-secondary'}`;
+                btn.textContent = i;
+                btn.onclick = () => {
+                    tableType === 'deposits' ? loadDeposits(i) :
+                    tableType === 'images' ? loadCheckImages(i) :
+                    loadOCRResults(i);
+                };
+                container.appendChild(btn);
+            }
+            
+            // Next button
+            const nextBtn = document.createElement('button');
+            nextBtn.className = 'btn btn-sm btn-outline-secondary';
+            nextBtn.textContent = 'Next →';
+            nextBtn.disabled = currentPage === totalPages;
+            nextBtn.onclick = () => {
+                if (currentPage < totalPages) {
+                    tableType === 'deposits' ? loadDeposits(currentPage + 1) :
+                    tableType === 'images' ? loadCheckImages(currentPage + 1) :
+                    loadOCRResults(currentPage + 1);
+                }
+            };
+            container.appendChild(nextBtn);
+            
+            // Page info
+            const pageInfo = document.getElementById(pageInfoId);
+            pageInfo.textContent = `Page ${currentPage} of ${totalPages} | Showing ${(currentPage - 1) * pageSize + 1}-${Math.min(currentPage * pageSize, total)} of ${total} records`;
+        }
+
+        // ============================================================================
+        // HELPER FUNCTIONS
+        // ============================================================================
         function getStatusClass(status) {
-            const map = { 'processed': 'processed', 'pending': 'pending', 'rejected': 'rejected', 'approved': 'processed' };
+            const map = {
+                'processed': 'processed',
+                'pending': 'pending',
+                'rejected': 'rejected',
+                'approved': 'processed',
+                'failed': 'rejected'
+            };
             return map[status] || 'pending';
         }
 
+        function getIQABadgeClass(score) {
+            if (score >= 85) return 'bg-success';
+            if (score >= 70) return 'bg-warning';
+            return 'bg-danger';
+        }
+
+        function getIQAStatusBadgeClass(status) {
+            const map = {
+                'passed': 'bg-success',
+                'warning': 'bg-warning',
+                'failed': 'bg-danger'
+            };
+            return map[status] || 'bg-secondary';
+        }
+
         function initCharts() {
-            const statusCtx = document.getElementById('statusChart').getContext('2d');
-            statusChart = new Chart(statusCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Processed', 'Pending', 'Rejected'],
-                    datasets: [{
-                        data: [65, 25, 10],
-                        backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
-                        borderColor: 'white',
-                        borderWidth: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'bottom' } }
-                }
-            });
-
-            const ocrCtx = document.getElementById('ocrChart').getContext('2d');
-            ocrChart = new Chart(ocrCtx, {
-                type: 'bar',
-                data: {
-                    labels: ['Excellent', 'Good', 'Fair', 'Poor'],
-                    datasets: [{
-                        label: 'Image Quality',
-                        data: [45, 30, 15, 10],
-                        backgroundColor: '#667eea',
-                        borderRadius: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true } }
-                }
-            });
-        }
-
-        function viewImage(imageId) {
-            currentImageId = imageId;
-            document.getElementById('previewImage').src = `/api/v1/mobile-deposit/images/${imageId}/preview`;
-            document.getElementById('qualityScore').textContent = '92';
-            document.getElementById('imageclarity').textContent = '88';
-            document.getElementById('imageSize').textContent = '245';
-            new bootstrap.Modal(document.getElementById('reviewImageModal')).show();
-        }
-
-        async function approveImage() {
-            try {
-                const response = await fetchAPI(`/api/v1/mobile-deposit/images/${currentImageId}/approve`, {
-                    method: 'POST',
-                    body: JSON.stringify({ notes: document.getElementById('reviewNotes').value })
+            const statusCtx = document.getElementById('statusChart');
+            if (statusCtx) {
+                statusChart = new Chart(statusCtx.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Processed', 'Pending', 'Rejected'],
+                        datasets: [{
+                            data: [0, 0, 0],
+                            backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+                            borderColor: 'white',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { position: 'bottom' } }
+                    }
                 });
-                if (response.success) {
-                    showAlert('Image approved successfully', 'success');
+            }
+
+            const ocrCtx = document.getElementById('ocrChart');
+            if (ocrCtx) {
+                ocrChart = new Chart(ocrCtx.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: ['Excellent (90-100%)', 'Good (75-89%)', 'Fair (60-74%)', 'Poor (<60%)'],
+                        datasets: [{
+                            label: 'OCR Results',
+                            data: [0, 0, 0, 0],
+                            backgroundColor: '#667eea',
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: { y: { beginAtZero: true } }
+                    }
+                });
+            }
+        }
+
+        function updateChartFromData(deposits) {
+            if (!statusChart || !deposits) return;
+            const processed = deposits.filter(d => d.status === 'processed').length;
+            const pending = deposits.filter(d => d.status === 'pending').length;
+            const rejected = deposits.filter(d => d.status === 'rejected').length;
+            statusChart.data.datasets[0].data = [processed, pending, rejected];
+            statusChart.update();
+        }
+
+        function updateOCRChart(ocrResults) {
+            if (!ocrChart || !ocrResults) return;
+            const excellent = ocrResults.filter(d => d.confidence >= 90).length;
+            const good = ocrResults.filter(d => d.confidence >= 75 && d.confidence < 90).length;
+            const fair = ocrResults.filter(d => d.confidence >= 60 && d.confidence < 75).length;
+            const poor = ocrResults.filter(d => d.confidence < 60).length;
+            ocrChart.data.datasets[0].data = [excellent, good, fair, poor];
+            ocrChart.update();
+        }
+
+        // ============================================================================
+        // FORENSIC IMAGE VIEWER
+        // ============================================================================
+        async function viewImage(imageId) {
+            currentImageId = imageId;
+            imageZoom = 1;
+            imageRotation = 0;
+            currentFilter = 'none';
+            
+            try {
+                const data = await fetchAPI(`/mobile-deposit/images/${imageId}/details`);
+                if (!data?.success) {
+                    toastSystem.showToast('Failed to load image details', 'error');
+                    return;
+                }
+
+                // Set image source (lazy loading - only load when modal opens)
+                const img = document.getElementById('previewImage');
+                img.src = `/api/v1/mobile-deposit/images/${imageId}/preview`;
+                img.style.transform = 'none';
+                
+                // Display IQA Analysis
+                const iqa = data.iqa_analysis || {};
+                document.getElementById('qualityScore').textContent = iqa.quality_score || '--';
+                document.getElementById('qualityScore').className = `badge ${getIQABadgeClass(iqa.quality_score)}`;
+                document.getElementById('blurStatus').textContent = iqa.blur_detected ? '❌ Detected' : '✓ None';
+                document.getElementById('cornersStatus').textContent = iqa.corners_intact ? '✓ Intact' : '❌ Cut Off';
+                document.getElementById('glareStatus').textContent = iqa.glare_detected ? '⚠ Detected' : '✓ None';
+                
+                // Display MICR Comparison
+                const micr = data.micr_analysis || {};
+                const micrMatch = micr.routing_match && micr.account_match;
+                const micrHtml = micrMatch ? 
+                    `<div class="micr-match"><strong>✓ MICR Match</strong><br>Routing: ${securityManager.escapeHtml(micr.extracted_routing)} | Account: ${securityManager.maskPII(micr.extracted_account)}</div>` :
+                    `<div class="micr-mismatch"><strong>✕ MICR Mismatch</strong><br>Expected Routing: ${securityManager.escapeHtml(micr.expected_routing)} (Got: ${securityManager.escapeHtml(micr.extracted_routing)})</div>`;
+                document.getElementById('micrComparison').innerHTML = micrHtml;
+                
+                // Display Endorsement Status
+                const endorsement = data.endorsement_verified ?
+                    '<span class="endorsement-verified">✓ Required Endorsement Found</span>' :
+                    '<span class="endorsement-missing">⚠ Endorsement Missing - "For Mobile Deposit Only"</span>';
+                document.getElementById('endorsementStatus').innerHTML = endorsement;
+
+                // Set compliance checkboxes to match data
+                document.getElementById('confirmIQA').checked = (iqa.quality_score >= 80);
+                document.getElementById('confirmMICR').checked = micrMatch;
+                document.getElementById('confirmEndorsement').checked = data.endorsement_verified;
+                document.getElementById('confirmNoDuplicate').checked = !data.is_duplicate;
+
+                new bootstrap.Modal(document.getElementById('reviewImageModal')).show();
+            } catch (error) {
+                toastSystem.showToast('Error loading image details', 'error');
+            }
+        }
+
+        // Image Viewer Controls
+        function zoomIn() {
+            imageZoom = Math.min(imageZoom + 0.2, 3);
+            updateImageTransform();
+        }
+
+        function zoomOut() {
+            imageZoom = Math.max(imageZoom - 0.2, 0.5);
+            updateImageTransform();
+        }
+
+        function rotateImage(angle) {
+            imageRotation = (imageRotation + angle) % 360;
+            updateImageTransform();
+        }
+
+        function applyFilter(filter) {
+            currentFilter = filter;
+            const img = document.getElementById('previewImage');
+            img.style.filter = filter === 'grayscale' ? 'grayscale(100%)' :
+                                filter === 'contrast' ? 'contrast(1.5)' : 'none';
+        }
+
+        function resetImage() {
+            imageZoom = 1;
+            imageRotation = 0;
+            currentFilter = 'none';
+            updateImageTransform();
+            document.getElementById('previewImage').style.filter = 'none';
+        }
+
+        function updateImageTransform() {
+            const img = document.getElementById('previewImage');
+            img.style.transform = `scale(${imageZoom}) rotate(${imageRotation}deg)`;
+            document.getElementById('zoomLevel').textContent = Math.round(imageZoom * 100) + '%';
+        }
+
+        // ============================================================================
+        // IMAGE APPROVAL/REJECTION
+        // ============================================================================
+        async function approveImage() {
+            const btn = document.getElementById('approveImageBtn');
+            btn.disabled = true;
+            
+            try {
+                const idempotencyKey = securityManager.generateIdempotencyKey();
+                const response = await fetchAPI(`/mobile-deposit/images/${currentImageId}/approve`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        notes: document.getElementById('reviewNotes').value,
+                        idempotency_key: idempotencyKey,
+                        iqa_verified: document.getElementById('confirmIQA').checked,
+                        micr_verified: document.getElementById('confirmMICR').checked,
+                        endorsement_verified: document.getElementById('confirmEndorsement').checked
+                    })
+                });
+
+                if (response?.success) {
+                    const refNum = response.reference_number || 'IMG-' + currentImageId;
+                    securityManager.auditLog('IMAGE_APPROVED', 'mobile_deposit', {
+                        image_id: currentImageId,
+                        reference: refNum,
+                        timestamp: new Date().toISOString()
+                    });
+                    
+                    toastSystem.showToast(`✓ Image approved | Ref: ${refNum}`, 'success');
                     bootstrap.Modal.getInstance(document.getElementById('reviewImageModal')).hide();
-                    loadCheckImages();
+                    await loadCheckImages(paginationState.images.currentPage);
+                } else {
+                    toastSystem.showToast('Failed to approve image', 'error');
                 }
             } catch (error) {
-                showAlert('Error approving image', 'danger');
+                toastSystem.showToast('Error approving image: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
             }
         }
 
         async function rejectImage() {
+            const btn = document.getElementById('rejectImageBtn');
+            btn.disabled = true;
+            
             try {
-                const response = await fetchAPI(`/api/v1/mobile-deposit/images/${currentImageId}/reject`, {
+                const idempotencyKey = securityManager.generateIdempotencyKey();
+                const response = await fetchAPI(`/mobile-deposit/images/${currentImageId}/reject`, {
                     method: 'POST',
-                    body: JSON.stringify({ notes: document.getElementById('reviewNotes').value })
+                    body: JSON.stringify({
+                        notes: document.getElementById('reviewNotes').value || 'No reason provided',
+                        idempotency_key: idempotencyKey
+                    })
                 });
-                if (response.success) {
-                    showAlert('Image rejected', 'warning');
+
+                if (response?.success) {
+                    const refNum = response.reference_number || 'REJ-' + currentImageId;
+                    securityManager.auditLog('IMAGE_REJECTED', 'mobile_deposit', {
+                        image_id: currentImageId,
+                        reference: refNum,
+                        reason: document.getElementById('reviewNotes').value
+                    });
+                    
+                    toastSystem.showToast(`⛔ Image rejected | Ref: ${refNum}`, 'warning');
                     bootstrap.Modal.getInstance(document.getElementById('reviewImageModal')).hide();
-                    loadCheckImages();
+                    await loadCheckImages(paginationState.images.currentPage);
                 }
             } catch (error) {
-                showAlert('Error rejecting image', 'danger');
+                toastSystem.showToast('Error rejecting image: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
             }
         }
 
-        function reviewDeposit(depositId, amount) {
+        // ============================================================================
+        // DEPOSIT APPROVAL
+        // ============================================================================
+        async function reviewDeposit(depositId, amount, checkNum) {
             currentDepositId = depositId;
-            document.getElementById('depositIdApprove').value = depositId;
-            document.getElementById('depositAmount').value = formatCurrency(parseFloat(amount));
-            new bootstrap.Modal(document.getElementById('approveDepositModal')).show();
+            
+            try {
+                const data = await fetchAPI(`/mobile-deposit/deposits/${depositId}/details`);
+                if (!data?.success) {
+                    toastSystem.showToast('Failed to load deposit details', 'error');
+                    return;
+                }
+
+                document.getElementById('depositIdApprove').value = depositId;
+                document.getElementById('depositAmount').value = formatCurrency(parseFloat(amount));
+                document.getElementById('depositCheckNum').value = checkNum;
+                
+                // Populate compliance fields from data
+                const checks = data.compliance_checks || {};
+                document.getElementById('confirmIQA').checked = checks.iqa_passed || false;
+                document.getElementById('confirmMICR').checked = checks.micr_verified || false;
+                document.getElementById('confirmEndorsement').checked = checks.endorsement_found || false;
+                document.getElementById('confirmNoDuplicate').checked = !checks.is_duplicate || false;
+                
+                // Show warnings if checks failed
+                if (!checks.iqa_passed || !checks.micr_verified || !checks.endorsement_found || checks.is_duplicate) {
+                    document.getElementById('complianceAlert').style.display = 'block';
+                    const warnings = [];
+                    if (!checks.iqa_passed) warnings.push('IQA failed');
+                    if (!checks.micr_verified) warnings.push('MICR mismatch');
+                    if (!checks.endorsement_found) warnings.push('Endorsement missing');
+                    if (checks.is_duplicate) warnings.push('Possible duplicate');
+                    document.getElementById('complianceMessage').textContent = warnings.join(', ') + '. Review carefully before approval.';
+                } else {
+                    document.getElementById('complianceAlert').style.display = 'none';
+                }
+
+                new bootstrap.Modal(document.getElementById('approveDepositModal')).show();
+            } catch (error) {
+                toastSystem.showToast('Error loading deposit details', 'error');
+            }
         }
 
-        function verifyOCR(ocrId) {
-            showAlert(`Verifying OCR result #${ocrId}...`, 'info');
+        async function reviewOCRResult(ocrId, depositId) {
+            toastSystem.showToast('Fetching OCR verification details for ' + ocrId, 'info');
+            // This would open a detailed OCR review modal
+            // For now, we just show a placeholder
         }
 
         document.getElementById('approveDepositForm').addEventListener('submit', async function(e) {
             e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitApproveBtnDeposit');
+            submitBtn.disabled = true;
+            
             try {
-                const response = await fetchAPI(`/api/v1/mobile-deposit/deposits/${currentDepositId}/approve`, {
+                const idempotencyKey = securityManager.generateIdempotencyKey();
+                const depositId = document.getElementById('depositIdApprove').value;
+                
+                const response = await fetchAPI(`/mobile-deposit/deposits/${depositId}/approve`, {
                     method: 'POST',
-                    body: JSON.stringify({ notes: document.getElementById('processingNotes').value })
+                    body: JSON.stringify({
+                        notes: document.getElementById('processingNotes').value,
+                        idempotency_key: idempotencyKey,
+                        iqa_verified: document.getElementById('confirmIQA').checked,
+                        micr_verified: document.getElementById('confirmMICR').checked,
+                        endorsement_verified: document.getElementById('confirmEndorsement').checked,
+                        no_duplicate: document.getElementById('confirmNoDuplicate').checked
+                    })
                 });
-                if (response.success) {
-                    showAlert('Deposit approved successfully', 'success');
+
+                if (response?.success) {
+                    const txRef = response.transaction_reference || 'TXN-' + depositId;
+                    securityManager.auditLog('DEPOSIT_APPROVED', 'mobile_deposit', {
+                        deposit_id: depositId,
+                        transaction_ref: txRef,
+                        amount: document.getElementById('depositAmount').value,
+                        timestamp: new Date().toISOString()
+                    });
+                    
+                    toastSystem.showToast(`✓ Deposit approved | Reference: ${txRef}`, 'success', 6000);
                     bootstrap.Modal.getInstance(document.getElementById('approveDepositModal')).hide();
-                    loadDeposits();
-                    loadMobileDepositMetrics();
+                    await loadDeposits(paginationState.deposits.currentPage);
+                    await loadMobileDepositMetrics();
+                } else {
+                    toastSystem.showToast('Failed to approve deposit', 'error');
                 }
             } catch (error) {
-                showAlert('Error approving deposit', 'danger');
+                toastSystem.showToast('Error approving deposit: ' + error.message, 'error');
+            } finally {
+                submitBtn.disabled = false;
             }
         });
     </script>

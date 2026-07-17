@@ -1,26 +1,45 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://code.jquery.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data: https:; connect-src 'self' https: http://localhost:* ws: wss:;">
     <title>Blockchain Management - Finanza Admin</title>
     <link href="/static/css/style.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
+        body { background: #f8f9fa; }
         .admin-nav { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
         .admin-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; }
         .stat-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .stat-number { font-size: 2rem; font-weight: bold; color: #667eea; }
+        .stat-label { color: #666; font-size: 0.9rem; margin-top: 5px; }
         .dashboard-section { background: white; border-radius: 10px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 30px; }
         .chain-badge { display: inline-block; padding: 10px 15px; border-radius: 5px; font-size: 0.9rem; font-weight: bold; }
         .chain-eth { background: #627eea; color: white; }
         .chain-btc { background: #f7931a; color: white; }
         .chain-polygon { background: #8247e5; color: white; }
         .chain-bsc { background: #f3ba2f; color: white; }
+        .chain-solana { background: #14f195; color: #333; }
+        .status-pending { background: #fff3cd; color: #856404; padding: 5px 10px; border-radius: 5px; }
+        .status-confirmed { background: #d4edda; color: #155724; padding: 5px 10px; border-radius: 5px; }
+        .status-failed { background: #f8d7da; color: #721c24; padding: 5px 10px; border-radius: 5px; }
+        .ws-indicator { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 5px; background: #dc3545; }
+        .ws-indicator.connected { background: #28a745; }
+        .table-responsive { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .filter-section { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .pagination-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 15px; border-top: 1px solid #ddd; }
+        .confirmation-badge { padding: 5px 8px; border-radius: 4px; font-size: 0.85rem; font-weight: 600; }
+        .confirmation-low { background: #ffe5e5; color: #c00; }
+        .confirmation-medium { background: #fff4e5; color: #ff8c00; }
+        .confirmation-high { background: #e5ffe5; color: #008c00; }
     </style>
+
+    <script src="/static/js/toast-utils.js"></script>
 </head>
 <body>
-    <!-- Admin Navigation -->
+    <!-- Navigation -->
     <nav class="admin-nav navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="/user/admin/dashboard">
@@ -32,9 +51,7 @@
             <div class="collapse navbar-collapse" id="navbarAdmin">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item"><a class="nav-link" href="/user/admin/dashboard">Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/user/admin/fraud_detection">Fraud</a></li>
                     <li class="nav-item"><a class="nav-link active" href="/user/admin/blockchain">Blockchain</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/user/admin/reporting">Reports</a></li>
                     <li class="nav-item"><a class="nav-link" href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
                 </ul>
             </div>
@@ -42,179 +59,103 @@
     </nav>
 
     <div class="container-fluid mt-5 mb-5">
-        <!-- Header -->
+        <!-- Header with WebSocket Status -->
         <div class="admin-header">
-            <h1><i class="fas fa-cube"></i> Blockchain & Cryptocurrency Management</h1>
-            <p class="mb-0">Monitor wallets, accounts, and blockchain transactions</p>
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1><i class="fas fa-cube"></i> Blockchain & Cryptocurrency Management</h1>
+                    <p class="mb-0">Production-grade settlement tracking with real-time monitoring</p>
+                </div>
+                <div style="text-align: right;">
+                    <div><span class="ws-indicator" id="wsIndicator"></span><span id="wsStatus">Connecting...</span></div>
+                </div>
+            </div>
         </div>
 
-        <!-- Quick Stats -->
+        <!-- Quick Stats - Loaded from API -->
         <div class="row g-4 mb-5">
             <div class="col-lg-3 col-md-6">
                 <div class="stat-card">
-                    <div style="font-size: 2rem; color: #667eea; font-weight: bold;" id="totalWallets">-</div>
-                    <div class="text-muted">Total Wallets</div>
+                    <div class="stat-number" id="totalWallets">-</div>
+                    <div class="stat-label">Total Wallets</div>
                 </div>
             </div>
             <div class="col-lg-3 col-md-6">
                 <div class="stat-card">
-                    <div style="font-size: 2rem; color: #667eea; font-weight: bold;" id="totalAccounts">-</div>
-                    <div class="text-muted">Active Accounts</div>
+                    <div class="stat-number" id="totalAccounts">-</div>
+                    <div class="stat-label">Active Accounts</div>
                 </div>
             </div>
             <div class="col-lg-3 col-md-6">
                 <div class="stat-card">
-                    <div style="font-size: 2rem; color: #667eea; font-weight: bold;" id="totalValue">$-</div>
-                    <div class="text-muted">Total Value</div>
+                    <div class="stat-number" id="totalValue">$-</div>
+                    <div class="stat-label">Total Value</div>
                 </div>
             </div>
             <div class="col-lg-3 col-md-6">
                 <div class="stat-card">
-                    <div style="font-size: 2rem; color: #667eea; font-weight: bold;" id="pendingTxn">-</div>
-                    <div class="text-muted">Pending Tx</div>
+                    <div class="stat-number" id="pendingSettlements">-</div>
+                    <div class="stat-label">Pending Settlements</div>
                 </div>
             </div>
         </div>
 
-        <!-- Supported Blockchains -->
+        <!-- Blockchain Networks - Dynamically populated -->
         <div class="dashboard-section">
             <h4 class="mb-4"><i class="fas fa-network-wired"></i> Blockchain Networks</h4>
-            <div class="row g-4">
-                <div class="col-lg-3 col-md-6">
-                    <div class="card">
-                        <div class="card-body text-center">
-                            <div class="chain-badge chain-eth mb-3" style="width: 100%;">Ethereum</div>
-                            <div id="ethStats">
-                                <p class="mb-2"><strong id="ethWallets">-</strong> Wallets</p>
-                                <p class="mb-0"><span id="ethTVL">$-</span> TVL</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-3 col-md-6">
-                    <div class="card">
-                        <div class="card-body text-center">
-                            <div class="chain-badge chain-btc mb-3" style="width: 100%;">Bitcoin</div>
-                            <div id="btcStats">
-                                <p class="mb-2"><strong id="btcWallets">-</strong> Wallets</p>
-                                <p class="mb-0"><span id="btcTVL">$-</span> TVL</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-3 col-md-6">
-                    <div class="card">
-                        <div class="card-body text-center">
-                            <div class="chain-badge chain-polygon mb-3" style="width: 100%;">Polygon</div>
-                            <div id="polyStats">
-                                <p class="mb-2"><strong id="polyWallets">-</strong> Wallets</p>
-                                <p class="mb-0"><span id="polyTVL">$-</span> TVL</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-3 col-md-6">
-                    <div class="card">
-                        <div class="card-body text-center">
-                            <div class="chain-badge chain-bsc mb-3" style="width: 100%;">BSC</div>
-                            <div id="bscStats">
-                                <p class="mb-2"><strong id="bscWallets">-</strong> Wallets</p>
-                                <p class="mb-0"><span id="bscTVL">$-</span> TVL</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <div class="row g-4" id="networkStatsContainer">
+                <!-- Populated from API -->
             </div>
         </div>
 
-        <!-- User Crypto Accounts -->
+        <!-- Settlements with Advanced Filtering -->
         <div class="dashboard-section">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h4><i class="fas fa-user-circle"></i> User Crypto Accounts</h4>
-                <button class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> Approve Account</button>
+                <h4><i class="fas fa-sync"></i> On-Chain Settlements</h4>
+                <button class="btn btn-primary btn-sm" onclick="toggleFilters()">
+                    <i class="fas fa-filter"></i> Filters
+                </button>
             </div>
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>User</th>
-                            <th>Account ID</th>
-                            <th>Chains</th>
-                            <th>Wallets</th>
-                            <th>Total Value</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="accountsBody">
-                        <tr>
-                            <td colspan="7" class="text-center text-muted">Loading...</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
 
-        <!-- Recent Transactions -->
-        <div class="dashboard-section">
-            <h4 class="mb-4"><i class="fas fa-exchange-alt"></i> Recent Transactions</h4>
+            <!-- Filter Section (Hidden by default) -->
+            <div class="filter-section" id="filterSection" style="display: none;">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <input type="text" class="form-control" id="filterAddress" placeholder="Wallet/Tx Address">
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-control" id="filterChain">
+                            <option value="">All Chains</option>
+                            <option value="ethereum">Ethereum</option>
+                            <option value="bitcoin">Bitcoin</option>
+                            <option value="polygon">Polygon</option>
+                            <option value="bsc">BSC</option>
+                            <option value="solana">Solana</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-control" id="filterStatus">
+                            <option value="">All Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="confirmed">Confirmed</option>
+                            <option value="failed">Failed</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <input type="date" class="form-control" id="filterDateFrom" placeholder="From Date">
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-primary w-100" onclick="performSearch()">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settlements Table -->
             <div class="table-responsive">
                 <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Tx Hash</th>
-                            <th>From User</th>
-                            <th>To</th>
-                            <th>Amount</th>
-                            <th>Chain</th>
-                            <th>Status</th>
-                            <th>Date</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="transactionsBody">
-                        <tr>
-                            <td colspan="8" class="text-center text-muted">Loading...</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Smart Contract Management -->
-        <div class="dashboard-section">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h4><i class="fas fa-code"></i> Smart Contracts</h4>
-                <button class="btn btn-primary btn-sm"><i class="fas fa-plus"></i> Deploy Contract</button>
-            </div>
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Contract Name</th>
-                            <th>Chain</th>
-                            <th>Address</th>
-                            <th>Status</th>
-                            <th>Deployments</th>
-                            <th>Last Updated</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="contractsBody">
-                        <tr>
-                            <td colspan="7" class="text-center text-muted">Loading...</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Settlement Tracking -->
-        <div class="dashboard-section">
-            <h4 class="mb-4"><i class="fas fa-sync"></i> On-Chain Settlements</h4>
-            <div class="table-responsive">
-                <table class="table table-striped">
-                    <thead>
+                    <thead class="table-light">
                         <tr>
                             <th>Settlement ID</th>
                             <th>User</th>
@@ -222,238 +163,597 @@
                             <th>Chain</th>
                             <th>Status</th>
                             <th>Confirmations</th>
+                            <th>Tx Hash</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="settlementsBody">
-                        <tr>
-                            <td colspan="7" class="text-center text-muted">Loading...</td>
-                        </tr>
+                        <tr><td colspan="8" class="text-center text-muted">Loading settlements...</td></tr>
                     </tbody>
                 </table>
             </div>
-        </div>
 
-        <!-- Blockchain Configuration -->
-        <div class="dashboard-section">
-            <h4 class="mb-4"><i class="fas fa-cogs"></i> Blockchain Configuration</h4>
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Max Transaction Amount</label>
-                    <input type="number" class="form-control" id="maxTxAmount" value="100000">
+            <!-- Pagination Controls -->
+            <div class="pagination-controls">
+                <div>
+                    <button class="btn btn-sm btn-outline-primary" onclick="previousPage()" id="prevBtn">
+                        <i class="fas fa-chevron-left"></i> Previous
+                    </button>
+                    <span id="pageInfo" class="mx-3">Page 1</span>
+                    <button class="btn btn-sm btn-outline-primary" onclick="nextPage()" id="nextBtn">
+                        Next <i class="fas fa-chevron-right"></i>
+                    </button>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Min Wallet Balance</label>
-                    <input type="number" class="form-control" id="minWalletBalance" value="0.001">
+                <select class="form-control w-auto" id="pageSize" onchange="changePageSize()">
+                    <option value="10">10 per page</option>
+                    <option value="20" selected>20 per page</option>
+                    <option value="50">50 per page</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- MFA Confirmation Modal -->
+    <div class="modal fade" id="mfaModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title"><i class="fas fa-lock"></i> Multi-Factor Authentication Required</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Gas Fee Multiplier</label>
-                    <input type="number" class="form-control" id="gasFeeMultiplier" value="1.0" step="0.1">
-                </div>
-                <div class="col-md-6 mb-3">
-                    <label class="form-label">Settlement Timeout (hours)</label>
-                    <input type="number" class="form-control" id="settlementTimeout" value="24">
-                </div>
-                <div class="col-12 mb-3">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="enableAutoReconcile" checked>
-                        <label class="form-check-label" for="enableAutoReconcile">
-                            Enable Automatic Reconciliation
-                        </label>
+                <form id="mfaForm">
+                    <div class="modal-body">
+                        <div class="alert alert-info">
+                            <strong>Sensitive Action Detected</strong><br>
+                            Please confirm your identity with a second factor before proceeding.
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Verification Code</label>
+                            <input type="text" class="form-control" id="mfaCode" placeholder="Enter code from authenticator" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Reason for Action</label>
+                            <textarea class="form-control" id="actionReason" placeholder="Describe why this action is needed" required></textarea>
+                        </div>
                     </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-warning">Confirm Action</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settlement Details Modal -->
+    <div class="modal fade" id="settlementDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Settlement Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="settlementDetailsBody">
+                    <!-- Dynamically populated -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="openExplorer()">
+                        <i class="fas fa-external-link-alt"></i> View on Explorer
+                    </button>
                 </div>
             </div>
-            <button class="btn btn-primary">Save Configuration</button>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-        const token = localStorage.getItem('token');
+        // ============================================
+        // PRODUCTION-READY BLOCKCHAIN MANAGEMENT
+        // ============================================
 
+        const CONFIG = {
+            apiBaseUrl: '/api/v1',
+            adminBaseUrl: '/api/admin',
+            wsUrl: 'ws://localhost:8000/ws/blockchain',
+            sessionCheckInterval: 5 * 60 * 1000,
+            tokenKey: 'token',
+            pageSize: 20,
+            requestTimeout: 15000,
+            confirmationThresholds: {
+                ethereum: 12,
+                bitcoin: 6,
+                polygon: 256,
+                bsc: 20,
+                solana: 1
+            },
+            features: {
+                enableAuditLogging: true,
+                enableIdempotencyKeys: true,
+                csrfProtection: true,
+                enableWebSocket: true,
+                enableMFA: true
+            }
+        };
+
+        let state = {
+            token: null,
+            sessionValid: false,
+            currentPage: 0,
+            pageSize: 20,
+            wsConnection: null,
+            wsConnected: false,
+            pendingAction: null,
+            currentSettlementId: null,
+            filters: { address: null, chain: null, status: null, dateFrom: null}
+        };
+
+        // ===== SECURITY LAYER =====
+        class SecurityManager {
+            static async validateSession() {
+                try {
+                    const token = this.getToken();
+                    if (!token) {
+                        this.handleSessionExpired();
+                        return false;
+                    }
+
+                    const response = await fetch(`${CONFIG.adminBaseUrl}/verify-session`, {
+                        method: 'GET',
+                        headers: this.getSecureHeaders(),
+                        credentials: 'include'
+                    });
+
+                    if (response.status === 401) {
+                        this.handleSessionExpired();
+                        return false;
+                    }
+
+                    if (response.ok) {
+                        state.sessionValid = true;
+                        state.token = token;
+                        return true;
+                    }
+                    return false;
+                } catch (error) {
+                    console.error('Session validation error:', error);
+                    return false;
+                }
+            }
+
+            static getToken() {
+                return localStorage.getItem(CONFIG.tokenKey);
+            }
+
+            static getSecureHeaders() {
+                const headers = {
+                    'Authorization': `Bearer ${state.token || this.getToken()}`,
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                };
+                return headers;
+            }
+
+            static handleSessionExpired() {
+                localStorage.removeItem(CONFIG.tokenKey);
+                showToast('Your session has expired. Please log in again.', 'warning', 3000);
+                setTimeout(() => {
+                    window.location.href = '/signin';
+                }, 2000);
+            }
+
+            static validateToken() {
+                if (!this.getToken()) {
+                    window.location.href = '/signin';
+                    return false;
+                }
+                return true;
+            }
+
+            static generateIdempotencyKey(action, resourceId) {
+                if (!CONFIG.features.enableIdempotencyKeys) return null;
+                return `${action}-${resourceId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            }
+        }
+
+        // ===== NOTIFICATION SYSTEM =====
+        function showToast(message, type = 'info', duration = 4000) {
+            const toastDiv = document.createElement('div');
+            toastDiv.id = 'toast-' + Date.now();
+            toastDiv.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show`;
+            toastDiv.style.cssText = `
+                position: fixed; top: 20px; right: 20px; z-index: 1050; min-width: 300px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            `;
+            toastDiv.innerHTML = `
+                <strong>${type.charAt(0).toUpperCase() + type.slice(1)}:</strong> ${escapeHtml(message)}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+
+            document.body.appendChild(toastDiv);
+            if (duration > 0) {
+                setTimeout(() => {
+                    if (document.getElementById(toastDiv.id)) toastDiv.remove();
+                }, duration);
+            }
+        }
+
+        // ===== WEBSOCKET REAL-TIME UPDATES =====
+        function initWebSocket() {
+            if (!CONFIG.features.enableWebSocket) return;
+            try {
+                state.wsConnection = new WebSocket(CONFIG.wsUrl);
+                state.wsConnection.onopen = () => {
+                    state.wsConnected = true;
+                    updateWSIndicator(true);
+                    showToast('Connected to real-time blockchain updates', 'success', 2000);
+                };
+                state.wsConnection.onmessage = (event) => {
+                    try {
+                        const data = JSON.parse(event.data);
+                        if (data.type === 'settlement_confirmed') {
+                            const row = document.querySelector(`[data-settlement-id="${data.settlement_id}"]`);
+                            if (row) {
+                                row.querySelector('.confirmations').textContent = data.confirmations;
+                                updateConfirmationStatus(row, data.confirmations, data.chain);
+                            }
+                        }
+                    } catch (error) {
+                        console.error('WebSocket message parse error:', error);
+                    }
+                };
+                state.wsConnection.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    updateWSIndicator(false);
+                };
+                state.wsConnection.onclose = () => {
+                    state.wsConnected = false;
+                    updateWSIndicator(false);
+                    setTimeout(() => initWebSocket(), 5000);
+                };
+            } catch (error) {
+                console.warn('WebSocket not available:', error);
+            }
+        }
+
+        function updateWSIndicator(connected) {
+            const indicator = document.getElementById('wsIndicator');
+            const status = document.getElementById('wsStatus');
+            if (connected) {
+                indicator.classList.add('connected');
+                status.textContent = 'Real-time Connected';
+            } else {
+                indicator.classList.remove('connected');
+                status.textContent = 'Polling Mode';
+            }
+        }
+
+        // ===== API FUNCTIONS =====
+        async function loadBlockchainData() {
+            try {
+                const response = await fetch(`${CONFIG.apiBaseUrl}/blockchain/dashboard`, {
+                    headers: SecurityManager.getSecureHeaders(),
+                    timeout: CONFIG.requestTimeout
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                
+                document.getElementById('totalWallets').textContent = data.total_wallets || 0;
+                document.getElementById('totalAccounts').textContent = data.total_accounts || 0;
+                document.getElementById('totalValue').textContent = '$' + (data.total_value || 0).toLocaleString();
+                document.getElementById('pendingSettlements').textContent = data.total_transactions || 0;
+
+                logAuditEvent('dashboard_loaded', 'BLOCKCHAIN', 'Dashboard metrics loaded');
+            } catch (error) {
+                console.error('Error loading blockchain data:', error);
+                showToast('Failed to load blockchain data: ' + error.message, 'error');
+            }
+        }
+
+        async function loadSettlements(page = 0) {
+            try {
+                const skip = page * state.pageSize;
+                let url = `${CONFIG.apiBaseUrl}/blockchain/settlements?skip=${skip}&limit=${state.pageSize}`;
+
+                if (state.filters.address || state.filters.chain || state.filters.status || state.filters.dateFrom) {
+                    url = `${CONFIG.apiBaseUrl}/blockchain/settlements/search?skip=${skip}&limit=${state.pageSize}`;
+                    if (state.filters.address) url += `&query=${encodeURIComponent(state.filters.address)}`;
+                    if (state.filters.chain) url += `&chain=${encodeURIComponent(state.filters.chain)}`;
+                    if (state.filters.status) url += `&status=${encodeURIComponent(state.filters.status)}`;
+                    if (state.filters.dateFrom) url += `&date_from=${encodeURIComponent(state.filters.dateFrom)}`;
+                }
+
+                const response = await fetch(url, {
+                    headers: SecurityManager.getSecureHeaders(),
+                    timeout: CONFIG.requestTimeout
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                const tbody = document.getElementById('settlementsBody');
+                
+                if (!data.data || data.data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No settlements found</td></tr>';
+                    document.getElementById('nextBtn').disabled = true;
+                    return;
+                }
+
+                tbody.innerHTML = data.data.map(settlement => {
+                    const threshold = CONFIG.confirmationThresholds[settlement.chain] || 12;
+                    const confirmationStatus = getConfirmationStatus(settlement.confirmations, threshold);
+                    
+                    return `
+                        <tr data-settlement-id="${settlement.id}">
+                            <td><strong>${escapeHtml(settlement.id)}</strong></td>
+                            <td>${escapeHtml(settlement.user_name || 'N/A')}</td>
+                            <td>$${(settlement.amount || 0).toFixed(2)}</td>
+                            <td><span class="chain-badge chain-${settlement.chain}">${settlement.chain.toUpperCase()}</span></td>
+                            <td><span class="status-${settlement.status}">${settlement.status.toUpperCase()}</span></td>
+                            <td>
+                                <span class="confirmation-badge confirmation-${confirmationStatus} confirmations">
+                                    ${settlement.confirmations || 0}/${threshold}
+                                </span>
+                            </td>
+                            <td><small>${escapeHtml((settlement.tx_hash || '').substring(0, 12))}...</small></td>
+                            <td>
+                                <button class="btn btn-sm btn-info" onclick="viewSettlementDetails('${settlement.id}')" title="View details">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-primary" onclick="exploreTransaction('${settlement.chain}', '${settlement.tx_hash}')" title="View on explorer">
+                                    <i class="fas fa-external-link-alt"></i>
+                                </button>
+                                ${settlement.status === 'pending' ? `
+                                    <button class="btn btn-sm btn-warning" onclick="requestMFAForAction('retry', '${settlement.id}')" title="Retry settlement">
+                                        <i class="fas fa-redo"></i>
+                                    </button>
+                                ` : ''}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                state.currentPage = page;
+                document.getElementById('pageInfo').textContent = `Page ${page + 1}`;
+                document.getElementById('prevBtn').disabled = page === 0;
+                document.getElementById('nextBtn').disabled = data.data.length < state.pageSize;
+
+                logAuditEvent('settlements_loaded', 'BLOCKCHAIN', `Loaded page ${page}`);
+            } catch (error) {
+                console.error('Error loading settlements:', error);
+                showToast('Failed to load settlements: ' + error.message, 'error');
+            }
+        }
+
+        function getConfirmationStatus(confirmations, threshold) {
+            if (confirmations < threshold / 3) return 'low';
+            if (confirmations < (threshold * 2 / 3)) return 'medium';
+            return 'high';
+        }
+
+        function updateConfirmationStatus(row, confirmations, chain) {
+            const threshold = CONFIG.confirmationThresholds[chain] || 12;
+            const status = getConfirmationStatus(confirmations, threshold);
+            const badge = row.querySelector('.confirmation-badge');
+            badge.className = `confirmation-badge confirmation-${status}`;
+            badge.textContent = `${confirmations}/${threshold}`;
+        }
+
+        async function viewSettlementDetails(settlementId) {
+            try {
+                const response = await fetch(`${CONFIG.apiBaseUrl}/blockchain/settlement/${settlementId}/details`, {
+                    headers: SecurityManager.getSecureHeaders()
+                });
+
+                if (!response.ok) throw new Error('Failed to load details');
+                const data = await response.json();
+                state.currentSettlementId = settlementId;
+
+                const detailsHtml = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Settlement ID:</strong> ${escapeHtml(data.settlement_id)}</p>
+                            <p><strong>Status:</strong> <span class="status-${data.status}">${data.status.toUpperCase()}</span></p>
+                            <p><strong>Amount:</strong> $${(data.amount || 0).toFixed(2)}</p>
+                            <p><strong>Chain:</strong> ${escapeHtml(data.chain || 'N/A')}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Confirmations:</strong> ${data.confirmations || 0}</p>
+                            <p><strong>Gas Used:</strong> ${data.gas_used || 0}</p>
+                            <p><strong>Gas Price:</strong> $${data.gas_price || 0}</p>
+                            <p><strong>Created:</strong> ${data.created_at ? new Date(data.created_at).toLocaleString() : 'N/A'}</p>
+                        </div>
+                    </div>
+                    <div class="alert alert-info mt-3">
+                        <strong>Addresses</strong><br>
+                        From: ${escapeHtml(data.from_address || 'N/A')}<br>
+                        To: ${escapeHtml(data.to_address || 'N/A')}
+                    </div>
+                `;
+
+                document.getElementById('settlementDetailsBody').innerHTML = detailsHtml;
+                new bootstrap.Modal(document.getElementById('settlementDetailsModal')).show();
+                logAuditEvent('settlement_details_viewed', 'BLOCKCHAIN', `Settlement ${settlementId}`);
+            } catch (error) {
+                console.error('Error loading settlement details:', error);
+                showToast('Failed to load settlement details: ' + error.message, 'error');
+            }
+        }
+
+        async function exploreTransaction(chain, txHash) {
+            try {
+                const response = await fetch(`${CONFIG.apiBaseUrl}/blockchain/explorer-urls?chain=${chain}&tx_hash=${txHash}`, {
+                    headers: SecurityManager.getSecureHeaders()
+                });
+
+                if (!response.ok) throw new Error('Failed to get explorer URL');
+                const data = await response.json();
+                window.open(data.explorer_url, '_blank');
+                logAuditEvent('explorer_clicked', 'BLOCKCHAIN', `Chain: ${chain}`);
+            } catch (error) {
+                console.error('Error getting explorer URL:', error);
+                showToast('Failed to open explorer: ' + error.message, 'error');
+            }
+        }
+
+        function openExplorer() {
+            if (state.currentSettlementId) {
+                const row = document.querySelector(`[data-settlement-id="${state.currentSettlementId}"]`);
+                if (row) {
+                    const chain = row.querySelector('.chain-badge').textContent.toLowerCase();
+                    const txHash = row.querySelector('small').textContent;
+                    exploreTransaction(chain, txHash);
+                }
+            }
+        }
+
+        // ===== FILTERING & PAGINATION =====
+        function toggleFilters() {
+            const filterSection = document.getElementById('filterSection');
+            filterSection.style.display = filterSection.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function performSearch() {
+            state.filters.address = document.getElementById('filterAddress').value || null;
+            state.filters.chain = document.getElementById('filterChain').value || null;
+            state.filters.status = document.getElementById('filterStatus').value || null;
+            state.filters.dateFrom = document.getElementById('filterDateFrom').value || null;
+            state.currentPage = 0;
+            loadSettlements(0);
+            logAuditEvent('search_performed', 'BLOCKCHAIN', `Filters applied`);
+        }
+
+        function nextPage() {
+            loadSettlements(state.currentPage + 1);
+        }
+
+        function previousPage() {
+            if (state.currentPage > 0) {
+                loadSettlements(state.currentPage - 1);
+            }
+        }
+
+        function changePageSize() {
+            state.pageSize = parseInt(document.getElementById('pageSize').value);
+            state.currentPage = 0;
+            loadSettlements(0);
+        }
+
+        // ===== MFA & APPROVAL GATES =====
+        function requestMFAForAction(action, resourceId) {
+            if (!CONFIG.features.enableMFA) {
+                performSettlementAction(action, resourceId);
+                return;
+            }
+            state.pendingAction = { action, resourceId };
+            new bootstrap.Modal(document.getElementById('mfaModal')).show();
+            logAuditEvent('mfa_requested', 'BLOCKCHAIN', `Action: ${action}`);
+        }
+
+        document.getElementById('mfaForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const mfaCode = document.getElementById('mfaCode').value;
+            const reason = document.getElementById('actionReason').value;
+
+            try {
+                showToast('Verifying authentication...', 'info', 0);
+                await performSettlementAction(state.pendingAction.action, state.pendingAction.resourceId, {
+                    mfa_code: mfaCode,
+                    reason: reason
+                });
+                
+                bootstrap.Modal.getInstance(document.getElementById('mfaModal')).hide();
+                document.getElementById('mfaForm').reset();
+            } catch (error) {
+                showToast('MFA verification failed: ' + error.message, 'error');
+            }
+        });
+
+        async function performSettlementAction(action, settlementId, additionalData = {}) {
+            try {
+                showToast(`Performing ${action}...`, 'info', 0);
+
+                const idempotencyKey = SecurityManager.generateIdempotencyKey(action, settlementId);
+                const headers = SecurityManager.getSecureHeaders();
+                if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey;
+
+                const response = await fetch(`${CONFIG.apiBaseUrl}/blockchain/settlement/${settlementId}/${action}`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify(additionalData),
+                    timeout: CONFIG.requestTimeout
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || `HTTP ${response.status}`);
+                }
+
+                showToast(`Action completed successfully`, 'success');
+                logAuditEvent(`settlement_${action}`, 'BLOCKCHAIN', `Settlement: ${settlementId}`);
+                await loadSettlements(state.currentPage);
+            } catch (error) {
+                console.error('Action error:', error);
+                showToast(`Failed to perform action: ${error.message}`, 'error');
+            }
+        }
+
+        // ===== AUDIT LOGGING =====
+        async function logAuditEvent(action, category, details) {
+            try {
+                await fetch(`${CONFIG.apiBaseUrl}/blockchain/settlement/audit-log`, {
+                    method: 'POST',
+                    headers: SecurityManager.getSecureHeaders(),
+                    body: JSON.stringify({
+                        action: action,
+                        category: category,
+                        details: details,
+                        timestamp: new Date().toISOString()
+                    }),
+                    timeout: 5000
+                });
+            } catch (error) {
+                console.warn('Failed to log audit event:', error);
+            }
+        }
+
+        // ===== HELPER FUNCTIONS =====
+        function escapeHtml(text) {
+            if (!text) return '';
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+            return text.replace(/[&<>"']/g, c => map[c]);
+        }
+
+        // ===== INITIALIZATION =====
         document.addEventListener('DOMContentLoaded', async function() {
-            if (!token) {
-                window.location.href = '/signin';
+            if (!SecurityManager.validateToken()) return;
+
+            if (!await SecurityManager.validateSession()) {
+                showToast('Session validation failed', 'error');
                 return;
             }
 
             try {
-                await loadBlockchainData();
-                await loadAccounts();
-                await loadTransactions();
-                await loadContracts();
-                await loadSettlements();
+                if (CONFIG.features.enableWebSocket) {
+                    initWebSocket();
+                }
+
+                await Promise.all([
+                    loadBlockchainData(),
+                    loadSettlements(0)
+                ]);
+
+                setInterval(() => SecurityManager.validateSession(), CONFIG.sessionCheckInterval);
+                setInterval(() => {
+                    if (!state.wsConnected) {
+                        loadBlockchainData();
+                    }
+                }, 30000);
             } catch (error) {
-                console.error('Error loading blockchain data:', error);
+                console.error('Initialization error:', error);
+                showToast('Failed to initialize blockchain dashboard: ' + error.message, 'error');
             }
         });
-
-        async function loadBlockchainData() {
-            try {
-                const response = await fetch('/api/v1/blockchain/dashboard', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    
-                    document.getElementById('totalWallets').textContent = data.total_wallets || '-';
-                    document.getElementById('totalAccounts').textContent = data.total_accounts || '-';
-                    document.getElementById('totalValue').textContent = '$' + (data.total_value || 0).toLocaleString('en-US', {maximumFractionDigits: 2});
-                    document.getElementById('pendingTxn').textContent = data.pending_transactions || '-';
-
-                    // Update chain stats
-                    const chains = data.chains || {};
-                    Object.keys(chains).forEach(chain => {
-                        document.getElementById(chain + 'Wallets').textContent = chains[chain].wallets || '-';
-                        document.getElementById(chain + 'TVL').textContent = '$' + (chains[chain].tvl || 0).toLocaleString('en-US', {maximumFractionDigits: 0});
-                    });
-                }
-            } catch (error) {
-                console.error('Error loading blockchain data:', error);
-            }
-        }
-
-        async function loadAccounts() {
-            try {
-                const response = await fetch('/api/v1/blockchain/accounts', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    const tbody = document.getElementById('accountsBody');
-                    tbody.innerHTML = '';
-
-                    if (data.accounts && data.accounts.length > 0) {
-                        data.accounts.forEach(account => {
-                            tbody.innerHTML += `
-                                <tr>
-                                    <td>${account.user_name}</td>
-                                    <td>${account.id}</td>
-                                    <td>${account.chains.join(', ')}</td>
-                                    <td>${account.wallet_count}</td>
-                                    <td>$${account.total_value.toLocaleString('en-US', {maximumFractionDigits: 2})}</td>
-                                    <td><span class="badge bg-${account.status === 'active' ? 'success' : 'warning'}">${account.status}</span></td>
-                                    <td>
-                                        <button class="btn btn-sm btn-primary">View</button>
-                                        <button class="btn btn-sm btn-danger">Suspend</button>
-                                    </td>
-                                </tr>
-                            `;
-                        });
-                    } else {
-                        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No accounts found</td></tr>';
-                    }
-                }
-            } catch (error) {
-                console.error('Error loading accounts:', error);
-            }
-        }
-
-        async function loadTransactions() {
-            try {
-                const response = await fetch('/api/v1/blockchain/transactions?limit=20', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    const tbody = document.getElementById('transactionsBody');
-                    tbody.innerHTML = '';
-
-                    if (data.transactions && data.transactions.length > 0) {
-                        data.transactions.forEach(tx => {
-                            tbody.innerHTML += `
-                                <tr>
-                                    <td><small>${tx.hash.substring(0, 10)}...</small></td>
-                                    <td>${tx.from_user}</td>
-                                    <td><small>${tx.to_address.substring(0, 10)}...</small></td>
-                                    <td>${tx.amount}</td>
-                                    <td><span class="badge bg-primary">${tx.chain.toUpperCase()}</span></td>
-                                    <td><span class="badge bg-${tx.status === 'confirmed' ? 'success' : 'warning'}">${tx.status}</span></td>
-                                    <td>${new Date(tx.date).toLocaleDateString()}</td>
-                                    <td>
-                                        <a href="https://etherscan.io/tx/${tx.hash}" target="_blank" class="text-primary text-decoration-none">View</a>
-                                    </td>
-                                </tr>
-                            `;
-                        });
-                    }
-                }
-            } catch (error) {
-                console.error('Error loading transactions:', error);
-            }
-        }
-
-        async function loadContracts() {
-            try {
-                const response = await fetch('/api/v1/blockchain/contracts', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    const tbody = document.getElementById('contractsBody');
-                    tbody.innerHTML = '';
-
-                    if (data.contracts && data.contracts.length > 0) {
-                        data.contracts.forEach(contract => {
-                            tbody.innerHTML += `
-                                <tr>
-                                    <td>${contract.name}</td>
-                                    <td><span class="badge bg-primary">${contract.chain.toUpperCase()}</span></td>
-                                    <td><small>${contract.address.substring(0, 10)}...</small></td>
-                                    <td><span class="badge bg-success">Active</span></td>
-                                    <td>${contract.deployments}</td>
-                                    <td>${new Date(contract.updated).toLocaleDateString()}</td>
-                                    <td>
-                                        <button class="btn btn-sm btn-primary">Details</button>
-                                    </td>
-                                </tr>
-                            `;
-                        });
-                    }
-                }
-            } catch (error) {
-                console.error('Error loading contracts:', error);
-            }
-        }
-
-        async function loadSettlements() {
-            try {
-                const response = await fetch('/api/v1/blockchain/settlements?limit=10', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    const tbody = document.getElementById('settlementsBody');
-                    tbody.innerHTML = '';
-
-                    if (data.settlements && data.settlements.length > 0) {
-                        data.settlements.forEach(settlement => {
-                            tbody.innerHTML += `
-                                <tr>
-                                    <td>${settlement.id}</td>
-                                    <td>${settlement.user_name}</td>
-                                    <td>$${settlement.amount.toLocaleString('en-US', {maximumFractionDigits: 2})}</td>
-                                    <td><span class="badge bg-primary">${settlement.chain.toUpperCase()}</span></td>
-                                    <td><span class="badge bg-${settlement.status === 'settled' ? 'success' : 'warning'}">${settlement.status}</span></td>
-                                    <td>${settlement.confirmations}</td>
-                                    <td>
-                                        <button class="btn btn-sm btn-primary">Monitor</button>
-                                    </td>
-                                </tr>
-                            `;
-                        });
-                    }
-                }
-            } catch (error) {
-                console.error('Error loading settlements:', error);
-            }
-        }
     </script>
     <script src="/static/js/admin-guard.js"></script>
 </body>

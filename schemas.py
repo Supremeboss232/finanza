@@ -395,6 +395,9 @@ class Project(ProjectBase):
 
 class AdminDashboardMetrics(BaseModel):
     total_users: int
+    active_users: int = 0
+    kyc_verified: int = 0
+    account_holds: int = 0
     total_transactions: int
     total_volume: float
     total_deposits: float = 0.0

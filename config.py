@@ -5,6 +5,9 @@ from typing import Optional
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
+    # Override option to use local SQLite database instead of remote Supabase/PostgreSQL
+    USE_LOCAL_DB: str = "false"
+
     # For async postgres with SSH tunnel:
     # RDS is not publicly accessible, must tunnel through EC2 bastion
     # Connection: local 127.0.0.1:5432 -> tunneled -> RDS:5432
@@ -167,6 +170,12 @@ class Settings(BaseSettings):
 
     @model_validator(mode='after')
     def normalize_database_urls(self) -> 'Settings':
+        import os
+        if os.environ.get("USE_LOCAL_DB") == "true" or getattr(self, "USE_LOCAL_DB", "false") == "true":
+            self.DATABASE_URL = "sqlite+aiosqlite:///finanza.db"
+            self.ALEMBIC_DATABASE_URL = "sqlite:///finanza.db"
+            return self
+
         # For Supabase: prefer POSTGRES_URL_NON_POOLING (pooler on port 5432)
         # since direct connections to db.*.supabase.co often fail with DNS on some networks
         # Only use DATABASE_URL if no pooler URL is available

@@ -810,3 +810,37 @@ async def test_webhook(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to queue test webhook"
         )
+
+
+@router.post(
+    "/{webhook_id}/rotate-secret",
+    summary="Rotate Webhook Secret",
+    description="Generate a new signing secret key for the webhook"
+)
+async def rotate_webhook_secret(
+    webhook_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        webhook = db.query(Webhook).filter(Webhook.id == webhook_id).first()
+        if not webhook:
+            raise HTTPException(status_code=404, detail="Webhook not found")
+            
+        if webhook.user_id != current_user.id:
+            raise HTTPException(status_code=403, detail="You do not have access to this webhook")
+            
+        import secrets
+        new_secret = secrets.token_urlsafe(32)
+        webhook.secret_key = new_secret
+        db.add(webhook)
+        db.commit()
+        db.refresh(webhook)
+        
+        return {"success": True, "secret_key": new_secret}
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Error rotating secret for webhook {webhook_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to rotate secret")
+

@@ -329,6 +329,15 @@ async def approve_kyc_submission(db: AsyncSession, submission_id: int, approver_
             user.account_number = _generate_account_number()
         db.add(user)
 
+        # Unlock the user's account for transaction use once KYC is approved.
+        account_result = await db.execute(
+            select(models.Account).where(models.Account.owner_id == user.id)
+        )
+        for account in account_result.scalars().all():
+            account.status = "active"
+            account.kyc_level = "full"
+            db.add(account)
+
     # Also update the KYCInfo record if it exists
     kyc_info_result = await db.execute(
         select(models.KYCInfo).filter(models.KYCInfo.user_id == submission.user_id)

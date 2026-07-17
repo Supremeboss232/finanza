@@ -1,7 +1,7 @@
 # routers/mobile_deposit_api.py
 # API endpoints for mobile check deposit service
 
-from fastapi import APIRouter, Depends, HTTPException, Query, File, UploadFile, Form
+from fastapi import APIRouter, Depends, HTTPException, Query, File, UploadFile, Form, Path
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from typing import Optional
@@ -73,7 +73,7 @@ async def initiate_deposit(
 
 @router.post("/upload/{deposit_id}/front")
 async def upload_check_front(
-    deposit_id: int = Query(..., gt=0),
+    deposit_id: int = Path(..., gt=0),
     file: UploadFile = File(...),
     current_user_id: Optional[int] = None,
     db: Session = Depends(get_db)
@@ -120,7 +120,7 @@ async def upload_check_front(
 
 @router.post("/upload/{deposit_id}/back")
 async def upload_check_back(
-    deposit_id: int = Query(..., gt=0),
+    deposit_id: int = Path(..., gt=0),
     file: UploadFile = File(...),
     current_user_id: Optional[int] = None,
     db: Session = Depends(get_db)
@@ -169,7 +169,7 @@ async def upload_check_back(
 
 @router.post("/{deposit_id}/verify")
 async def verify_check_images(
-    deposit_id: int = Query(..., gt=0),
+    deposit_id: int = Path(..., gt=0),
     current_user_id: Optional[int] = None,
     db: Session = Depends(get_db)
 ):
@@ -251,7 +251,7 @@ async def verify_check_images(
 
 @router.post("/{deposit_id}/submit")
 async def submit_deposit(
-    deposit_id: int = Query(..., gt=0),
+    deposit_id: int = Path(..., gt=0),
     current_user_id: Optional[int] = None,
     db: Session = Depends(get_db)
 ):
@@ -341,7 +341,7 @@ async def submit_deposit(
 
 @router.get("/{deposit_id}/status")
 async def get_deposit_status(
-    deposit_id: int = Query(..., gt=0),
+    deposit_id: int = Path(..., gt=0),
     db: Session = Depends(get_db)
 ):
     """Get current status of a mobile deposit"""
@@ -364,7 +364,7 @@ async def get_deposit_status(
 
 @router.get("/account/{account_id}/holds")
 async def get_deposit_holds(
-    account_id: int = Query(..., gt=0),
+    account_id: int = Path(..., gt=0),
     db: Session = Depends(get_db)
 ):
     """Get all active deposit holds for an account"""
@@ -385,7 +385,7 @@ async def get_deposit_holds(
 
 @router.get("/account/{account_id}/available-funds")
 async def get_available_funds(
-    account_id: int = Query(..., gt=0),
+    account_id: int = Path(..., gt=0),
     db: Session = Depends(get_db)
 ):
     """Get available funds considering deposit holds"""
@@ -408,7 +408,7 @@ async def get_available_funds(
 
 @router.get("/account/{account_id}/deposits")
 async def get_deposit_history(
-    account_id: int = Query(..., gt=0),
+    account_id: int = Path(..., gt=0),
     limit: int = Query(50, ge=1, le=100),
     db: Session = Depends(get_db)
 ):
@@ -442,7 +442,7 @@ async def get_deposit_history(
 
 @router.get("/{deposit_id}/exceptions")
 async def get_deposit_exceptions(
-    deposit_id: int = Query(..., gt=0),
+    deposit_id: int = Path(..., gt=0),
     db: Session = Depends(get_db)
 ):
     """Get any exceptions or issues with a deposit"""

@@ -1114,44 +1114,88 @@ async def force_user_logout(
 async def advanced_user_search(
     db_session: SessionDep,
     current_admin: PydanticUser = Depends(require_permission("users:view")),
+    search: Optional[str] = None,
     email: Optional[str] = None,
+    phone: Optional[str] = None,
+    account_number: Optional[str] = None,
     kyc_status: Optional[str] = None,
-    is_active: Optional[bool] = None,
+    account_status: Optional[str] = None,
+    mfa_enabled: Optional[bool] = None,
+    email_verified: Optional[bool] = None,
     region: Optional[str] = None,
     balance_min: Optional[float] = None,
     balance_max: Optional[float] = None,
     created_after: Optional[str] = None,
     created_before: Optional[str] = None,
+    account_type: Optional[str] = None,
     limit: int = Query(50, le=500)
 ):
     """
     Advanced search with multiple filters.
-    Supports filtering by:
-    - Email (partial match)
-    - KYC status
-    - Active status
-    - Region
-    - Balance range
-    - Creation date range
+    Supports filtering by email, phone, account number, status, kyc, region, type, balance, and dates.
     """
     try:
-        query = select(DBUser)
+        from sqlalchemy import or_, and_
+        from models import UserSettings, Account
         
+        from sqlalchemy.orm import selectinload
+        query = select(DBUser).options(selectinload(DBUser.accounts))
+        
+        # User settings join if filtering by phone
+        if phone:
+            query = query.join(UserSettings, DBUser.id == UserSettings.user_id).where(UserSettings.phone_number.ilike(f"%{phone}%"))
+            
+        # Search query matching multiple fields
+        if search:
+            query = query.where(or_(
+                DBUser.email.ilike(f"%{search}%"),
+                DBUser.full_name.ilike(f"%{search}%"),
+                DBUser.account_number.ilike(f"%{search}%")
+            ))
+            
         if email:
             query = query.where(DBUser.email.ilike(f"%{email}%"))
         if kyc_status:
             query = query.where(DBUser.kyc_status == kyc_status)
-        if is_active is not None:
-            query = query.where(DBUser.is_active == is_active)
+        if account_number:
+            query = query.where(DBUser.account_number.ilike(f"%{account_number}%"))
+        if account_type:
+            query = query.where(DBUser.account_type == account_type)
+        if mfa_enabled is not None:
+            query = query.where(DBUser.mfa_enabled == mfa_enabled)
+        if email_verified is not None:
+            query = query.where(DBUser.is_verified == email_verified)
+            
+        if account_status:
+            if account_status == "active":
+                query = query.where(and_(DBUser.is_active == True, DBUser.is_suspended == False, DBUser.is_frozen == False))
+            elif account_status == "suspended":
+                query = query.where(DBUser.is_suspended == True)
+            elif account_status == "frozen":
+                query = query.where(DBUser.is_frozen == True)
+            elif account_status == "inactive":
+                query = query.where(DBUser.is_active == False)
+                
         if region:
             query = query.where(DBUser.region == region)
-        if balance_min is not None:
-            from models import Ledger
-            # Join with ledger to filter by balance
-        if balance_max is not None:
-            from models import Ledger
-            # Join with ledger to filter by balance
-        
+            
+        # Balance filters (filter by total balance across accounts)
+        if balance_min is not None or balance_max is not None:
+            from sqlalchemy import func
+            subq = select(Account.owner_id, func.sum(Account.balance).label("total_balance")).group_by(Account.owner_id).subquery()
+            query = query.join(subq, DBUser.id == subq.c.owner_id)
+            if balance_min is not None:
+                query = query.where(subq.c.total_balance >= balance_min)
+            if balance_max is not None:
+                query = query.where(subq.c.total_balance <= balance_max)
+                
+        if created_after:
+            from datetime import datetime
+            query = query.where(DBUser.created_at >= datetime.fromisoformat(created_after))
+        if created_before:
+            from datetime import datetime
+            query = query.where(DBUser.created_at <= datetime.fromisoformat(created_before))
+            
         result = await db_session.execute(query.limit(limit))
         users = result.scalars().all()
         
@@ -1168,17 +1212,17 @@ async def advanced_user_search(
                     "is_suspended": u.is_suspended,
                     "is_frozen": u.is_frozen,
                     "region": u.region,
-                    "balance": u.balance,
+                    "balance": float(u.balance),
                     "created_at": u.created_at.isoformat() if u.created_at else None,
                     "account_number": u.account_number
                 }
                 for u in users
             ]
         }
-        
     except Exception as e:
         logger.error(f"Error in advanced search: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 # ==================== SCHEDULED ADJUSTMENTS ====================

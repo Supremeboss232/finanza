@@ -5,12 +5,13 @@ Endpoints for sanctions screening, transaction flagging, country risk assessment
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Path
 from sqlalchemy.orm import Session
-from typing import List, Optional
+from sqlalchemy import select
+from typing import List, Optional, Annotated
 from datetime import datetime, timedelta
 import logging
 from pydantic import BaseModel, Field
 
-from deps import get_db, get_current_user
+from deps import get_db, get_current_user, SessionDep, CurrentUserDep
 from models import User
 from models_priority_3 import (
     FlaggedTransaction, SanctionsScreening, CountryRiskAssessment
@@ -247,8 +248,8 @@ async def screen_sanctions(
 )
 async def get_sanctions_screening(
     screening_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: SessionDep,
+    current_user: CurrentUserDep,
 ) -> SanctionsScreeningResponse:
     """
     Get details of a sanctions screening result.
@@ -259,9 +260,11 @@ async def get_sanctions_screening(
     - 404 Not Found if screening doesn't exist
     """
     try:
-        screening = db.query(SanctionsScreening).filter(
+        stmt = select(SanctionsScreening).where(
             SanctionsScreening.id == screening_id
-        ).first()
+        )
+        result = await db.execute(stmt)
+        screening = result.scalars().first()
         
         if not screening:
             raise HTTPException(
@@ -344,12 +347,12 @@ async def flag_transaction(
     description="Get list of flagged transactions (admin only)"
 )
 async def list_flagged_transactions(
+    db: SessionDep,
+    current_user: CurrentUserDep,
     status_filter: Optional[str] = Query(None, description="Filter by status"),
     risk_level_filter: Optional[str] = Query(None, description="Filter by risk level"),
     limit: int = Query(50, ge=1, le=1000),
     offset: int = Query(0, ge=0),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
 ) -> List[FlagTransactionResponse]:
     """
     Get list of flagged transactions.
@@ -376,17 +379,20 @@ async def list_flagged_transactions(
                 detail="Only administrators can access this endpoint"
             )
         
-        query = db.query(FlaggedTransaction)
+        stmt = select(FlaggedTransaction)
         
         if status_filter:
-            query = query.filter(FlaggedTransaction.status == status_filter)
+            stmt = stmt.where(FlaggedTransaction.status == status_filter)
         
         if risk_level_filter:
-            query = query.filter(FlaggedTransaction.risk_level == risk_level_filter)
+            stmt = stmt.where(FlaggedTransaction.risk_level == risk_level_filter)
         
-        flags = query.order_by(
+        stmt = stmt.order_by(
             FlaggedTransaction.created_at.desc()
-        ).offset(offset).limit(limit).all()
+        ).offset(offset).limit(limit)
+        
+        result = await db.execute(stmt)
+        flags = result.scalars().all()
         
         return [FlagTransactionResponse.from_orm(f) for f in flags]
     
@@ -408,8 +414,8 @@ async def list_flagged_transactions(
 )
 async def get_flagged_transaction(
     flag_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: SessionDep,
+    current_user: CurrentUserDep,
 ) -> FlagTransactionResponse:
     """
     Get details of a flagged transaction.
@@ -430,9 +436,11 @@ async def get_flagged_transaction(
                 detail="Only administrators can access this endpoint"
             )
         
-        flag = db.query(FlaggedTransaction).filter(
+        stmt = select(FlaggedTransaction).where(
             FlaggedTransaction.id == flag_id
-        ).first()
+        )
+        result = await db.execute(stmt)
+        flag = result.scalars().first()
         
         if not flag:
             raise HTTPException(
@@ -461,8 +469,8 @@ async def get_flagged_transaction(
 async def update_flagged_transaction(
     flag_id: int,
     request: UpdateFlagRequest,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    db: SessionDep,
+    current_user: CurrentUserDep,
 ) -> FlagTransactionResponse:
     """
     Update a flagged transaction's investigation status.
@@ -488,9 +496,11 @@ async def update_flagged_transaction(
                 detail="Only administrators can access this endpoint"
             )
         
-        flag = db.query(FlaggedTransaction).filter(
+        stmt = select(FlaggedTransaction).where(
             FlaggedTransaction.id == flag_id
-        ).first()
+        )
+        result = await db.execute(stmt)
+        flag = result.scalars().first()
         
         if not flag:
             raise HTTPException(
@@ -508,7 +518,8 @@ async def update_flagged_transaction(
         
         flag.updated_at = datetime.utcnow()
         
-        db.commit()
+        db.add(flag)
+        await db.commit()
         
         log.info(f"Flagged transaction {flag_id} updated by admin {current_user.id}")
         
@@ -517,7 +528,7 @@ async def update_flagged_transaction(
     except HTTPException:
         raise
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         log.error(f"Error updating flagged transaction {flag_id}: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -536,9 +547,9 @@ async def update_flagged_transaction(
     description="Get risk assessment for a specific country"
 )
 async def get_country_risk(
+    db: SessionDep,
+    current_user: CurrentUserDep,
     country_code: str = Path(..., min_length=2, max_length=2, description="ISO 3166-1 alpha-2 country code"),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
 ) -> CountryRiskResponse:
     """
     Get risk assessment for a country.
@@ -555,9 +566,11 @@ async def get_country_risk(
     - 404 Not Found if country not found
     """
     try:
-        risk_assessment = db.query(CountryRiskAssessment).filter(
+        stmt = select(CountryRiskAssessment).where(
             CountryRiskAssessment.country_code == country_code.upper()
-        ).first()
+        )
+        result = await db.execute(stmt)
+        risk_assessment = result.scalars().first()
         
         if not risk_assessment:
             raise HTTPException(
@@ -584,11 +597,11 @@ async def get_country_risk(
     description="Get list of country risk assessments with optional filtering"
 )
 async def list_country_risks(
+    db: SessionDep,
+    current_user: CurrentUserDep,
     risk_level_filter: Optional[str] = Query(None, description="Filter by risk level"),
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
 ) -> List[CountryRiskResponse]:
     """
     Get list of country risk assessments.
@@ -603,14 +616,17 @@ async def list_country_risks(
     - 401 Unauthorized if not authenticated
     """
     try:
-        query = db.query(CountryRiskAssessment)
+        stmt = select(CountryRiskAssessment)
         
         if risk_level_filter:
-            query = query.filter(CountryRiskAssessment.risk_level == risk_level_filter)
+            stmt = stmt.where(CountryRiskAssessment.risk_level == risk_level_filter)
         
-        countries = query.order_by(
+        stmt = stmt.order_by(
             CountryRiskAssessment.country_name
-        ).offset(offset).limit(limit).all()
+        ).offset(offset).limit(limit)
+        
+        result = await db.execute(stmt)
+        countries = result.scalars().all()
         
         return [CountryRiskResponse.from_orm(c) for c in countries]
     

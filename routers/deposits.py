@@ -110,9 +110,8 @@ async def create_deposit_for_current_user(
                 reference_number=reference_number
             )
             
-            # Sync account.balance from ledger (source of truth)
-            new_balance = await BalanceServiceLedger.get_user_balance(db_session, current_user.id)
-            account.balance = new_balance
+            # Account balance is calculated from ledger entries (read-only)
+            # No need to manually update account.balance column
             db_session.add(account)
         
         # Create Deposit record for UI reference (historical record)

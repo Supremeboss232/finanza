@@ -762,10 +762,16 @@ async def startup_event():
             else:
                 print("[WARN] FIXER_IO_API_KEY not configured - forex rates will not sync")
             
-            # Start cryptocurrency WebSocket feed (continuous background task)
-            print("[*] Starting Crypto WebSocket feed (continuous)...")
-            asyncio.create_task(price_feed.connect_crypto_feed())
-            print("[OK] Crypto feed started")
+            # Register cryptocurrency WebSocket feed (continuous background task)
+            print("[*] Registering Crypto WebSocket feed (continuous)...")
+            scheduler.add_job(
+                price_feed.connect_crypto_feed,
+                'interval',
+                seconds=0,  # Run once, continues internally with reconnect
+                id='crypto_websocket_task',
+                replace_existing=True
+            )
+            print("[OK] Crypto feed registered")
             
             # Start scheduler
             scheduler.start()
@@ -2549,4 +2555,7 @@ async def websocket_fund_updates(websocket: WebSocket):
 app.mount("/", StaticFiles(directory="static", html=True), name="public")
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    import os
+    host = os.environ.get("HOST", "0.0.0.0")
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host=host, port=port)

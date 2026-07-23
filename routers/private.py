@@ -422,6 +422,43 @@ async def webhooks_config_page(request: Request, current_user: User = Depends(ge
     """Renders the user's webhook configuration page."""
     return user_templates.TemplateResponse("webhooks_config.html", {"request": request, "user": current_user})
 
+@private_router.get("/transfers")
+async def transfers_page(request: Request, current_user: User = Depends(get_current_user)):
+    """Renders the user's transfers page."""
+    return user_templates.TemplateResponse("transfers.html", {"request": request, "user": current_user})
+
+@private_router.get("/contact")
+async def contact_page(request: Request, current_user: User = Depends(get_current_user)):
+    """Renders the user's contact/support page."""
+    return user_templates.TemplateResponse("contact.html", {"request": request, "user": current_user})
+
+@private_router.get("/kyc")
+async def kyc_page(request: Request, current_user: User = Depends(get_current_user)):
+    """Renders the user's KYC page."""
+    kyc_file = BASE_PATH / "private/user/kyc.html"
+    template_name = "kyc.html" if kyc_file.exists() else "kyc_form.html"
+    return user_templates.TemplateResponse(template_name, {"request": request, "user": current_user})
+
+@private_router.get("/business_analysis")
+async def business_analysis_page(request: Request, current_user: User = Depends(get_current_user)):
+    """Renders the user's business analysis page."""
+    return user_templates.TemplateResponse("business_analysis.html", {"request": request, "user": current_user})
+
+@private_router.get("/financial_planning")
+async def financial_planning_page(request: Request, current_user: User = Depends(get_current_user)):
+    """Renders the user's financial planning page."""
+    return user_templates.TemplateResponse("financial_planning.html", {"request": request, "user": current_user})
+
+@private_router.get("/loans_enhanced")
+async def loans_enhanced_page(request: Request, current_user: User = Depends(get_current_user)):
+    """Renders the user's enhanced loans page."""
+    return user_templates.TemplateResponse("loans_enhanced.html", {"request": request, "user": current_user})
+
+@private_router.get("/project")
+async def project_page(request: Request, current_user: User = Depends(get_current_user)):
+    """Renders the user's project page."""
+    return user_templates.TemplateResponse("project.html", {"request": request, "user": current_user})
+
 # --- Priority 3 Admin Pages ---
 
 @private_router.get("/admin/webhooks", tags=["Admin UI"])
@@ -502,3 +539,28 @@ async def logout(request: Request):
     response = RedirectResponse(url="/signin", status_code=status.HTTP_303_SEE_OTHER)
     response.delete_cookie(key="access_token", path="/")
     return response
+
+
+# --- Fallback Generic Handler for User UI Pages ---
+
+@private_router.get("/{page:path}", tags=["Private UI Fallback"])
+async def user_generic_page(page: str, request: Request, current_user: User = Depends(get_current_user)):
+    """
+    Fallback route handler to serve any user HTML template dynamically by name.
+    
+    Maps requests like `/user/transfers` -> `private/user/transfers.html` or
+    `/user/contact.html` -> `private/user/contact.html`.
+    """
+    clean_page = page.strip("/")
+    
+    # Do not match admin subpaths in user fallback
+    if clean_page.startswith("admin"):
+        raise HTTPException(status_code=404, detail=f"Admin page '{clean_page}' not found")
+        
+    filename = clean_page if clean_page.endswith('.html') else f"{clean_page}.html"
+    file_path = BASE_PATH / "private/user" / filename
+    
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail=f"User page '{clean_page}' not found")
+        
+    return user_templates.TemplateResponse(filename, {"request": request, "user": current_user})

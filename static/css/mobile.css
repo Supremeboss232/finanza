@@ -1,0 +1,629 @@
+/**
+ * Finanza Bank — Mobile Responsive Stylesheet
+ * Covers all portrait phone and tablet breakpoints
+ * Mobile-first approach using standard Bootstrap breakpoints:
+ *   xs:  < 576px  (portrait phone)
+ *   sm:  576–768px (landscape phone)
+ *   md:  768–992px (tablet portrait)
+ *   lg:  ≥ 992px  (desktop, handled by base styles)
+ */
+
+/* =====================================================
+   1. GLOBAL MOBILE BASE
+   ===================================================== */
+
+/* Prevent horizontal overflow globally */
+html, body {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+/* Smooth scroll everywhere */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Touch-friendly tappable elements */
+button,
+.btn,
+a.nav-link,
+a.dropdown-item {
+    -webkit-tap-highlight-color: rgba(53, 94, 252, 0.1);
+}
+
+/* =====================================================
+   2. NAVBAR — MOBILE FIXES
+   ===================================================== */
+
+/* Ensure navbar brand is always visible */
+@media (max-width: 991.98px) {
+    .navbar-brand h5 {
+        font-size: 1.1rem;
+    }
+
+    /* Hamburger button — make it easier to tap */
+    .navbar-toggler {
+        padding: 0.5rem 0.75rem;
+        border-radius: 6px;
+        border: 1px solid rgba(53, 94, 252, 0.3);
+    }
+
+    /* Collapsed nav — full width white menu */
+    .navbar-collapse {
+        background: #ffffff;
+        border-top: 2px solid var(--primary);
+        padding: 0.5rem 0;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+        max-height: 75vh;
+        overflow-y: auto;
+    }
+
+    .navbar .navbar-nav .nav-link {
+        padding: 12px 20px;
+        font-size: 0.95rem;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+
+    .navbar .navbar-nav .nav-link:last-child {
+        border-bottom: none;
+    }
+
+    .navbar .dropdown-menu {
+        border: none;
+        background: #f8f9ff;
+        border-left: 3px solid var(--primary);
+        margin-left: 1rem;
+        padding: 0;
+    }
+
+    .navbar .dropdown-item {
+        padding: 10px 16px;
+        font-size: 0.9rem;
+        border-bottom: 1px solid rgba(0,0,0,0.04);
+    }
+
+    /* Fixed top navbar — give body enough space */
+    body {
+        padding-top: 60px;
+    }
+}
+
+/* =====================================================
+   3. PAGE HEADER — COMPRESS ON MOBILE
+   ===================================================== */
+
+@media (max-width: 767.98px) {
+    .page-header {
+        padding-top: 4.5rem !important;
+        padding-bottom: 2rem !important;
+    }
+
+    .page-header h1,
+    .page-header .display-4 {
+        font-size: 1.6rem !important;
+        margin-bottom: 0.5rem;
+    }
+
+    .page-header .breadcrumb {
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .page-header {
+        padding-top: 4rem !important;
+        padding-bottom: 1.5rem !important;
+    }
+
+    .page-header h1,
+    .page-header .display-4 {
+        font-size: 1.4rem !important;
+    }
+}
+
+/* =====================================================
+   4. STAT CARDS — 2-COLUMN GRID ON PHONE
+   ===================================================== */
+
+@media (max-width: 575.98px) {
+    /* Override to 2 columns on xs phones */
+    .stat-card-col {
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+
+    /* Smaller font on stat cards */
+    .stat-card-col .card-body h4,
+    .stat-card-col .card h4 {
+        font-size: 1rem;
+    }
+
+    .stat-card-col .card-body h6 {
+        font-size: 0.72rem;
+    }
+
+    .stat-card-col .card-body .fa-2x {
+        font-size: 1.3rem;
+    }
+}
+
+/* =====================================================
+   5. DATA TABLES — HORIZONTAL SCROLL
+   ===================================================== */
+
+/* All tables become scrollable on mobile */
+@media (max-width: 991.98px) {
+    .table-responsive,
+    .card-body .table {
+        font-size: 0.82rem;
+    }
+
+    /* Force auto table-responsive if not already wrapped */
+    .card-body > table {
+        min-width: 600px;
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Hide less important columns on small screens */
+    .table .d-none-mobile {
+        display: none !important;
+    }
+
+    /* Table header */
+    .table thead th {
+        white-space: nowrap;
+        font-size: 0.78rem;
+        padding: 0.5rem 0.6rem;
+    }
+
+    .table tbody td {
+        padding: 0.5rem 0.6rem;
+        vertical-align: middle;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .table-responsive {
+        border: none;
+    }
+
+    .card-body > table {
+        min-width: 500px;
+    }
+}
+
+/* =====================================================
+   6. FORMS — FULL WIDTH INPUTS ON MOBILE
+   ===================================================== */
+
+@media (max-width: 767.98px) {
+    .form-control,
+    .form-select,
+    .input-group {
+        font-size: 16px; /* prevents iOS zoom on focus */
+    }
+
+    /* Stack form rows */
+    .row .col-md-6,
+    .row .col-md-4,
+    .row .col-md-3 {
+        margin-bottom: 0.5rem;
+    }
+
+    /* Make all buttons full-width in form contexts */
+    .form-submit-row .btn {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* =====================================================
+   7. CARDS — RESPONSIVE LAYOUT
+   ===================================================== */
+
+@media (max-width: 767.98px) {
+    /* Card bodies get less padding */
+    .card-body {
+        padding: 0.85rem;
+    }
+
+    /* Card headers smaller */
+    .card-header h5 {
+        font-size: 0.95rem;
+    }
+
+    /* Card action buttons — stack on mobile */
+    .card-header .d-flex {
+        flex-wrap: wrap;
+        gap: 0.4rem;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .card-body {
+        padding: 0.75rem;
+    }
+}
+
+/* =====================================================
+   8. MODALS — FIT ON PHONE SCREEN
+   ===================================================== */
+
+@media (max-width: 575.98px) {
+    .modal-dialog {
+        margin: 0.5rem;
+        max-width: calc(100% - 1rem);
+    }
+
+    .modal-lg,
+    .modal-xl {
+        max-width: calc(100% - 1rem) !important;
+    }
+
+    .modal-header {
+        padding: 0.75rem 1rem;
+    }
+
+    .modal-title {
+        font-size: 1rem;
+    }
+
+    .modal-body {
+        padding: 0.75rem 1rem;
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+
+    .modal-footer {
+        padding: 0.5rem 1rem;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .modal-footer .btn {
+        flex: 1 1 100%;
+    }
+}
+
+/* =====================================================
+   9. QUICK ACTION BUTTONS — TOUCH FRIENDLY
+   ===================================================== */
+
+@media (max-width: 767.98px) {
+    /* Minimum tap target size for all buttons */
+    .btn {
+        min-height: 38px;
+        padding: 0.45rem 0.9rem;
+        font-size: 0.88rem;
+    }
+
+    .btn-sm {
+        min-height: 32px;
+        font-size: 0.8rem;
+    }
+
+    /* Quick action grid — 3 across on phone */
+    .quick-action-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+    }
+
+    .quick-action-grid .btn,
+    .quick-action-grid a {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 0.75rem 0.25rem;
+        font-size: 0.72rem;
+        border-radius: 10px;
+        min-height: 70px;
+        line-height: 1.2;
+    }
+
+    .quick-action-grid i {
+        font-size: 1.3rem;
+        margin-bottom: 0.3rem;
+        display: block;
+    }
+}
+
+/* =====================================================
+   10. WELCOME / HERO SECTION ON DASHBOARD
+   ===================================================== */
+
+@media (max-width: 575.98px) {
+    /* Welcome card — stacks vertically */
+    #welcome-section .row {
+        flex-direction: column;
+    }
+
+    #welcome-section .col-md-8,
+    #welcome-section .col-md-4 {
+        width: 100%;
+        max-width: 100%;
+        flex: 0 0 100%;
+    }
+
+    #welcome-section h3 {
+        font-size: 1.1rem;
+    }
+
+    #welcome-section p {
+        font-size: 0.85rem;
+        margin-bottom: 0.25rem;
+    }
+
+    #welcome-section {
+        height: auto !important;
+    }
+}
+
+/* =====================================================
+   11. ACCOUNT CARDS — RESPONSIVE
+   ===================================================== */
+
+@media (max-width: 767.98px) {
+    #accounts-container .row.g-3 > div {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+}
+
+/* =====================================================
+   12. GENERAL CONTAINER PADDING
+   ===================================================== */
+
+@media (max-width: 575.98px) {
+    .container-xxl,
+    .container-xl,
+    .container-lg,
+    .container {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+
+    .py-5 {
+        padding-top: 2rem !important;
+        padding-bottom: 2rem !important;
+    }
+
+    .mb-4 {
+        margin-bottom: 0.75rem !important;
+    }
+
+    .g-5 {
+        --bs-gutter-x: 1rem;
+        --bs-gutter-y: 1rem;
+    }
+}
+
+/* =====================================================
+   13. BOTTOM MOBILE NAVIGATION BAR
+   ===================================================== */
+
+/* The bottom nav is only shown on mobile (≤ 768px) */
+#mobile-bottom-nav {
+    display: none;
+}
+
+@media (max-width: 767.98px) {
+    #mobile-bottom-nav {
+        display: flex;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 1040;
+        background: #ffffff;
+        border-top: 1px solid #e0e0e0;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+        height: 62px;
+        align-items: stretch;
+    }
+
+    /* Each tab item */
+    .mobile-nav-item {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        color: #888;
+        font-size: 0.62rem;
+        font-weight: 500;
+        letter-spacing: 0.3px;
+        transition: color 0.2s ease, background 0.2s ease;
+        padding: 6px 2px 8px;
+        position: relative;
+        -webkit-tap-highlight-color: transparent;
+        cursor: pointer;
+    }
+
+    .mobile-nav-item i {
+        font-size: 1.25rem;
+        margin-bottom: 2px;
+        display: block;
+    }
+
+    .mobile-nav-item:hover,
+    .mobile-nav-item.active {
+        color: var(--primary);
+        background: rgba(53, 94, 252, 0.04);
+        text-decoration: none;
+    }
+
+    /* Active indicator dot above label */
+    .mobile-nav-item.active::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 32px;
+        height: 3px;
+        background: var(--primary);
+        border-radius: 0 0 4px 4px;
+    }
+
+    /* Notification badge on mobile nav */
+    .mobile-nav-item .mobile-badge {
+        position: absolute;
+        top: 4px;
+        right: calc(50% - 18px);
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #dc3545;
+        color: white;
+        font-size: 0.55rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+    }
+
+    /* Space page content above the bottom nav bar */
+    body {
+        padding-bottom: 70px;
+    }
+
+    /* More dropdown that expands from bottom nav */
+    #mobile-more-menu {
+        position: fixed;
+        bottom: 62px;
+        left: 0;
+        right: 0;
+        background: #ffffff;
+        border-top: 1px solid #e0e0e0;
+        box-shadow: 0 -8px 25px rgba(0,0,0,0.12);
+        z-index: 1039;
+        padding: 1rem;
+        display: none;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.75rem;
+        max-height: 55vh;
+        overflow-y: auto;
+    }
+
+    #mobile-more-menu.open {
+        display: grid;
+    }
+
+    .mobile-more-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        color: #555;
+        font-size: 0.68rem;
+        font-weight: 500;
+        text-align: center;
+        padding: 0.75rem 0.25rem;
+        border-radius: 10px;
+        background: #f8f9ff;
+        border: 1px solid rgba(53, 94, 252, 0.08);
+        transition: all 0.2s ease;
+        min-height: 72px;
+    }
+
+    .mobile-more-item:hover {
+        background: rgba(53, 94, 252, 0.08);
+        color: var(--primary);
+        text-decoration: none;
+    }
+
+    .mobile-more-item i {
+        font-size: 1.3rem;
+        margin-bottom: 0.3rem;
+        color: var(--primary);
+    }
+
+    /* Overlay backdrop when more menu is open */
+    #mobile-more-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 62px;
+        background: rgba(0,0,0,0.3);
+        z-index: 1038;
+    }
+
+    #mobile-more-overlay.open {
+        display: block;
+    }
+}
+
+/* =====================================================
+   14. TRANSACTION / HISTORY LIST — MOBILE CARDS
+   ===================================================== */
+
+@media (max-width: 575.98px) {
+    /* Convert table rows to card-like items on very small screens */
+    .mobile-list-card {
+        border: 1px solid #f0f0f0;
+        border-radius: 10px;
+        padding: 0.75rem;
+        margin-bottom: 0.5rem;
+        background: #fff;
+    }
+
+    .mobile-list-card .amount-positive { color: #28a745; font-weight: 700; }
+    .mobile-list-card .amount-negative { color: #dc3545; font-weight: 700; }
+}
+
+/* =====================================================
+   15. BADGE / PILL SIZING ON SMALL SCREENS
+   ===================================================== */
+
+@media (max-width: 575.98px) {
+    .badge {
+        font-size: 0.65rem;
+        padding: 0.28em 0.5em;
+    }
+}
+
+/* =====================================================
+   16. FOOTER PADDING ON MOBILE
+   ===================================================== */
+
+@media (max-width: 767.98px) {
+    .footer {
+        text-align: center;
+    }
+
+    /* Add extra bottom padding to account for the mobile nav bar */
+    .footer {
+        padding-bottom: 70px !important;
+    }
+}
+
+/* =====================================================
+   17. MISC UTILITY HELPERS
+   ===================================================== */
+
+/* Touch-action on scrollable containers */
+.table-responsive {
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent text overflow on badges inside small containers */
+.badge {
+    word-break: keep-all;
+    white-space: nowrap;
+}
+
+/* Better outline on focus for accessibility */
+:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}

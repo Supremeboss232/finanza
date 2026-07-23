@@ -210,6 +210,20 @@ h6,
     background-size: cover;
 }
 
+@media (max-width: 767.98px) {
+    .page-header {
+        padding-top: 5rem;
+        padding-bottom: 2.5rem;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .page-header {
+        padding-top: 4rem;
+        padding-bottom: 1.5rem;
+    }
+}
+
 .page-header .breadcrumb-item,
 .page-header .breadcrumb-item a {
     font-weight: 500;

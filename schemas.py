@@ -402,6 +402,9 @@ class AdminDashboardMetrics(BaseModel):
     total_volume: float
     total_deposits: float = 0.0
     pending_kyc: int = 0
+    system_reserve_balance: float = 0.0
+    total_user_liabilities: float = 0.0
+    liquidity_ratio: float = 0.0
     recent_users: Optional[List['User']] = None
     recent_transactions: Optional[List['Transaction']] = None
 

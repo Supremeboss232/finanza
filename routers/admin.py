@@ -75,7 +75,7 @@ async def verify_session(
             detail="Failed to verify session"
         )
 
-@admin_router.get("/metrics")
+@admin_router.get("/metrics", response_model=AdminDashboardMetrics)
 async def get_admin_metrics(
     db_session: SessionDep
 ):
@@ -84,6 +84,7 @@ async def get_admin_metrics(
     - System reserve account balance
     - Total user liabilities
     - Liquidity ratio
+    - Total users, active users, KYC verified, account holds, total deposits, and total volume
     """
     try:
         # Get system reserve account balance
@@ -96,7 +97,6 @@ async def get_admin_metrics(
         system_reserve_balance = float(reserve_account.balance) if reserve_account else 0.0
         
         # Get total user liabilities (sum of all positive user account balances = what users owe)
-        # This is simplified - in reality, you might want to look at negative balances or specific account types
         liabilities_query = select(func.sum(DBAccount.balance)).where(
             DBAccount.account_number != "SYS-RESERVE-0001"
         )
@@ -108,23 +108,74 @@ async def get_admin_metrics(
             liquidity_ratio = (system_reserve_balance / total_user_liabilities) * 100
         else:
             liquidity_ratio = 100.0 if system_reserve_balance > 0 else 0.0
+
+        # 1. Total users (all users in system)
+        total_users_result = await db_session.execute(
+            select(func.count(DBUser.id))
+        )
+        total_users = total_users_result.scalar() or 0
         
-        return {
-            "success": True,
-            "system_reserve_balance": system_reserve_balance,
-            "total_user_liabilities": total_user_liabilities,
-            "liquidity_ratio": round(liquidity_ratio, 2),
-            "timestamp": datetime.utcnow().isoformat()
-        }
+        # 2. Active users (users with verified KYC and active status)
+        active_users_result = await db_session.execute(
+            select(func.count(DBUser.id)).where(
+                (DBUser.kyc_status == 'approved') & (DBUser.is_active == True)
+            )
+        )
+        active_users = active_users_result.scalar() or 0
+        
+        # 3. KYC verified count
+        kyc_verified_result = await db_session.execute(
+            select(func.count(DBUser.id)).where(DBUser.kyc_status == 'approved')
+        )
+        kyc_verified = kyc_verified_result.scalar() or 0
+        
+        # 4. Account holds count
+        account_holds_result = await db_session.execute(
+            select(func.count(AccountHold.id)).where(AccountHold.released_at == None)
+        )
+        account_holds = account_holds_result.scalar() or 0
+        
+        # 5. Total deposits (credits from system account)
+        total_deposits = await BalanceServiceLedger.get_admin_total_deposits(db_session)
+        
+        # 6. Total volume (sum of all credits)
+        total_volume = await BalanceServiceLedger.get_admin_total_volume(db_session)
+        
+        # 7. Pending KYC count
+        pending_kyc_result = await db_session.execute(
+            select(func.count(KYCSubmission.id)).where(
+                KYCSubmission.status == "pending"
+            )
+        )
+        pending_kyc = pending_kyc_result.scalar() or 0
+        
+        # 8. Total transactions (posted ledger entries)
+        total_transactions_result = await db_session.execute(
+            select(func.count(DBLedger.id)).where(
+                DBLedger.status == "posted"
+            )
+        )
+        total_transactions = total_transactions_result.scalar() or 0
+        
+        return AdminDashboardMetrics(
+            total_users=total_users,
+            active_users=active_users,
+            kyc_verified=kyc_verified,
+            account_holds=account_holds,
+            total_transactions=total_transactions,
+            total_volume=total_volume,
+            total_deposits=total_deposits,
+            pending_kyc=pending_kyc,
+            system_reserve_balance=system_reserve_balance,
+            total_user_liabilities=total_user_liabilities,
+            liquidity_ratio=round(liquidity_ratio, 2)
+        )
     except Exception as e:
         log.error(f"Error fetching metrics: {str(e)}")
-        return {
-            "success": False,
-            "error": str(e),
-            "system_reserve_balance": 0.0,
-            "total_user_liabilities": 0.0,
-            "liquidity_ratio": 0.0
-        }
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve metrics"
+        )
 
 @admin_router.get("/users")
 async def read_all_users_admin(
@@ -258,75 +309,7 @@ async def delete_user_admin(user_id: int, db_session: SessionDep):
         pass
     return {"status": "deleted", "id": user_id}
 
-@admin_router.get("/metrics", response_model=AdminDashboardMetrics)
-async def get_dashboard_metrics(db_session: SessionDep):
-    """
-    Provides summary metrics for the admin dashboard.
-    
-    Returns all metrics needed by admin frontend dashboard.
-    """
-    try:
-        # 1. Total users (all users in system)
-        total_users_result = await db_session.execute(
-            select(func.count(DBUser.id))
-        )
-        total_users = total_users_result.scalar() or 0
-        
-        # 2. Active users (users with verified KYC and active status)
-        active_users_result = await db_session.execute(
-            select(func.count(DBUser.id)).where(
-                (DBUser.kyc_status == 'approved') & (DBUser.is_active == True)
-            )
-        )
-        active_users = active_users_result.scalar() or 0
-        
-        # 3. KYC verified count
-        kyc_verified_result = await db_session.execute(
-            select(func.count(DBUser.id)).where(DBUser.kyc_status == 'approved')
-        )
-        kyc_verified = kyc_verified_result.scalar() or 0
-        
-        # 4. Account holds count
-        account_holds_result = await db_session.execute(
-            select(func.count(AccountHold.id)).where(AccountHold.released_at == None)
-        )
-        account_holds = account_holds_result.scalar() or 0
-        
-        # 5. Total deposits (credits from system account)
-        total_deposits = await BalanceServiceLedger.get_admin_total_deposits(db_session)
-        
-        # 6. Total volume (sum of all credits)
-        total_volume = await BalanceServiceLedger.get_admin_total_volume(db_session)
-        
-        # 7. Pending KYC count
-        pending_kyc_result = await db_session.execute(
-            select(func.count(KYCSubmission.id)).where(
-                KYCSubmission.status == "pending"
-            )
-        )
-        pending_kyc = pending_kyc_result.scalar() or 0
-        
-        # 8. Total transactions (posted ledger entries)
-        total_transactions_result = await db_session.execute(
-            select(func.count(DBLedger.id)).where(
-                DBLedger.status == "posted"
-            )
-        )
-        total_transactions = total_transactions_result.scalar() or 0
-        
-        return AdminDashboardMetrics(
-            total_users=total_users,
-            active_users=active_users,
-            kyc_verified=kyc_verified,
-            account_holds=account_holds,
-            pending_kyc=pending_kyc,
-            total_transactions=total_transactions,
-            total_deposits=total_deposits,
-            total_volume=total_volume
-        )
-    except Exception as e:
-        log.error(f"Error calculating dashboard metrics: {e}")
-        raise
+
 
 
 @admin_router.get("/holds")

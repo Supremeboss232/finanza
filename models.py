@@ -21,7 +21,7 @@ class User(Base):
     is_verified = Column(Boolean, default=False)
     is_admin = Column(Boolean, default=False)
     admin_role = Column(String, default="STANDARD", nullable=False)  # STANDARD, ADMIN, TREASURY, SUPER_ADMIN
-    # ⚠️ RULE 1: KYC Status controls transaction completion
+    # [WARN] RULE 1: KYC Status controls transaction completion
     # STATES: not_started, pending, approved, rejected
     # Only 'approved' KYC allows completed transactions
     kyc_status = Column(String, default="not_started", nullable=False)
@@ -120,11 +120,11 @@ class Transaction(Base):
     transaction_type = Column(String, nullable=False)  # e.g., "deposit", "withdrawal", "transfer", "fund_transfer"
     direction = Column(String, nullable=True)  # "credit" or "debit" for clarity
     status = Column(String, default="pending", nullable=False)  # STATES: pending, blocked, completed, failed, cancelled
-    # ⚠️ CRITICAL RULE: Only 'completed' transactions affect balance
+    # [WARN] CRITICAL RULE: Only 'completed' transactions affect balance
     # 'blocked' and 'pending' are held funds (visible to admin, not to user balance)
     description = Column(String, nullable=True)
     reference_number = Column(String, nullable=True)
-    # ⚠️ RULE 2: Transaction must not complete if KYC not approved
+    # [WARN] RULE 2: Transaction must not complete if KYC not approved
     kyc_status_at_time = Column(String, nullable=True)  # snapshot of kyc_status when created
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -1493,4 +1493,4 @@ class CheckOCRData(Base):
     confidence_score = Column(Float, nullable=True)
 
 
-OCRResult = CheckOCRData
+OCRResult = CheckOCRData

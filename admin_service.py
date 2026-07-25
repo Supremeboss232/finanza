@@ -238,10 +238,10 @@ class AdminService:
     def _get_status_label(status: str) -> str:
         """Get user-friendly label for transaction status"""
         labels = {
-            'completed': '✓ Completed',
-            'pending': '⏳ Pending',
-            'blocked': '🚫 Blocked',
-            'failed': '❌ Failed',
+            'completed': '[OK] Completed',
+            'pending': '[..]  Pending',
+            'blocked': '[NO] Blocked',
+            'failed': '[FAIL] Failed',
             'cancelled': '◀ Cancelled'
         }
         return labels.get(status, status)
@@ -459,7 +459,7 @@ class AdminService:
         """
         Fund a user account from System Reserve Account (Admin operation).
         
-        ⚠️ ADMIN-ONLY OPERATION
+        [WARN] ADMIN-ONLY OPERATION
         
         Uses SystemFundService to:
         1. Create double-entry ledger (debit system, credit user)

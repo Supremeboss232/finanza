@@ -16,10 +16,10 @@ async def test_connection():
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
             result = await conn.execute(text("SELECT 1"))
-            print("✅ Database connection successful!")
+            print("[OK] Database connection successful!")
             return True
     except Exception as e:
-        print(f"❌ Database connection failed: {e}")
+        print(f"[FAIL] Database connection failed: {e}")
         return False
 
 
@@ -46,9 +46,9 @@ async def create_test_users():
                 )
                 db.add(admin_user)
                 await db.commit()
-                print(f"✅ Admin user created: {settings.ADMIN_EMAIL} / {settings.ADMIN_PASSWORD}")
+                print(f"[OK] Admin user created: {settings.ADMIN_EMAIL} / {settings.ADMIN_PASSWORD}")
             else:
-                print(f"✅ Admin user already exists: {settings.ADMIN_EMAIL}")
+                print(f"[OK] Admin user already exists: {settings.ADMIN_EMAIL}")
             
             # Create a test user for regular login
             test_result = await db.execute(
@@ -67,12 +67,12 @@ async def create_test_users():
                 )
                 db.add(test_user)
                 await db.commit()
-                print(f"✅ Test user created: testuser@example.com / testuser123")
+                print(f"[OK] Test user created: testuser@example.com / testuser123")
             else:
-                print(f"✅ Test user already exists: testuser@example.com")
+                print(f"[OK] Test user already exists: testuser@example.com")
                 
         except Exception as e:
-            print(f"❌ Error creating test users: {e}")
+            print(f"[FAIL] Error creating test users: {e}")
             import traceback
             traceback.print_exc()
 
@@ -92,7 +92,7 @@ async def main():
         await create_test_users()
         print()
         print("=" * 60)
-        print("✅ Setup Complete! You can now login with:")
+        print("[OK] Setup Complete! You can now login with:")
         print(f"   Email: {settings.ADMIN_EMAIL}")
         print(f"   Password: {settings.ADMIN_PASSWORD}")
         print()
@@ -101,7 +101,7 @@ async def main():
         print("   Password: testuser123")
         print("=" * 60)
     else:
-        print("❌ Database connection failed. Fix the connection before continuing.")
+        print("[FAIL] Database connection failed. Fix the connection before continuing.")
         print()
         print("DATABASE URL:", settings.DATABASE_URL)
         print()

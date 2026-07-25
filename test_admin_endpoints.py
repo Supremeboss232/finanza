@@ -25,12 +25,12 @@ def test_admin_endpoints():
     try:
         response = requests.get(f"{BASE_URL}/docs", timeout=2)
         if response.status_code == 200:
-            print("✓ Server is running\n")
+            print("[OK] Server is running\n")
         else:
-            print(f"✗ Server returned status {response.status_code}\n")
+            print(f"[FAIL] Server returned status {response.status_code}\n")
             return
     except requests.ConnectionError:
-        print("✗ Cannot connect to server. Make sure it's running on port 8000\n")
+        print("[FAIL] Cannot connect to server. Make sure it's running on port 8000\n")
         print("  Start with: python main.py\n")
         return
     
@@ -50,12 +50,12 @@ def test_admin_endpoints():
         token_data = login_response.json()
         access_token = token_data.get('access_token')
         if access_token:
-            print(f"✓ Login successful\n")
+            print(f"[OK] Login successful\n")
         else:
-            print(f"✗ No token in response: {token_data}\n")
+            print(f"[FAIL] No token in response: {token_data}\n")
             return
     else:
-        print(f"✗ Login failed with status {login_response.status_code}")
+        print(f"[FAIL] Login failed with status {login_response.status_code}")
         print(f"  Response: {login_response.text}\n")
         return
     
@@ -96,10 +96,10 @@ def test_admin_endpoints():
                 if isinstance(data, dict):
                     if 'data' in data:
                         count = len(data.get('data', []))
-                        print(f"  ✓ Success - {count} items returned")
+                        print(f"  [OK] Success - {count} items returned")
                     else:
                         keys = list(data.keys())[:5]
-                        print(f"  ✓ Success - Fields: {', '.join(keys)}")
+                        print(f"  [OK] Success - Fields: {', '.join(keys)}")
                         if 'total_users' in data:
                             print(f"    - total_users: {data.get('total_users')}")
                         if 'active_users' in data:
@@ -109,21 +109,21 @@ def test_admin_endpoints():
                         if 'account_holds' in data:
                             print(f"    - account_holds: {data.get('account_holds')}")
                 else:
-                    print(f"  ✓ Success - Data type: {type(data).__name__}")
+                    print(f"  [OK] Success - Data type: {type(data).__name__}")
                     
             elif response.status_code == 401:
-                print(f"  ✗ Unauthorized (401) - Check authentication token")
+                print(f"  [FAIL] Unauthorized (401) - Check authentication token")
             elif response.status_code == 403:
-                print(f"  ✗ Forbidden (403) - User is not admin")
+                print(f"  [FAIL] Forbidden (403) - User is not admin")
             else:
-                print(f"  ✗ Error: {response.text[:100]}")
+                print(f"  [FAIL] Error: {response.text[:100]}")
                 
         except requests.Timeout:
-            print(f"  ✗ Timeout - Server took too long to respond")
+            print(f"  [FAIL] Timeout - Server took too long to respond")
         except requests.ConnectionError:
-            print(f"  ✗ Connection error")
+            print(f"  [FAIL] Connection error")
         except Exception as e:
-            print(f"  ✗ Error: {str(e)}")
+            print(f"  [FAIL] Error: {str(e)}")
         
         print()
     

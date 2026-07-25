@@ -37,7 +37,7 @@ async def migrate():
         added_count = 0
         for col_name, col_def in columns_to_add:
             if col_name in existing_columns:
-                print(f"✅ Column '{col_name}' already exists")
+                print(f"[OK] Column '{col_name}' already exists")
                 continue
             
             try:
@@ -48,17 +48,17 @@ async def migrate():
                         ADD COLUMN {col_name} {col_def}
                     """)
                 )
-                print(f"✅ Added column '{col_name}' to transactions table")
+                print(f"[OK] Added column '{col_name}' to transactions table")
                 added_count += 1
                 
             except Exception as e:
-                print(f"❌ Error adding column '{col_name}': {e}")
+                print(f"[FAIL] Error adding column '{col_name}': {e}")
                 raise
         
         if added_count == 0:
-            print("\n✅ All columns already exist - no migration needed")
+            print("\n[OK] All columns already exist - no migration needed")
         else:
-            print(f"\n✅ Migration complete - Added {added_count} column(s)")
+            print(f"\n[OK] Migration complete - Added {added_count} column(s)")
 
 if __name__ == "__main__":
     asyncio.run(migrate())

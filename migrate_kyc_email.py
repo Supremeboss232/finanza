@@ -18,14 +18,14 @@ async def migrate():
         existing_columns = {row[0] for row in result.fetchall()}
         
         if 'email' in existing_columns:
-            print("✅ email column already exists")
+            print("[OK] email column already exists")
             return
         
         print("➕ Adding email column to kyc_info table...")
         await conn.execute(
             text("ALTER TABLE kyc_info ADD COLUMN email VARCHAR NULL")
         )
-        print("✅ Migration complete: email column added to kyc_info")
+        print("[OK] Migration complete: email column added to kyc_info")
 
 if __name__ == "__main__":
     asyncio.run(migrate())

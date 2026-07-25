@@ -38,14 +38,14 @@ class SAMDeployer:
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, shell=False)
             if result.returncode == 0:
-                print(f"✓ {description} succeeded")
+                print(f"[OK] {description} succeeded")
                 return result.stdout.strip()
             else:
-                print(f"✗ {description} failed")
+                print(f"[FAIL] {description} failed")
                 print(f"Error: {result.stderr}")
                 return None
         except Exception as e:
-            print(f"✗ Exception: {e}")
+            print(f"[FAIL] Exception: {e}")
             return None
     
     def validate_template(self):
@@ -203,29 +203,29 @@ class SAMDeployer:
         
         # Step 1: Validate
         if not self.validate_template():
-            print("\n✗ Template validation failed. Aborting.")
+            print("\n[FAIL] Template validation failed. Aborting.")
             return False
         
         # Step 2: Build
         if not self.build_template():
-            print("\n✗ Build failed. Aborting.")
+            print("\n[FAIL] Build failed. Aborting.")
             return False
         
         # Step 3: Create S3 bucket
         s3_bucket = self.create_s3_bucket()
         if not s3_bucket:
-            print("\n✗ S3 bucket creation failed. Aborting.")
+            print("\n[FAIL] S3 bucket creation failed. Aborting.")
             return False
         
         # Step 4: Package
         packaged_template = self.package_template(s3_bucket)
         if not packaged_template:
-            print("\n✗ Packaging failed. Aborting.")
+            print("\n[FAIL] Packaging failed. Aborting.")
             return False
         
         # Step 5: Deploy
         if not self.deploy_template(packaged_template):
-            print("\n✗ Deployment failed. Aborting.")
+            print("\n[FAIL] Deployment failed. Aborting.")
             return False
         
         # Step 6: Get outputs

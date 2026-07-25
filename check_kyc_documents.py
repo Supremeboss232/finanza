@@ -30,14 +30,14 @@ async def check_kyc_documents():
         
         async with async_session() as db:
             # Check 1: Count total KYC submissions
-            print("1️⃣  Counting total KYC submissions...")
+            print("1⃣  Counting total KYC submissions...")
             result = await db.execute(text("SELECT COUNT(*) FROM kyc_submissions"))
             total_kyc = result.scalar()
             print(f"   Total KYC submissions: {total_kyc}\n")
             
             # Check 2: List all KYC submissions with details
             if total_kyc > 0:
-                print("2️⃣  Listing KYC submissions:")
+                print("2⃣  Listing KYC submissions:")
                 result = await db.execute(text("""
                     SELECT 
                         id, 
@@ -64,7 +64,7 @@ async def check_kyc_documents():
                     print(f"     - Reviewed: {reviewed}")
                 
                 # Check 3: Count documents with file paths
-                print("\n\n3️⃣  Document Status Summary:")
+                print("\n\n3⃣  Document Status Summary:")
                 result = await db.execute(text("""
                     SELECT 
                         status,
@@ -83,7 +83,7 @@ async def check_kyc_documents():
                     print(f"     - Without documents: {without_docs}")
                 
                 # Check 4: Verify document storage
-                print("\n\n4️⃣  Document Storage Check:")
+                print("\n\n4⃣  Document Storage Check:")
                 result = await db.execute(text("""
                     SELECT 
                         COUNT(*) as total,
@@ -98,7 +98,7 @@ async def check_kyc_documents():
                 print(f"   - Empty path: {empty_path}")
                 
                 # Check 5: User information for KYC
-                print("\n\n5️⃣  KYC Submissions by User:")
+                print("\n\n5⃣  KYC Submissions by User:")
                 result = await db.execute(text("""
                     SELECT 
                         k.user_id,
@@ -121,7 +121,7 @@ async def check_kyc_documents():
                     print(f"     - Has documents: {'Yes' if has_docs else 'No'}")
                 
             else:
-                print("   ❌ No KYC submissions found in database!\n")
+                print("   [FAIL] No KYC submissions found in database!\n")
                 print("   This means:")
                 print("     - Users haven't submitted KYC documents yet, OR")
                 print("     - KYC table is empty\n")
@@ -135,7 +135,7 @@ async def check_kyc_documents():
         print("="*70 + "\n")
         
     except Exception as e:
-        print(f"\n❌ Database Error: {str(e)}\n")
+        print(f"\n[FAIL] Database Error: {str(e)}\n")
         print("Troubleshooting:")
         print("  - Is SSH tunnel open? (port 5432 should be listening)")
         print("  - Are credentials correct? (finbank:Supposedbe5)")
@@ -151,5 +151,5 @@ if __name__ == "__main__":
         success = asyncio.run(check_kyc_documents())
         sys.exit(0 if success else 1)
     except Exception as e:
-        print(f"\n❌ Error: {e}\n")
+        print(f"\n[FAIL] Error: {e}\n")
         sys.exit(1)

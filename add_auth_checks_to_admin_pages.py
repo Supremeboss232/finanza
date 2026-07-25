@@ -26,7 +26,7 @@ def add_auth_check_to_file(file_path):
     
     # Check if auth check already exists
     if 'Authorization Check - Prevent non-admin' in content:
-        print(f"  ✓ {file_path.name} - already has auth check")
+        print(f"  [OK] {file_path.name} - already has auth check")
         return False
     
     # Find the insertion point - right after <body> tag
@@ -34,7 +34,7 @@ def add_auth_check_to_file(file_path):
     match = re.search(body_pattern, content)
     
     if not match:
-        print(f"  ✗ {file_path.name} - could not find <body> tag")
+        print(f"  [FAIL] {file_path.name} - could not find <body> tag")
         return False
     
     # Insert the auth check right after the <body> tag
@@ -45,7 +45,7 @@ def add_auth_check_to_file(file_path):
     with open(file_path, 'w', encoding='utf-8') as f:
         f.write(new_content)
     
-    print(f"  ✓ {file_path.name} - auth check added")
+    print(f"  [OK] {file_path.name} - auth check added")
     return True
 
 def main():
@@ -72,7 +72,7 @@ def main():
         if add_auth_check_to_file(file_path):
             updated += 1
     
-    print(f"\n✅ Complete! Updated {updated}/{len(admin_files)} files")
+    print(f"\n[OK] Complete! Updated {updated}/{len(admin_files)} files")
 
 if __name__ == "__main__":
     main()

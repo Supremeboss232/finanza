@@ -36,7 +36,7 @@ async def seed_system_reserve():
             system_user = result.scalars().first()
             
             if system_user:
-                print(f"✅ System User already exists:")
+                print(f"[OK] System User already exists:")
                 print(f"   - ID: {system_user.id}")
                 print(f"   - Name: {system_user.full_name}")
                 print(f"   - Email: {system_user.email}")
@@ -46,7 +46,7 @@ async def seed_system_reserve():
                 
                 # Update password if needed
                 if system_user.email != "sysreserve@finanza.com":
-                    print("\n⚠️  WARNING: System user email doesn't match spec!")
+                    print("\n[WARN]  WARNING: System user email doesn't match spec!")
                     print(f"   Expected: sysreserve@finanza.com")
                     print(f"   Actual: {system_user.email}")
             else:
@@ -63,7 +63,7 @@ async def seed_system_reserve():
                 )
                 db.add(system_user)
                 await db.flush()
-                print("✅ System User created successfully:")
+                print("[OK] System User created successfully:")
                 print(f"   - ID: {system_user.id}")
                 print(f"   - Name: {system_user.full_name}")
                 print(f"   - Email: {system_user.email}")
@@ -81,7 +81,7 @@ async def seed_system_reserve():
             SEED_BALANCE = 10_000_000.0  # $10M
             
             if reserve_account:
-                print(f"✅ System Reserve Account already exists:")
+                print(f"[OK] System Reserve Account already exists:")
                 print(f"   - Account Number: {reserve_account.account_number}")
                 print(f"   - Type: {reserve_account.account_type}")
                 print(f"   - Owner: User ID {reserve_account.owner_id}")
@@ -93,7 +93,7 @@ async def seed_system_reserve():
                 
                 # Check if balance needs updating
                 if reserve_account.balance < SEED_BALANCE:
-                    print(f"\n⚠️  Current balance (${reserve_account.balance:,.2f}) is below seed amount (${SEED_BALANCE:,.2f})")
+                    print(f"\n[WARN]  Current balance (${reserve_account.balance:,.2f}) is below seed amount (${SEED_BALANCE:,.2f})")
                     print("   No automatic update - manual intervention may be needed")
             else:
                 # Create System Reserve Account
@@ -109,7 +109,7 @@ async def seed_system_reserve():
                 )
                 db.add(reserve_account)
                 await db.flush()
-                print(f"✅ System Reserve Account created successfully:")
+                print(f"[OK] System Reserve Account created successfully:")
                 print(f"   - Account Number: SYS-RESERVE-0001")
                 print(f"   - Type: treasury")
                 print(f"   - Owner: System User (ID=1)")
@@ -145,7 +145,7 @@ async def seed_system_reserve():
                     status="posted"
                 )
                 db.add(seed_ledger)
-                print(f"✅ Transaction and Ledger entry created:")
+                print(f"[OK] Transaction and Ledger entry created:")
                 print(f"   - Transaction ID: {seed_transaction.id}")
                 print(f"   - Ledger Entry ID: (will be generated on commit)")
                 print(f"   - Amount: ${SEED_BALANCE:,.2f}")
@@ -175,7 +175,7 @@ async def seed_system_reserve():
             )
             ledger_entries = result.scalars().all()
             
-            print("\n✅ SYSTEM RESERVE ACCOUNT READY FOR OPERATIONS")
+            print("\n[OK] SYSTEM RESERVE ACCOUNT READY FOR OPERATIONS")
             print("\nSystem User:")
             print(f"  • ID: {system_user.id}")
             print(f"  • Name: {system_user.full_name}")
@@ -201,11 +201,11 @@ async def seed_system_reserve():
             print(f"  • Net Balance: ${total_credits - total_debits:,.2f}")
             
             print("\n" + "=" * 80)
-            print("✅ DATABASE SEEDING COMPLETE")
+            print("[OK] DATABASE SEEDING COMPLETE")
             print("=" * 80 + "\n")
             
         except Exception as e:
-            print(f"\n❌ ERROR: {e}")
+            print(f"\n[FAIL] ERROR: {e}")
             import traceback
             traceback.print_exc()
             await db.rollback()
@@ -256,9 +256,9 @@ async def main():
         # Verify
         is_valid, data = await verify_system_reserve()
         if is_valid:
-            print("✅ System Reserve Account verified and ready!")
+            print("[OK] System Reserve Account verified and ready!")
         else:
-            print("⚠️  WARNING: Some components are missing:")
+            print("[WARN]  WARNING: Some components are missing:")
             print(data)
     
     except Exception as e:

@@ -22,20 +22,20 @@ async def fix_missing_columns():
                 try:
                     await db.execute(text(sql_cmd))
                     await db.commit()
-                    print(f"✓ Column {col_name} added successfully")
+                    print(f"[OK] Column {col_name} added successfully")
                 except Exception as e:
                     error_str = str(e)
                     if "already exists" in error_str or "duplicate" in error_str.lower():
-                        print(f"✓ Column {col_name} already exists")
+                        print(f"[OK] Column {col_name} already exists")
                         await db.rollback()
                     else:
-                        print(f"✗ Error adding {col_name}: {e}")
+                        print(f"[FAIL] Error adding {col_name}: {e}")
                         await db.rollback()
             
-            print("\n✓ All missing columns have been processed!")
+            print("\n[OK] All missing columns have been processed!")
             
         except Exception as e:
-            print(f"✗ Error: {e}")
+            print(f"[FAIL] Error: {e}")
             await db.rollback()
 
 if __name__ == "__main__":

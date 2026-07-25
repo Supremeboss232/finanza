@@ -17,10 +17,10 @@ async def test_login(email: str, password: str):
         user = result.scalar_one_or_none()
         
         if not user:
-            print(f"❌ User '{email}' not found!")
+            print(f"[FAIL] User '{email}' not found!")
             return False
         
-        print(f"✅ User found: {user.email}")
+        print(f"[OK] User found: {user.email}")
         print(f"   Full Name: {user.full_name}")
         print(f"   Is Admin: {user.is_admin}")
         print(f"   Is Active: {user.is_active}")
@@ -30,16 +30,16 @@ async def test_login(email: str, password: str):
         is_valid = verify_password(password, user.hashed_password)
         
         if is_valid:
-            print(f"✅ Password is CORRECT!")
+            print(f"[OK] Password is CORRECT!")
         else:
-            print(f"❌ Password is INCORRECT!")
+            print(f"[FAIL] Password is INCORRECT!")
             print(f"\n   Entered password: {password}")
             print(f"   Hashed password: {user.hashed_password[:50]}...")
             
             # Try with the new hash to see if it works
             new_hash = get_password_hash(password)
             is_valid_new = verify_password(password, new_hash)
-            print(f"\n   Fresh hash verification: {'✅ PASS' if is_valid_new else '❌ FAIL'}")
+            print(f"\n   Fresh hash verification: {'[OK] PASS' if is_valid_new else '[FAIL] FAIL'}")
         
         return is_valid
 

@@ -24,7 +24,7 @@ async def verify_system_reserve():
         system_user = result.scalars().first()
         
         if system_user:
-            print(f"✅ System User Found:")
+            print(f"[OK] System User Found:")
             print(f"   - ID: {system_user.id}")
             print(f"   - Full Name: {system_user.full_name}")
             print(f"   - Email: {system_user.email}")
@@ -32,7 +32,7 @@ async def verify_system_reserve():
             print(f"   - Is Active: {system_user.is_active}")
             print(f"   - KYC Status: {system_user.kyc_status}")
         else:
-            print("❌ System User (ID=1) not found!")
+            print("[FAIL] System User (ID=1) not found!")
             return False
         
         # 2. Check System Reserve Account
@@ -43,7 +43,7 @@ async def verify_system_reserve():
         reserve_account = result.scalars().first()
         
         if reserve_account:
-            print(f"✅ System Reserve Account Found:")
+            print(f"[OK] System Reserve Account Found:")
             print(f"   - Account ID: {reserve_account.id}")
             print(f"   - Account Number: {reserve_account.account_number}")
             print(f"   - Owner ID: {reserve_account.owner_id}")
@@ -56,19 +56,19 @@ async def verify_system_reserve():
             
             # Verify it's owned by system user
             if reserve_account.owner_id == 1:
-                print(f"   ✅ Correctly owned by System User (ID=1)")
+                print(f"   [OK] Correctly owned by System User (ID=1)")
             else:
-                print(f"   ❌ NOT owned by System User! Owner ID: {reserve_account.owner_id}")
+                print(f"   [FAIL] NOT owned by System User! Owner ID: {reserve_account.owner_id}")
                 return False
         else:
-            print("❌ System Reserve Account (SYS-RESERVE-0001) not found!")
+            print("[FAIL] System Reserve Account (SYS-RESERVE-0001) not found!")
             return False
         
         # 3. Summary
         print("\n" + "=" * 70)
         print("VERIFICATION SUMMARY")
         print("=" * 70)
-        print("✅ System Reserve Account is properly configured and ready for use")
+        print("[OK] System Reserve Account is properly configured and ready for use")
         print("\nUsage:")
         print("  - All admin funding operations use SYS-RESERVE-0001 as source")
         print("  - User accounts receive credits with transaction type 'fund_transfer'")
@@ -89,7 +89,7 @@ async def check_recent_funding_transactions():
         reserve_account = result.scalars().first()
         
         if not reserve_account:
-            print("⚠️  System reserve account not found, skipping transaction check")
+            print("[WARN]  System reserve account not found, skipping transaction check")
             return
         
         # Check for fund_transfer transactions
@@ -102,11 +102,11 @@ async def check_recent_funding_transactions():
         transactions = result.scalars().all()
         
         if transactions:
-            print(f"✅ Found {len(transactions)} recent fund transfer transactions:")
+            print(f"[OK] Found {len(transactions)} recent fund transfer transactions:")
             for tx in transactions:
                 print(f"   - TX ID: {tx.id} | User: {tx.user_id} | Amount: {tx.amount} | Status: {tx.status}")
         else:
-            print("ℹ️  No fund transfer transactions found yet")
+            print("[i]  No fund transfer transactions found yet")
 
 async def main():
     """Run all verification checks."""
@@ -115,7 +115,7 @@ async def main():
         if is_valid:
             await check_recent_funding_transactions()
     except Exception as e:
-        print(f"❌ Verification failed: {e}")
+        print(f"[FAIL] Verification failed: {e}")
         import traceback
         traceback.print_exc()
 

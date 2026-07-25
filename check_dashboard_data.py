@@ -16,10 +16,10 @@ async def check_user_data():
         user = result.scalar_one_or_none()
         
         if not user:
-            print("❌ User not found!")
+            print("[FAIL] User not found!")
             return
         
-        print(f"✅ Found user: {user.email} (ID: {user.id})")
+        print(f"[OK] Found user: {user.email} (ID: {user.id})")
         print(f"   Full name: {user.full_name}")
         print(f"   Account number: {user.account_number}")
         
@@ -28,7 +28,7 @@ async def check_user_data():
             select(Deposit).filter(Deposit.user_id == user.id)
         )
         deposits = result.scalars().all()
-        print(f"\n📊 Deposits: {len(deposits)}")
+        print(f"\n[CHT] Deposits: {len(deposits)}")
         for dep in deposits:
             print(f"   - ${dep.amount} ({dep.status}) - {dep.created_at}")
         
@@ -37,7 +37,7 @@ async def check_user_data():
             select(Loan).filter(Loan.user_id == user.id)
         )
         loans = result.scalars().all()
-        print(f"\n💰 Loans: {len(loans)}")
+        print(f"\n[MNY] Loans: {len(loans)}")
         for loan in loans:
             print(f"   - ${loan.amount} ({loan.status}) - {loan.created_at}")
         
@@ -46,7 +46,7 @@ async def check_user_data():
             select(Investment).filter(Investment.user_id == user.id)
         )
         investments = result.scalars().all()
-        print(f"\n📈 Investments: {len(investments)}")
+        print(f"\n[UP] Investments: {len(investments)}")
         for inv in investments:
             print(f"   - ${inv.amount} ({inv.status}) - {inv.created_at}")
         
@@ -55,7 +55,7 @@ async def check_user_data():
             select(Account).filter(Account.owner_id == user.id)
         )
         accounts = result.scalars().all()
-        print(f"\n🏦 Accounts: {len(accounts)}")
+        print(f"\n[BNK] Accounts: {len(accounts)}")
         for acc in accounts:
             print(f"   - {acc.account_number} (${acc.balance}) - {acc.currency}")
 

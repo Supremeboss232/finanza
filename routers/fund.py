@@ -160,7 +160,7 @@ async def fund_user_transfer(
     """
     Fund a single user account from System Reserve Account.
     
-    ⚠️ ADMIN OPERATION - Core Financial Transaction
+    [WARN] ADMIN OPERATION - Core Financial Transaction
     
     Process:
     1. Get/create target user account
@@ -237,12 +237,12 @@ async def fund_user_transfer(
         debug_log += f"  SystemFundService result: {result}\n"
         
         if not result["success"]:
-            debug_log += f"  ❌ Fund transfer failed: {result.get('error')}\n"
+            debug_log += f"  [FAIL] Fund transfer failed: {result.get('error')}\n"
             with open('/tmp/fund_debug.log', 'a') as f:
                 f.write(debug_log)
             raise HTTPException(status_code=500, detail=f"Fund transfer failed: {result.get('error')}")
         
-        debug_log += f"  ✅ Fund transfer successful\n"
+        debug_log += f"  [OK] Fund transfer successful\n"
         
         # Broadcast notification
         try:
@@ -285,7 +285,7 @@ async def fund_user_transfer(
         error_msg = f"[{datetime.now().isoformat()}] Fund transfer failed: {str(e)}\n"
         import traceback
         error_msg += traceback.format_exc()
-        debug_log += f"  ❌ Exception: {str(e)}\n"
+        debug_log += f"  [FAIL] Exception: {str(e)}\n"
         debug_log += traceback.format_exc() + "\n"
         with open('/tmp/fund_debug.log', 'a') as f:
             f.write(debug_log)

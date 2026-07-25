@@ -227,10 +227,10 @@ def create_monitoring_dashboard(environment='dev', region='eu-north-1'):
             DashboardName=dashboard_name,
             DashboardBody=json.dumps(dashboard_body)
         )
-        print(f"✓ Dashboard created: {dashboard_name}")
+        print(f"[OK] Dashboard created: {dashboard_name}")
         return response
     except Exception as e:
-        print(f"✗ Failed to create dashboard: {e}")
+        print(f"[FAIL] Failed to create dashboard: {e}")
         return None
 
 
@@ -328,10 +328,10 @@ def create_alarms(environment='dev', region='eu-north-1'):
                 TreatMissingData=alarm_config["TreatMissingData"],
                 AlarmActions=[]  # Add SNS ARN for notifications
             )
-            print(f"✓ Alarm created: {alarm_config['AlarmName']}")
+            print(f"[OK] Alarm created: {alarm_config['AlarmName']}")
             created_alarms.append(alarm_config["AlarmName"])
         except Exception as e:
-            print(f"✗ Failed to create alarm {alarm_config['AlarmName']}: {e}")
+            print(f"[FAIL] Failed to create alarm {alarm_config['AlarmName']}: {e}")
     
     return created_alarms
 

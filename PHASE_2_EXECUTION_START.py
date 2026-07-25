@@ -5,7 +5,7 @@ Priority 3 API - Phase 2 Testing Execution
 
 PHASE 2 HAS STARTED!
 
-Server Status: ✓ RUNNING on http://localhost:8000
+Server Status: [OK] RUNNING on http://localhost:8000
 Database: SQLite (finanza.db)
 Endpoints Ready: 30/30 (171 v1 endpoints total)
 
@@ -40,15 +40,15 @@ print("-" * 80)
 try:
     response = requests.get(f"{BASE_URL}/openapi.json", timeout=5)
     if response.status_code == 200:
-        print("✓ Server is running")
-        print("✓ OpenAPI schema accessible")
+        print("[OK] Server is running")
+        print("[OK] OpenAPI schema accessible")
         schema = response.json()
         paths = schema.get("paths", {})
         priority3 = [p for p in paths if "/v1/" in p]
-        print(f"✓ Total endpoints in schema: {len(paths)}")
-        print(f"✓ Priority 3 endpoints (/v1/): {len(priority3)}")
+        print(f"[OK] Total endpoints in schema: {len(paths)}")
+        print(f"[OK] Priority 3 endpoints (/v1/): {len(priority3)}")
 except Exception as e:
-    print(f"✗ ERROR: Cannot connect to server: {e}")
+    print(f"[FAIL] ERROR: Cannot connect to server: {e}")
     exit(1)
 
 # Step 2: Check Authentication Endpoints
@@ -60,10 +60,10 @@ for path in schema.get("paths", {}).keys():
     if any(x in path.lower() for x in ["auth", "login", "signup", "register"]):
         methods = list(schema["paths"][path].keys())
         auth_endpoints[path] = methods
-        print(f"✓ Found: {path} {methods}")
+        print(f"[OK] Found: {path} {methods}")
 
 if not auth_endpoints:
-    print("⚠ No auth endpoints found in schema")
+    print("[WARN] No auth endpoints found in schema")
     print("  Will attempt standard /auth/login and /auth/signup")
 
 # Step 3: Create Test Users
@@ -96,12 +96,12 @@ if signup_path:
                 timeout=5
             )
             if response.status_code in [200, 201]:
-                print(f"✓ Created user: {creds['email']}")
+                print(f"[OK] Created user: {creds['email']}")
                 created_users.append(creds)
             else:
-                print(f"⚠ Signup status {response.status_code} for {creds['email']}")
+                print(f"[WARN] Signup status {response.status_code} for {creds['email']}")
         except Exception as e:
-            print(f"⚠ Could not create {creds['email']}: {str(e)[:50]}")
+            print(f"[WARN] Could not create {creds['email']}: {str(e)[:50]}")
 
 # Step 4: Authenticate Users
 print("\nSTEP 4: AUTHENTICATE USERS & GET JWT TOKENS")
@@ -130,13 +130,13 @@ for user_type, creds in test_users.items():
             token = result.get("access_token") or result.get("token")
             if token:
                 tokens[user_type] = token
-                print(f"✓ {user_type:5}: Got token (expires in {result.get('expires_in', '?')}s)")
+                print(f"[OK] {user_type:5}: Got token (expires in {result.get('expires_in', '?')}s)")
             else:
-                print(f"⚠ {user_type:5}: Login OK but no token in response")
+                print(f"[WARN] {user_type:5}: Login OK but no token in response")
         else:
-            print(f"⚠ {user_type:5}: Login failed (status {response.status_code})")
+            print(f"[WARN] {user_type:5}: Login failed (status {response.status_code})")
     except Exception as e:
-        print(f"✗ {user_type:5}: {str(e)[:40]}")
+        print(f"[FAIL] {user_type:5}: {str(e)[:40]}")
 
 # Step 5: Test Endpoints Without Auth
 print("\nSTEP 5: TEST ENDPOINTS WITHOUT AUTHENTICATION (expect 401)")
@@ -157,13 +157,13 @@ for method, path in test_endpoints_no_auth:
             response = requests.get(f"{BASE_URL}{path}", timeout=5)
         
         if response.status_code == 401:
-            print(f"✓ {method} {path:50} → 401 (correct)")
+            print(f"[OK] {method} {path:50} → 401 (correct)")
             no_auth_results["passed"] += 1
         else:
-            print(f"⚠ {method} {path:50} → {response.status_code}")
+            print(f"[WARN] {method} {path:50} → {response.status_code}")
             no_auth_results["failed"] += 1
     except Exception as e:
-        print(f"✗ {method} {path:50} → Error: {str(e)[:20]}")
+        print(f"[FAIL] {method} {path:50} → Error: {str(e)[:20]}")
         no_auth_results["failed"] += 1
 
 # Step 6: Test Endpoints WITH Auth
@@ -193,27 +193,27 @@ if tokens:
                     response = requests.get(f"{BASE_URL}{path}", headers=headers, timeout=5)
                 
                 if response.status_code in [200, 201]:
-                    print(f"✓ {desc:30} {response.status_code}")
+                    print(f"[OK] {desc:30} {response.status_code}")
                     auth_results["passed"] += 1
                 else:
-                    print(f"⚠ {desc:30} {response.status_code}")
+                    print(f"[WARN] {desc:30} {response.status_code}")
                     auth_results["failed"] += 1
             except Exception as e:
-                print(f"✗ {desc:30} Error: {str(e)[:30]}")
+                print(f"[FAIL] {desc:30} Error: {str(e)[:30]}")
                 auth_results["failed"] += 1
     else:
-        print("⚠ No user token available - skipping authenticated tests")
+        print("[WARN] No user token available - skipping authenticated tests")
 else:
-    print("⚠ No tokens generated - skipping authenticated tests")
+    print("[WARN] No tokens generated - skipping authenticated tests")
 
 # Summary
 print("\n" + "=" * 80)
 print("PHASE 2 TESTING - SUMMARY")
 print("=" * 80)
 
-print(f"\nServer Status: ✓ RUNNING")
-print(f"Database: ✓ SQLite (finanza.db)")
-print(f"Endpoints Ready: ✓ 30/30 Priority 3")
+print(f"\nServer Status: [OK] RUNNING")
+print(f"Database: [OK] SQLite (finanza.db)")
+print(f"Endpoints Ready: [OK] 30/30 Priority 3")
 
 print(f"\nTest Users Created: {len(created_users)}")
 print(f"JWT Tokens Generated: {len(tokens)}")
@@ -227,7 +227,7 @@ print("NEXT STEPS")
 print("=" * 80)
 
 print("""
-✓ Phase 2 Testing Started!
+[OK] Phase 2 Testing Started!
 
 Next Actions:
 1. Open Swagger UI: http://localhost:8000/docs

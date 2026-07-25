@@ -20,7 +20,7 @@ def deploy_lambda(function_name, handler_path, region='eu-north-1'):
         with open(handler_path, 'r') as f:
             code = f.read()
     except FileNotFoundError:
-        print(f"✗ Handler not found: {handler_path}")
+        print(f"[FAIL] Handler not found: {handler_path}")
         return False
     
     # For simplicity, we'll use a basic deployment
@@ -54,17 +54,17 @@ def deploy_lambda(function_name, handler_path, region='eu-north-1'):
     try:
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode == 0:
-            print(f"✓ {function_name} deployed successfully!")
+            print(f"[OK] {function_name} deployed successfully!")
             response = json.loads(result.stdout)
             print(f"  CodeSha256: {response.get('CodeSha256', 'N/A')}")
             os.unlink(zip_path)
             return True
         else:
-            print(f"✗ Deployment failed: {result.stderr}")
+            print(f"[FAIL] Deployment failed: {result.stderr}")
             os.unlink(zip_path)
             return False
     except Exception as e:
-        print(f"✗ Exception: {e}")
+        print(f"[FAIL] Exception: {e}")
         os.unlink(zip_path)
         return False
 

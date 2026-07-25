@@ -23,7 +23,7 @@ async def check_api_response():
         user = result.scalar_one_or_none()
         
         if not user:
-            print("❌ System reserve user not found!")
+            print("[FAIL] System reserve user not found!")
             return
         
         print(f"System Reserve User: {user.full_name}")

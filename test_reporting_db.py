@@ -29,7 +29,7 @@ async def test_queries():
             )
             result1 = await session.execute(query1)
             txs = result1.scalars().all()
-            print(f"✓ Query 1: Found {len(txs)} transactions")
+            print(f"[OK] Query 1: Found {len(txs)} transactions")
             
             # Test 2: Distinct users count
             from sqlalchemy import func
@@ -41,7 +41,7 @@ async def test_queries():
             )
             result2 = await session.execute(query2)
             user_count = result2.scalar()
-            print(f"✓ Query 2: Found {user_count} distinct users")
+            print(f"[OK] Query 2: Found {user_count} distinct users")
             
             # Test 3: User lookup
             if txs:
@@ -49,13 +49,13 @@ async def test_queries():
                 query3 = select(User).where(User.id == first_user_id)
                 result3 = await session.execute(query3)
                 user = result3.scalars().first()
-                print(f"✓ Query 3: Found user {user.email if user else 'not found'}")
+                print(f"[OK] Query 3: Found user {user.email if user else 'not found'}")
             
-            print("\n✅ All database queries work!")
+            print("\n[OK] All database queries work!")
             await engine.dispose()
             
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"[FAIL] Error: {e}")
         import traceback
         traceback.print_exc()
 

@@ -19,7 +19,7 @@ def get_transaction_notification(transaction_type: str, amount: str, status: str
 
 def get_kyc_notification(status: str, message: str = "") -> Dict[str, str]:
     """KYC status notification"""
-    status_emoji = "✓" if status.lower() == "approved" else "⏳" if status.lower() == "pending" else "✗"
+    status_emoji = "[OK]" if status.lower() == "approved" else "[..] " if status.lower() == "pending" else "[FAIL]"
     
     messages = {
         'email': f"Your KYC verification has been {status}. {message}",
@@ -34,7 +34,7 @@ def get_kyc_notification(status: str, message: str = "") -> Dict[str, str]:
 
 def get_loan_notification(loan_id: str, status: str, amount: str = "") -> Dict[str, str]:
     """Loan application notification"""
-    status_emoji = "✓" if status.lower() == "approved" else "⏳" if status.lower() == "pending" else "✗"
+    status_emoji = "[OK]" if status.lower() == "approved" else "[..] " if status.lower() == "pending" else "[FAIL]"
     
     messages = {
         'email': f"Your loan application {loan_id} has been {status}. Amount: {amount}" if amount else f"Your loan application {loan_id} has been {status}.",
@@ -50,10 +50,10 @@ def get_loan_notification(loan_id: str, status: str, amount: str = "") -> Dict[s
 def get_security_alert(alert_type: str, description: str) -> Dict[str, str]:
     """Security alert notification"""
     messages = {
-        'email': f"⚠️ Security Alert: {alert_type}\n\n{description}\n\nIf this wasn't you, secure your account immediately.",
+        'email': f"[WARN] Security Alert: {alert_type}\n\n{description}\n\nIf this wasn't you, secure your account immediately.",
         'sms': f"FinanzaBank: ALERT - {alert_type}. Check your account now.",
         'push': {
-            'title': '⚠️ Security Alert',
+            'title': '[WARN] Security Alert',
             'body': f'{alert_type}'
         }
     }

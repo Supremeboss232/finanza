@@ -8,10 +8,10 @@ PRINCIPLE: Every transaction creates exactly TWO ledger entries (debit and credi
 Balance = sum(credits) - sum(debits)
 
 This ensures:
-✓ Money is never created or destroyed (double-entry)
-✓ Every transaction is linked to users
-✓ Audit trail is complete and reversible
-✓ System balances: total debits = total credits
+[OK] Money is never created or destroyed (double-entry)
+[OK] Every transaction is linked to users
+[OK] Audit trail is complete and reversible
+[OK] System balances: total debits = total credits
 """
 
 from sqlalchemy.ext.asyncio import AsyncSession

@@ -45,15 +45,15 @@ class ScheduledAdjustmentExecutor:
                 expire_on_commit=False
             )
             await self.engine.begin()
-            logger.info("✅ Scheduler initialized successfully")
+            logger.info("[OK] Scheduler initialized successfully")
         except Exception as e:
-            logger.error(f"❌ Failed to initialize scheduler: {e}")
+            logger.error(f"[FAIL] Failed to initialize scheduler: {e}")
             raise
     
     async def start(self):
         """Start the scheduler"""
         self.running = True
-        logger.info(f"🚀 Scheduler started (checking every {self.check_interval}s)")
+        logger.info(f"[>>] Scheduler started (checking every {self.check_interval}s)")
         
         while self.running:
             try:
@@ -148,7 +148,7 @@ class ScheduledAdjustmentExecutor:
         if adjustment.recurrence != "ONCE":
             await self._schedule_next_recurrence(adjustment, now)
         
-        logger.info(f"✅ Executed adjustment {adjustment.id}: {adjustment.amount} for user {user.id}")
+        logger.info(f"[OK] Executed adjustment {adjustment.id}: {adjustment.amount} for user {user.id}")
     
     async def _schedule_next_recurrence(
         self,

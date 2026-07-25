@@ -422,9 +422,9 @@ class KYCService:
                     status="pending"
                 )
                 db_session.add(kyc_submission)
-                print(f"✅ Created KYCSubmission for user {user_id}")
+                print(f"[OK] Created KYCSubmission for user {user_id}")
             except Exception as ks_error:
-                print(f"⚠️  Could not create KYCSubmission: {str(ks_error)}")
+                print(f"[WARN]  Could not create KYCSubmission: {str(ks_error)}")
                 # Continue anyway - KYCInfo is the primary record
             
             await db_session.commit()
@@ -439,7 +439,7 @@ class KYCService:
             
         except Exception as e:
             await db_session.rollback()
-            print(f"❌ Error in submit_kyc_form: {str(e)}")
+            print(f"[FAIL] Error in submit_kyc_form: {str(e)}")
             return False, f"Error submitting KYC: {str(e)}", {}
 
     @staticmethod

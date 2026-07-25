@@ -51,16 +51,16 @@ BLUE = '\033[94m'
 RESET = '\033[0m'
 
 def log_success(msg):
-    print(f"{GREEN}✓{RESET} {msg}")
+    print(f"{GREEN}[OK]{RESET} {msg}")
 
 def log_error(msg):
-    print(f"{RED}✗{RESET} {msg}")
+    print(f"{RED}[FAIL]{RESET} {msg}")
 
 def log_warning(msg):
-    print(f"{YELLOW}⚠{RESET} {msg}")
+    print(f"{YELLOW}[WARN]{RESET} {msg}")
 
 def log_info(msg):
-    print(f"{BLUE}ℹ{RESET} {msg}")
+    print(f"{BLUE}[i]{RESET} {msg}")
 
 async def audit_users_and_accounts():
     """Audit all users and accounts for missing fields"""
@@ -193,11 +193,11 @@ async def audit_users_and_accounts():
                 account = account_result.scalar_one_or_none()
                 
                 if account:
-                    status_icon = GREEN + "✓" + RESET
+                    status_icon = GREEN + "[OK]" + RESET
                     kyc_label = "approved" if user.kyc_status == "approved" else user.kyc_status
                     print(f"  {status_icon} {user.email:40} | Account: {account.account_number:25} | KYC: {kyc_label}")
                 else:
-                    status_icon = RED + "✗" + RESET
+                    status_icon = RED + "[FAIL]" + RESET
                     print(f"  {status_icon} {user.email:40} | NO ACCOUNT")
             
             print()

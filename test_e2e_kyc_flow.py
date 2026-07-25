@@ -89,20 +89,20 @@ class KycE2ETest:
                 response_body = json.loads(payload.get('body', '{}'))
                 
                 if response_body.get('success'):
-                    self.log("  ✓ Lambda executed successfully", "PASS")
+                    self.log("  [OK] Lambda executed successfully", "PASS")
                     self.log(f"    Action: {response_body.get('action')}", "")
                     self.log(f"    User: {response_body.get('user_id')}", "")
                     self.results.append(('Lambda Approval Invocation', True))
                 else:
-                    self.log("  ✗ Lambda returned error response", "FAIL")
+                    self.log("  [FAIL] Lambda returned error response", "FAIL")
                     self.log(f"    Response: {payload}", "")
                     self.results.append(('Lambda Approval Invocation', False))
             else:
-                self.log(f"  ✗ Lambda error: {status_code}", "FAIL")
+                self.log(f"  [FAIL] Lambda error: {status_code}", "FAIL")
                 self.results.append(('Lambda Approval Invocation', False))
                 
         except Exception as e:
-            self.log(f"  ✗ Exception: {e}", "FAIL")
+            self.log(f"  [FAIL] Exception: {e}", "FAIL")
             self.results.append(('Lambda Approval Invocation', False))
     
     def test_lambda_invocation_rejection(self):
@@ -138,17 +138,17 @@ class KycE2ETest:
                 response_body = json.loads(payload.get('body', '{}'))
                 
                 if response_body.get('success'):
-                    self.log("  ✓ Lambda handled rejection successfully", "PASS")
+                    self.log("  [OK] Lambda handled rejection successfully", "PASS")
                     self.results.append(('Lambda Rejection Invocation', True))
                 else:
-                    self.log("  ✗ Lambda rejection failed", "FAIL")
+                    self.log("  [FAIL] Lambda rejection failed", "FAIL")
                     self.results.append(('Lambda Rejection Invocation', False))
             else:
-                self.log(f"  ✗ Lambda error: {response['StatusCode']}", "FAIL")
+                self.log(f"  [FAIL] Lambda error: {response['StatusCode']}", "FAIL")
                 self.results.append(('Lambda Rejection Invocation', False))
                 
         except Exception as e:
-            self.log(f"  ✗ Exception: {e}", "FAIL")
+            self.log(f"  [FAIL] Exception: {e}", "FAIL")
             self.results.append(('Lambda Rejection Invocation', False))
     
     def test_cloudwatch_metrics(self):
@@ -177,14 +177,14 @@ class KycE2ETest:
             
             if response['Datapoints']:
                 total_invocations = sum(dp['Sum'] for dp in response['Datapoints'])
-                self.log(f"  ✓ Metrics published (invocations: {int(total_invocations)})", "PASS")
+                self.log(f"  [OK] Metrics published (invocations: {int(total_invocations)})", "PASS")
                 self.results.append(('CloudWatch Metrics', True))
             else:
-                self.log("  ✗ No metrics found", "FAIL")
+                self.log("  [FAIL] No metrics found", "FAIL")
                 self.results.append(('CloudWatch Metrics', False))
                 
         except Exception as e:
-            self.log(f"  ✗ Exception: {e}", "FAIL")
+            self.log(f"  [FAIL] Exception: {e}", "FAIL")
             self.results.append(('CloudWatch Metrics', False))
     
     def test_sns_topics(self):
@@ -197,15 +197,15 @@ class KycE2ETest:
             kyc_topic = next((t for t in topics if 'kyc' in t['TopicArn'].lower()), None)
             
             if kyc_topic:
-                self.log(f"  ✓ KYC SNS topic found", "PASS")
+                self.log(f"  [OK] KYC SNS topic found", "PASS")
                 self.log(f"    Topic ARN: {kyc_topic['TopicArn']}", "")
                 self.results.append(('SNS Topics', True))
             else:
-                self.log("  ✗ KYC SNS topic not found", "FAIL")
+                self.log("  [FAIL] KYC SNS topic not found", "FAIL")
                 self.results.append(('SNS Topics', False))
                 
         except Exception as e:
-            self.log(f"  ✗ Exception: {e}", "FAIL")
+            self.log(f"  [FAIL] Exception: {e}", "FAIL")
             self.results.append(('SNS Topics', False))
     
     def test_database_update(self):
@@ -240,10 +240,10 @@ class KycE2ETest:
             
             columns = cursor.fetchall()
             if len(columns) >= 2:
-                self.log("  ✓ KYC columns exist in users table", "PASS")
+                self.log("  [OK] KYC columns exist in users table", "PASS")
                 self.results.append(('Database Schema', True))
             else:
-                self.log("  ✗ KYC columns missing from users table", "FAIL")
+                self.log("  [FAIL] KYC columns missing from users table", "FAIL")
                 self.log("    Run: ALTER TABLE users ADD COLUMN kyc_status VARCHAR(50);", "")
                 self.results.append(('Database Schema', False))
             
@@ -251,7 +251,7 @@ class KycE2ETest:
             conn.close()
             
         except Exception as e:
-            self.log(f"  ✗ Exception: {e}", "FAIL")
+            self.log(f"  [FAIL] Exception: {e}", "FAIL")
             self.log("    Cannot connect to RDS or Secrets Manager issue", "")
             self.results.append(('Database Update', False))
     
@@ -262,13 +262,13 @@ class KycE2ETest:
         
         print("\nResults:")
         for test_name, passed_test in self.results:
-            status = "✓ PASS" if passed_test else "✗ FAIL"
+            status = "[OK] PASS" if passed_test else "[FAIL] FAIL"
             print(f"  {status:8} {test_name}")
         
         print(f"\nTotal: {passed}/{total} tests passed")
         
         if passed == total:
-            self.log("All tests passed! ✓ Lambda is ready for production.", "INFO")
+            self.log("All tests passed! [OK] Lambda is ready for production.", "INFO")
             return True
         else:
             self.log(f"{total - passed} test(s) failed. Review output above.", "WARN")

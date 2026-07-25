@@ -13,20 +13,20 @@ C) Session not refreshed
 """
 
 print("""
-🔍 DIAGNOSTIC CHECKLIST
+[SCH] DIAGNOSTIC CHECKLIST
 ========================
 
 After you rejected the KYC submission, the database should have:
 
-✓ kyc_info.kyc_submitted = FALSE (was TRUE, now FALSE)
-✓ kyc_info.submission_locked = FALSE (was TRUE, now FALSE)  
-✓ kyc_info.kyc_status = 'rejected'
-✓ user.kyc_status = 'rejected'
+[OK] kyc_info.kyc_submitted = FALSE (was TRUE, now FALSE)
+[OK] kyc_info.submission_locked = FALSE (was TRUE, now FALSE)  
+[OK] kyc_info.kyc_status = 'rejected'
+[OK] user.kyc_status = 'rejected'
 
 The profile update endpoint checks: if kyc_submitted == TRUE → 423 Locked
 Since kyc_submitted should now be FALSE → profile should be UNLOCKED
 
-🔧 TO FIX THIS:
+[FIX] TO FIX THIS:
 
 Option 1 - Clear browser cache/cookies:
   - Hard refresh: Ctrl+Shift+R
@@ -45,7 +45,7 @@ Option 3 - Check the database directly:
   submission_locked: false
   kyc_status: rejected
 
-📝 PROFILE UPDATE ENDPOINT LOGIC:
+[DOC] PROFILE UPDATE ENDPOINT LOGIC:
 ═════════════════════════════════
 
 Current code in routers/api_users.py:

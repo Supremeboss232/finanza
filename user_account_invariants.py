@@ -1,19 +1,19 @@
 """
 USER-ACCOUNT INVARIANTS ENFORCEMENT
 
-⚠️ CORE RULE (NON-NEGOTIABLE):
+[WARN] CORE RULE (NON-NEGOTIABLE):
 Every user must have BOTH a User ID and an Account ID.
 
 This module enforces system invariants and prevents operations that violate core rules.
 
 Invariants:
-1️⃣ No transaction without Account ID (❌ No "N/A" or NULL account_id)
-2️⃣ No balance without Account ID (must query from account, never from user)
-3️⃣ No dashboard data without Account ID
-4️⃣ No admin funding without Account ID
-5️⃣ User creation = User + Account binding (atomic, one operation)
-6️⃣ KYC does NOT create accounts (account exists at registration)
-7️⃣ KYC only changes: Account status, limits, permissions
+1⃣ No transaction without Account ID ([FAIL] No "N/A" or NULL account_id)
+2⃣ No balance without Account ID (must query from account, never from user)
+3⃣ No dashboard data without Account ID
+4⃣ No admin funding without Account ID
+5⃣ User creation = User + Account binding (atomic, one operation)
+6⃣ KYC does NOT create accounts (account exists at registration)
+7⃣ KYC only changes: Account status, limits, permissions
 """
 
 import logging
@@ -147,7 +147,7 @@ class InvariantValidator:
         balance = sum(float(t.amount) for t in transactions)
         
         log.info(
-            f"✓ Balance query validated for user {user_id}: "
+            f"[OK] Balance query validated for user {user_id}: "
             f"account {account.id}, balance {balance}"
         )
         

@@ -12,14 +12,14 @@ all_ok = True
 for filepath in files_to_check:
     try:
         py_compile.compile(filepath, doraise=True)
-        print(f"✓ {filepath}: Syntax OK")
+        print(f"[OK] {filepath}: Syntax OK")
     except py_compile.PyCompileError as e:
-        print(f"✗ {filepath}: {e}")
+        print(f"[FAIL] {filepath}: {e}")
         all_ok = False
 
 if all_ok:
-    print("\n✓ All files compiled successfully!")
+    print("\n[OK] All files compiled successfully!")
     sys.exit(0)
 else:
-    print("\n✗ Some files have syntax errors")
+    print("\n[FAIL] Some files have syntax errors")
     sys.exit(1)

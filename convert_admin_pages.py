@@ -61,7 +61,7 @@ def convert_admin_page(filepath):
     
     # Skip if already converted
     if '{% extends "base.html" %}' in content:
-        print(f"✓ {filename} - already converted")
+        print(f"[OK] {filename} - already converted")
         return False
     
     # Get nav_active value
@@ -74,13 +74,13 @@ def convert_admin_page(filepath):
     # Find where to split - after navbar, before page header
     navbar_end = content.find('<!-- Navbar End -->')
     if navbar_end == -1:
-        print(f"✗ {filename} - could not find navbar end marker")
+        print(f"[FAIL] {filename} - could not find navbar end marker")
         return False
     
     # Find the start
     doctype_start = content.find('<!DOCTYPE html>')
     if doctype_start == -1:
-        print(f"✗ {filename} - could not find doctype start")
+        print(f"[FAIL] {filename} - could not find doctype start")
         return False
     
     # Extract content after navbar
@@ -102,7 +102,7 @@ def convert_admin_page(filepath):
     with open(filepath, 'w', encoding='utf-8') as f:
         f.write(new_content)
     
-    print(f"✓ {filename} - converted (nav_active: {nav_active})")
+    print(f"[OK] {filename} - converted (nav_active: {nav_active})")
     return True
 
 def main():
@@ -118,7 +118,7 @@ def main():
         if convert_admin_page(str(filepath)):
             converted_count += 1
     
-    print(f"\n✓ Converted {converted_count} files")
+    print(f"\n[OK] Converted {converted_count} files")
 
 if __name__ == '__main__':
     main()

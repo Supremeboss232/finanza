@@ -54,7 +54,7 @@ async def log_dashboard_session(
         
         # Log aggregated session info
         log_instance.info(
-            f"📊 DASHBOARD SESSION | "
+            f"[CHT] DASHBOARD SESSION | "
             f"Start: {session_start} | "
             f"Duration: {session_duration_sec:.2f}s | "
             f"Actions: {action_count}"
@@ -77,7 +77,7 @@ async def log_dashboard_session(
     except Exception as e:
         log_instance = logging.getLogger(__name__)
         log_instance.error(
-            f"❌ Error logging dashboard session: {e}",
+            f"[FAIL] Error logging dashboard session: {e}",
             exc_info=True
         )
         # Don't raise error - audit logging should not block user flow

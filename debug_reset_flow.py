@@ -27,7 +27,7 @@ async def debug_password_reset():
             user = result.scalar_one_or_none()
             
             if not user:
-                print("❌ User not found!")
+                print("[FAIL] User not found!")
                 return
             
             print("=" * 80)
@@ -77,9 +77,9 @@ async def debug_password_reset():
             print(f"Old password '{test_old}' verifies: {result_old_after}")
             
             if result_new and not result_old_after:
-                print("\n✅ PASSWORD RESET WORKING!")
+                print("\n[OK] PASSWORD RESET WORKING!")
             else:
-                print("\n❌ PASSWORD RESET NOT WORKING!")
+                print("\n[FAIL] PASSWORD RESET NOT WORKING!")
                 
                 # Debug what hash was actually created
                 print("\nDEBUGGING:")

@@ -28,7 +28,7 @@ async def create_deposit_for_current_user(
     """
     Create a deposit for the current user.
     
-    🔧 CRITICAL FIX: Creates a Transaction record (not just Deposit)
+    [FIX] CRITICAL FIX: Creates a Transaction record (not just Deposit)
     This ensures the balance system can see the deposit.
     
     RULE 1: No account, no money → User must have account
@@ -76,7 +76,7 @@ async def create_deposit_for_current_user(
         )
         user = user_result.scalar_one_or_none()
         
-        # 🔧 CRITICAL: Create Transaction record (not just Deposit)
+        # [FIX] CRITICAL: Create Transaction record (not just Deposit)
         # This is what the balance system queries!
         amount = float(deposit.amount)
         reference_number = str(uuid.uuid4())
@@ -85,14 +85,14 @@ async def create_deposit_for_current_user(
         status_to_set = "completed" if user.kyc_status == "approved" else "blocked"
         
         transaction = DBTransaction(
-            user_id=current_user.id,  # ✓ REQUIRED: Track who made it
-            account_id=account.id,    # ✓ REQUIRED: Track where it goes
-            transaction_type="deposit",  # ✓ REQUIRED: What type
-            amount=amount,            # ✓ REQUIRED: How much
-            status=status_to_set,     # ✓ REQUIRED: Is it valid?
-            direction="credit",       # ✓ Money coming in
+            user_id=current_user.id,  # [OK] REQUIRED: Track who made it
+            account_id=account.id,    # [OK] REQUIRED: Track where it goes
+            transaction_type="deposit",  # [OK] REQUIRED: What type
+            amount=amount,            # [OK] REQUIRED: How much
+            status=status_to_set,     # [OK] REQUIRED: Is it valid?
+            direction="credit",       # [OK] Money coming in
             description=f"User deposit",
-            reference_number=reference_number,  # ✓ REQUIRED: Audit trail
+            reference_number=reference_number,  # [OK] REQUIRED: Audit trail
             kyc_status_at_time=user.kyc_status  # Snapshot for compliance
         )
         db_session.add(transaction)

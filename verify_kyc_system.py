@@ -19,7 +19,7 @@ async def verify_kyc_system():
         print("="*70 + "\n")
         
         # Step 1: Admin login
-        print("Step 1️⃣ : Admin Authentication")
+        print("Step 1⃣ : Admin Authentication")
         print("─" * 70)
         try:
             response = await client.post("/auth/token", data={
@@ -28,18 +28,18 @@ async def verify_kyc_system():
             })
             
             if response.status_code != 200:
-                print("❌ Admin login failed")
+                print("[FAIL] Admin login failed")
                 return False
             
             token = response.json()["access_token"]
             headers = {"Authorization": f"Bearer {token}"}
-            print("✅ Admin authenticated successfully\n")
+            print("[OK] Admin authenticated successfully\n")
         except Exception as e:
-            print(f"❌ Error: {e}\n")
+            print(f"[FAIL] Error: {e}\n")
             return False
         
         # Step 2: Check KYC submissions
-        print("Step 2️⃣ : Check KYC Submissions")
+        print("Step 2⃣ : Check KYC Submissions")
         print("─" * 70)
         try:
             response = await client.get("/api/admin/data/kyc?skip=0&limit=20", headers=headers)
@@ -47,7 +47,7 @@ async def verify_kyc_system():
             kyc_list = data.get("data", [])
             total = data.get("total", 0)
             
-            print(f"✅ KYC Query Successful")
+            print(f"[OK] KYC Query Successful")
             print(f"   Total Submissions: {total}\n")
             
             if total > 0:
@@ -61,14 +61,14 @@ async def verify_kyc_system():
                         print(f"   ➜ To Approve: POST /api/admin/kyc/{kyc.get('id')}/approve")
                         print(f"   ➜ To Reject: POST /api/admin/kyc/{kyc.get('id')}/reject\n")
             else:
-                print("   ⚠️  No KYC submissions yet")
+                print("   [WARN]  No KYC submissions yet")
                 print("   Waiting for users to submit documents\n")
         except Exception as e:
-            print(f"❌ Error: {e}\n")
+            print(f"[FAIL] Error: {e}\n")
             return False
         
         # Step 3: Verify fund endpoint
-        print("Step 3️⃣ : Verify Fund User Endpoint")
+        print("Step 3⃣ : Verify Fund User Endpoint")
         print("─" * 70)
         try:
             response = await client.post(
@@ -82,24 +82,24 @@ async def verify_kyc_system():
             )
             
             if response.status_code in [200, 400, 404]:
-                print(f"✅ Fund endpoint is operational")
+                print(f"[OK] Fund endpoint is operational")
                 print(f"   Status: {response.status_code}")
                 if response.status_code == 400:
                     print(f"   (Expected error: user doesn't exist)\n")
             else:
-                print(f"⚠️  Unexpected status: {response.status_code}\n")
+                print(f"[WARN]  Unexpected status: {response.status_code}\n")
         except Exception as e:
-            print(f"❌ Error: {e}\n")
+            print(f"[FAIL] Error: {e}\n")
             return False
         
         # Step 4: Check user balances
-        print("Step 4️⃣ : User Balance Summary")
+        print("Step 4⃣ : User Balance Summary")
         print("─" * 70)
         try:
             response = await client.get("/api/admin/users?skip=0&limit=10", headers=headers)
             users = response.json().get("data", [])
             
-            print(f"✅ Users Retrieved: {len(users)}\n")
+            print(f"[OK] Users Retrieved: {len(users)}\n")
             
             for user in users[:5]:
                 print(f"   • {user.get('email')}: ${user.get('balance', 0):,.2f}")
@@ -107,7 +107,7 @@ async def verify_kyc_system():
             if len(users) > 5:
                 print(f"   ... and {len(users) - 5} more users\n")
         except Exception as e:
-            print(f"❌ Error: {e}\n")
+            print(f"[FAIL] Error: {e}\n")
             return False
         
         # Summary
@@ -115,11 +115,11 @@ async def verify_kyc_system():
         print("KYC SYSTEM SUMMARY")
         print("="*70 + "\n")
         
-        print("✅ All Components Working:")
-        print("   ✅ Admin authentication")
-        print("   ✅ KYC data retrieval with documents")
-        print("   ✅ Fund user endpoint")
-        print("   ✅ User balance retrieval\n")
+        print("[OK] All Components Working:")
+        print("   [OK] Admin authentication")
+        print("   [OK] KYC data retrieval with documents")
+        print("   [OK] Fund user endpoint")
+        print("   [OK] User balance retrieval\n")
         
         if total == 0:
             print("📌 Status: Awaiting User Submissions")
@@ -138,5 +138,5 @@ if __name__ == "__main__":
         success = asyncio.run(verify_kyc_system())
         sys.exit(0 if success else 1)
     except Exception as e:
-        print(f"\n❌ Fatal Error: {e}\n")
+        print(f"\n[FAIL] Fatal Error: {e}\n")
         sys.exit(1)

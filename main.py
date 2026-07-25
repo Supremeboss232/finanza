@@ -24,6 +24,7 @@ from auth import get_current_user_from_cookie
 from database import SessionLocal, Base, engine
 from auth import auth_router # Use the root auth.py for API endpoints
 from routers.private import private_router
+from routers.public import public_router
 from routers.users import users_router
 try:
     from routers.admin import admin_router
@@ -173,7 +174,7 @@ async def create_admin_user():
     """
     Ensures the default SUPER_ADMIN user exists with proper role and linked account.
     
-    ⚠️ CORE RULES:
+    [WARN] CORE RULES:
     1. Default admin must have admin_role set to "SUPER_ADMIN"
     2. Admin user must have BOTH User ID and Account ID bound together
     3. Default admin must have is_admin=True
@@ -194,7 +195,7 @@ async def create_admin_user():
                 email=settings.ADMIN_EMAIL,
                 hashed_password=hashed_password,
                 is_admin=True,
-                admin_role="SUPER_ADMIN",  # ✅ SET SUPER_ADMIN ROLE
+                admin_role="SUPER_ADMIN",  # [OK] SET SUPER_ADMIN ROLE
                 is_active=True,
                 kyc_status='approved'  # Admin is pre-approved
             )
@@ -218,13 +219,13 @@ async def create_admin_user():
             new_admin.account_number = admin_account_number
             
             await db.commit()
-            print(f"✅ SUPER_ADMIN user created: {settings.ADMIN_EMAIL}")
+            print(f"[OK] SUPER_ADMIN user created: {settings.ADMIN_EMAIL}")
             print(f"   Role: SUPER_ADMIN (All access)")
             
         else:
             # Ensure admin has proper role and account
             if admin_user.admin_role != "SUPER_ADMIN":
-                admin_user.admin_role = "SUPER_ADMIN"  # ✅ UPGRADE TO SUPER_ADMIN IF NOT
+                admin_user.admin_role = "SUPER_ADMIN"  # [OK] UPGRADE TO SUPER_ADMIN IF NOT
                 
             if not admin_user.is_admin:
                 admin_user.is_admin = True
@@ -251,7 +252,7 @@ async def create_admin_user():
                 admin_user.account_number = admin_account_number
             
             await db.commit()
-            print(f"✅ SUPER_ADMIN verified: {settings.ADMIN_EMAIL}")
+            print(f"[OK] SUPER_ADMIN verified: {settings.ADMIN_EMAIL}")
 
 
 async def create_default_admin_roles():
@@ -311,7 +312,7 @@ async def create_default_admin_roles():
                     email=config["email"],
                     hashed_password=hashed_password,
                     is_admin=True,
-                    admin_role=role,  # ✅ SET PROPER ROLE
+                    admin_role=role,  # [OK] SET PROPER ROLE
                     is_active=True,
                     kyc_status='approved'
                 )
@@ -334,7 +335,7 @@ async def create_default_admin_roles():
                 new_user.account_number = account_number
                 
                 await db.commit()
-                print(f"✅ {role} account created")
+                print(f"[OK] {role} account created")
                 print(f"   Email: {config['email']}")
                 print(f"   Password: {config['password']}")
                 print(f"   Permissions: {config['permissions']}")
@@ -344,13 +345,13 @@ async def create_default_admin_roles():
                 if user.admin_role != role:
                     user.admin_role = role
                     await db.commit()
-                    print(f"✅ {role} account verified (role updated)")
+                    print(f"[OK] {role} account verified (role updated)")
 
 async def create_system_reserve_account():
     """
     Creates a system reserve account for treasury/funding operations.
     
-    ⚠️ SYSTEM ACCOUNT - Core Financial Component
+    [WARN] SYSTEM ACCOUNT - Core Financial Component
     
     System User Details:
     - ID: 1 (reserved)
@@ -397,12 +398,12 @@ async def create_system_reserve_account():
                 )
                 db.add(system_user)
                 await db.flush()
-                print("✅ System User (ID=1) created successfully")
+                print("[OK] System User (ID=1) created successfully")
                 print(f"   → Name: {system_user.full_name}")
                 print(f"   → Email: {system_user.email}")
                 print(f"   → Role: admin/system")
             else:
-                print("✅ System User (ID=1) already exists")
+                print("[OK] System User (ID=1) already exists")
             
             # Step 2: Create or verify system reserve account
             result = await db.execute(
@@ -457,7 +458,7 @@ async def create_system_reserve_account():
                 db.add(seed_ledger)
                 
                 await db.commit()
-                print("✅ System Reserve Account (SYS-RESERVE-0001) created successfully")
+                print("[OK] System Reserve Account (SYS-RESERVE-0001) created successfully")
                 print(f"   → Account Number: SYS-RESERVE-0001")
                 print(f"   → Owner: System User (ID=1)")
                 print(f"   → Account Type: treasury")
@@ -465,11 +466,11 @@ async def create_system_reserve_account():
                 print(f"   → KYC Level: full")
                 print(f"   → Status: Active and ready for use")
             else:
-                print("✅ System Reserve Account (SYS-RESERVE-0001) already exists")
+                print("[OK] System Reserve Account (SYS-RESERVE-0001) already exists")
                 print(f"   → Current Balance: ${reserve_account.balance:,.2f}")
         
         except Exception as e:
-            print(f"⚠️  Error creating system reserve account: {e}")
+            print(f"[WARN]  Error creating system reserve account: {e}")
             await db.rollback()
             raise
 
@@ -492,12 +493,12 @@ class ConnectionManager:
         """Accept and register a new WebSocket connection"""
         await websocket.accept()
         self.active_connections.append(websocket)
-        print(f"✅ WebSocket client connected. Total connections: {len(self.active_connections)}")
+        print(f"[OK] WebSocket client connected. Total connections: {len(self.active_connections)}")
     
     def disconnect(self, websocket: WebSocket):
         """Remove a disconnected WebSocket connection"""
         self.active_connections.remove(websocket)
-        print(f"❌ WebSocket client disconnected. Total connections: {len(self.active_connections)}")
+        print(f"[FAIL] WebSocket client disconnected. Total connections: {len(self.active_connections)}")
     
     async def broadcast(self, alert: dict):
         """
@@ -518,7 +519,7 @@ class ConnectionManager:
                 await connection.send_json(alert)
             except Exception as e:
                 # Connection failed, mark for removal
-                print(f"⚠️  Failed to broadcast alert to client: {e}")
+                print(f"[WARN]  Failed to broadcast alert to client: {e}")
                 disconnected.append(connection)
         
         # Remove failed connections
@@ -884,7 +885,7 @@ app.include_router(realtime_router)
 try:
     from routers.realtime_webhooks_receiver import router as realtime_webhooks_router
     app.include_router(realtime_webhooks_router)
-    log.info("✅ Real-Time Webhook Receiver registered - Ready to receive payments, KYC, email events")
+    log.info("[OK] Real-Time Webhook Receiver registered - Ready to receive payments, KYC, email events")
 except Exception as e:
     log.warning(f"Real-Time Webhook Receiver not available: {e}")
 
@@ -940,7 +941,7 @@ try:
     app.include_router(mobile_deposits_priority3_router)
     log.info(f"About to register compliance router with {len(compliance_priority3_router.routes)} routes")
     app.include_router(compliance_priority3_router)
-    log.info("✅ Priority 3 APIs registered: Scheduled Transfers, Webhooks, Mobile Deposits, Compliance")
+    log.info("[OK] Priority 3 APIs registered: Scheduled Transfers, Webhooks, Mobile Deposits, Compliance")
 except Exception as e:
     log.warning(f"Priority 3 APIs not available: {e}")
     import traceback
@@ -996,11 +997,11 @@ try:
     app.include_router(reporting_router)  # Prefix defined in router as /api/v1/reports
     app.include_router(treasury_router)  # Prefix defined in router as /api/v1/treasury
     app.include_router(settlement_router)  # Prefix defined in router as /api/v1/settlement
-    log.info("✅ Phase 4A routers registered (Fraud Detection, Blockchain, Reporting, Treasury, Settlement)")
+    log.info("[OK] Phase 4A routers registered (Fraud Detection, Blockchain, Reporting, Treasury, Settlement)")
 except (ImportError, ModuleNotFoundError, AttributeError) as e:
-    log.warning(f"⚠️  Phase 4A routers not available: {e}")
+    log.warning(f"[WARN]  Phase 4A routers not available: {e}")
 except Exception as e:
-    log.warning(f"⚠️  Phase 4A routers not available (optional): {e}")
+    log.warning(f"[WARN]  Phase 4A routers not available (optional): {e}")
 
 # PHASE 4B: Optional Enterprise Features (Bill Pay, Mobile Deposit)
 try:
@@ -1009,20 +1010,20 @@ try:
     
     app.include_router(bill_pay_router)  # Prefix defined in router as /api/v1/bill-pay
     app.include_router(mobile_deposit_router)  # Prefix defined in router as /api/v1/mobile-deposit
-    log.info("✅ Phase 4B routers registered (Bill Pay, Mobile Deposit)")
+    log.info("[OK] Phase 4B routers registered (Bill Pay, Mobile Deposit)")
 except (ImportError, ModuleNotFoundError, AttributeError) as e:
-    log.warning(f"⚠️  Phase 4B routers not available (optional): {e}")
+    log.warning(f"[WARN]  Phase 4B routers not available (optional): {e}")
 except Exception as e:
-    log.warning(f"⚠️  Phase 4B routers not available (optional): {e}")
+    log.warning(f"[WARN]  Phase 4B routers not available (optional): {e}")
 
 # WAVE 3: FILE UPLOADS, INTERNATIONAL TRANSFERS, ENHANCED MOBILE DEPOSITS
 try:
     app.include_router(uploads_router)  # /api/uploads/* endpoints
     app.include_router(international_router)  # /api/international/* endpoints
     app.include_router(mobile_deposits_router_new, prefix="/api")  # /api/deposits/* endpoints (enhanced)
-    log.info("✅ Wave 3 routers registered (File Uploads, International Transfers, Mobile Deposits)")
+    log.info("[OK] Wave 3 routers registered (File Uploads, International Transfers, Mobile Deposits)")
 except Exception as e:
-    log.warning(f"⚠️  Wave 3 routers not available: {e}")
+    log.warning(f"[WARN]  Wave 3 routers not available: {e}")
 
 # SUPPLEMENTAL ROUTERS: Alerts, Recipients
 try:
@@ -1030,7 +1031,7 @@ try:
     from routers.recipients import router as recipients_router
     app.include_router(alerts_router)   # /api/v1/alerts
     app.include_router(recipients_router)  # /api/v1/recipients
-    log.info("✅ Supplemental routers registered (Alerts, Recipients)")
+    log.info("[OK] Supplemental routers registered (Alerts, Recipients)")
 except Exception as e:
     log.warning(f"Supplemental routers not available: {e}")
 
@@ -1039,28 +1040,28 @@ try:
     from routers.admin_settings_api import admin_settings_router, config_router
     app.include_router(admin_settings_router)  # /api/v1/admin/settings
     app.include_router(config_router)           # /api/v1/config (public config endpoint)
-    log.info("✅ Admin Settings API registered")
+    log.info("[OK] Admin Settings API registered")
 except Exception as e:
     log.warning(f"Admin Settings API not available: {e}")
 
 try:
     from routers.business_analysis import router as business_analysis_router
     app.include_router(business_analysis_router)  # /api/user/analysis
-    log.info("✅ Business Analysis router registered")
+    log.info("[OK] Business Analysis router registered")
 except Exception as e:
     log.warning(f"Business Analysis router not available: {e}")
 
 try:
     from routers.forms import forms_router
     app.include_router(forms_router, prefix="/api/v1")  # /api/v1/forms
-    log.info("✅ Forms router registered")
+    log.info("[OK] Forms router registered")
 except Exception as e:
     log.warning(f"Forms router not available: {e}")
 
 try:
     from routers.mobile_deposit_api import router as mobile_deposit_api_router
     app.include_router(mobile_deposit_api_router)  # /api/v1/mobile-deposit (user-facing)
-    log.info("✅ Mobile Deposit API (user-facing) registered")
+    log.info("[OK] Mobile Deposit API (user-facing) registered")
 except Exception as e:
     log.warning(f"Mobile Deposit API not available: {e}")
 
@@ -2458,7 +2459,7 @@ async def websocket_fraud_alerts(websocket: WebSocket):
         fraud_alert_manager.disconnect(websocket)
         print("🔌 WebSocket client disconnected gracefully")
     except Exception as e:
-        print(f"❌ WebSocket error: {e}")
+        print(f"[FAIL] WebSocket error: {e}")
         try:
             fraud_alert_manager.disconnect(websocket)
         except:
@@ -2552,6 +2553,7 @@ async def websocket_fund_updates(websocket: WebSocket):
 # This should be the LAST mount.
 # The `html=True` argument makes it so that paths like "/" or "/about"
 # will automatically serve "static/index.html" or "static/about.html".
+app.include_router(public_router)
 app.mount("/", StaticFiles(directory="static", html=True), name="public")
 
 if __name__ == "__main__":

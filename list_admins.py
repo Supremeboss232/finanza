@@ -16,10 +16,10 @@ async def list_admins():
         admins = result.scalars().all()
         
         if not admins:
-            print("❌ No admin users found!")
+            print("[FAIL] No admin users found!")
             return
         
-        print(f"✅ Found {len(admins)} admin user(s):\n")
+        print(f"[OK] Found {len(admins)} admin user(s):\n")
         for admin in admins:
             print(f"  Email: {admin.email}")
             print(f"  Full Name: {admin.full_name}")

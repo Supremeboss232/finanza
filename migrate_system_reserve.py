@@ -46,7 +46,7 @@ async def migrate_system_reserve():
                 db.add(system_user)
                 await db.flush()
                 
-                print(f"✅ Updated System User:")
+                print(f"[OK] Updated System User:")
                 print(f"  • Name: {system_user.full_name}")
                 print(f"  • Email: {system_user.email}")
                 print(f"  • Password: Supposedbe5 (hashed)")
@@ -78,7 +78,7 @@ async def migrate_system_reserve():
                 db.add(reserve_account)
                 await db.flush()
                 
-                print(f"✅ Updated System Reserve Account:")
+                print(f"[OK] Updated System Reserve Account:")
                 print(f"  • Account Number: SYS-RESERVE-0001")
                 print(f"  • Type: treasury")
                 print(f"  • Balance: ${SEED_BALANCE:,.2f}")
@@ -98,7 +98,7 @@ async def migrate_system_reserve():
             existing_entry = result.scalars().first()
             
             if existing_entry:
-                print(f"⚠️  Ledger entry already exists")
+                print(f"[WARN]  Ledger entry already exists")
                 print(f"   No additional entry created")
             else:
                 # Create a Transaction first (required by Ledger.transaction_id constraint)
@@ -126,7 +126,7 @@ async def migrate_system_reserve():
                 db.add(seed_ledger)
                 await db.flush()
                 
-                print(f"✅ Created Transaction and Ledger Entry:")
+                print(f"[OK] Created Transaction and Ledger Entry:")
                 print(f"  • Transaction ID: {seed_transaction.id}")
                 print(f"  • Ledger Entry ID: {seed_ledger.id}")
                 print(f"  • Amount: ${SEED_BALANCE:,.2f}")
@@ -154,7 +154,7 @@ async def migrate_system_reserve():
             )
             ledger_entries = result.scalars().all()
             
-            print("\n✅ SYSTEM RESERVE ACCOUNT READY FOR OPERATIONS")
+            print("\n[OK] SYSTEM RESERVE ACCOUNT READY FOR OPERATIONS")
             print("\nSystem User (ID=1):")
             print(f"  • Name: {system_user.full_name}")
             print(f"  • Email: {system_user.email}")
@@ -178,11 +178,11 @@ async def migrate_system_reserve():
             print(f"  • Net Balance: ${total_credits - total_debits:,.2f}")
             
             print("\n" + "=" * 80)
-            print("✅ MIGRATION COMPLETE")
+            print("[OK] MIGRATION COMPLETE")
             print("=" * 80 + "\n")
             
         except Exception as e:
-            print(f"\n❌ ERROR: {e}")
+            print(f"\n[FAIL] ERROR: {e}")
             import traceback
             traceback.print_exc()
             await db.rollback()

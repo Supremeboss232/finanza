@@ -21,10 +21,10 @@ def check_env_file():
     env_path = Path(".env")
     
     if not env_path.exists():
-        print(f"❌ .env file not found!")
+        print(f"[FAIL] .env file not found!")
         return False
     
-    print(f"✅ Found .env file")
+    print(f"[OK] Found .env file")
     
     with open(env_path) as f:
         content = f.read()
@@ -34,10 +34,10 @@ def check_env_file():
                 if line.startswith('DATABASE_URL='):
                     url = line.split('=', 1)[1]
                     masked_url = url.replace('Supposedbe5', '***')
-                    print(f"✅ DATABASE_URL configured: {masked_url}")
+                    print(f"[OK] DATABASE_URL configured: {masked_url}")
                     return True
     
-    print(f"❌ DATABASE_URL not found in .env")
+    print(f"[FAIL] DATABASE_URL not found in .env")
     return False
 
 def check_pem_file():
@@ -49,10 +49,10 @@ def check_pem_file():
     pem_path = Path("BankingBackendKey.pem")
     
     if not pem_path.exists():
-        print(f"❌ BankingBackendKey.pem not found!")
+        print(f"[FAIL] BankingBackendKey.pem not found!")
         return False
     
-    print(f"✅ Found BankingBackendKey.pem")
+    print(f"[OK] Found BankingBackendKey.pem")
     return True
 
 def check_python_dependencies():
@@ -72,17 +72,17 @@ def check_python_dependencies():
     for package in required:
         try:
             __import__(package)
-            print(f"✅ {package}")
+            print(f"[OK] {package}")
         except ImportError:
-            print(f"❌ {package} - NOT INSTALLED")
+            print(f"[FAIL] {package} - NOT INSTALLED")
             missing.append(package)
     
     if missing:
-        print(f"\n❌ Missing packages: {', '.join(missing)}")
+        print(f"\n[FAIL] Missing packages: {', '.join(missing)}")
         print(f"   Install with: pip install -r requirements.txt")
         return False
     
-    print(f"\n✅ All dependencies installed")
+    print(f"\n[OK] All dependencies installed")
     return True
 
 async def test_database_connection():
@@ -111,13 +111,13 @@ async def test_database_connection():
             
         await engine.dispose()
         
-        print(f"✅ Database connection successful!")
-        print(f"✅ Query executed: SELECT 1 → {value}")
+        print(f"[OK] Database connection successful!")
+        print(f"[OK] Query executed: SELECT 1 → {value}")
         return True
         
     except Exception as e:
-        print(f"❌ Database connection failed: {e}")
-        print(f"\n💡 Troubleshooting:")
+        print(f"[FAIL] Database connection failed: {e}")
+        print(f"\n[TIP] Troubleshooting:")
         print(f"   1. Is SSH tunnel open? Run: .\\setup_ec2_tunnel.ps1")
         print(f"   2. Is database running on localhost:5432?")
         print(f"   3. Are credentials correct in .env?")
@@ -141,7 +141,7 @@ async def main():
         try:
             results[name] = check()
         except Exception as e:
-            print(f"❌ Error during {name}: {e}")
+            print(f"[FAIL] Error during {name}: {e}")
             results[name] = False
     
     # Test database if everything else passes
@@ -149,10 +149,10 @@ async def main():
         try:
             results["Database Connection"] = await test_database_connection()
         except Exception as e:
-            print(f"❌ Error testing database: {e}")
+            print(f"[FAIL] Error testing database: {e}")
             results["Database Connection"] = False
     else:
-        print("\n⏭️  Skipping database test due to earlier failures")
+        print("\n⏭  Skipping database test due to earlier failures")
     
     # Summary
     print("\n" + "="*70)
@@ -160,14 +160,14 @@ async def main():
     print("="*70)
     
     for name, passed in results.items():
-        status = "✅" if passed else "❌"
+        status = "[OK]" if passed else "[FAIL]"
         print(f"{status} {name}")
     
     if all(results.values()):
         print("\n" + "="*70)
-        print("✅ ALL CHECKS PASSED!")
+        print("[OK] ALL CHECKS PASSED!")
         print("="*70)
-        print("\n🚀 You're ready to start developing!")
+        print("\n[>>] You're ready to start developing!")
         print("\nNext steps:")
         print("  1. Install dependencies: pip install -r requirements.txt")
         print("  2. Run migrations (if needed): alembic upgrade head")
@@ -175,7 +175,7 @@ async def main():
         return 0
     else:
         print("\n" + "="*70)
-        print("❌ SOME CHECKS FAILED")
+        print("[FAIL] SOME CHECKS FAILED")
         print("="*70)
         print("\nPlease fix the issues above and try again.")
         print("\nFor help, see EC2_CONNECTION_SETUP.md or EC2_QUICK_START.md")

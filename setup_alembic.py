@@ -91,4 +91,4 @@ env_file = alembic_dir / "env.py"
 with open(env_file, "w") as f:
     f.write(alembic_env_content)
 
-print(f"✅ Created {env_file}")
+print(f"[OK] Created {env_file}")

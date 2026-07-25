@@ -31,7 +31,7 @@ class OrphanedUserFixer:
     @staticmethod
     async def fix_orphaned_users(db: AsyncSession):
         """Create accounts for all orphaned users"""
-        log.info("🔧 Starting orphaned user fix...")
+        log.info("[FIX] Starting orphaned user fix...")
         
         # Find all users without accounts
         result = await db.execute(
@@ -42,10 +42,10 @@ class OrphanedUserFixer:
         orphaned_users = result.scalars().all()
         
         if not orphaned_users:
-            log.info("✅ No orphaned users found - system is clean!")
+            log.info("[OK] No orphaned users found - system is clean!")
             return 0, []
         
-        log.warning(f"⚠️  Found {len(orphaned_users)} orphaned users - creating accounts...")
+        log.warning(f"[WARN]  Found {len(orphaned_users)} orphaned users - creating accounts...")
         
         fixed_count = 0
         fixes = []
@@ -57,7 +57,7 @@ class OrphanedUserFixer:
                 # Ensure KYC status is set
                 if not user.kyc_status:
                     user.kyc_status = 'not_started'
-                    log.info(f"    ✓ Set kyc_status='not_started'")
+                    log.info(f"    [OK] Set kyc_status='not_started'")
                 
                 # Create primary account
                 account_number = f"ACC{user.id}_{int(time.time() * 1000000) % 1000000}"
@@ -77,7 +77,7 @@ class OrphanedUserFixer:
                 
                 await db.flush()
                 
-                log.info(f"    ✓ Created account: {account_number}")
+                log.info(f"    [OK] Created account: {account_number}")
                 fixes.append({
                     "user_id": user.id,
                     "email": user.email,
@@ -88,7 +88,7 @@ class OrphanedUserFixer:
                 fixed_count += 1
                 
             except Exception as e:
-                log.error(f"    ❌ Error fixing user {user.id}: {e}")
+                log.error(f"    [FAIL] Error fixing user {user.id}: {e}")
                 fixes.append({
                     "user_id": user.id,
                     "email": user.email,
@@ -99,13 +99,13 @@ class OrphanedUserFixer:
         # Commit all fixes
         await db.commit()
         
-        log.info(f"\n✅ Fixed {fixed_count} orphaned users")
+        log.info(f"\n[OK] Fixed {fixed_count} orphaned users")
         return fixed_count, fixes
     
     @staticmethod
     async def fix_kyc_status(db: AsyncSession):
         """Ensure all users have KYC status"""
-        log.info("🔧 Checking KYC status...")
+        log.info("[FIX] Checking KYC status...")
         
         result = await db.execute(
             select(DBUser).filter(
@@ -115,17 +115,17 @@ class OrphanedUserFixer:
         users = result.scalars().all()
         
         if not users:
-            log.info("✅ All users have KYC status")
+            log.info("[OK] All users have KYC status")
             return 0
         
-        log.warning(f"⚠️  Found {len(users)} users without KYC status - fixing...")
+        log.warning(f"[WARN]  Found {len(users)} users without KYC status - fixing...")
         
         for user in users:
             user.kyc_status = 'not_started'
-            log.info(f"  ✓ User {user.id}: kyc_status='not_started'")
+            log.info(f"  [OK] User {user.id}: kyc_status='not_started'")
         
         await db.commit()
-        log.info(f"✅ Fixed {len(users)} users")
+        log.info(f"[OK] Fixed {len(users)} users")
         return len(users)
 
 
@@ -143,7 +143,7 @@ async def main():
         kyc_fixed = await OrphanedUserFixer.fix_kyc_status(db)
         
         log.info("\n" + "="*70)
-        log.info("✅ FIX COMPLETE")
+        log.info("[OK] FIX COMPLETE")
         log.info(f"  Orphaned users fixed: {fixed_count}")
         log.info(f"  KYC status fixed: {kyc_fixed}")
         log.info("="*70 + "\n")
@@ -160,9 +160,9 @@ if __name__ == "__main__":
     
     import sys
     if result["orphaned_users_fixed"] > 0 or result["kyc_status_fixed"] > 0:
-        log.info("⚠️  System was not compliant - fixes applied.")
+        log.info("[WARN]  System was not compliant - fixes applied.")
         log.info("   Please run verify_invariants.py to confirm.")
         sys.exit(0)  # Success
     else:
-        log.info("✅ System was already compliant.")
+        log.info("[OK] System was already compliant.")
         sys.exit(0)

@@ -70,14 +70,14 @@ async def cleanup_accounting_data():
                 account.balance = calculated_balance
                 accounts_fixed += 1
                 
-                print(f"    ✓ Updated to ${calculated_balance:.2f}\n")
+                print(f"    [OK] Updated to ${calculated_balance:.2f}\n")
         
         print(f"  Fixed: {accounts_fixed} accounts\n")
         
         # Step 3: Commit all changes
         print("[3] Committing changes...")
         await db.commit()
-        print("  ✓ Changes committed\n")
+        print("  [OK] Changes committed\n")
         
         # Step 4: Verify cleanup
         print("[4] Verifying cleanup...")
@@ -89,9 +89,9 @@ async def cleanup_accounting_data():
         remaining_orphaned = orphaned_check.scalar() or 0
         
         if remaining_orphaned == 0:
-            print("  ✓ No orphaned transactions remaining")
+            print("  [OK] No orphaned transactions remaining")
         else:
-            print(f"  ⚠ WARNING: {remaining_orphaned} orphaned transactions still exist")
+            print(f"  [WARN] WARNING: {remaining_orphaned} orphaned transactions still exist")
         
         # Verify accounting equation
         admin_total = await BalanceService.get_admin_total_volume(db)
@@ -99,9 +99,9 @@ async def cleanup_accounting_data():
         difference = abs(admin_total - user_balances_sum)
         
         if difference < 0.01:
-            print(f"  ✓ Accounting equation balanced: ${admin_total:.2f} = ${user_balances_sum:.2f}")
+            print(f"  [OK] Accounting equation balanced: ${admin_total:.2f} = ${user_balances_sum:.2f}")
         else:
-            print(f"  ⚠ WARNING: Accounting equation imbalanced: ${admin_total:.2f} ≠ ${user_balances_sum:.2f}")
+            print(f"  [WARN] WARNING: Accounting equation imbalanced: ${admin_total:.2f} ≠ ${user_balances_sum:.2f}")
         
         print("\n" + "="*80)
         print("CLEANUP COMPLETE")

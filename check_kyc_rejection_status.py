@@ -39,14 +39,14 @@ async def check_kyc_status():
                 
                 # Check if profile should be locked
                 is_locked = kyc_info and kyc_info.kyc_submitted
-                print(f"\n   🔒 Profile Locked? {is_locked}")
+                print(f"\n   [LOCK] Profile Locked? {is_locked}")
                 
                 if not is_locked:
-                    print(f"   ✅ Profile is OPEN for updates!")
+                    print(f"   [OK] Profile is OPEN for updates!")
                 else:
-                    print(f"   ❌ Profile is LOCKED - KYC under review")
+                    print(f"   [FAIL] Profile is LOCKED - KYC under review")
             else:
-                print(f"   ❌ No KYC info found")
+                print(f"   [FAIL] No KYC info found")
         
         print("\n" + "="*80)
 

@@ -19,14 +19,14 @@ YOUR DATABASE DETAILS:
   Password:   Supposedbe5
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-⚠️  CURRENT ISSUE:
+[WARN]  CURRENT ISSUE:
 Your computer cannot reach the RDS instance. This is likely due to:
   • Security Group not allowing your IP
   • RDS not accessible from outside AWS VPC
   • Network timeout
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-OPTION 1: Use AWS RDS Query Editor (EASIEST - Recommended) ✨
+OPTION 1: Use AWS RDS Query Editor (EASIEST - Recommended) [*]
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Steps:
@@ -71,7 +71,7 @@ UNION ALL
 SELECT 'loans', COUNT(*) FROM loans;
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-OPTION 2: Use DBeaver (Desktop Tool) 🖥️
+OPTION 2: Use DBeaver (Desktop Tool) 🖥
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 1. Download: https://dbeaver.io/download/
@@ -80,7 +80,7 @@ OPTION 2: Use DBeaver (Desktop Tool) 🖥️
 4. Test Connection → If it fails, continue to Option 3
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-OPTION 3: Fix AWS Security Group (If you need external access) 🔒
+OPTION 3: Fix AWS Security Group (If you need external access) [LOCK]
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 1. Go to AWS Console → RDS → Databases → finbank-db
@@ -95,7 +95,7 @@ OPTION 3: Fix AWS Security Group (If you need external access) 🔒
 To find your IP: https://www.whatismyipaddress.com/
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-OPTION 4: Use EC2 Bastion Host (Most Secure) 🛡️
+OPTION 4: Use EC2 Bastion Host (Most Secure) 🛡
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 1. Launch an EC2 instance in the same VPC as your RDS
@@ -141,7 +141,7 @@ YOUR DATABASE TABLES & STRUCTURE:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-✅ RECOMMENDED: Start with Option 1 (AWS RDS Query Editor)
+[OK] RECOMMENDED: Start with Option 1 (AWS RDS Query Editor)
    It requires no setup and no security group changes!
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

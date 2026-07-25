@@ -33,37 +33,37 @@ async def migrate_add_missing_columns():
                         ADD COLUMN {col_name} {col_type}
                     """)
                     await conn.execute(query)
-                    print(f"✅ Added column: {col_name}")
+                    print(f"[OK] Added column: {col_name}")
                 except Exception as e:
                     if "already exists" in str(e):
-                        print(f"⚠️  Column already exists: {col_name}")
+                        print(f"[WARN]  Column already exists: {col_name}")
                     else:
-                        print(f"❌ Error adding {col_name}: {e}")
+                        print(f"[FAIL] Error adding {col_name}: {e}")
             
             # Add index on common query columns
             try:
                 await conn.execute(text("CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)"))
-                print("✅ Added index on email")
+                print("[OK] Added index on email")
             except:
-                print("⚠️  Index on email already exists")
+                print("[WARN]  Index on email already exists")
             
             try:
                 await conn.execute(text("CREATE INDEX IF NOT EXISTS idx_users_admin_role ON users(admin_role)"))
-                print("✅ Added index on admin_role")
+                print("[OK] Added index on admin_role")
             except:
-                print("⚠️  Index on admin_role already exists")
+                print("[WARN]  Index on admin_role already exists")
             
             try:
                 await conn.execute(text("CREATE INDEX IF NOT EXISTS idx_users_is_suspended ON users(is_suspended)"))
-                print("✅ Added index on is_suspended")
+                print("[OK] Added index on is_suspended")
             except:
-                print("⚠️  Index on is_suspended already exists")
+                print("[WARN]  Index on is_suspended already exists")
             
             await conn.commit()
-            print("\n✅ Database migration completed successfully!")
+            print("\n[OK] Database migration completed successfully!")
             
         except Exception as e:
-            print(f"\n❌ Migration failed: {e}")
+            print(f"\n[FAIL] Migration failed: {e}")
             raise
 
 if __name__ == "__main__":

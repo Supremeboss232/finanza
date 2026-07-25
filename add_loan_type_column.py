@@ -19,9 +19,9 @@ async def add_loan_type_column():
                 ADD COLUMN IF NOT EXISTS loan_type VARCHAR(50) NULL
             """))
             await conn.commit()
-            print("✅ Successfully added loan_type column to loans table")
+            print("[OK] Successfully added loan_type column to loans table")
     except Exception as e:
-        print(f"❌ Error adding column: {e}")
+        print(f"[FAIL] Error adding column: {e}")
     finally:
         await engine.dispose()
 

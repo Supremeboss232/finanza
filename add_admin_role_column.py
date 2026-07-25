@@ -16,14 +16,14 @@ try:
     columns = [column[1] for column in cursor.fetchall()]
     
     if "admin_role" in columns:
-        print("✅ Column admin_role already exists")
+        print("[OK] Column admin_role already exists")
     else:
         # Add the column
         cursor.execute("ALTER TABLE users ADD COLUMN admin_role VARCHAR DEFAULT 'STANDARD'")
         conn.commit()
-        print("✅ Column admin_role added to users table")
+        print("[OK] Column admin_role added to users table")
     
     conn.close()
 except Exception as e:
-    print(f"❌ Error updating database: {e}")
+    print(f"[FAIL] Error updating database: {e}")
     exit(1)

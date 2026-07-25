@@ -50,10 +50,10 @@ class DatabaseSetup:
         try:
             async with self.engine.connect() as connection:
                 await connection.execute(text("SELECT 1"))
-            logger.info("✅ Database connection successful")
+            logger.info("[OK] Database connection successful")
             return True
         except Exception as e:
-            logger.error(f"❌ Database connection failed: {e}")
+            logger.error(f"[FAIL] Database connection failed: {e}")
             return False
     
     async def create_all_tables(self) -> bool:
@@ -61,10 +61,10 @@ class DatabaseSetup:
         try:
             async with self.engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
-            logger.info("✅ All tables created/verified")
+            logger.info("[OK] All tables created/verified")
             return True
         except Exception as e:
-            logger.error(f"❌ Failed to create tables: {e}")
+            logger.error(f"[FAIL] Failed to create tables: {e}")
             return False
     
     async def verify_schema(self) -> dict:
@@ -109,7 +109,7 @@ class DatabaseSetup:
                 
                 return results
         except Exception as e:
-            logger.error(f"❌ Schema verification failed: {e}")
+            logger.error(f"[FAIL] Schema verification failed: {e}")
             return results
     
     async def ensure_system_user(self) -> bool:
@@ -121,7 +121,7 @@ class DatabaseSetup:
                 system_user = await get_user_by_email(db, email="sysreserve@finanza.com")
                 
                 if system_user:
-                    logger.info("✅ System user (ID=1) already exists")
+                    logger.info("[OK] System user (ID=1) already exists")
                     return True
                 
                 # Create system user
@@ -137,11 +137,11 @@ class DatabaseSetup:
                 )
                 db.add(system_user)
                 await db.commit()
-                logger.info("✅ System user created (ID=1)")
+                logger.info("[OK] System user created (ID=1)")
                 return True
                 
         except Exception as e:
-            logger.error(f"❌ Failed to ensure system user: {e}")
+            logger.error(f"[FAIL] Failed to ensure system user: {e}")
             return False
     
     async def ensure_system_reserve_account(self) -> bool:
@@ -156,7 +156,7 @@ class DatabaseSetup:
                 reserve = result.scalar_one_or_none()
                 
                 if reserve:
-                    logger.info(f"✅ System reserve account exists (Balance: ${reserve.balance:,.2f})")
+                    logger.info(f"[OK] System reserve account exists (Balance: ${reserve.balance:,.2f})")
                     return True
                 
                 # Create reserve account
@@ -202,11 +202,11 @@ class DatabaseSetup:
                 db.add(seed_ledger)
                 await db.commit()
                 
-                logger.info("✅ System reserve account created with $10,000,000 seed")
+                logger.info("[OK] System reserve account created with $10,000,000 seed")
                 return True
                 
         except Exception as e:
-            logger.error(f"❌ Failed to create system reserve account: {e}")
+            logger.error(f"[FAIL] Failed to create system reserve account: {e}")
             return False
     
     async def create_admin_user(self) -> bool:
@@ -217,7 +217,7 @@ class DatabaseSetup:
                 admin = await get_user_by_email(db, email=settings.ADMIN_EMAIL)
                 
                 if admin and admin.is_admin:
-                    logger.info(f"✅ Admin user exists ({settings.ADMIN_EMAIL})")
+                    logger.info(f"[OK] Admin user exists ({settings.ADMIN_EMAIL})")
                     return True
                 
                 # Create admin user
@@ -250,11 +250,11 @@ class DatabaseSetup:
                 admin_user.account_number = admin_account_number
                 
                 await db.commit()
-                logger.info(f"✅ Admin user created ({settings.ADMIN_EMAIL})")
+                logger.info(f"[OK] Admin user created ({settings.ADMIN_EMAIL})")
                 return True
                 
         except Exception as e:
-            logger.error(f"❌ Failed to create admin user: {e}")
+            logger.error(f"[FAIL] Failed to create admin user: {e}")
             return False
     
     async def generate_schema_summary(self) -> None:
@@ -288,7 +288,7 @@ class DatabaseSetup:
 async def main():
     """Main setup orchestration"""
     logger.info("\n" + "="*60)
-    logger.info("🚀 DATABASE SETUP & SYNCHRONIZATION")
+    logger.info("[>>] DATABASE SETUP & SYNCHRONIZATION")
     logger.info("="*60 + "\n")
     
     setup = DatabaseSetup()
@@ -296,14 +296,14 @@ async def main():
     # Step 1: Test connection
     logger.info("Step 1: Testing database connection...")
     if not await setup.test_connection():
-        logger.error("\n❌ Cannot proceed - database connection failed")
+        logger.error("\n[FAIL] Cannot proceed - database connection failed")
         logger.info("   Check .env DATABASE_URL configuration")
         return False
     
     # Step 2: Create tables
     logger.info("\nStep 2: Creating/verifying tables...")
     if not await setup.create_all_tables():
-        logger.error("\n❌ Failed to create tables")
+        logger.error("\n[FAIL] Failed to create tables")
         return False
     
     # Step 3: Verify schema
@@ -312,11 +312,11 @@ async def main():
     logger.info(f"   Tables verified: {schema_check['verified_tables']}/{schema_check['total_tables']}")
     
     if schema_check['missing_tables']:
-        logger.warning(f"   ⚠️  Missing tables: {schema_check['missing_tables']}")
+        logger.warning(f"   [WARN]  Missing tables: {schema_check['missing_tables']}")
     
     if schema_check['missing_columns']:
         for missing in schema_check['missing_columns']:
-            logger.warning(f"   ⚠️  {missing['table']}: missing columns {missing['columns']}")
+            logger.warning(f"   [WARN]  {missing['table']}: missing columns {missing['columns']}")
     
     # Step 4: Ensure system user
     logger.info("\nStep 4: Ensuring system user...")
@@ -335,13 +335,13 @@ async def main():
     await setup.generate_schema_summary()
     
     logger.info("\n" + "="*60)
-    logger.info("✅ DATABASE SETUP COMPLETE")
+    logger.info("[OK] DATABASE SETUP COMPLETE")
     logger.info("="*60)
     logger.info("\nYour database is now ready with:")
-    logger.info("  ✓ All tables created and synchronized")
-    logger.info("  ✓ System user (ID=1) configured")
-    logger.info("  ✓ System reserve account ($10M seed)")
-    logger.info("  ✓ Admin user account configured")
+    logger.info("  [OK] All tables created and synchronized")
+    logger.info("  [OK] System user (ID=1) configured")
+    logger.info("  [OK] System reserve account ($10M seed)")
+    logger.info("  [OK] Admin user account configured")
     logger.info("\nYou can now start the application!")
     logger.info("="*60 + "\n")
     

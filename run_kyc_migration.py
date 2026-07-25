@@ -11,13 +11,13 @@ async def init_database():
     """Initialize all tables and add kyc_status column"""
     
     # 1. Create all tables
-    print("1️⃣  Creating all database tables...")
+    print("1⃣  Creating all database tables...")
     async with engine.begin() as connection:
         await connection.run_sync(Base.metadata.create_all)
-    print("✓ Tables created")
+    print("[OK] Tables created")
     
     # 2. Add kyc_status column if it doesn't exist
-    print("\n2️⃣  Adding kyc_status column to users table...")
+    print("\n2⃣  Adding kyc_status column to users table...")
     async with engine.begin() as connection:
         try:
             # Check if column exists
@@ -30,7 +30,7 @@ async def init_database():
             )
             
             if result.fetchone():
-                print("✓ kyc_status column already exists")
+                print("[OK] kyc_status column already exists")
             else:
                 # Add the column with default
                 await connection.execute(
@@ -39,7 +39,7 @@ async def init_database():
                         ADD COLUMN kyc_status VARCHAR(20) NOT NULL DEFAULT 'not_started'
                     """)
                 )
-                print("✓ Added kyc_status column to users table")
+                print("[OK] Added kyc_status column to users table")
                 
                 # Create index for performance
                 try:
@@ -48,16 +48,16 @@ async def init_database():
                             CREATE INDEX idx_users_kyc_status ON users (kyc_status)
                         """)
                     )
-                    print("✓ Created index on kyc_status")
+                    print("[OK] Created index on kyc_status")
                 except Exception:
-                    print("⚠ Index may already exist (skipped)")
+                    print("[WARN] Index may already exist (skipped)")
         
         except Exception as e:
-            print(f"⚠ Warning during column addition: {e}")
+            print(f"[WARN] Warning during column addition: {e}")
 
 async def verify_schema():
     """Verify the schema was created correctly"""
-    print("\n3️⃣  Verifying schema...")
+    print("\n3⃣  Verifying schema...")
     async with engine.begin() as connection:
         try:
             # Check users table columns
@@ -71,7 +71,7 @@ async def verify_schema():
             )
             
             columns = result.fetchall()
-            print(f"\n✓ Users table has {len(columns)} columns:")
+            print(f"\n[OK] Users table has {len(columns)} columns:")
             for col in columns:
                 nullable = "NULL" if col[2] == "YES" else "NOT NULL"
                 print(f"  - {col[0]:<25} {col[1]:<15} {nullable}")
@@ -79,10 +79,10 @@ async def verify_schema():
             # Verify kyc_status exists
             kyc_found = any(col[0] == 'kyc_status' for col in columns)
             if kyc_found:
-                print("\n✅ kyc_status column verified!")
+                print("\n[OK] kyc_status column verified!")
                 return True
             else:
-                print("\n⚠ kyc_status column NOT FOUND in database")
+                print("\n[WARN] kyc_status column NOT FOUND in database")
                 return False
                 
         except Exception as e:
@@ -91,7 +91,7 @@ async def verify_schema():
 
 async def test_admin_query():
     """Test that admin user query works"""
-    print("\n4️⃣  Testing admin user query...")
+    print("\n4⃣  Testing admin user query...")
     try:
         from sqlalchemy.orm import sessionmaker
         from sqlalchemy.ext.asyncio import AsyncSession
@@ -103,10 +103,10 @@ async def test_admin_query():
             from sqlalchemy import select
             result = await session.execute(select(User).limit(1))
             users = result.scalars().all()
-            print(f"✓ Admin query works - found {len(users)} users")
+            print(f"[OK] Admin query works - found {len(users)} users")
             return True
     except Exception as e:
-        print(f"⚠ Query test error: {e}")
+        print(f"[WARN] Query test error: {e}")
         return False
 
 if __name__ == "__main__":
@@ -115,6 +115,6 @@ if __name__ == "__main__":
     query_ok = asyncio.run(test_admin_query())
     
     if schema_ok and query_ok:
-        print("\n✅ Database initialization complete! KYC logic ready to activate.")
+        print("\n[OK] Database initialization complete! KYC logic ready to activate.")
     else:
-        print("\n⚠ Database initialization completed with warnings.")
+        print("\n[WARN] Database initialization completed with warnings.")

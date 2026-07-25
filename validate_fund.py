@@ -8,8 +8,8 @@ try:
     
     parser = HTMLParser()
     parser.feed(content)
-    print('✓ HTML structure is valid')
-    print(f'✓ File size: {len(content)} bytes')
+    print('[OK] HTML structure is valid')
+    print(f'[OK] File size: {len(content)} bytes')
     print()
     
     checks = [
@@ -31,19 +31,19 @@ try:
     all_present = True
     for check, desc in checks:
         if check in content:
-            print(f'✓ {desc}')
+            print(f'[OK] {desc}')
         else:
-            print(f'✗ {desc} - NOT FOUND')
+            print(f'[FAIL] {desc} - NOT FOUND')
             all_present = False
     
     print()
     print('Summary:')
     if all_present:
-        print('✓ ALL PRODUCTION FEATURES PRESENT')
+        print('[OK] ALL PRODUCTION FEATURES PRESENT')
     else:
-        print('✗ Some features missing')
+        print('[FAIL] Some features missing')
         
 except SyntaxError as e:
-    print(f'✗ HTML Syntax Error: {e}')
+    print(f'[FAIL] HTML Syntax Error: {e}')
 except Exception as e:
-    print(f'✗ Error: {e}')
+    print(f'[FAIL] Error: {e}')

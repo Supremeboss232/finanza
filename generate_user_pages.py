@@ -363,6 +363,6 @@ for filename, (title, page_type, content) in pages.items():
     html = generate_page(title, page_type, content)
     with open(filepath, 'w', encoding='utf-8') as f:
         f.write(html)
-    print(f"✓ Created: {filename}")
+    print(f"[OK] Created: {filename}")
 
 print("\nAll KYC pages generated successfully!")

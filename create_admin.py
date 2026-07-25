@@ -23,7 +23,7 @@ async def create_admin_user(email: str, password: str, full_name: str = "Admin")
         existing_user = result.scalar_one_or_none()
         
         if existing_user:
-            print(f"❌ User with email '{email}' already exists!")
+            print(f"[FAIL] User with email '{email}' already exists!")
             return False
         
         # Create new admin user
@@ -40,7 +40,7 @@ async def create_admin_user(email: str, password: str, full_name: str = "Admin")
         await db.commit()
         await db.refresh(new_admin)
         
-        print(f"✅ Admin user created successfully!")
+        print(f"[OK] Admin user created successfully!")
         print(f"   Email: {email}")
         print(f"   Full Name: {full_name}")
         print(f"   User ID: {new_admin.id}")
@@ -61,12 +61,12 @@ def main():
     
     # Validate email
     if "@" not in email:
-        print("❌ Invalid email address!")
+        print("[FAIL] Invalid email address!")
         sys.exit(1)
     
     # Validate password
     if len(password) < 6:
-        print("❌ Password must be at least 6 characters!")
+        print("[FAIL] Password must be at least 6 characters!")
         sys.exit(1)
     
     print(f"Creating admin user...")

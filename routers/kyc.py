@@ -275,7 +275,7 @@ async def submit_kyc_form(
             )
         
         # Log successful submission
-        print(f"\n✅ KYC SUBMIT - Success")
+        print(f"\n[OK] KYC SUBMIT - Success")
         print(f"   KYC ID: {kyc_data.get('kyc_id')}")
         print(f"   User ID: {current_user.id}")
         print(f"   Email: {email}")
@@ -298,7 +298,7 @@ async def submit_kyc_form(
     except HTTPException:
         raise
     except Exception as e:
-        print(f"\n❌ KYC SUBMIT - Error: {str(e)}")
+        print(f"\n[FAIL] KYC SUBMIT - Error: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error submitting KYC: {str(e)}"

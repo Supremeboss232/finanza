@@ -75,7 +75,7 @@ for category, endpoints in missing_endpoints.items():
     print(f"\n📍 {category}: {count} endpoints")
     print("-" * 100)
     for ep in endpoints:
-        print(f"   ❌ {ep}")
+        print(f"   [FAIL] {ep}")
 
 print("\n" + "="*100)
 print(f"TOTAL MISSING ENDPOINTS: {total_missing}")

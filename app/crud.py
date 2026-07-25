@@ -32,7 +32,7 @@ async def create_user(db: AsyncSession, user: schemas.UserCreate):
     """
     ATOMIC OPERATION: Create User with Primary Account
     
-    ⚠️ CORE RULE (NON-NEGOTIABLE):
+    [WARN] CORE RULE (NON-NEGOTIABLE):
     Every user must have BOTH a User ID and an Account ID.
     Not "optional", not "generated later", not "after KYC".
     

@@ -11,7 +11,7 @@ load_dotenv()
 def test_supabase_connection():
     """Test Supabase REST API and PostgreSQL connectivity"""
     print("\n" + "=" * 60)
-    print("🧪 SUPABASE CONNECTION TEST")
+    print("[TST] SUPABASE CONNECTION TEST")
     print("=" * 60 + "\n")
 
     required_vars = [
@@ -28,14 +28,14 @@ def test_supabase_connection():
     if missing:
         pytest.fail(f"Missing Supabase environment variables: {', '.join(missing)}")
 
-    print("1️⃣  Checking environment variables...")
+    print("1⃣  Checking environment variables...")
     for name in required_vars:
         value = os.getenv(name)
         display = value[:20] + "..." if value and len(value) > 20 else value
-        print(f"   ✅ {name}: {display}")
+        print(f"   [OK] {name}: {display}")
 
     # Test Supabase REST API (this works in all environments)
-    print("\n2️⃣  Testing Supabase REST API connection...")
+    print("\n2⃣  Testing Supabase REST API connection...")
     try:
         from supabase import create_client
         
@@ -43,28 +43,28 @@ def test_supabase_connection():
         key = os.getenv("SUPABASE_ANON_KEY")
         
         supabase = create_client(url, key)
-        print("   ✅ Supabase client created")
+        print("   [OK] Supabase client created")
         
         # Try a simple query - this will fail with table not found initially (expected)
         # but it proves the connection and authentication work
         try:
             response = supabase.table('users').select('id').limit(1).execute()
-            print(f"   ✅ REST API query successful: {len(response.data)} rows")
+            print(f"   [OK] REST API query successful: {len(response.data)} rows")
         except Exception as api_error:
             # Check if it's just a missing table (which is expected during setup)
             error_msg = str(api_error)
             if "table" in error_msg.lower() and "not found" in error_msg.lower():
-                print(f"   ✅ REST API connection successful (table not yet migrated)")
+                print(f"   [OK] REST API connection successful (table not yet migrated)")
             elif "401" in error_msg or "unauthorized" in error_msg.lower():
                 pytest.fail(f"Supabase authentication failed: {api_error}")
             else:
-                print(f"   ✅ REST API connection successful (response: {error_msg[:50]})")
+                print(f"   [OK] REST API connection successful (response: {error_msg[:50]})")
     
     except Exception as exc:
         pytest.fail(f"Supabase REST API initialization failed: {exc}")
 
     # Test PostgreSQL direct connection (optional - may fail due to DNS issues)
-    print("\n3️⃣  Testing PostgreSQL direct connection...")
+    print("\n3⃣  Testing PostgreSQL direct connection...")
     try:
         import psycopg2
         from psycopg2 import OperationalError
@@ -80,28 +80,28 @@ def test_supabase_connection():
             cursor.execute("SELECT version();")
             version = cursor.fetchone()[0]
         conn.close()
-        print(f"   ✅ PostgreSQL connection successful! {version[:50]}")
+        print(f"   [OK] PostgreSQL connection successful! {version[:50]}")
     except ImportError as exc:
-        print(f"   ⚠️  psycopg2 not installed (REST API is available as alternative)")
+        print(f"   [WARN]  psycopg2 not installed (REST API is available as alternative)")
     except OperationalError as exc:
-        print(f"   ⚠️  PostgreSQL direct connection failed (expected in some environments)")
+        print(f"   [WARN]  PostgreSQL direct connection failed (expected in some environments)")
         print(f"       Error: {str(exc)[:80]}")
-        print(f"       ℹ️  Using Supabase REST API instead is recommended")
+        print(f"       [i]  Using Supabase REST API instead is recommended")
 
 
 if __name__ == "__main__":
     test_supabase_connection()
-    print("\n✅ Supabase connection test completed")
+    print("\n[OK] Supabase connection test completed")
 
 
     try:
         from sqlalchemy import create_engine, text
 
-        print("\n3️⃣  Testing SQLAlchemy connection...")
+        print("\n3⃣  Testing SQLAlchemy connection...")
         engine = create_engine(os.getenv("DATABASE_URL"))
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
         engine.dispose()
-        print("   ✅ SQLAlchemy connection successful")
+        print("   [OK] SQLAlchemy connection successful")
     except Exception as exc:
         pytest.fail(f"SQLAlchemy connection failed: {exc}")

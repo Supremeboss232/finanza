@@ -25,36 +25,36 @@ async def migrate():
                 migrations.append(
                     text("ALTER TABLE users ADD COLUMN address VARCHAR NULL")
                 )
-                print("✓ Adding 'address' column")
+                print("[OK] Adding 'address' column")
             
             if 'region' not in existing_columns:
                 migrations.append(
                     text("ALTER TABLE users ADD COLUMN region VARCHAR NULL")
                 )
-                print("✓ Adding 'region' column")
+                print("[OK] Adding 'region' column")
             
             if 'routing_number' not in existing_columns:
                 migrations.append(
                     text("ALTER TABLE users ADD COLUMN routing_number VARCHAR NULL")
                 )
-                print("✓ Adding 'routing_number' column")
+                print("[OK] Adding 'routing_number' column")
             
             # Execute all migrations
             for migration in migrations:
                 try:
                     await conn.execute(migration)
                 except Exception as e:
-                    print(f"⚠️  Migration failed: {e}")
+                    print(f"[WARN]  Migration failed: {e}")
             
             await conn.commit()
             
             if migrations:
-                print(f"\n✅ Successfully added {len(migrations)} column(s) to users table")
+                print(f"\n[OK] Successfully added {len(migrations)} column(s) to users table")
             else:
-                print("\n✅ All columns already exist in users table")
+                print("\n[OK] All columns already exist in users table")
                 
         except Exception as e:
-            print(f"❌ Migration failed: {e}")
+            print(f"[FAIL] Migration failed: {e}")
             raise
 
 if __name__ == "__main__":

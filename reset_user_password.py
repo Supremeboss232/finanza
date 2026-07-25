@@ -29,7 +29,7 @@ async def reset_password(email: str, new_password: str = None):
         user.hashed_password = get_password_hash(new_password)
         await db.commit()
         
-        print(f"✓ Password reset successfully for {email}")
+        print(f"[OK] Password reset successfully for {email}")
         print(f"  Temporary Password: {new_password}")
         print(f"  Please inform the user to change this password after login.")
         return True

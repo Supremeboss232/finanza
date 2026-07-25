@@ -16,9 +16,9 @@ async def add_missing_columns():
                 ADD COLUMN IF NOT EXISTS description VARCHAR NULL
             """))
             await db.commit()
-            print("✓ Added description column to transactions table")
+            print("[OK] Added description column to transactions table")
         except Exception as e:
-            print(f"✗ Error adding description column: {e}")
+            print(f"[FAIL] Error adding description column: {e}")
             await db.rollback()
         
         try:
@@ -28,9 +28,9 @@ async def add_missing_columns():
                 ADD COLUMN IF NOT EXISTS reference_number VARCHAR NULL
             """))
             await db.commit()
-            print("✓ Added reference_number column to transactions table")
+            print("[OK] Added reference_number column to transactions table")
         except Exception as e:
-            print(f"✗ Error adding reference_number column: {e}")
+            print(f"[FAIL] Error adding reference_number column: {e}")
             await db.rollback()
 
 if __name__ == "__main__":

@@ -40,10 +40,10 @@ def main():
     
     for filepath in admin_files:
         if fix_absolute_links(str(filepath)):
-            print(f"✓ Fixed links in {filepath.name}")
+            print(f"[OK] Fixed links in {filepath.name}")
             fixed_count += 1
     
-    print(f"\n✓ Fixed {fixed_count} files")
+    print(f"\n[OK] Fixed {fixed_count} files")
 
 if __name__ == '__main__':
     main()

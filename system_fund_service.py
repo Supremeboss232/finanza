@@ -211,7 +211,7 @@ class SystemFundService:
             except Exception as write_error:
                 pass
             
-            print(f"❌ SystemFundService.fund_user_from_system failed:")
+            print(f"[FAIL] SystemFundService.fund_user_from_system failed:")
             print(f"   Error: {str(e)}")
             print(f"   Type: {type(e).__name__}")
             traceback.print_exc()

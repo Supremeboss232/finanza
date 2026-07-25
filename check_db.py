@@ -11,15 +11,15 @@ async def check_database():
             tables = inspector.get_table_names()
             
         if not tables:
-            print("❌ No tables found in database")
+            print("[FAIL] No tables found in database")
             return
             
-        print("✅ Connected to AWS Database!")
+        print("[OK] Connected to AWS Database!")
         print(f"\n📋 Tables found: {len(tables)}")
         print("-" * 50)
         
         for table in tables:
-            print(f"\n📊 TABLE: {table}")
+            print(f"\n[CHT] TABLE: {table}")
             print("=" * 50)
             
             async with SessionLocal() as db:
@@ -37,7 +37,7 @@ async def check_database():
                 print()
                 
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"[FAIL] Error: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":

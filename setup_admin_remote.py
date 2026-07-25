@@ -34,13 +34,13 @@ async def setup_admin():
             admin = result.scalars().first()
 
             if admin:
-                print(f"✓ Found existing admin")
+                print(f"[OK] Found existing admin")
                 admin.full_name = "Admin User"
                 admin.hashed_password = get_password_hash(settings.ADMIN_PASSWORD)
                 admin.is_admin = True
                 admin.is_active = True
             else:
-                print(f"✗ Admin not found, creating new...")
+                print(f"[FAIL] Admin not found, creating new...")
                 admin = User(
                     full_name="Admin User",
                     email=settings.ADMIN_EMAIL,
@@ -51,13 +51,13 @@ async def setup_admin():
                 session.add(admin)
 
             await session.commit()
-            print(f"✅ Admin user ready!")
+            print(f"[OK] Admin user ready!")
             print(f"\n   Login with:")
             print(f"   Email: {settings.ADMIN_EMAIL}")
             print(f"   Password: {settings.ADMIN_PASSWORD}\n")
 
         except Exception as e:
-            print(f"❌ Error: {e}")
+            print(f"[FAIL] Error: {e}")
             await session.rollback()
             raise
 

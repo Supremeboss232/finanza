@@ -13,7 +13,7 @@ async def check_schema():
         
         # Get columns for transactions table
         columns = inspector.get_columns('transactions')
-        print("✅ Transactions table columns:")
+        print("[OK] Transactions table columns:")
         for col in columns:
             print(f"   - {col['name']}: {col['type']}")
 

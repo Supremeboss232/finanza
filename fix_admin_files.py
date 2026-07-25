@@ -40,8 +40,8 @@ for html_file in files_to_fix:
         with open(html_file, 'w', encoding='utf-8') as f:
             f.write(content)
         fixes_made += 1
-        print(f"✅ Fixed: {html_file.name}")
+        print(f"[OK] Fixed: {html_file.name}")
     else:
-        print(f"⏭️  Skipped: {html_file.name} (no changes needed)")
+        print(f"⏭  Skipped: {html_file.name} (no changes needed)")
 
-print(f"\n📊 Summary: Fixed {fixes_made}/{len(files_to_fix)} files")
+print(f"\n[CHT] Summary: Fixed {fixes_made}/{len(files_to_fix)} files")

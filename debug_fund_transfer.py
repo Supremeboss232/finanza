@@ -30,12 +30,12 @@ async def debug_fund_transfer():
         reserve = result.scalars().first()
         
         if not reserve:
-            print("❌ System Reserve Account NOT FOUND")
+            print("[FAIL] System Reserve Account NOT FOUND")
             print("   This is the root cause of the 500 error")
             print("   Action: Run seed_system_reserve.py")
             return
         
-        print(f"✅ System Reserve Account found:")
+        print(f"[OK] System Reserve Account found:")
         print(f"   Account ID: {reserve.id}")
         print(f"   Number: {reserve.account_number}")
         print(f"   Balance: ${reserve.balance:,.2f}")
@@ -47,11 +47,11 @@ async def debug_fund_transfer():
         sys_user = result.scalars().first()
         
         if not sys_user:
-            print("❌ System User NOT FOUND")
+            print("[FAIL] System User NOT FOUND")
             print("   Action: Run seed_system_reserve.py")
             return
         
-        print(f"✅ System User found:")
+        print(f"[OK] System User found:")
         print(f"   ID: {sys_user.id}")
         print(f"   Email: {sys_user.email}")
         print(f"   Is Admin: {sys_user.is_admin}")
@@ -62,9 +62,9 @@ async def debug_fund_transfer():
         test_user = result.scalars().first()
         
         if test_user:
-            print(f"✅ Test user exists (ID={test_user.id})")
+            print(f"[OK] Test user exists (ID={test_user.id})")
         else:
-            print("⚠️  Test user not found - creating...")
+            print("[WARN]  Test user not found - creating...")
             from auth_utils import get_password_hash
             test_user = User(
                 full_name="Test User",
@@ -76,7 +76,7 @@ async def debug_fund_transfer():
             )
             db.add(test_user)
             await db.flush()
-            print(f"✅ Test user created (ID={test_user.id})")
+            print(f"[OK] Test user created (ID={test_user.id})")
         
         # Check 4: Test account exists
         print("\n[4/5] Checking Test Account...")
@@ -86,9 +86,9 @@ async def debug_fund_transfer():
         test_account = result.scalars().first()
         
         if test_account:
-            print(f"✅ Test account exists (ID={test_account.id})")
+            print(f"[OK] Test account exists (ID={test_account.id})")
         else:
-            print("⚠️  Test account not found - creating...")
+            print("[WARN]  Test account not found - creating...")
             test_account = Account(
                 owner_id=test_user.id,
                 account_number=f"TEST-{test_user.id:06d}",
@@ -100,7 +100,7 @@ async def debug_fund_transfer():
             )
             db.add(test_account)
             await db.flush()
-            print(f"✅ Test account created (ID={test_account.id})")
+            print(f"[OK] Test account created (ID={test_account.id})")
         
         # Check 5: Try fund transfer
         print("\n[5/5] Testing Fund Transfer...")
@@ -115,17 +115,17 @@ async def debug_fund_transfer():
             )
             
             if result.get('success'):
-                print("✅ Fund transfer successful!")
+                print("[OK] Fund transfer successful!")
                 print(f"   Transaction ID: {result.get('transaction_id')}")
                 print(f"   Debit Entry ID: {result.get('debit_entry_id')}")
                 print(f"   Credit Entry ID: {result.get('credit_entry_id')}")
                 print(f"   New Balance: ${result.get('new_balance'):,.2f}")
             else:
-                print(f"❌ Fund transfer failed: {result.get('error')}")
+                print(f"[FAIL] Fund transfer failed: {result.get('error')}")
                 print("\nFull result:")
                 print(json.dumps(result, indent=2, default=str))
         except Exception as e:
-            print(f"❌ Exception during fund transfer: {e}")
+            print(f"[FAIL] Exception during fund transfer: {e}")
             import traceback
             traceback.print_exc()
         

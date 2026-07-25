@@ -30,8 +30,8 @@ async def get_active_accounts():
         print("-"*100)
         
         for user in users:
-            admin_badge = "⭐ ADMIN" if user.is_admin else "User"
-            verified = "✓ Yes" if user.is_verified else "✗ No"
+            admin_badge = "[*] ADMIN" if user.is_admin else "User"
+            verified = "[OK] Yes" if user.is_verified else "[FAIL] No"
             print(f"{user.id:<5} {user.email:<30} {user.full_name:<25} {admin_badge:<10} {user.kyc_status:<15} {verified:<10}")
         
         print("\n" + "="*100)
@@ -43,9 +43,9 @@ async def get_active_accounts():
             print(f"  Email: {user.email}")
             print(f"  Name: {user.full_name}")
             print(f"  Account Number: {user.account_number}")
-            print(f"  Is Admin: {'Yes ⭐' if user.is_admin else 'No'}")
-            print(f"  Is Active: {'Yes ✓' if user.is_active else 'No ✗'}")
-            print(f"  Is Verified: {'Yes ✓' if user.is_verified else 'No ✗'}")
+            print(f"  Is Admin: {'Yes [*]' if user.is_admin else 'No'}")
+            print(f"  Is Active: {'Yes [OK]' if user.is_active else 'No [FAIL]'}")
+            print(f"  Is Verified: {'Yes [OK]' if user.is_verified else 'No [FAIL]'}")
             print(f"  KYC Status: {user.kyc_status}")
             print(f"  Created: {user.created_at}")
             

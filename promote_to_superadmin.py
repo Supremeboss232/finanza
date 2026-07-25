@@ -23,7 +23,7 @@ async def promote_user():
             admin_user = result.scalar_one_or_none()
             
             if not admin_user:
-                print("❌ User admin@admin.com not found in database")
+                print("[FAIL] User admin@admin.com not found in database")
                 await engine.dispose()
                 return False
             
@@ -36,7 +36,7 @@ async def promote_user():
             session.add(admin_user)
             await session.commit()
             
-            print(f"✅ Successfully promoted admin@admin.com to SUPER_ADMIN")
+            print(f"[OK] Successfully promoted admin@admin.com to SUPER_ADMIN")
             print(f"   User ID: {admin_user.id}")
             print(f"   Email: {admin_user.email}")
             print(f"   is_admin: {admin_user.is_admin}")
@@ -46,7 +46,7 @@ async def promote_user():
             return True
             
     except Exception as e:
-        print(f"❌ Error promoting user: {e}")
+        print(f"[FAIL] Error promoting user: {e}")
         import traceback
         traceback.print_exc()
         return False

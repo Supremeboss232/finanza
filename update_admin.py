@@ -38,16 +38,16 @@ async def update_or_create_admin():
 
             if admin_user:
                 # Update existing admin
-                print(f"✓ Found existing admin: {admin_user.email}")
+                print(f"[OK] Found existing admin: {admin_user.email}")
                 admin_user.full_name = "Admin User"
                 admin_user.hashed_password = get_password_hash(settings.ADMIN_PASSWORD)
                 admin_user.is_admin = True
                 admin_user.is_active = True
                 await session.commit()
-                print(f"✓ Updated admin password and settings")
+                print(f"[OK] Updated admin password and settings")
             else:
                 # Create new admin
-                print(f"✗ Admin not found, creating new admin...")
+                print(f"[FAIL] Admin not found, creating new admin...")
                 hashed_password = get_password_hash(settings.ADMIN_PASSWORD)
                 new_admin = User(
                     full_name="Admin User",
@@ -58,15 +58,15 @@ async def update_or_create_admin():
                 )
                 session.add(new_admin)
                 await session.commit()
-                print(f"✓ Created new admin user: {settings.ADMIN_EMAIL}")
+                print(f"[OK] Created new admin user: {settings.ADMIN_EMAIL}")
 
-            print("\n✅ Admin user setup complete!")
+            print("\n[OK] Admin user setup complete!")
             print(f"   Email: {settings.ADMIN_EMAIL}")
             print(f"   Password: {settings.ADMIN_PASSWORD}")
             print(f"   Admin Status: True")
 
         except Exception as e:
-            print(f"❌ Error: {e}")
+            print(f"[FAIL] Error: {e}")
             await session.rollback()
             raise
 
@@ -84,7 +84,7 @@ async def list_all_users():
                 print(f"\n📋 Total users: {len(users)}")
                 print("-" * 60)
                 for user in users:
-                    admin_status = "✓ ADMIN" if user.is_admin else "  User"
+                    admin_status = "[OK] ADMIN" if user.is_admin else "  User"
                     active_status = "Active" if user.is_active else "Inactive"
                     print(f"{admin_status} | {user.email:30} | {active_status}")
                 print("-" * 60)
@@ -106,6 +106,6 @@ if __name__ == "__main__":
     asyncio.run(update_or_create_admin())
     asyncio.run(list_all_users())
 
-    print("\n✅ Complete! You can now login with:")
+    print("\n[OK] Complete! You can now login with:")
     print(f"   Email: {settings.ADMIN_EMAIL}")
     print(f"   Password: {settings.ADMIN_PASSWORD}")

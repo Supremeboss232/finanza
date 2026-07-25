@@ -180,9 +180,9 @@ def main():
         with open(filepath, 'w') as f:
             f.write(content)
         
-        print(f"✓ Generated {filepath}")
+        print(f"[OK] Generated {filepath}")
     
-    print(f"\n✅ Created {len(USER_TEMPLATES)} user templates in {base_dir}/")
+    print(f"\n[OK] Created {len(USER_TEMPLATES)} user templates in {base_dir}/")
 
 if __name__ == '__main__':
     main()

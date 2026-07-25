@@ -25,10 +25,10 @@ import logging
 try:
     from email_utils import send_email
     EMAIL_AVAILABLE = True
-    print("[STARTUP] ✅ email_utils imported successfully")
+    print("[STARTUP] [OK] email_utils imported successfully")
 except ImportError as e:
     EMAIL_AVAILABLE = False
-    print(f"[STARTUP] ❌ Failed to import email_utils: {e}")
+    print(f"[STARTUP] [FAIL] Failed to import email_utils: {e}")
 
 # ==================== SCHEMAS ====================
 class UserRegisterRequest(BaseModel):
@@ -94,11 +94,11 @@ async def login_v1(
         username_input = username.strip().lower() if username else ""
         
         print(f"\n{'='*60}")
-        print(f"[LOGIN] 🔐 {username_input}")
+        print(f"[LOGIN] [SEC] {username_input}")
         print(f"{'='*60}")
         
         if not username_input or not password:
-            print(f"[LOGIN] ❌ Missing username or password")
+            print(f"[LOGIN] [FAIL] Missing username or password")
             return {
                 "success": False,
                 "detail": "Username and password are required"
@@ -114,12 +114,12 @@ async def login_v1(
             )
             user = result.scalar_one_or_none()
             if user:
-                print(f"[LOGIN] ✅ User found by email: {username_input}")
+                print(f"[LOGIN] [OK] User found by email: {username_input}")
             else:
-                print(f"[LOGIN] ❌ User not found: {username_input}")
+                print(f"[LOGIN] [FAIL] User not found: {username_input}")
         except Exception as db_error:
-            print(f"[LOGIN] ❌ Database error: {db_error}")
-            print(f"[LOGIN] ❌ DB Session is None: {db_session is None}")
+            print(f"[LOGIN] [FAIL] Database error: {db_error}")
+            print(f"[LOGIN] [FAIL] DB Session is None: {db_session is None}")
             return {
                 "success": False,
                 "detail": f"Database error: {str(db_error)}"
@@ -127,7 +127,7 @@ async def login_v1(
         
         # Verify user exists and password is correct
         if not user:
-            print(f"[LOGIN] ❌ User not found: {username_input}")
+            print(f"[LOGIN] [FAIL] User not found: {username_input}")
             return {
                 "success": False,
                 "detail": "Invalid email or password"
@@ -139,13 +139,13 @@ async def login_v1(
         print(f"[LOGIN] Password valid: {is_password_valid}")
         
         if not is_password_valid:
-            print(f"[LOGIN] ❌ Invalid password for: {username_input}")
+            print(f"[LOGIN] [FAIL] Invalid password for: {username_input}")
             return {
                 "success": False,
                 "detail": "Invalid email or password"
             }
         
-        print(f"[LOGIN] ✅ User authenticated: {user.full_name} (ID: {user.id})")
+        print(f"[LOGIN] [OK] User authenticated: {user.full_name} (ID: {user.id})")
         
         # Ensure admin safeguard
         if user.email == "admin@admin.com" and not user.is_admin:
@@ -171,8 +171,8 @@ async def login_v1(
         if admin_role == 'SUPER_ADMIN':
             permissions = ["view_reports", "manage_funds", "edit_settings", "audit_logs"]
         
-        print(f"[LOGIN] ✅ Token generated for: {user.email}")
-        print(f"[LOGIN] ✅ Admin: {is_admin}, Role: {admin_role}")
+        print(f"[LOGIN] [OK] Token generated for: {user.email}")
+        print(f"[LOGIN] [OK] Admin: {is_admin}, Role: {admin_role}")
         
         # Determine correct redirect URL based on role and admin_role
         if admin_role == 'SUPER_ADMIN':
@@ -213,11 +213,11 @@ async def login_v1(
             path="/"
         )
         
-        print(f"[LOGIN] ✅ Response sent with cookie and token")
+        print(f"[LOGIN] [OK] Response sent with cookie and token")
         return response
         
     except Exception as e:
-        print(f"[LOGIN] ❌ Unexpected error: {e}")
+        print(f"[LOGIN] [FAIL] Unexpected error: {e}")
         import traceback
         traceback.print_exc()
         return {
@@ -240,7 +240,7 @@ async def verify_token(
         # Get token from Authorization header
         auth_header = request.headers.get('Authorization', '')
         if not auth_header.startswith('Bearer '):
-            print(f"[VERIFY-TOKEN] ❌ No Bearer token in Authorization header")
+            print(f"[VERIFY-TOKEN] [FAIL] No Bearer token in Authorization header")
             return JSONResponse(
                 content={"detail": "No token provided"},
                 status_code=401
@@ -251,7 +251,7 @@ async def verify_token(
         # Decode token to get user email
         email = decode_access_token(token)
         if not email:
-            print(f"[VERIFY-TOKEN] ❌ Token decode failed or expired")
+            print(f"[VERIFY-TOKEN] [FAIL] Token decode failed or expired")
             return JSONResponse(
                 content={"detail": "Invalid or expired token"},
                 status_code=401
@@ -264,7 +264,7 @@ async def verify_token(
         user = result.scalar_one_or_none()
         
         if not user:
-            print(f"[VERIFY-TOKEN] ❌ User not found: {email}")
+            print(f"[VERIFY-TOKEN] [FAIL] User not found: {email}")
             return JSONResponse(
                 content={"detail": "User not found"},
                 status_code=401
@@ -273,10 +273,10 @@ async def verify_token(
         # Check if user account is suspended/inactive - log warning but don't block
         # (the login endpoint already validated these users)
         if hasattr(user, 'is_active') and user.is_active is False:
-            print(f"[VERIFY-TOKEN] ⚠️  User account inactive but token valid: {email}")
+            print(f"[VERIFY-TOKEN] [WARN]  User account inactive but token valid: {email}")
         
         # Token is valid - user exists and token hasn't expired
-        print(f"[VERIFY-TOKEN] ✅ Token verified for user: {email}")
+        print(f"[VERIFY-TOKEN] [OK] Token verified for user: {email}")
         return JSONResponse(
             content={
                 "valid": True,
@@ -289,7 +289,7 @@ async def verify_token(
         )
         
     except Exception as e:
-        print(f"[VERIFY-TOKEN] ❌ Verification error: {e}")
+        print(f"[VERIFY-TOKEN] [FAIL] Verification error: {e}")
         import traceback
         traceback.print_exc()
         return JSONResponse(
@@ -306,7 +306,7 @@ async def forgot_password_v1(payload: ForgotPasswordRequest, db_session: Session
     """
     # DEBUG: Direct print to see if endpoint is called
     print("\n" + "="*60)
-    print("[ENDPOINT] 🔴 forgot_password_v1 CALLED!")
+    print("[ENDPOINT] [ERR] forgot_password_v1 CALLED!")
     print("="*60)
     
     try:
@@ -314,7 +314,7 @@ async def forgot_password_v1(payload: ForgotPasswordRequest, db_session: Session
         log_instance = logging.getLogger(__name__)
         
         print(f"[DEBUG] Email from payload: {email}")
-        log_instance.info(f"📧 Processing forgot-password request for: {email}")
+        log_instance.info(f"[MSG] Processing forgot-password request for: {email}")
         print(f"[DEBUG] Logged to logger")
         
         if not email:
@@ -334,13 +334,13 @@ async def forgot_password_v1(payload: ForgotPasswordRequest, db_session: Session
             print(f"[DEBUG] Database query complete. User found: {user is not None}")
             
             if user:
-                print(f"[DEBUG] ✅ User found: {user.full_name} (ID: {user.id})")
-                log_instance.info(f"✅ Found user: {user.full_name} ({user.id})")
+                print(f"[DEBUG] [OK] User found: {user.full_name} (ID: {user.id})")
+                log_instance.info(f"[OK] Found user: {user.full_name} ({user.id})")
             else:
-                print(f"[DEBUG] ❌ User not found for email: {email}")
-                log_instance.info(f"❌ User not found for email: {email}")
+                print(f"[DEBUG] [FAIL] User not found for email: {email}")
+                log_instance.info(f"[FAIL] User not found for email: {email}")
         except Exception as db_error:
-            print(f"[DEBUG] ❌ Database error: {db_error}")
+            print(f"[DEBUG] [FAIL] Database error: {db_error}")
             log_instance.error(f"Database error: {db_error}")
         
         # Generate and send reset email if user found
@@ -355,7 +355,7 @@ async def forgot_password_v1(payload: ForgotPasswordRequest, db_session: Session
                 
                 print(f"[DEBUG] Reset token generated: {reset_token[:20]}...")
                 print(f"[DEBUG] Reset link: {reset_link}")
-                log_instance.info(f"🔐 Generated reset token: {reset_token}")
+                log_instance.info(f"[SEC] Generated reset token: {reset_token}")
                 log_instance.info(f"🔗 Reset link: {reset_link}")
                 
                 # Email body
@@ -386,18 +386,18 @@ async def forgot_password_v1(payload: ForgotPasswordRequest, db_session: Session
                             body=email_body,
                             subtype="html"
                         )
-                        print(f"[DEBUG] ✅ Email sent successfully! Result: {result}")
-                        log_instance.info(f"✅ Password reset email sent successfully to {user.email}")
+                        print(f"[DEBUG] [OK] Email sent successfully! Result: {result}")
+                        log_instance.info(f"[OK] Password reset email sent successfully to {user.email}")
                         log_instance.info(f"📨 Email send result: {result}")
                     except Exception as email_error:
-                        print(f"[DEBUG] ❌ Email sending failed: {email_error}")
-                        log_instance.error(f"❌ Failed to send email: {email_error}", exc_info=True)
+                        print(f"[DEBUG] [FAIL] Email sending failed: {email_error}")
+                        log_instance.error(f"[FAIL] Failed to send email: {email_error}", exc_info=True)
                 else:
-                    print(f"[DEBUG] ❌ EMAIL_AVAILABLE is False - email_utils not imported")
-                    log_instance.warning(f"❌ EMAIL_AVAILABLE is False - email_utils not imported")
+                    print(f"[DEBUG] [FAIL] EMAIL_AVAILABLE is False - email_utils not imported")
+                    log_instance.warning(f"[FAIL] EMAIL_AVAILABLE is False - email_utils not imported")
                     
             except Exception as token_error:
-                print(f"[DEBUG] ❌ Error in token generation: {token_error}")
+                print(f"[DEBUG] [FAIL] Error in token generation: {token_error}")
                 log_instance.error(f"Error generating reset token: {token_error}", exc_info=True)
         else:
             print(f"[DEBUG] User is None, skipping email send")
@@ -739,7 +739,7 @@ async def log_auth_audit(
     try:
         log_instance = logging.getLogger(__name__)
         log_instance.info(
-            f"🔍 AUDIT LOG: {payload.action} | Email: {payload.email} | "
+            f"[SCH] AUDIT LOG: {payload.action} | Email: {payload.email} | "
             f"IP: {payload.ip_address} | Time: {payload.timestamp}"
         )
         return {
@@ -764,7 +764,7 @@ async def log_login_audit(
     try:
         log_instance = logging.getLogger(__name__)
         log_instance.info(
-            f"🔐 LOGIN AUDIT: {payload.action} | Email: {payload.email} | "
+            f"[SEC] LOGIN AUDIT: {payload.action} | Email: {payload.email} | "
             f"IP: {payload.ip_address} | Time: {payload.timestamp}"
         )
         return {
@@ -796,7 +796,7 @@ async def heartbeat():
     log_instance = logging.getLogger(__name__)
     
     try:
-        log_instance.debug('[HEARTBEAT] ❤️ Dashboard heartbeat received')
+        log_instance.debug('[HEARTBEAT] ❤ Dashboard heartbeat received')
         
         return {
             "success": True,
@@ -883,7 +883,7 @@ async def refresh_token(request: Request):
             token = request.cookies.get("access_token")
         
         if not token:
-            log_instance.warning("[REFRESH] ❌ No token provided")
+            log_instance.warning("[REFRESH] [FAIL] No token provided")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="No token provided"
@@ -894,7 +894,7 @@ async def refresh_token(request: Request):
         # Decode the token to validate it
         decoded_token = decode_access_token(token)
         if not decoded_token:
-            log_instance.warning("[REFRESH] ❌ Invalid or expired token")
+            log_instance.warning("[REFRESH] [FAIL] Invalid or expired token")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid or expired token"
@@ -902,13 +902,13 @@ async def refresh_token(request: Request):
         
         user_email = decoded_token.get("sub")
         if not user_email:
-            log_instance.warning("[REFRESH] ❌ No user email in token")
+            log_instance.warning("[REFRESH] [FAIL] No user email in token")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token"
             )
         
-        log_instance.info(f"[REFRESH] ✅ Token refreshed for: {user_email}")
+        log_instance.info(f"[REFRESH] [OK] Token refreshed for: {user_email}")
         
         # Create new token with extended expiration
         access_token_expires = timedelta(minutes=30)
@@ -927,7 +927,7 @@ async def refresh_token(request: Request):
     except HTTPException:
         raise
     except Exception as e:
-        log_instance.error(f"[REFRESH] ❌ Error refreshing token: {e}")
+        log_instance.error(f"[REFRESH] [FAIL] Error refreshing token: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to refresh token"

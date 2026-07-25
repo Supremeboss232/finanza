@@ -33,7 +33,7 @@ print("-" * 70)
 service_count = 0
 for file, desc in features.items():
     exists = os.path.exists(file)
-    status = "✓" if exists else "✗"
+    status = "[OK]" if exists else "[FAIL]"
     print(f"  {status} {desc:40s} {file}")
     if exists:
         service_count += 1
@@ -45,7 +45,7 @@ print("-" * 70)
 router_count = 0
 for file, desc in routers.items():
     exists = os.path.exists(file)
-    status = "✓" if exists else "✗"
+    status = "[OK]" if exists else "[FAIL]"
     print(f"  {status} {desc:40s} {file}")
     if exists:
         router_count += 1
@@ -79,45 +79,45 @@ try:
     field_count = 0
     for field, desc in fields.items():
         exists = field in models
-        status = "✓" if exists else "✗"
+        status = "[OK]" if exists else "[FAIL]"
         print(f"  {status} {desc:45s} ({field})")
         if exists:
             field_count += 1
     print(f"\n  FIELDS: {field_count}/{len(fields)} present\n")
 except:
-    print("  ✗ Could not read models.py\n")
+    print("  [FAIL] Could not read models.py\n")
 
 print("4. WHAT YOUR ADMIN CAN DO")
 print("-" * 70)
 
 capabilities = [
-    ("User Management", "✓"),
-    ("  • View all users", "✓"),
-    ("  • Suspend/freeze users", "✓"),
-    ("  • Review KYC status", "✓"),
-    ("Transaction Control", "✓"),
-    ("  • View transactions", "✓"),
-    ("  • Block transactions", "✓"),
-    ("Balance Management", "✓"),
-    ("  • Adjust user balances", "✓"),
-    ("  • View ledger entries", "✓"),
-    ("Bulk Operations", "✓" if os.path.exists('bulk_operations_service.py') else "✗"),
-    ("  • Export users to CSV", "✓" if os.path.exists('bulk_operations_service.py') else "✗"),
-    ("  • Import users from CSV", "✓" if os.path.exists('bulk_operations_service.py') else "✗"),
-    ("  • Batch KYC updates", "✓" if os.path.exists('bulk_operations_service.py') else "✗"),
-    ("Admin Management", "✓" if os.path.exists('admin_management_service.py') else "✗"),
-    ("  • Create admin accounts", "✓" if os.path.exists('admin_management_service.py') else "✗"),
-    ("  • Revoke admin access", "✓" if os.path.exists('admin_management_service.py') else "✗"),
-    ("  • Change admin roles", "✓" if os.path.exists('admin_management_service.py') else "✗"),
-    ("Security Features", "✓"),
-    ("  • Setup MFA for users", "✓" if os.path.exists('mfa_service.py') else "✗"),
-    ("  • Verify MFA tokens", "✓" if os.path.exists('mfa_service.py') else "✗"),
-    ("  • Force user logout", "✓" if os.path.exists('token_blacklist_service.py') else "✗"),
-    ("  • Revoke user tokens", "✓" if os.path.exists('token_blacklist_service.py') else "✗"),
-    ("Audit & Compliance", "✓"),
-    ("  • View audit logs", "✓"),
-    ("  • Filter by user/action", "✓"),
-    ("  • Rate limiting on endpoints", "✓" if os.path.exists('rate_limiter_service.py') else "✗"),
+    ("User Management", "[OK]"),
+    ("  • View all users", "[OK]"),
+    ("  • Suspend/freeze users", "[OK]"),
+    ("  • Review KYC status", "[OK]"),
+    ("Transaction Control", "[OK]"),
+    ("  • View transactions", "[OK]"),
+    ("  • Block transactions", "[OK]"),
+    ("Balance Management", "[OK]"),
+    ("  • Adjust user balances", "[OK]"),
+    ("  • View ledger entries", "[OK]"),
+    ("Bulk Operations", "[OK]" if os.path.exists('bulk_operations_service.py') else "[FAIL]"),
+    ("  • Export users to CSV", "[OK]" if os.path.exists('bulk_operations_service.py') else "[FAIL]"),
+    ("  • Import users from CSV", "[OK]" if os.path.exists('bulk_operations_service.py') else "[FAIL]"),
+    ("  • Batch KYC updates", "[OK]" if os.path.exists('bulk_operations_service.py') else "[FAIL]"),
+    ("Admin Management", "[OK]" if os.path.exists('admin_management_service.py') else "[FAIL]"),
+    ("  • Create admin accounts", "[OK]" if os.path.exists('admin_management_service.py') else "[FAIL]"),
+    ("  • Revoke admin access", "[OK]" if os.path.exists('admin_management_service.py') else "[FAIL]"),
+    ("  • Change admin roles", "[OK]" if os.path.exists('admin_management_service.py') else "[FAIL]"),
+    ("Security Features", "[OK]"),
+    ("  • Setup MFA for users", "[OK]" if os.path.exists('mfa_service.py') else "[FAIL]"),
+    ("  • Verify MFA tokens", "[OK]" if os.path.exists('mfa_service.py') else "[FAIL]"),
+    ("  • Force user logout", "[OK]" if os.path.exists('token_blacklist_service.py') else "[FAIL]"),
+    ("  • Revoke user tokens", "[OK]" if os.path.exists('token_blacklist_service.py') else "[FAIL]"),
+    ("Audit & Compliance", "[OK]"),
+    ("  • View audit logs", "[OK]"),
+    ("  • Filter by user/action", "[OK]"),
+    ("  • Rate limiting on endpoints", "[OK]" if os.path.exists('rate_limiter_service.py') else "[FAIL]"),
 ]
 
 for cap, status in capabilities:
@@ -133,10 +133,10 @@ Routers Available:        {router_count}/{len(routers)}
 Model Fields Present:     {field_count}/{len(fields)}
 
 CRITICAL BLOCKING ITEMS:
-  - MFA Fields in Database: {'✓ Present' if 'mfa_secret' in locals().get('models', '') else '✗ Need Migration'}
-  - Token Revocation:       {'✓ Implemented' if os.path.exists('token_blacklist_service.py') else '✗ Missing'}
-  - Rate Limiting:          {'✓ Implemented' if os.path.exists('rate_limiter_service.py') else '✗ Missing'}
-  - Bulk Operations:        {'✓ Implemented' if os.path.exists('bulk_operations_service.py') else '✗ Missing'}
+  - MFA Fields in Database: {'[OK] Present' if 'mfa_secret' in locals().get('models', '') else '[FAIL] Need Migration'}
+  - Token Revocation:       {'[OK] Implemented' if os.path.exists('token_blacklist_service.py') else '[FAIL] Missing'}
+  - Rate Limiting:          {'[OK] Implemented' if os.path.exists('rate_limiter_service.py') else '[FAIL] Missing'}
+  - Bulk Operations:        {'[OK] Implemented' if os.path.exists('bulk_operations_service.py') else '[FAIL] Missing'}
 
 NEXT STEPS:
   1. Apply database migration: alembic upgrade head

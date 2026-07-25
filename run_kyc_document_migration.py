@@ -44,30 +44,30 @@ async def run_migration():
                     alter_sql = f"ALTER TABLE kyc_info ADD COLUMN {col_name} {col_type}"
                     try:
                         await conn.execute(text(alter_sql))
-                        print(f"✅ Added column: {col_name}")
+                        print(f"[OK] Added column: {col_name}")
                     except Exception as e:
                         if "already exists" in str(e).lower():
-                            print(f"⚠️  Column {col_name} already exists")
+                            print(f"[WARN]  Column {col_name} already exists")
                         else:
-                            print(f"❌ Error adding {col_name}: {e}")
+                            print(f"[FAIL] Error adding {col_name}: {e}")
                 else:
-                    print(f"ℹ️  Column {col_name} already exists")
+                    print(f"[i]  Column {col_name} already exists")
             
             # Create index on kyc_status for faster queries
             try:
                 await conn.execute(text("CREATE INDEX IF NOT EXISTS idx_kyc_status ON kyc_info(kyc_status)"))
-                print(f"✅ Created index on kyc_status")
+                print(f"[OK] Created index on kyc_status")
             except Exception as e:
                 if "already exists" in str(e).lower():
-                    print(f"ℹ️  Index already exists")
+                    print(f"[i]  Index already exists")
                 else:
-                    print(f"❌ Error creating index: {e}")
+                    print(f"[FAIL] Error creating index: {e}")
             
             await conn.commit()
-            print("\n✅ KYC Info migration completed successfully!")
+            print("\n[OK] KYC Info migration completed successfully!")
             
         except Exception as e:
-            print(f"❌ Migration failed: {e}")
+            print(f"[FAIL] Migration failed: {e}")
             raise
 
 if __name__ == "__main__":

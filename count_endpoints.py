@@ -13,7 +13,7 @@ try:
     paths = schema.get("paths", {})
     
     total = len(paths)
-    print(f"✅ Server responding!")
+    print(f"[OK] Server responding!")
     print(f"Total endpoints: {total}")
     print()
     
@@ -37,4 +37,4 @@ try:
             print(f"  - {ep}")
     
 except Exception as e:
-    print(f"❌ Error: {e}")
+    print(f"[FAIL] Error: {e}")

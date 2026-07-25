@@ -22,7 +22,7 @@ def print_header(title):
     print(f"{'='*60}")
 
 def print_status(check, passed, details=""):
-    status = "✓ PASS" if passed else "✗ FAIL"
+    status = "[OK] PASS" if passed else "[FAIL] FAIL"
     color = "\033[92m" if passed else "\033[91m"
     reset = "\033[0m"
     print(f"{color}{status}{reset} {check}")
@@ -62,10 +62,10 @@ class KycDispatcherHealthCheck:
         print(f"Failed: {total - passed}")
         
         if passed == total:
-            print("\n✓ All checks passed! Lambda is ready for production.")
+            print("\n[OK] All checks passed! Lambda is ready for production.")
             return True
         else:
-            print("\n✗ Some checks failed. Review output above.")
+            print("\n[FAIL] Some checks failed. Review output above.")
             return False
     
     def check_lambda_exists(self):

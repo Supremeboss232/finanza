@@ -36,9 +36,9 @@ async def migrate_kyc_submission_lock():
                         ADD COLUMN kyc_submitted BOOLEAN NOT NULL DEFAULT FALSE
                     """)
                 )
-                print("  ✅ kyc_submitted column added")
+                print("  [OK] kyc_submitted column added")
             else:
-                print("  ✓ kyc_submitted column already exists")
+                print("  [OK] kyc_submitted column already exists")
             
             # Add submission_locked if it doesn't exist
             if 'submission_locked' not in existing_cols:
@@ -49,9 +49,9 @@ async def migrate_kyc_submission_lock():
                         ADD COLUMN submission_locked BOOLEAN NOT NULL DEFAULT FALSE
                     """)
                 )
-                print("  ✅ submission_locked column added")
+                print("  [OK] submission_locked column added")
             else:
-                print("  ✓ submission_locked column already exists")
+                print("  [OK] submission_locked column already exists")
             
             # Add submission_timestamp if it doesn't exist
             if 'submission_timestamp' not in existing_cols:
@@ -62,9 +62,9 @@ async def migrate_kyc_submission_lock():
                         ADD COLUMN submission_timestamp TIMESTAMP WITH TIME ZONE NULL
                     """)
                 )
-                print("  ✅ submission_timestamp column added")
+                print("  [OK] submission_timestamp column added")
             else:
-                print("  ✓ submission_timestamp column already exists")
+                print("  [OK] submission_timestamp column already exists")
             
             await db.commit()
             
@@ -84,12 +84,12 @@ async def migrate_kyc_submission_lock():
                 null_str = "NULL" if is_nullable == "YES" else "NOT NULL"
                 print(f"    - {col_name}: {data_type} {null_str}")
             
-            print("\n✅ KYC submission lock migration completed successfully!")
+            print("\n[OK] KYC submission lock migration completed successfully!")
             return True
             
         except Exception as e:
             await db.rollback()
-            print(f"\n❌ Migration failed: {str(e)}")
+            print(f"\n[FAIL] Migration failed: {str(e)}")
             return False
 
 

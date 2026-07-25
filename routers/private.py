@@ -33,7 +33,7 @@ async def dashboard(request: Request, current_user: User = Depends(get_current_u
     CASE 1: Regular User → Renders private/user/dashboard.html
     CASE 2: Admin User → Directly serves private/admin/admin_dashboard_hub.html (no 302 redirect)
     
-    ⚠️ CRITICAL: This route does NOT redirect to avoid 302 loops.
+    [WARN] CRITICAL: This route does NOT redirect to avoid 302 loops.
     The frontend login flow already knows user type from is_admin flag.
     """
     # Check if admin - serve admin dashboard directly (no redirect)
@@ -563,4 +563,4 @@ async def user_generic_page(page: str, request: Request, current_user: User = De
     if not file_path.exists():
         raise HTTPException(status_code=404, detail=f"User page '{clean_page}' not found")
         
-    return user_templates.TemplateResponse(filename, {"request": request, "user": current_user})
+    return user_templates.TemplateResponse(filename, {"request": request, "user": current_user})

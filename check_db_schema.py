@@ -36,12 +36,12 @@ try:
         table_name = table[0]
         for keyword in treasury_keywords:
             if keyword in table_name.lower():
-                print(f'  ✓ {table_name}')
+                print(f'  [OK] {table_name}')
                 found = True
                 break
     
     if not found:
-        print('  ✗ No treasury/portfolio/asset related tables found')
+        print('  [FAIL] No treasury/portfolio/asset related tables found')
     
     cursor.close()
     conn.close()

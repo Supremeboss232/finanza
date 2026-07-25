@@ -32,10 +32,10 @@ def main():
     
     for filepath in admin_files:
         if fix_jinja_escaping(str(filepath)):
-            print(f"✓ Fixed {filepath.name}")
+            print(f"[OK] Fixed {filepath.name}")
             fixed_count += 1
     
-    print(f"\n✓ Fixed {fixed_count} files")
+    print(f"\n[OK] Fixed {fixed_count} files")
 
 if __name__ == '__main__':
     main()

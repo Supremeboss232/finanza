@@ -24,13 +24,13 @@ async def send_email(subject: str, recipients: list, body: str, subtype: str = "
         dict with status information
     """
     if not settings.MAIL_USERNAME or not settings.MAIL_PASSWORD:
-        log.error("❌ Gmail credentials not configured in .env")
+        log.error("[FAIL] Gmail credentials not configured in .env")
         log.error(f"MAIL_USERNAME: {settings.MAIL_USERNAME}")
         log.error(f"MAIL_PASSWORD: {'*' * len(settings.MAIL_PASSWORD) if settings.MAIL_PASSWORD else 'NOT SET'}")
         raise ValueError("Gmail SMTP credentials not configured in .env")
     
     try:
-        log.info(f"📧 Sending email via Gmail SMTP to {recipients}")
+        log.info(f"[MSG] Sending email via Gmail SMTP to {recipients}")
         log.info(f"Subject: {subject}")
         log.info(f"From: {settings.MAIL_FROM}")
         
@@ -52,7 +52,7 @@ async def send_email(subject: str, recipients: list, body: str, subtype: str = "
         with smtplib.SMTP(settings.MAIL_SERVER, settings.MAIL_PORT, timeout=10) as server:
             # Start TLS encryption
             if settings.MAIL_STARTTLS:
-                log.info("🔐 Starting TLS encryption")
+                log.info("[SEC] Starting TLS encryption")
                 server.starttls()
             
             # Login with credentials
@@ -63,18 +63,18 @@ async def send_email(subject: str, recipients: list, body: str, subtype: str = "
             log.info(f"📤 Sending email to {recipients}")
             server.sendmail(settings.MAIL_FROM, recipients, msg.as_string())
         
-        log.info(f"✅ Email sent successfully to {recipients}")
+        log.info(f"[OK] Email sent successfully to {recipients}")
         return {"success": True, "message": f"Email sent to {recipients}"}
         
     except smtplib.SMTPAuthenticationError as e:
-        log.error(f"❌ Gmail authentication failed: {e}", exc_info=True)
+        log.error(f"[FAIL] Gmail authentication failed: {e}", exc_info=True)
         log.error("   Check: 1) Gmail address is correct 2) App Password is correct 3) 2FA enabled")
         raise ValueError("Gmail authentication failed. Check credentials and ensure 2FA is enabled.")
     
     except smtplib.SMTPException as e:
-        log.error(f"❌ SMTP error: {e}", exc_info=True)
+        log.error(f"[FAIL] SMTP error: {e}", exc_info=True)
         raise
     
     except Exception as e:
-        log.error(f"❌ Unexpected error sending email: {e}", exc_info=True)
+        log.error(f"[FAIL] Unexpected error sending email: {e}", exc_info=True)
         raise

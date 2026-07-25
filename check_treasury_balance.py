@@ -20,7 +20,7 @@ async def check_balance():
         user = result.scalar_one_or_none()
         
         if not user:
-            print("❌ System reserve user not found!")
+            print("[FAIL] System reserve user not found!")
             return
         
         print(f"System Reserve User: {user.full_name} ({user.email})")
@@ -35,7 +35,7 @@ async def check_balance():
         if account:
             print(f"\nAccount Balance (from accounts table): ${account.balance:.2f}")
         else:
-            print("\n❌ No account found for system reserve user!")
+            print("\n[FAIL] No account found for system reserve user!")
         
         # Check ledger entries
         result = await session.execute(
@@ -59,7 +59,7 @@ async def check_balance():
             for ledger in ledgers[-5:]:
                 print(f"  {ledger.entry_type.upper()}: ${ledger.amount:.2f} - {ledger.description}")
         else:
-            print("❌ No ledger entries found!")
+            print("[FAIL] No ledger entries found!")
     
     await engine.dispose()
 

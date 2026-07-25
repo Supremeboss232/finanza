@@ -142,7 +142,7 @@ class TransactionValidator:
         if not sender_account:
             return False, f"Sender has no account. Cannot transfer without account (RULE 1)"
 
-        # 🔧 ENFORCEMENT: Validate sender account ownership
+        # [FIX] ENFORCEMENT: Validate sender account ownership
         is_valid, reason = await account_id_enforcement.validate_account_ownership(
             db=db, user_id=sender_id, account_id=sender_account.id
         )
@@ -156,7 +156,7 @@ class TransactionValidator:
         if not recipient_account:
             return False, f"Recipient has no account. Cannot transfer to account that doesn't exist (RULE 1)"
 
-        # 🔧 ENFORCEMENT: Validate recipient account ownership
+        # [FIX] ENFORCEMENT: Validate recipient account ownership
         is_valid, reason = await account_id_enforcement.validate_account_ownership(
             db=db, user_id=recipient_id, account_id=recipient_account.id
         )

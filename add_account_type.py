@@ -28,9 +28,9 @@ async def migrate():
                         ADD COLUMN account_type VARCHAR DEFAULT 'savings'
                     """)
                 )
-                print("✓ Added account_type column to accounts table")
+                print("[OK] Added account_type column to accounts table")
             else:
-                print("✓ account_type column already exists")
+                print("[OK] account_type column already exists")
                 
         except Exception as e:
             print(f"Error during migration: {e}")

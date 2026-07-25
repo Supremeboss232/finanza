@@ -36,7 +36,7 @@ STEP 1: LAUNCH AN EC2 INSTANCE (BASTION HOST)
     • AMI: Select "Amazon Linux 2" (free tier eligible)
     • Instance Type: t2.micro (free tier)
     • Key Pair: Create or select an existing key pair
-      ⚠️  IMPORTANT: Download and save the .pem file securely!
+      [WARN]  IMPORTANT: Download and save the .pem file securely!
     
 1.5 Network Configuration:
     • VPC: Select the SAME VPC as your RDS instance
@@ -74,7 +74,7 @@ STEP 2: CONNECT TO EC2 INSTANCE VIA SSH
     Connect:
     ssh -i ~/Downloads/your-key-pair.pem ec2-user@<PUBLIC_IPv4>
 
-2.3 If you see "Welcome to Amazon Linux" → SUCCESS! ✅
+2.3 If you see "Welcome to Amazon Linux" → SUCCESS! [OK]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 STEP 3: INSTALL POSTGRESQL CLIENT ON EC2
@@ -91,7 +91,7 @@ Once connected to EC2, run these commands:
 3.3 Verify installation:
     psql --version
     
-    Output should show: psql (PostgreSQL) 12.x or higher ✅
+    Output should show: psql (PostgreSQL) 12.x or higher [OK]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 STEP 4: CONNECT TO YOUR RDS DATABASE FROM EC2
@@ -111,7 +111,7 @@ Still on the EC2 instance, run:
 4.3 You should see the PostgreSQL prompt:
     finbank=>
 
-    If you see this → SUCCESS! ✅
+    If you see this → SUCCESS! [OK]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 STEP 5: VIEW YOUR DATABASE DATA
@@ -152,23 +152,23 @@ Now at the finbank=> prompt, you can run SQL queries:
 TROUBLESHOOTING
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-❌ Problem: "Host key verification failed"
+[FAIL] Problem: "Host key verification failed"
    Solution: 
    - Make sure the .pem file permissions are correct (chmod 400)
    - Use the correct username (ec2-user for Amazon Linux)
 
-❌ Problem: "Could not resolve hostname"
+[FAIL] Problem: "Could not resolve hostname"
    Solution:
    - Check Public IPv4 address is correct
    - EC2 instance is running (check status in AWS Console)
 
-❌ Problem: "Connection refused" when connecting to RDS
+[FAIL] Problem: "Connection refused" when connecting to RDS
    Solution:
    - Make sure EC2 is in the SAME VPC as RDS
    - Check RDS security group allows inbound from EC2 security group
    - Verify RDS endpoint is correct
 
-❌ Problem: "psql: password authentication failed"
+[FAIL] Problem: "psql: password authentication failed"
    Solution:
    - Verify password is: Supposedbe5
    - Make sure username is: postgres_admin
@@ -210,11 +210,11 @@ Password: Supposedbe5
 SUMMARY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1. ✅ Launch EC2 instance in same VPC as RDS
-2. ✅ SSH into EC2
-3. ✅ Install PostgreSQL client
-4. ✅ Connect to RDS from EC2
-5. ✅ Run SQL queries to view data
+1. [OK] Launch EC2 instance in same VPC as RDS
+2. [OK] SSH into EC2
+3. [OK] Install PostgreSQL client
+4. [OK] Connect to RDS from EC2
+5. [OK] Run SQL queries to view data
 
 For support or questions about your database, run:
 python DATABASE_ACCESS_GUIDE.py

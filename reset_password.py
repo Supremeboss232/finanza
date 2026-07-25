@@ -17,7 +17,7 @@ async def update_admin_password(email: str, new_password: str):
         user = result.scalar_one_or_none()
         
         if not user:
-            print(f"❌ User with email '{email}' not found!")
+            print(f"[FAIL] User with email '{email}' not found!")
             return False
         
         # Hash and update password
@@ -28,7 +28,7 @@ async def update_admin_password(email: str, new_password: str):
         await db.commit()
         await db.refresh(user)
         
-        print(f"✅ Password updated successfully!")
+        print(f"[OK] Password updated successfully!")
         print(f"   Email: {user.email}")
         print(f"   New Password: {new_password}")
         

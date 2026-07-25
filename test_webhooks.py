@@ -35,10 +35,10 @@ def print_section(title: str):
     print(f"{BLUE}{'='*60}{RESET}\n")
 
 def print_success(msg: str):
-    print(f"{GREEN}✓ {msg}{RESET}")
+    print(f"{GREEN}[OK] {msg}{RESET}")
 
 def print_error(msg: str):
-    print(f"{RED}✗ {msg}{RESET}")
+    print(f"{RED}[FAIL] {msg}{RESET}")
 
 def print_info(msg: str):
     print(f"{YELLOW}→ {msg}{RESET}")

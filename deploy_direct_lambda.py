@@ -39,7 +39,7 @@ class DirectLambdaDeployer:
     
     def create_deployment_package(self, handler_file, requirements_file=None):
         """Package Lambda code with dependencies"""
-        print(f"📦 Creating deployment package from {handler_file}...")
+        print(f"[PKG] Creating deployment package from {handler_file}...")
         
         # Create temp directory
         package_dir = Path('lambda_package')
@@ -67,12 +67,12 @@ class DirectLambdaDeployer:
                     arcname = file_path.relative_to(package_dir)
                     zf.write(file_path, arcname)
         
-        print(f"✓ Package ready: {zip_path}")
+        print(f"[OK] Package ready: {zip_path}")
         return zip_path
     
     def create_iam_role(self, role_name):
         """Create IAM role for Lambda"""
-        print(f"🔐 Creating IAM role: {role_name}...")
+        print(f"[SEC] Creating IAM role: {role_name}...")
         
         trust_policy = {
             "Version": "2012-10-17",
@@ -92,7 +92,7 @@ class DirectLambdaDeployer:
                 Description=f'Lambda execution role for {role_name}'
             )
             role_arn = response['Role']['Arn']
-            print(f"✓ Role created: {role_arn}")
+            print(f"[OK] Role created: {role_arn}")
             
             # Attach basic permissions
             self.iam_client.attach_role_policy(
@@ -102,11 +102,11 @@ class DirectLambdaDeployer:
             
             return role_arn
         except self.iam_client.exceptions.EntityAlreadyExistsException:
-            print(f"✓ Role already exists: {role_name}")
+            print(f"[OK] Role already exists: {role_name}")
             response = self.iam_client.get_role(RoleName=role_name)
             return response['Role']['Arn']
         except Exception as e:
-            print(f"✗ Error creating role: {e}")
+            print(f"[FAIL] Error creating role: {e}")
             return None
     
     def deploy_lambda(self, function_config):
@@ -118,7 +118,7 @@ class DirectLambdaDeployer:
         env_vars = function_config.get('env_vars', {})
         vpc_config = function_config.get('vpc_config', {})
         
-        print(f"\n🚀 Deploying Lambda: {name}...")
+        print(f"\n[>>] Deploying Lambda: {name}...")
         
         # Read ZIP
         with open(zip_path, 'rb') as f:
@@ -148,7 +148,7 @@ class DirectLambdaDeployer:
                     TracingConfig={'Mode': 'Active'}
                 )
                 
-                print(f"✓ Function updated: {name}")
+                print(f"[OK] Function updated: {name}")
                 
             except self.lambda_client.exceptions.ResourceNotFoundException:
                 # Create new function
@@ -173,12 +173,12 @@ class DirectLambdaDeployer:
                         VpcConfig=vpc_config
                     )
                 
-                print(f"✓ Function created: {name}")
+                print(f"[OK] Function created: {name}")
             
             return response['FunctionArn']
             
         except Exception as e:
-            print(f"✗ Deployment failed: {e}")
+            print(f"[FAIL] Deployment failed: {e}")
             return None
     
     def deploy_all(self):
@@ -192,7 +192,7 @@ class DirectLambdaDeployer:
         role_arn = self.create_iam_role(role_name)
         
         if not role_arn:
-            print("✗ Failed to create IAM role. Aborting.")
+            print("[FAIL] Failed to create IAM role. Aborting.")
             return False
         
         # Deploy KYC Dispatcher
@@ -216,7 +216,7 @@ class DirectLambdaDeployer:
         })
         
         if not kyc_arn:
-            print("✗ KYC Dispatcher deployment failed")
+            print("[FAIL] KYC Dispatcher deployment failed")
             return False
         
         # Deploy Fraud Detector
@@ -258,7 +258,7 @@ class DirectLambdaDeployer:
         })
         
         print("\n" + "="*70)
-        print("✓ DEPLOYMENT COMPLETE!")
+        print("[OK] DEPLOYMENT COMPLETE!")
         print("="*70)
         print(f"\nLambda Functions Deployed:")
         print(f"  1. KYC Dispatcher: {kyc_arn}")

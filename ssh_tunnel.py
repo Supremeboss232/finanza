@@ -61,12 +61,12 @@ class SSHTunnelManager:
                 stdout, stderr = self.process.communicate()
                 raise Exception(f"SSH tunnel failed: {stderr}")
             
-            print(f"✅ SSH tunnel established on localhost:{self.local_port}")
+            print(f"[OK] SSH tunnel established on localhost:{self.local_port}")
             print(f"   Connecting to {self.rds_host}:{self.rds_port} via {self.ec2_host}")
             return True
             
         except Exception as e:
-            print(f"❌ Failed to start SSH tunnel: {e}")
+            print(f"[FAIL] Failed to start SSH tunnel: {e}")
             return False
     
     def stop(self):
@@ -78,7 +78,7 @@ class SSHTunnelManager:
                 self.process.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 self.process.kill()
-            print("✅ SSH tunnel stopped")
+            print("[OK] SSH tunnel stopped")
     
     def is_running(self) -> bool:
         """Check if tunnel is still running"""

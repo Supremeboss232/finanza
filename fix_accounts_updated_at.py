@@ -34,24 +34,24 @@ async def run_migration():
                     await conn.execute(
                         text("UPDATE accounts SET updated_at = NOW() WHERE updated_at IS NULL")
                     )
-                    print("   ✓ Updated NULL values to current timestamp")
+                    print("   [OK] Updated NULL values to current timestamp")
                 except Exception as e:
-                    print(f"   ⚠️  Could not update NULL values: {e}")
+                    print(f"   [WARN]  Could not update NULL values: {e}")
                 
                 # Add the default value
                 try:
                     await conn.execute(
                         text("ALTER TABLE accounts ALTER COLUMN updated_at SET DEFAULT NOW()")
                     )
-                    print("   ✓ Set DEFAULT NOW() for updated_at")
+                    print("   [OK] Set DEFAULT NOW() for updated_at")
                 except Exception as e:
-                    print(f"   ⚠️  Could not set default: {e}")
+                    print(f"   [WARN]  Could not set default: {e}")
             
-            print("✅ Migration completed")
+            print("[OK] Migration completed")
             return True
             
         except Exception as e:
-            print(f"❌ Migration error: {e}")
+            print(f"[FAIL] Migration error: {e}")
             import traceback
             traceback.print_exc()
             return False
@@ -65,13 +65,13 @@ async def main():
     try:
         success = await run_migration()
         if success:
-            print("\n✅ Migration script completed successfully")
+            print("\n[OK] Migration script completed successfully")
             sys.exit(0)
         else:
-            print("\n❌ Migration script failed")
+            print("\n[FAIL] Migration script failed")
             sys.exit(1)
     except Exception as e:
-        print(f"\n❌ Fatal error: {e}")
+        print(f"\n[FAIL] Fatal error: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":

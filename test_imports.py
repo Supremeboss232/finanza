@@ -15,6 +15,6 @@ for module_name, display_name in routers_to_test:
     try:
         module = __import__(f"routers.{module_name}", fromlist=["router"])
         router = getattr(module, "router")
-        print(f"✓ {display_name}")
+        print(f"[OK] {display_name}")
     except Exception as e:
-        print(f"✗ {display_name}: {type(e).__name__}: {e}")
+        print(f"[FAIL] {display_name}: {type(e).__name__}: {e}")

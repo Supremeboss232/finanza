@@ -40,10 +40,10 @@ async def create_ledger_table():
         async with engine.begin() as connection:
             # Create Ledger table
             await connection.run_sync(Base.metadata.create_all, tables=[DBLedger.__table__])
-        print("✓ Ledger table created successfully")
+        print("[OK] Ledger table created successfully")
         return True
     except Exception as e:
-        print(f"✗ Error creating Ledger table: {e}")
+        print(f"[FAIL] Error creating Ledger table: {e}")
         return False
 
 
@@ -82,7 +82,7 @@ async def migrate_transactions_to_ledger(db: AsyncSession):
                     continue
                 
                 if not tx.user_id or tx.user_id <= 0:
-                    print(f"  ✗ TX {tx.id}: Invalid user_id ({tx.user_id}), skipping")
+                    print(f"  [FAIL] TX {tx.id}: Invalid user_id ({tx.user_id}), skipping")
                     failed += 1
                     continue
                 
@@ -96,7 +96,7 @@ async def migrate_transactions_to_ledger(db: AsyncSession):
                         description=tx.description or tx.transaction_type,
                         reference_number=tx.reference_number
                     )
-                    print(f"  ✓ TX {tx.id}: Created ledger entries (fund: ${tx.amount})")
+                    print(f"  [OK] TX {tx.id}: Created ledger entries (fund: ${tx.amount})")
                     migrated += 1
                 
                 elif tx.transaction_type == "withdrawal":
@@ -110,7 +110,7 @@ async def migrate_transactions_to_ledger(db: AsyncSession):
                         description=f"Withdrawal: {tx.description}",
                         reference_number=tx.reference_number
                     )
-                    print(f"  ✓ TX {tx.id}: Created ledger entries (withdrawal: ${tx.amount})")
+                    print(f"  [OK] TX {tx.id}: Created ledger entries (withdrawal: ${tx.amount})")
                     migrated += 1
                 
                 else:
@@ -118,21 +118,21 @@ async def migrate_transactions_to_ledger(db: AsyncSession):
                     failed += 1
                 
             except Exception as e:
-                print(f"  ✗ TX {tx.id}: Error during migration: {e}")
+                print(f"  [FAIL] TX {tx.id}: Error during migration: {e}")
                 failed += 1
                 continue
         
         await db.commit()
         print(f"\nMigration Summary:")
-        print(f"  ✓ Migrated: {migrated}")
-        print(f"  ✗ Failed: {failed}")
+        print(f"  [OK] Migrated: {migrated}")
+        print(f"  [FAIL] Failed: {failed}")
         print(f"  Total: {len(transactions)}")
         
         return migrated > 0 or failed == 0
         
     except Exception as e:
         await db.rollback()
-        print(f"✗ Error during migration: {e}")
+        print(f"[FAIL] Error during migration: {e}")
         return False
 
 
@@ -149,20 +149,20 @@ async def verify_ledger_integrity(db: AsyncSession):
         print(f"  Total Debits:      ${reconciliation['total_debits']:.2f}")
         print(f"  Total Credits:     ${reconciliation['total_credits']:.2f}")
         print(f"  Difference:        ${reconciliation['difference']:.2f}")
-        print(f"  Ledger Balanced:   {'✓ YES' if reconciliation['is_balanced'] else '✗ NO'}")
+        print(f"  Ledger Balanced:   {'[OK] YES' if reconciliation['is_balanced'] else '[FAIL] NO'}")
         print(f"  Orphaned Entries:  {reconciliation['orphaned_entries']}")
         
         if reconciliation['errors']:
             print(f"\nErrors found:")
             for error in reconciliation['errors']:
-                print(f"  ✗ {error}")
+                print(f"  [FAIL] {error}")
         else:
-            print(f"\n✓ No errors found in ledger")
+            print(f"\n[OK] No errors found in ledger")
         
         return reconciliation['is_balanced']
         
     except Exception as e:
-        print(f"✗ Error verifying ledger: {e}")
+        print(f"[FAIL] Error verifying ledger: {e}")
         return False
 
 
@@ -194,7 +194,7 @@ async def test_reconciliation(db: AsyncSession):
             )
             account_balance = float(account_result.scalar() or 0)
             
-            match = "✓" if abs(ledger_balance - account_balance) < 0.01 else "✗"
+            match = "[OK]" if abs(ledger_balance - account_balance) < 0.01 else "[FAIL]"
             print(f"  {match} User {user.id} ({user.email}): Ledger=${ledger_balance:.2f}, Account=${account_balance:.2f}")
             
             if abs(ledger_balance - account_balance) > 0.01:
@@ -209,7 +209,7 @@ async def test_reconciliation(db: AsyncSession):
         return mismatches == 0
         
     except Exception as e:
-        print(f"✗ Error during reconciliation test: {e}")
+        print(f"[FAIL] Error during reconciliation test: {e}")
         return False
 
 
@@ -236,11 +236,11 @@ async def sync_account_balances_from_ledger(db: AsyncSession):
                 if abs(new_balance - old_balance) > 0.01:
                     account.balance = new_balance
                     db.add(account)
-                    print(f"  ✓ Account {account.id} (User {account.owner_id}): ${old_balance:.2f} → ${new_balance:.2f}")
+                    print(f"  [OK] Account {account.id} (User {account.owner_id}): ${old_balance:.2f} → ${new_balance:.2f}")
                     updated += 1
                 
             except Exception as e:
-                print(f"  ✗ Account {account.id}: Error {e}")
+                print(f"  [FAIL] Account {account.id}: Error {e}")
         
         await db.commit()
         print(f"\nUpdated: {updated} accounts")
@@ -248,7 +248,7 @@ async def sync_account_balances_from_ledger(db: AsyncSession):
         
     except Exception as e:
         await db.rollback()
-        print(f"✗ Error syncing balances: {e}")
+        print(f"[FAIL] Error syncing balances: {e}")
         return False
 
 
@@ -270,28 +270,28 @@ async def main():
         
         # Step 1: Create table
         if not await create_ledger_table():
-            print("\n✗ FAILED: Could not create Ledger table")
+            print("\n[FAIL] FAILED: Could not create Ledger table")
             return False
         
         # Step 2: Migrate transactions
         if not await migrate_transactions_to_ledger(db):
-            print("\n⚠ WARNING: Migration had issues, continuing...")
+            print("\n[WARN] WARNING: Migration had issues, continuing...")
         
         # Step 3: Verify ledger
         if not await verify_ledger_integrity(db):
-            print("\n⚠ WARNING: Ledger integrity check found issues, continuing...")
+            print("\n[WARN] WARNING: Ledger integrity check found issues, continuing...")
         
         # Step 4: Test reconciliation
         if not await test_reconciliation(db):
-            print("\n⚠ WARNING: Reconciliation test found mismatches, continuing...")
+            print("\n[WARN] WARNING: Reconciliation test found mismatches, continuing...")
         
         # Step 5: Sync balances
         if not await sync_account_balances_from_ledger(db):
-            print("\n✗ FAILED: Could not sync account balances")
+            print("\n[FAIL] FAILED: Could not sync account balances")
             return False
     
     print("\n" + "=" * 80)
-    print("✓ MIGRATION COMPLETE")
+    print("[OK] MIGRATION COMPLETE")
     print("=" * 80)
     print("\nNext steps:")
     print("  1. Deploy updated code with ledger support")

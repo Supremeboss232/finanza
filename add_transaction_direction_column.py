@@ -21,7 +21,7 @@ async def migrate():
             )
             
             if result.fetchone():
-                print("✅ 'direction' column already exists")
+                print("[OK] 'direction' column already exists")
                 return
             
             # Add the column
@@ -31,10 +31,10 @@ async def migrate():
                     ADD COLUMN direction VARCHAR(20) NULL
                 """)
             )
-            print("✅ Added 'direction' column to transactions table")
+            print("[OK] Added 'direction' column to transactions table")
             
         except Exception as e:
-            print(f"❌ Error adding direction column: {e}")
+            print(f"[FAIL] Error adding direction column: {e}")
             raise
 
 if __name__ == "__main__":

@@ -46,7 +46,7 @@ async def check_database():
                 
                 for pwd in test_passwords:
                     is_valid = verify_password(pwd, admin.hashed_password)
-                    print(f"Password '{pwd}': {'✅ VALID' if is_valid else '❌ INVALID'}")
+                    print(f"Password '{pwd}': {'[OK] VALID' if is_valid else '[FAIL] INVALID'}")
                 
                 # Test hashing a new password
                 print("\n" + "=" * 70)
@@ -61,10 +61,10 @@ async def check_database():
                 
                 # Test if the new hash can be verified
                 is_valid = verify_password(new_pwd, new_hash)
-                print(f"Verify new hash with original password: {'✅ VALID' if is_valid else '❌ INVALID'}")
+                print(f"Verify new hash with original password: {'[OK] VALID' if is_valid else '[FAIL] INVALID'}")
                 
             else:
-                print("❌ Admin user not found")
+                print("[FAIL] Admin user not found")
             
             # Check other users
             print("\n" + "=" * 70)

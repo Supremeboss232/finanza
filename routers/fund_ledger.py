@@ -256,7 +256,7 @@ async def fund_user_transfer(
         if account.owner_id != user_id:
             raise HTTPException(status_code=400, detail="Account does not belong to user")
         
-        # 🔧 ENFORCEMENT: Validate account ownership before proceeding
+        # [FIX] ENFORCEMENT: Validate account ownership before proceeding
         is_valid, reason = await account_id_enforcement.validate_account_ownership(
             db=db_session,
             user_id=user_id,

@@ -18,7 +18,7 @@ def sync_check_database():
         from psycopg2 import sql
         
         print("\n" + "="*70)
-        print("📊 DATABASE INSPECTOR - PostgreSQL RDS")
+        print("[CHT] DATABASE INSPECTOR - PostgreSQL RDS")
         print("="*70)
         
         # Connection parameters
@@ -40,7 +40,7 @@ def sync_check_database():
         conn = psycopg2.connect(**conn_params)
         cursor = conn.cursor()
         
-        print("✅ Connected successfully!\n")
+        print("[OK] Connected successfully!\n")
         
         # Get all tables
         cursor.execute("""
@@ -53,7 +53,7 @@ def sync_check_database():
         tables = [row[0] for row in cursor.fetchall()]
         
         if not tables:
-            print("❌ No tables found in database\n")
+            print("[FAIL] No tables found in database\n")
             conn.close()
             return
         
@@ -101,20 +101,20 @@ def sync_check_database():
                     print()
         
         print("="*70)
-        print("✅ Data inspection complete!\n")
+        print("[OK] Data inspection complete!\n")
         
         conn.close()
         return True
         
     except ImportError:
-        print("❌ psycopg2 not installed")
+        print("[FAIL] psycopg2 not installed")
         print("\nInstalling psycopg2...")
         os.system(f"{sys.executable} -m pip install psycopg2-binary -q")
         print("\nPlease run the script again.")
         return False
         
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"[FAIL] Error: {e}")
         import traceback
         traceback.print_exc()
         return False

@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 # Verify Supabase credentials are configured
 if not settings.SUPABASE_URL or not settings.SUPABASE_ANON_KEY:
     logger.warning(
-        "⚠️  Supabase credentials not configured. "
+        "[WARN]  Supabase credentials not configured. "
         "Set SUPABASE_URL and SUPABASE_ANON_KEY in .env"
     )
     supabase = None
@@ -30,9 +30,9 @@ else:
             settings.SUPABASE_URL,
             settings.SUPABASE_ANON_KEY
         )
-        logger.info("✅ Supabase REST API client initialized")
+        logger.info("[OK] Supabase REST API client initialized")
     except Exception as e:
-        logger.error(f"❌ Failed to initialize Supabase client: {e}")
+        logger.error(f"[FAIL] Failed to initialize Supabase client: {e}")
         supabase = None
 
     try:
@@ -43,12 +43,12 @@ else:
                 settings.SUPABASE_URL,
                 settings.SUPABASE_SERVICE_ROLE_KEY
             )
-            logger.info("✅ Supabase admin client initialized")
+            logger.info("[OK] Supabase admin client initialized")
         else:
             supabase_admin = supabase  # Fall back to anon key if service role not available
-            logger.warning("⚠️  SUPABASE_SERVICE_ROLE_KEY not configured, using anon key for admin operations")
+            logger.warning("[WARN]  SUPABASE_SERVICE_ROLE_KEY not configured, using anon key for admin operations")
     except Exception as e:
-        logger.error(f"❌ Failed to initialize Supabase admin client: {e}")
+        logger.error(f"[FAIL] Failed to initialize Supabase admin client: {e}")
         supabase_admin = supabase
 
 
@@ -76,22 +76,22 @@ async def test_supabase_connection():
         client = get_supabase_client()
         # Try to query a table (will fail initially if schema not migrated, but proves connection)
         response = client.table('users').select("id").limit(1).execute()
-        logger.info("✅ Supabase REST API connection successful!")
+        logger.info("[OK] Supabase REST API connection successful!")
         return True
     except Exception as e:
         error_msg = str(e)
         # Check if error is just missing table (expected during setup)
         if "table" in error_msg.lower() and "not found" in error_msg.lower():
-            logger.info("✅ Supabase REST API connection successful (schema not yet migrated)")
+            logger.info("[OK] Supabase REST API connection successful (schema not yet migrated)")
             return True
         else:
-            logger.error(f"❌ Supabase connection test failed: {e}")
+            logger.error(f"[FAIL] Supabase connection test failed: {e}")
             return False
 
 
 if __name__ == "__main__":
     import asyncio
-    print("\n🧪 Testing Supabase connection...")
+    print("\n[TST] Testing Supabase connection...")
     result = asyncio.run(test_supabase_connection())
-    print(f"Result: {'✅ PASS' if result else '❌ FAIL'}\n")
+    print(f"Result: {'[OK] PASS' if result else '[FAIL] FAIL'}\n")
 

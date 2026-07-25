@@ -41,7 +41,7 @@ async def create_transfer(
     """
     Create a new transfer between users.
     
-    🔧 CRITICAL FIX: Creates TWO transaction records (sender debit, recipient credit)
+    [FIX] CRITICAL FIX: Creates TWO transaction records (sender debit, recipient credit)
     
     Validates:
     - Amount must be positive and within limits
@@ -89,7 +89,7 @@ async def create_transfer(
         if not sender_account:
             raise HTTPException(status_code=400, detail="Sender has no account")
         
-        # 🔧 ENFORCEMENT: Validate account ownership before proceeding
+        # [FIX] ENFORCEMENT: Validate account ownership before proceeding
         is_valid, reason = await account_id_enforcement.validate_account_ownership(
             db=db_session,
             user_id=current_user.id,
@@ -116,7 +116,7 @@ async def create_transfer(
         if not recipient_account:
             raise HTTPException(status_code=400, detail="Recipient has no account")
         
-        # 🔧 ENFORCEMENT: Validate recipient account ownership
+        # [FIX] ENFORCEMENT: Validate recipient account ownership
         is_valid, reason = await account_id_enforcement.validate_account_ownership(
             db=db_session,
             user_id=recipient_id,
@@ -132,18 +132,18 @@ async def create_transfer(
         # (recipient KYC also checked, but sender's matters for availability)
         status_to_set = "completed" if current_user.kyc_status == "approved" else "blocked"
         
-        # 🔧 CRITICAL: Create TWO transaction records
+        # [FIX] CRITICAL: Create TWO transaction records
         
         # 1. Debit transaction for sender (money going out)
         sender_transaction = DBTransaction(
-            user_id=current_user.id,           # ✓ Sender
-            account_id=sender_account.id,      # ✓ From where
-            transaction_type="transfer",       # ✓ What type
-            amount=-amount,                    # ✓ NEGATIVE (money out)
-            status=status_to_set,              # ✓ Completed or blocked
-            direction="debit",                 # ✓ Money out
+            user_id=current_user.id,           # [OK] Sender
+            account_id=sender_account.id,      # [OK] From where
+            transaction_type="transfer",       # [OK] What type
+            amount=-amount,                    # [OK] NEGATIVE (money out)
+            status=status_to_set,              # [OK] Completed or blocked
+            direction="debit",                 # [OK] Money out
             description=f"Transfer to {recipient.email}: {description}",
-            reference_number=reference_number, # ✓ Audit trail
+            reference_number=reference_number, # [OK] Audit trail
             kyc_status_at_time=current_user.kyc_status
         )
         db_session.add(sender_transaction)
@@ -151,14 +151,14 @@ async def create_transfer(
         
         # 2. Credit transaction for recipient (money coming in)
         recipient_transaction = DBTransaction(
-            user_id=recipient_id,              # ✓ Recipient
-            account_id=recipient_account.id,   # ✓ To where
-            transaction_type="transfer",       # ✓ What type
-            amount=amount,                     # ✓ POSITIVE (money in)
-            status=status_to_set,              # ✓ Same status
-            direction="credit",                # ✓ Money in
+            user_id=recipient_id,              # [OK] Recipient
+            account_id=recipient_account.id,   # [OK] To where
+            transaction_type="transfer",       # [OK] What type
+            amount=amount,                     # [OK] POSITIVE (money in)
+            status=status_to_set,              # [OK] Same status
+            direction="credit",                # [OK] Money in
             description=f"Transfer from {current_user.email}: {description}",
-            reference_number=reference_number, # ✓ Same reference for audit
+            reference_number=reference_number, # [OK] Same reference for audit
             kyc_status_at_time=recipient.kyc_status
         )
         db_session.add(recipient_transaction)

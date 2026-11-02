@@ -331,7 +331,135 @@ async def cancel_payment_schedule(schedule_id: int = Path(..., gt=0)):
     return {"success": True, "schedule_id": schedule_id}
 
 
+async def execute_due_scheduled_payments(db) -> dict:
+    """
+    Scan and execute all due scheduled BillPayment records and recurring schedules.
+    Debits the user's account, creates a completed Transaction & Notification,
+    marks the BillPayment as 'processed', and schedules the next cycle if recurring.
+    """
+    from models import Transaction, Notification, PaymentSchedule
+    import uuid
+
+    now = datetime.utcnow()
+    processed_count = 0
+    failed_count = 0
+
+    try:
+        res = await db.execute(
+            select(BillPayment).where(
+                BillPayment.status == "scheduled",
+                BillPayment.payment_date <= now,
+            )
+        )
+        due_bills = res.scalars().all()
+
+        for bp in due_bills:
+            acc = await db.get(Account, bp.account_id)
+            payee = await db.get(Payee, bp.payee_id) if bp.payee_id else None
+            payee_name = payee.payee_name if payee else f"Payee #{bp.payee_id}"
+            amount = float(bp.amount or 0)
+
+            if not acc or amount <= 0:
+                bp.status = "failed"
+                bp.failure_reason = "Invalid account or payment amount"
+                failed_count += 1
+                continue
+
+            current_bal = float(acc.balance or 0)
+            if current_bal < amount:
+                bp.retry_count = (bp.retry_count or 0) + 1
+                bp.failure_reason = f"Insufficient funds (balance ${current_bal:,.2f} < ${amount:,.2f})"
+                if bp.retry_count >= 3:
+                    bp.status = "failed"
+                    db.add(
+                        Notification(
+                            user_id=acc.owner_id,
+                            title="Scheduled Bill Payment Failed",
+                            message=f"Scheduled payment of ${amount:,.2f} to {payee_name} failed after 3 attempts due to insufficient funds.",
+                            notification_type="warning",
+                            is_read=False,
+                        )
+                    )
+                failed_count += 1
+                continue
+
+            # Debit account
+            acc.balance = round(current_bal - amount, 2)
+            db.add(acc)
+
+            # Create ledger transaction
+            ref_num = f"AUTOBILL-{int(now.timestamp())}-{bp.id}-{uuid.uuid4().hex[:4].upper()}"
+            tx = Transaction(
+                user_id=acc.owner_id,
+                account_id=acc.id,
+                amount=amount,
+                transaction_type="bill_pay",
+                direction="debit",
+                status="completed",
+                description=f"Scheduled Bill Payment to {payee_name}" + (f" ({bp.memo})" if bp.memo else ""),
+                reference_number=ref_num,
+            )
+            db.add(tx)
+            await db.flush()
+
+            bp.status = "processed"
+            bp.processed_at = now
+            bp.transaction_id = tx.id
+            bp.failure_reason = None
+            processed_count += 1
+
+            # Create user notification
+            db.add(
+                Notification(
+                    user_id=acc.owner_id,
+                    title="Scheduled Bill Paid",
+                    message=f"Your scheduled bill payment of ${amount:,.2f} to {payee_name} was automatically processed (Ref: {ref_num}).",
+                    notification_type="transaction",
+                    is_read=False,
+                )
+            )
+
+            # If recurring, schedule next occurrence
+            freq = (getattr(bp, "frequency", None) or "once").lower()
+            delta_map = {
+                "weekly": timedelta(days=7),
+                "biweekly": timedelta(days=14),
+                "monthly": timedelta(days=30),
+                "quarterly": timedelta(days=90),
+                "annually": timedelta(days=365),
+                "annual": timedelta(days=365),
+            }
+            if freq in delta_map:
+                next_due = (bp.payment_date or now) + delta_map[freq]
+                if not bp.end_date or next_due <= bp.end_date:
+                    next_bp = BillPayment(
+                        account_id=bp.account_id,
+                        payee_id=bp.payee_id,
+                        amount=bp.amount,
+                        payment_date=next_due,
+                        memo=bp.memo,
+                        status="scheduled",
+                        frequency=freq,
+                        end_date=bp.end_date,
+                        created_by=bp.created_by,
+                        created_at=now,
+                    )
+                    db.add(next_bp)
+
+        await db.commit()
+    except Exception as e:
+        await db.rollback()
+        log.error("Error in execute_due_scheduled_payments: %s", e)
+
+    return {
+        "success": True,
+        "processed_count": processed_count,
+        "failed_count": failed_count,
+        "total": processed_count + failed_count,
+    }
+
+
 @router.post("/process-payments")
-async def process_payments_batch():
-    """Process due bill payments."""
-    return {"success": True, "processed_count": 0, "failed_count": 0, "total": 0}
+async def process_payments_batch(db=Depends(get_db)):
+    """Process due bill payments immediately."""
+    return await execute_due_scheduled_payments(db)

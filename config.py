@@ -64,6 +64,8 @@ class Settings(BaseSettings):
     
     # Mailtrap Configuration (for email testing/development)
     MAILTRAP_TOKEN: Optional[str] = None
+    RESEND_API_KEY: Optional[str] = None
+    SENDGRID_API_KEY: Optional[str] = None
     MAILTRAP_FROM_EMAIL: str = "hello@demomailtrap.co"
     MAILTRAP_FROM_NAME: str = "Finanza Bank"
     

@@ -860,6 +860,27 @@ async def startup_event():
             )
             print("[OK] Crypto feed registered")
             
+            # Register automated scheduled bill payments & recurring transfers worker (every 5 minutes)
+            from routers.bill_pay_api import execute_due_scheduled_payments
+
+            async def _run_scheduled_payments_worker():
+                try:
+                    async with SessionLocal() as db:
+                        res = await execute_due_scheduled_payments(db)
+                        if res.get("processed_count", 0) > 0 or res.get("failed_count", 0) > 0:
+                            log.info("[scheduler] Processed due scheduled payments: %s", res)
+                except Exception as _sched_err:
+                    log.error("[scheduler] Scheduled payments worker error: %s", _sched_err)
+
+            scheduler.add_job(
+                _run_scheduled_payments_worker,
+                'interval',
+                minutes=5,
+                id='scheduled_bill_payments_worker',
+                replace_existing=True
+            )
+            print("[OK] Scheduled Bill Payments & Recurring Transfers worker registered (every 5m)")
+
             # Start scheduler
             scheduler.start()
             atexit.register(cleanup_scheduler)

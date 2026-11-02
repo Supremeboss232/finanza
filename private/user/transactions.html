@@ -83,9 +83,12 @@
                     </select>
                 </div>
                 <div class="col-lg-2 col-md-6 col-6 d-flex gap-2">
-                    <button type="button" class="btn btn-outline-primary w-100" onclick="exportLedgerCSV()">
-                        <i class="fas fa-file-csv me-1"></i> Export CSV
+                    <button type="button" class="btn btn-outline-primary flex-fill" onclick="exportLedgerCSV()" title="Export CSV">
+                        <i class="fas fa-file-csv me-1"></i> CSV
                     </button>
+                    <a href="/api/user/statements/official?days=30&autoprint=1" target="_blank" class="btn btn-primary flex-fill" title="Download Official Certified PDF Statement">
+                        <i class="fas fa-file-pdf me-1"></i> PDF
+                    </a>
                 </div>
             </div>
         </div>

@@ -1,8 +1,8 @@
 """User API endpoints for fetching and managing user-specific financial data."""
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from typing import List
-from datetime import datetime
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from typing import List, Optional
+from datetime import datetime, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -2005,3 +2005,341 @@ async def create_support_ticket(
         "ticket": ticket,
         "message": f"Support ticket {ticket['id']} created. A private banking specialist will respond shortly.",
     }
+
+
+@router.get("/statements/official")
+async def get_official_bank_statement(
+    db_session: SessionDep,
+    current_user: User = Depends(get_current_user),
+    days: str = Query("30"),
+    account_id: Optional[int] = Query(None),
+    format: str = Query("html"),
+    autoprint: int = Query(1),
+):
+    """
+    Generate a Certified Official Bank Statement (HTML printable PDF or JSON)
+    with opening/closing balances, total credits/debits, and running balance ledger.
+    """
+    from fastapi.responses import HTMLResponse
+    from models import Transaction
+    import html as _html
+
+    acct_res = await db_session.execute(
+        select(Account).where(Account.owner_id == current_user.id).order_by(Account.id.asc())
+    )
+    accounts = acct_res.scalars().all()
+    if not accounts:
+        primary = await _get_or_create_primary_account(db_session, current_user)
+        accounts = [primary]
+
+    selected_accounts = [a for a in accounts if account_id is None or a.id == account_id] or accounts
+    closing_balance = sum(float(a.balance or 0) for a in selected_accounts)
+    primary_acc = selected_accounts[0]
+
+    txn_stmt = select(Transaction).where(Transaction.user_id == current_user.id)
+    if account_id is not None:
+        txn_stmt = txn_stmt.where(Transaction.account_id == account_id)
+
+    now = datetime.utcnow()
+    period_label = "All-Time Statement"
+    if days != "all":
+        try:
+            d_int = max(1, int(days))
+            cutoff = now - timedelta(days=d_int)
+            txn_stmt = txn_stmt.where(Transaction.created_at >= cutoff)
+            period_label = f"Last {d_int} Days ({cutoff.strftime('%b %d, %Y')} – {now.strftime('%b %d, %Y')})"
+        except ValueError:
+            pass
+
+    tx_res = await db_session.execute(txn_stmt.order_by(Transaction.created_at.desc()).limit(500))
+    txns_desc = tx_res.scalars().all()
+
+    def _is_credit(t: Transaction) -> bool:
+        d = (t.direction or "").lower()
+        tt = (t.transaction_type or "").lower()
+        if d == "credit":
+            return True
+        if d == "debit":
+            return False
+        if tt in ("deposit", "credit", "transfer_received", "investment_liquidation"):
+            return True
+        return float(t.amount or 0) > 0 and tt not in ("withdrawal", "bill_pay", "debit", "loan_repayment")
+
+    total_credits = 0.0
+    total_debits = 0.0
+    for t in txns_desc:
+        amt = abs(float(t.amount or 0))
+        if _is_credit(t):
+            total_credits += amt
+        else:
+            total_debits += amt
+
+    net_change = round(total_credits - total_debits, 2)
+    opening_balance = round(closing_balance - net_change, 2)
+
+    # Compute running balance chronologically
+    running = opening_balance
+    chronological_items = []
+    for t in reversed(txns_desc):
+        amt = abs(float(t.amount or 0))
+        is_cr = _is_credit(t)
+        running = round(running + (amt if is_cr else -amt), 2)
+        chronological_items.append({
+            "id": t.id,
+            "date": (t.created_at or now).strftime("%Y-%m-%d %H:%M UTC"),
+            "reference": t.reference_number or f"TXN-{t.id}",
+            "description": t.description or "Ledger Transaction",
+            "category": (t.transaction_type or "transfer").replace("_", " ").title(),
+            "status": (t.status or "completed").upper(),
+            "direction": "CREDIT" if is_cr else "DEBIT",
+            "amount": amt,
+            "signed_amount": amt if is_cr else -amt,
+            "running_balance": running,
+        })
+
+    # Display newest first
+    statement_rows = list(reversed(chronological_items))
+    stmt_ref = f"STMT-{now.strftime('%Y%m%d')}-{current_user.id:04d}"
+
+    if format.lower() == "json":
+        return {
+            "success": True,
+            "statement_reference": stmt_ref,
+            "generated_at": now.isoformat(),
+            "period_label": period_label,
+            "customer": {
+                "full_name": current_user.full_name or current_user.email,
+                "email": current_user.email,
+                "account_number": primary_acc.account_number,
+                "routing_number": "021000021",
+                "swift_bic": "FNZAUS33XXX",
+            },
+            "summary": {
+                "opening_balance": opening_balance,
+                "total_credits": round(total_credits, 2),
+                "total_debits": round(total_debits, 2),
+                "net_change": net_change,
+                "closing_balance": round(closing_balance, 2),
+            },
+            "transactions": statement_rows,
+        }
+
+    rows_html = ""
+    if not statement_rows:
+        rows_html = '<tr><td colspan="7" style="text-align:center;padding:28px;color:#64748b;">No posted transactions during this statement period.</td></tr>'
+    else:
+        for r in statement_rows:
+            amt_color = "#059669" if r["direction"] == "CREDIT" else "#0f172a"
+            sign = "+" if r["direction"] == "CREDIT" else "-"
+            rows_html += f"""
+            <tr>
+                <td style="white-space:nowrap;">{_html.escape(r['date'])}</td>
+                <td><code style="font-family:monospace;font-size:11px;">{_html.escape(r['reference'])}</code></td>
+                <td><strong>{_html.escape(r['description'])}</strong></td>
+                <td>{_html.escape(r['category'])}</td>
+                <td><span style="font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;background:#f1f5f9;color:#334155;">{_html.escape(r['status'])}</span></td>
+                <td style="text-align:right;font-weight:700;color:{amt_color};">{sign}${r['amount']:,.2f}</td>
+                <td style="text-align:right;font-family:monospace;color:#334155;">${r['running_balance']:,.2f}</td>
+            </tr>
+            """
+
+    auto_print_script = "window.addEventListener('load', () => setTimeout(() => window.print(), 350));" if autoprint else ""
+    html_doc = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Finanza Bank Official Statement — {stmt_ref}</title>
+<style>
+    * {{ box-sizing: border-box; }}
+    body {{
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        color: #0f172a;
+        background: #f8fafc;
+        margin: 0;
+        padding: 24px;
+    }}
+    .toolbar {{
+        max-width: 960px;
+        margin: 0 auto 16px auto;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #0f172a;
+        color: #fff;
+        padding: 12px 20px;
+        border-radius: 10px;
+    }}
+    .toolbar button {{
+        background: #2563eb;
+        color: #fff;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        margin-left: 8px;
+    }}
+    .toolbar button.secondary {{ background: #334155; }}
+    .sheet {{
+        max-width: 960px;
+        margin: 0 auto;
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        border-radius: 12px;
+        padding: 40px;
+        box-shadow: 0 10px 25px rgba(15,23,42,0.06);
+    }}
+    .header {{
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        border-bottom: 2px solid #0f172a;
+        padding-bottom: 20px;
+        margin-bottom: 24px;
+    }}
+    .brand {{
+        font-size: 22px;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        color: #0f172a;
+    }}
+    .brand-sub {{ font-size: 12px; color: #475569; margin-top: 4px; }}
+    .meta-box {{ text-align: right; font-size: 12px; line-height: 1.6; color: #334155; }}
+    .info-grid {{
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-bottom: 24px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 16px 20px;
+        font-size: 13px;
+    }}
+    .summary-grid {{
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 12px;
+        margin-bottom: 28px;
+    }}
+    .summary-card {{
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 12px 14px;
+        background: #fff;
+    }}
+    .summary-card .lbl {{ font-size: 11px; text-transform: uppercase; color: #64748b; font-weight: 700; }}
+    .summary-card .val {{ font-size: 16px; font-weight: 800; margin-top: 4px; color: #0f172a; }}
+    table {{ width: 100%; border-collapse: collapse; font-size: 12px; }}
+    th {{
+        text-align: left;
+        padding: 10px 12px;
+        background: #f1f5f9;
+        border-bottom: 2px solid #cbd5e1;
+        font-size: 11px;
+        text-transform: uppercase;
+        color: #475569;
+    }}
+    td {{ padding: 10px 12px; border-bottom: 1px solid #e2e8f0; vertical-align: middle; }}
+    .footer {{
+        margin-top: 32px;
+        padding-top: 16px;
+        border-top: 1px solid #cbd5e1;
+        font-size: 11px;
+        color: #64748b;
+        display: flex;
+        justify-content: space-between;
+    }}
+    @media print {{
+        body {{ background: #fff; padding: 0; }}
+        .toolbar {{ display: none !important; }}
+        .sheet {{ border: none; box-shadow: none; padding: 16px; max-width: 100%; }}
+    }}
+</style>
+</head>
+<body>
+    <div class="toolbar">
+        <div><strong>Finanza Bank Certified Statement</strong> • {_html.escape(stmt_ref)}</div>
+        <div>
+            <button onclick="window.print()">Print / Save as PDF</button>
+            <button class="secondary" onclick="window.close()">Close Window</button>
+        </div>
+    </div>
+    <div class="sheet">
+        <div class="header">
+            <div>
+                <div class="brand">FINANZA BANK, N.A.</div>
+                <div class="brand-sub">Institutional & Private Banking Division • New York, NY 10001 • Member FDIC</div>
+            </div>
+            <div class="meta-box">
+                <div><strong>OFFICIAL STATEMENT OF ACCOUNT</strong></div>
+                <div>Statement Ref: <strong>{_html.escape(stmt_ref)}</strong></div>
+                <div>Period: <strong>{_html.escape(period_label)}</strong></div>
+                <div>Generated: {_html.escape(now.strftime('%b %d, %Y %H:%M UTC'))}</div>
+            </div>
+        </div>
+
+        <div class="info-grid">
+            <div>
+                <div style="font-size:11px;text-transform:uppercase;color:#64748b;font-weight:700;margin-bottom:4px;">Account Holder</div>
+                <div><strong>{_html.escape(current_user.full_name or 'Valued Client')}</strong></div>
+                <div>{_html.escape(current_user.email)}</div>
+                <div>KYC Verification Status: <strong>{_html.escape((current_user.kyc_status or 'approved').upper())}</strong></div>
+            </div>
+            <div>
+                <div style="font-size:11px;text-transform:uppercase;color:#64748b;font-weight:700;margin-bottom:4px;">Depository Coordinates</div>
+                <div>Primary Account Number: <strong>{_html.escape(primary_acc.account_number)}</strong> ({_html.escape(primary_acc.currency or 'USD')})</div>
+                <div>ABA Routing Number: <strong>021000021</strong></div>
+                <div>SWIFT / BIC Code: <strong>FNZAUS33XXX</strong></div>
+            </div>
+        </div>
+
+        <div class="summary-grid">
+            <div class="summary-card">
+                <div class="lbl">Opening Balance</div>
+                <div class="val">${opening_balance:,.2f}</div>
+            </div>
+            <div class="summary-card">
+                <div class="lbl">Total Credits (+)</div>
+                <div class="val" style="color:#059669;">+${total_credits:,.2f}</div>
+            </div>
+            <div class="summary-card">
+                <div class="lbl">Total Debits (-)</div>
+                <div class="val" style="color:#dc2626;">-${total_debits:,.2f}</div>
+            </div>
+            <div class="summary-card">
+                <div class="lbl">Net Period Change</div>
+                <div class="val">{'+' if net_change >= 0 else ''}${net_change:,.2f}</div>
+            </div>
+            <div class="summary-card" style="background:#eff6ff;border-color:#bfdbfe;">
+                <div class="lbl" style="color:#1d4ed8;">Closing Balance</div>
+                <div class="val" style="color:#1e40af;">${closing_balance:,.2f}</div>
+            </div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Date (UTC)</th>
+                    <th>Reference #</th>
+                    <th>Description</th>
+                    <th>Category</th>
+                    <th>Status</th>
+                    <th style="text-align:right;">Amount</th>
+                    <th style="text-align:right;">Running Balance</th>
+                </tr>
+            </thead>
+            <tbody>
+                {rows_html}
+            </tbody>
+        </table>
+
+        <div class="footer">
+            <div>Finanza Bank, N.A. • Certified Electronic Statement • Member FDIC • Equal Housing Lender</div>
+            <div>Page 1 of 1 • Verification Hash: {stmt_ref}</div>
+        </div>
+    </div>
+    <script>{auto_print_script}</script>
+</body>
+</html>"""
+    return HTMLResponse(content=html_doc)

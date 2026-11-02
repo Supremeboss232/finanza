@@ -97,7 +97,7 @@
                 <button type="button" class="btn btn-sm btn-outline-primary" onclick="exportStatementCSV()">
                     <i class="fas fa-download me-1"></i> Export CSV
                 </button>
-                <button type="button" class="btn btn-sm btn-primary" onclick="window.print()">
+                <button type="button" class="btn btn-sm btn-primary" onclick="openOfficialPDFStatement()">
                     <i class="fas fa-print me-1"></i> Print Official PDF Statement
                 </button>
             </div>
@@ -297,6 +297,12 @@ function renderStatementRows() {
             </tr>
         `;
     }).join('');
+}
+
+
+function openOfficialPDFStatement() {
+    const days = document.getElementById('stmtPeriodFilter')?.value || '30';
+    window.open(`/api/user/statements/official?days=${encodeURIComponent(days)}&autoprint=1`, '_blank');
 }
 
 function exportStatementCSV() {

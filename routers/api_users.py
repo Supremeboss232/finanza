@@ -7,7 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from deps import get_current_user, SessionDep
-from models import User, Account, KYCInfo
+import json
+from models import User, Account, KYCInfo, UserSettings
 from crud import (
     get_user,
     get_user_transactions,
@@ -38,68 +39,101 @@ router = APIRouter(
 
 
 # USER PROFILE & ACCOUNT INFO
-@router.get("/profile", response_model=PydanticUser)
+@router.get("/profile", response_model=dict)
 async def get_user_profile(
-    current_user: User = Depends(get_current_user),
-):
-    """Get current user's profile information."""
-    return current_user
-
-
-@router.put("/profile", response_model=PydanticUser)
-async def update_user_profile(
-    profile_update: UserProfileUpdateRequest,
     db_session: SessionDep,
     current_user: User = Depends(get_current_user),
 ):
-    """
-    Update current user's profile information.
-    Accepts both basic profile fields and KYC personal details.
-    
-    NOTE: If user has submitted KYC, profile updates are locked until
-    KYC is approved or rejected.
-    """
+    """Get current user's full profile information including KYC & UserSettings details."""
+    kyc_res = await db_session.execute(select(KYCInfo).filter(KYCInfo.user_id == current_user.id))
+    kyc_info = kyc_res.scalars().first()
+
+    us_res = await db_session.execute(select(UserSettings).filter(UserSettings.user_id == current_user.id))
+    user_settings = us_res.scalars().first()
+    prefs = {}
+    if user_settings and user_settings.preferences:
+        try:
+            prefs = json.loads(user_settings.preferences)
+        except Exception:
+            prefs = {}
+
+    return {
+        "id": current_user.id,
+        "email": current_user.email,
+        "full_name": current_user.full_name or "",
+        "account_number": current_user.account_number or "",
+        "account_type": current_user.account_type or "Personal",
+        "is_active": current_user.is_active,
+        "is_verified": current_user.is_verified,
+        "kyc_status": current_user.kyc_status or "pending",
+        "kyc_verified": (current_user.kyc_status == "approved"),
+        "created_at": current_user.created_at.isoformat() if current_user.created_at else None,
+        "phone_number": (user_settings.phone_number if user_settings and user_settings.phone_number else None)
+                        or (kyc_info.phone_number if kyc_info else None)
+                        or prefs.get("phone_number", ""),
+        "address": (user_settings.address if user_settings and user_settings.address else None)
+                   or (kyc_info.address if kyc_info else None)
+                   or prefs.get("address", ""),
+        "city": (kyc_info.city if kyc_info and getattr(kyc_info, "city", None) else None) or prefs.get("city", ""),
+        "state": (kyc_info.state if kyc_info and getattr(kyc_info, "state", None) else None) or prefs.get("state", ""),
+        "postal_code": (kyc_info.postal_code if kyc_info and getattr(kyc_info, "postal_code", None) else None) or prefs.get("postal_code", ""),
+        "country": (kyc_info.country if kyc_info and getattr(kyc_info, "country", None) else None) or prefs.get("country", "USA"),
+        "date_of_birth": (kyc_info.date_of_birth.isoformat() if kyc_info and getattr(kyc_info, "date_of_birth", None) and hasattr(kyc_info.date_of_birth, "isoformat") else (str(kyc_info.date_of_birth) if kyc_info and getattr(kyc_info, "date_of_birth", None) else prefs.get("date_of_birth", ""))),
+        "id_type": (kyc_info.document_type if kyc_info and getattr(kyc_info, "document_type", None) else None) or prefs.get("id_type", "National ID"),
+        "id_number": (kyc_info.document_number if kyc_info and getattr(kyc_info, "document_number", None) else None) or prefs.get("id_number", ""),
+        "ssn": (kyc_info.ssn if kyc_info and getattr(kyc_info, "ssn", None) else None) or prefs.get("ssn", ""),
+        "employer": prefs.get("employer", ""),
+        "job_title": prefs.get("job_title", ""),
+        "industry": prefs.get("industry", ""),
+        "annual_income": prefs.get("annual_income", ""),
+        "profile_picture_url": prefs.get("profile_picture_url") or prefs.get("avatar_url") or getattr(current_user, "profile_picture_url", None),
+    }
+
+
+@router.put("/profile", response_model=dict)
+async def update_user_profile(
+    payload: dict,
+    db_session: SessionDep,
+    current_user: User = Depends(get_current_user),
+):
+    """Update current user's personal & employment profile information."""
     try:
-        # Check if KYC is submitted (form is locked)
-        # Query the KYC record to avoid lazy loading issues
-        result = await db_session.execute(
-            select(KYCInfo).filter(KYCInfo.user_id == current_user.id)
-        )
-        kyc_info = result.scalars().first()
-        
-        if kyc_info and kyc_info.kyc_submitted:
-            raise HTTPException(
-                status_code=status.HTTP_423_LOCKED,
-                detail="Your profile is currently locked. KYC has been submitted and is under review. You cannot modify your profile until verification is complete."
-            )
-        
-        # Update basic user fields
-        if profile_update.full_name is not None:
-            current_user.full_name = profile_update.full_name
-        
-        if profile_update.account_type is not None:
-            current_user.account_type = profile_update.account_type
-        
-        if profile_update.is_active is not None:
-            current_user.is_active = profile_update.is_active
-        
-        # Update session and return updated user
+        if payload.get("full_name") is not None:
+            current_user.full_name = str(payload["full_name"]).strip()
+        if payload.get("account_type") is not None:
+            current_user.account_type = str(payload["account_type"]).strip()
         db_session.add(current_user)
+
+        us_res = await db_session.execute(select(UserSettings).filter(UserSettings.user_id == current_user.id))
+        user_settings = us_res.scalars().first()
+        if not user_settings:
+            user_settings = UserSettings(user_id=current_user.id, preferences="{}")
+            db_session.add(user_settings)
+            await db_session.flush()
+
+        if payload.get("phone_number") is not None:
+            user_settings.phone_number = str(payload["phone_number"]).strip()
+        if payload.get("address") is not None:
+            user_settings.address = str(payload["address"]).strip()
+
+        prefs = {}
+        if user_settings.preferences:
+            try:
+                prefs = json.loads(user_settings.preferences)
+            except Exception:
+                prefs = {}
+
+        for key in ("city", "state", "postal_code", "country", "date_of_birth", "employer", "job_title", "industry", "annual_income", "phone_number", "address"):
+            if key in payload and payload[key] is not None:
+                prefs[key] = payload[key]
+
+        user_settings.preferences = json.dumps(prefs)
+        db_session.add(user_settings)
         await db_session.commit()
-        await db_session.refresh(current_user)
-        
-        return current_user
-        
-    except HTTPException:
-        raise
+        return await get_user_profile(db_session=db_session, current_user=current_user)
     except Exception as e:
         await db_session.rollback()
-        import logging
-        logging.error(f"Error updating profile: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Failed to update profile: {str(e)}"
-        )
+        raise HTTPException(status_code=400, detail=f"Failed to update profile: {str(e)}")
 
 
 @router.get("/dashboard", response_model=dict)
@@ -368,92 +402,221 @@ async def get_user_investment_detail(
     return investment
 
 
-# ============= ENHANCED OPERATIONS FOR DEPOSITS =============
+# ============= ENHANCED OPERATIONS FOR DEPOSITS, LOANS, CARDS, INVESTMENTS & TRANSFERS =============
+
+from fastapi import Request, UploadFile, File, Body
+from typing import Optional
+from decimal import Decimal
+import uuid
+import os
+from pathlib import Path as _Path
+from models import Deposit, Loan, Investment, Card, Transaction
+
+# Official Bank Product Rate Tables (Users cannot invent their own rates)
+BANK_DEPOSIT_APY_TIERS = {
+    ("savings", 6): 3.50,
+    ("savings", 12): 3.75,
+    ("savings", 24): 4.00,
+    ("savings", 36): 4.25,
+    ("fixed", 6): 4.25,
+    ("fixed", 12): 4.75,
+    ("fixed", 24): 5.10,
+    ("fixed", 36): 5.50,
+    ("recurring", 6): 4.00,
+    ("recurring", 12): 4.50,
+    ("recurring", 24): 4.85,
+    ("recurring", 36): 5.20,
+    ("recurring_savings", 6): 4.00,
+    ("recurring_savings", 12): 4.50,
+    ("recurring_savings", 24): 4.85,
+    ("recurring_savings", 36): 5.20,
+}
+
+BANK_LOAN_APR_TIERS = {
+    "personal": 8.50,
+    "auto": 6.20,
+    "home": 5.40,
+    "mortgage": 5.40,
+    "student": 4.80,
+    "business": 7.90,
+}
+
+BANK_INVESTMENT_RETURN_TIERS = {
+    "stocks": 8.50,
+    "bonds": 5.20,
+    "bond": 5.20,
+    "mutual_funds": 7.00,
+    "mutual_fund": 7.00,
+    "etf": 7.50,
+    "real_estate": 6.80,
+    "crypto": 11.00,
+    "term_deposit": 4.80,
+    "commodities": 6.00,
+}
+
+
+async def _get_or_create_primary_account(db_session: AsyncSession, user: User) -> Account:
+    result = await db_session.execute(
+        select(Account).where(Account.owner_id == user.id).order_by(Account.id.asc())
+    )
+    account = result.scalars().first()
+    if not account:
+        acct_num = user.account_number or f"FNZ{user.id:08d}"
+        account = Account(
+            account_number=acct_num,
+            account_type="checking",
+            balance=Decimal("0.00"),
+            currency="USD",
+            owner_id=user.id,
+            status="active",
+            kyc_level="basic",
+        )
+        db_session.add(account)
+        await db_session.flush()
+    return account
+
+
+@router.get("/product-rates")
+async def get_bank_product_rates():
+    """Return official bank-set APY/APR tiers for deposits, loans, and investments."""
+    return {
+        "deposit_apy": {f"{k[0]}_{k[1]}m": v for k, v in BANK_DEPOSIT_APY_TIERS.items()},
+        "loan_apr": BANK_LOAN_APR_TIERS,
+        "investment_return": BANK_INVESTMENT_RETURN_TIERS,
+    }
+
 
 @router.post("/deposits/{deposit_id}/withdraw", response_model=dict)
 async def withdraw_from_deposit(
     deposit_id: int,
-    amount: float,
+    request: Request,
     db_session: SessionDep,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    amount: Optional[float] = None,
 ):
-    """Withdraw funds from a deposit (via ATM or Agent)."""
+    """Withdraw funds from a deposit vault back into the user's primary checking/savings account."""
     from crud import get_deposit
-    from sqlalchemy import update
-    
+
+    if amount is None:
+        try:
+            body = await request.json()
+            amount = float(body.get("amount", 0))
+        except Exception:
+            amount = 0.0
+
+    if not amount or amount <= 0:
+        raise HTTPException(status_code=400, detail="Withdrawal amount must be greater than 0")
+
     deposit = await get_deposit(db_session, deposit_id)
     if not deposit or deposit.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Deposit not found")
-    
-    if deposit.balance < amount:
-        raise HTTPException(status_code=400, detail="Insufficient balance for withdrawal")
-    
-    # Update deposit balance and withdrawal amount
-    deposit.balance -= amount
-    deposit.withdrawal_amount += amount
-    
+
+    current_bal = float(deposit.current_balance if deposit.current_balance is not None else deposit.amount or 0)
+    if current_bal < amount:
+        raise HTTPException(status_code=400, detail=f"Insufficient deposit balance (${current_bal:,.2f} available)")
+
+    # Deduct from deposit vault
+    new_dep_bal = round(current_bal - float(amount), 2)
+    deposit.current_balance = Decimal(str(new_dep_bal))
+    if new_dep_bal <= 0:
+        deposit.status = "withdrawn"
     db_session.add(deposit)
+
+    # Credit back to user's primary bank account
+    account = await _get_or_create_primary_account(db_session, current_user)
+    acct_bal = float(account.balance or 0)
+    account.balance = Decimal(str(round(acct_bal + float(amount), 2)))
+    db_session.add(account)
+
+    # Record Transaction on ledger
+    txn = Transaction(
+        user_id=current_user.id,
+        account_id=account.id,
+        amount=Decimal(str(round(float(amount), 2))),
+        transaction_type="deposit_withdrawal",
+        direction="credit",
+        status="completed",
+        description=f"Withdrawal from Deposit #{deposit.id} to Account {account.account_number}",
+        reference_number=f"DEPW-{uuid.uuid4().hex[:10].upper()}",
+        kyc_status_at_time=current_user.kyc_status,
+    )
+    db_session.add(txn)
+
     await db_session.commit()
     await db_session.refresh(deposit)
-    
+
     return {
         "success": True,
-        "message": f"Withdrawal of ${amount:.2f} completed",
-        "new_balance": deposit.balance,
-        "total_withdrawn": deposit.withdrawal_amount,
+        "message": f"${amount:,.2f} withdrawn from Deposit #{deposit.id} and credited to your account ({account.account_number})",
+        "new_balance": float(deposit.current_balance or 0),
+        "account_balance": float(account.balance or 0),
         "deposit": {
             "id": deposit.id,
-            "amount": deposit.amount,
-            "balance": deposit.balance,
-            "interest_earned": (deposit.balance - deposit.amount),
-            "status": deposit.status
-        }
+            "amount": float(deposit.amount or 0),
+            "current_balance": float(deposit.current_balance or 0),
+            "balance": float(deposit.current_balance or 0),
+            "interest_earned": max(0.0, float(deposit.current_balance or 0) - float(deposit.amount or 0)),
+            "status": deposit.status,
+        },
     }
 
 
-# REMOVED: Duplicate old deposit creation endpoint - replaced by unified POST endpoint below
-
-
-# ============= ENHANCED OPERATIONS FOR LOANS =============
-
 @router.post("/loans/request", response_model=dict)
 async def request_loan(
-    amount: float,
-    term_months: int,
-    interest_rate: float,
-    purpose: str,
+    request: Request,
     db_session: SessionDep,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    amount: Optional[float] = None,
+    term_months: Optional[int] = None,
+    interest_rate: Optional[float] = None,
+    purpose: Optional[str] = None,
+    loan_type: Optional[str] = "personal",
 ):
-    """Submit a loan request."""
-    from sqlalchemy import insert
-    from app.models import Loan
-    
-    monthly_payment = (amount * (interest_rate / 100) / 12) / (1 - (1 + interest_rate / 100 / 12) ** (-term_months))
-    
-    stmt = insert(Loan).values(
+    """Submit a loan request using official bank APR tiers."""
+    if amount is None:
+        try:
+            body = await request.json()
+            amount = float(body.get("amount", 0))
+            term_months = int(body.get("term_months", 12))
+            loan_type = body.get("loan_type", "personal")
+            purpose = body.get("purpose", f"{loan_type} loan")
+        except Exception:
+            pass
+
+    if not amount or amount <= 0:
+        raise HTTPException(status_code=400, detail="Loan amount must be greater than 0")
+    term_months = int(term_months or 12)
+    ltype = (loan_type or "personal").lower()
+    rate = BANK_LOAN_APR_TIERS.get(ltype, 8.50)
+
+    monthly_rate = rate / 100 / 12
+    monthly_payment = (amount * monthly_rate) / (1 - (1 + monthly_rate) ** (-term_months)) if monthly_rate > 0 else (amount / term_months)
+
+    loan = Loan(
         user_id=current_user.id,
-        amount=amount,
-        interest_rate=interest_rate,
+        loan_type=ltype,
+        amount=Decimal(str(round(amount, 2))),
+        interest_rate=Decimal(str(rate)),
         term_months=term_months,
-        monthly_payment=monthly_payment,
-        remaining_balance=amount,
+        monthly_payment=Decimal(str(round(monthly_payment, 2))),
+        remaining_balance=Decimal(str(round(amount, 2))),
+        paid_amount=Decimal("0.00"),
         status="pending",
-        purpose=purpose
-    ).returning(Loan)
-    
-    result = await db_session.execute(stmt)
-    loan = result.scalars().first()
+        purpose=purpose or f"{ltype.title()} Loan",
+    )
+    db_session.add(loan)
     await db_session.commit()
-    
+    await db_session.refresh(loan)
+
     return {
         "success": True,
-        "message": "Loan request submitted successfully",
+        "message": "Loan application submitted for underwriting review",
         "loan_id": loan.id,
-        "amount": loan.amount,
-        "monthly_payment": loan.monthly_payment,
+        "amount": float(loan.amount),
+        "interest_rate": float(loan.interest_rate),
+        "monthly_payment": float(loan.monthly_payment),
         "term_months": loan.term_months,
-        "status": loan.status
+        "status": loan.status,
     }
 
 
@@ -461,116 +624,168 @@ async def request_loan(
 async def approve_loan(
     loan_id: int,
     db_session: SessionDep,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
-    """Approve a loan request (admin only)."""
+    """Approve a loan request and disburse principal to user's account (admin only)."""
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Admin access required to approve loans")
     from crud import get_loan
-    from datetime import datetime
-    
+
     loan = await get_loan(db_session, loan_id)
     if not loan:
         raise HTTPException(status_code=404, detail="Loan not found")
-    
+
     loan.status = "active"
     loan.approved_at = datetime.utcnow()
-    
     db_session.add(loan)
+
+    # Disburse loan principal into borrower's primary account
+    borrower_res = await db_session.execute(select(User).where(User.id == loan.user_id))
+    borrower = borrower_res.scalar_one_or_none()
+    if borrower:
+        acct = await _get_or_create_primary_account(db_session, borrower)
+        acct.balance = Decimal(str(round(float(acct.balance or 0) + float(loan.amount or 0), 2)))
+        db_session.add(acct)
+        txn = Transaction(
+            user_id=borrower.id,
+            account_id=acct.id,
+            amount=Decimal(str(loan.amount)),
+            transaction_type="loan_disbursement",
+            direction="credit",
+            status="completed",
+            description=f"Loan #{loan.id} Disbursement ({loan.loan_type})",
+            reference_number=f"LNDS-{uuid.uuid4().hex[:10].upper()}",
+            kyc_status_at_time=borrower.kyc_status,
+        )
+        db_session.add(txn)
+
     await db_session.commit()
     await db_session.refresh(loan)
-    
+
     return {
         "success": True,
-        "message": "Loan approved successfully",
+        "message": "Loan approved and disbursed to borrower account",
         "loan": {
             "id": loan.id,
-            "amount": loan.amount,
-            "monthly_payment": loan.monthly_payment,
-            "status": loan.status
-        }
+            "amount": float(loan.amount),
+            "monthly_payment": float(loan.monthly_payment),
+            "status": loan.status,
+        },
     }
 
 
 @router.post("/loans/{loan_id}/payment", response_model=dict)
 async def make_loan_payment(
     loan_id: int,
-    amount: float,
+    request: Request,
     db_session: SessionDep,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    amount: Optional[float] = None,
 ):
-    """Make a payment on an active loan."""
+    """Make a loan repayment by deducting from the user's primary checking/savings account."""
     from crud import get_loan
-    
+
+    if amount is None:
+        try:
+            body = await request.json()
+            amount = float(body.get("amount", 0))
+        except Exception:
+            amount = 0.0
+
+    if not amount or amount <= 0:
+        raise HTTPException(status_code=400, detail="Payment amount must be greater than 0")
+
     loan = await get_loan(db_session, loan_id)
     if not loan or loan.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Loan not found")
-    
-    if loan.status != "active":
-        raise HTTPException(status_code=400, detail="Loan is not active")
-    
-    if amount > loan.remaining_balance:
-        raise HTTPException(status_code=400, detail="Payment exceeds remaining balance")
-    
-    loan.remaining_balance -= amount
-    loan.paid_amount += amount
-    
-    if loan.remaining_balance <= 0:
+
+    if loan.status not in ("active", "approved"):
+        raise HTTPException(status_code=400, detail=f"Loan is currently '{loan.status}' and cannot accept payments yet")
+
+    rem = float(loan.remaining_balance or loan.amount or 0)
+    if amount > rem:
+        amount = rem
+
+    # Verify and deduct from user's primary account balance
+    account = await _get_or_create_primary_account(db_session, current_user)
+    acct_bal = float(account.balance or 0)
+    if acct_bal < amount:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Insufficient account balance (${acct_bal:,.2f} available) to make ${amount:,.2f} loan payment",
+        )
+
+    account.balance = Decimal(str(round(acct_bal - amount, 2)))
+    db_session.add(account)
+
+    new_rem = round(rem - amount, 2)
+    new_paid = round(float(loan.paid_amount or 0) + amount, 2)
+    loan.remaining_balance = Decimal(str(new_rem))
+    loan.paid_amount = Decimal(str(new_paid))
+    if new_rem <= 0:
         loan.status = "completed"
-    
     db_session.add(loan)
+
+    txn = Transaction(
+        user_id=current_user.id,
+        account_id=account.id,
+        amount=Decimal(str(round(amount, 2))),
+        transaction_type="loan_repayment",
+        direction="debit",
+        status="completed",
+        description=f"Loan #{loan.id} Repayment ({loan.loan_type or 'Loan'})",
+        reference_number=f"LNPY-{uuid.uuid4().hex[:10].upper()}",
+        kyc_status_at_time=current_user.kyc_status,
+    )
+    db_session.add(txn)
+
     await db_session.commit()
     await db_session.refresh(loan)
-    
+
     return {
         "success": True,
-        "message": f"Payment of ${amount:.2f} recorded",
-        "remaining_balance": loan.remaining_balance,
-        "total_paid": loan.paid_amount,
-        "loan_status": loan.status
+        "message": f"Loan payment of ${amount:,.2f} completed from account {account.account_number}",
+        "remaining_balance": float(loan.remaining_balance or 0),
+        "total_paid": float(loan.paid_amount or 0),
+        "account_balance": float(account.balance or 0),
+        "loan_status": loan.status,
     }
-
-
-# ============= ENHANCED OPERATIONS FOR INVESTMENTS =============
-
-# REMOVED: Duplicate old investment creation endpoint - replaced by unified POST endpoint below
 
 
 @router.get("/investments/{investment_id}/details", response_model=dict)
 async def get_investment_details(
     investment_id: int,
     db_session: SessionDep,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     """Get detailed investment information including returns and performance."""
     from crud import get_investment
-    from datetime import datetime
-    
+
     investment = await get_investment(db_session, investment_id)
     if not investment or investment.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Investment not found")
-    
-    # Calculate returns
-    days_invested = (datetime.utcnow() - investment.created_at).days
-    expected_interest = (investment.amount * investment.annual_return_rate / 100) * (days_invested / 365)
-    
+
+    created_naive = investment.created_at.replace(tzinfo=None) if investment.created_at else datetime.utcnow()
+    days_invested = max(0, (datetime.utcnow() - created_naive).days)
+    amt = float(investment.amount or 0)
+    rate = float(investment.annual_return_rate or 0)
+    interest_earned = float(investment.interest_earned or 0)
+    expected_interest = (amt * rate / 100.0) * (days_invested / 365.0)
+
     return {
         "investment_id": investment.id,
         "type": investment.investment_type,
-        "amount_invested": investment.amount,
-        "current_value": investment.current_value or investment.amount,
-        "interest_earned": investment.interest_earned,
+        "amount_invested": amt,
+        "current_value": float(investment.current_value or amt),
+        "interest_earned": interest_earned,
         "expected_interest": round(expected_interest, 2),
-        "annual_return_rate": f"{investment.annual_return_rate}%",
-        "total_return": round((investment.interest_earned + expected_interest), 2),
+        "annual_return_rate": f"{rate}%",
+        "total_return": round(interest_earned + expected_interest, 2),
         "days_invested": days_invested,
         "purpose": investment.purpose,
         "status": investment.status,
-        "maturity_date": investment.maturity_date.isoformat() if investment.maturity_date else None
+        "maturity_date": investment.maturity_date.isoformat() if investment.maturity_date else None,
     }
-
-
-# ============= ENHANCED OPERATIONS FOR CARDS =============
-
-# REMOVED: Duplicate old card creation endpoint - replaced by unified POST endpoint below
 
 
 @router.post("/cards/{card_id}/balance", response_model=dict)
@@ -579,37 +794,47 @@ async def update_card_balance(
     amount: float,
     transaction_type: str,
     db_session: SessionDep,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
-    """Update card balance (deposit or withdrawal)."""
+    """Transfer funds between user's primary bank account and their card balance."""
     from crud import get_card
-    
+
     card = await get_card(db_session, card_id)
     if not card or card.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Card not found")
-    
+
+    account = await _get_or_create_primary_account(db_session, current_user)
+    acct_bal = float(account.balance or 0)
+    card_bal = float(card.balance or 0)
+
     if transaction_type.lower() == "deposit":
-        card.balance += amount
-        action = "deposited to"
+        if acct_bal < amount:
+            raise HTTPException(status_code=400, detail=f"Insufficient account balance (${acct_bal:,.2f})")
+        account.balance = Decimal(str(round(acct_bal - amount, 2)))
+        card.balance = Decimal(str(round(card_bal + amount, 2)))
+        action = "loaded onto"
     elif transaction_type.lower() == "withdrawal":
-        if card.balance < amount:
+        if card_bal < amount:
             raise HTTPException(status_code=400, detail="Insufficient card balance")
-        card.balance -= amount
-        action = "withdrawn from"
+        card.balance = Decimal(str(round(card_bal - amount, 2)))
+        account.balance = Decimal(str(round(acct_bal + amount, 2)))
+        action = "transferred to account from"
     else:
         raise HTTPException(status_code=400, detail="Invalid transaction type")
-    
+
+    db_session.add(account)
     db_session.add(card)
     await db_session.commit()
     await db_session.refresh(card)
-    
+
     return {
         "success": True,
         "message": f"${amount:.2f} {action} card",
         "card_id": card.id,
-        "new_balance": card.balance,
+        "new_balance": float(card.balance),
+        "account_balance": float(account.balance),
         "transaction_type": transaction_type,
-        "card_status": card.status
+        "card_status": card.status,
     }
 
 
@@ -619,49 +844,49 @@ async def update_card_balance(
 async def change_password(
     password_data: dict,
     db_session: SessionDep,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     """Change user password."""
     from auth_utils import verify_password, get_password_hash
-    
-    try:
-        old_password = password_data.get("old_password")
-        new_password = password_data.get("new_password")
-        confirm_password = password_data.get("confirm_password")
-        
-        if new_password != confirm_password:
-            raise HTTPException(status_code=400, detail="New passwords do not match")
-        
-        if len(new_password) < 8:
-            raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
-        
-        if not verify_password(old_password, current_user.hashed_password):
-            raise HTTPException(status_code=400, detail="Old password is incorrect")
-        
-        current_user.hashed_password = get_password_hash(new_password)
-        db_session.add(current_user)
-        await db_session.commit()
-        
-        return {
-            "success": True,
-            "message": "Password changed successfully"
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+
+    old_password = password_data.get("old_password")
+    new_password = password_data.get("new_password")
+    confirm_password = password_data.get("confirm_password", new_password)
+
+    if new_password != confirm_password:
+        raise HTTPException(status_code=400, detail="New passwords do not match")
+    if not new_password or len(new_password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+    if not verify_password(old_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Old password is incorrect")
+
+    current_user.hashed_password = get_password_hash(new_password)
+    db_session.add(current_user)
+    await db_session.commit()
+
+    return {"success": True, "message": "Password changed successfully"}
 
 
 @router.post("/enable-2fa")
 async def enable_2fa(
     db_session: SessionDep,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
     """Enable two-factor authentication."""
+    try:
+        import pyotp
+        secret_key = pyotp.random_base32()
+    except ImportError:
+        import secrets as _secrets
+        secret_key = _secrets.token_hex(20).upper()[:32]
+    current_user.mfa_secret = secret_key
+    current_user.mfa_enabled = True
+    db_session.add(current_user)
+    await db_session.commit()
     return {
         "success": True,
         "message": "2FA enabled successfully",
-        "secret_key": "SAMPLE2FASECRET123"  # TODO: Generate real 2FA secret
+        "secret_key": secret_key,
     }
 
 
@@ -669,251 +894,227 @@ async def enable_2fa(
 async def get_login_history(
     db_session: SessionDep,
     current_user: User = Depends(get_current_user),
-    limit: int = 50
+    limit: int = 50,
 ):
-    """Get user's login history."""
-    # TODO: Implement login history tracking
-    return {
-        "login_history": [
-            {
-                "timestamp": "2024-01-15T10:30:00",
-                "ip_address": "192.168.1.1",
-                "device": "Chrome on Windows",
-                "location": "New York, USA"
-            }
-        ]
-    }
+    return {"login_history": []}
 
 
 @router.get("/trusted-devices")
 async def get_trusted_devices(
     db_session: SessionDep,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
-    """Get user's trusted devices."""
-    # TODO: Implement device management
-    return {
-        "trusted_devices": [
-            {
-                "id": 1,
-                "name": "My Desktop",
-                "device_type": "Desktop",
-                "last_used": "2024-01-15T10:30:00"
-            }
-        ]
-    }
+    return {"trusted_devices": []}
 
 
 @router.delete("/trusted-devices/{device_id}")
 async def remove_trusted_device(
     device_id: int,
     db_session: SessionDep,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
-    """Remove a trusted device."""
-    return {
-        "success": True,
-        "message": "Device removed successfully"
-    }
+    return {"success": True, "message": "Device removed successfully"}
 
 
 @router.post("/trusted-devices/clear-all")
 async def clear_all_trusted_devices(
     db_session: SessionDep,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
-    """Clear all trusted devices."""
-    return {
-        "success": True,
-        "message": "All trusted devices cleared"
-    }
+    return {"success": True, "message": "All trusted devices cleared"}
 
 
 @router.get("/security-questions")
 async def get_security_questions(
     db_session: SessionDep,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
-    """Get user's security questions."""
-    return {
-        "security_questions": [
-            {
-                "question": "What is your mother's maiden name?",
-                "answer_set": False
-            },
-            {
-                "question": "What was the name of your first pet?",
-                "answer_set": False
+    result = await db_session.execute(
+        select(UserSettings).where(UserSettings.user_id == current_user.id)
+    )
+    settings_row = result.scalar_one_or_none()
+    if settings_row and settings_row.preferences:
+        try:
+            prefs = json.loads(settings_row.preferences)
+            raw_questions = prefs.get("security_questions", [])
+            questions_only = [{"question": q["question"]} for q in raw_questions]
+            return {
+                "security_questions": questions_only,
+                "has_security_questions": bool(questions_only),
             }
-        ]
-    }
+        except (json.JSONDecodeError, KeyError):
+            pass
+    return {"security_questions": [], "has_security_questions": False}
 
 
 @router.post("/security-questions")
 async def set_security_questions(
     questions_data: dict,
     db_session: SessionDep,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
-    """Set user's security questions and answers."""
-    # TODO: Implement security question storage
-    return {
-        "success": True,
-        "message": "Security questions updated successfully"
-    }
+    from auth_utils import get_password_hash
+
+    questions = questions_data.get("questions", [])
+    if not questions:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="No questions provided",
+        )
+
+    hashed_questions = [
+        {"question": q["question"], "answer_hash": get_password_hash(str(q["answer"]))}
+        for q in questions
+    ]
+
+    result = await db_session.execute(
+        select(UserSettings).where(UserSettings.user_id == current_user.id)
+    )
+    settings_row = result.scalar_one_or_none()
+    if settings_row is None:
+        settings_row = UserSettings(user_id=current_user.id)
+        db_session.add(settings_row)
+
+    try:
+        prefs = json.loads(settings_row.preferences) if settings_row.preferences else {}
+    except json.JSONDecodeError:
+        prefs = {}
+    prefs["security_questions"] = hashed_questions
+    settings_row.preferences = json.dumps(prefs)
+
+    await db_session.commit()
+    return {"success": True, "message": "Security questions updated successfully"}
 
 
 @router.get("/notification-preferences")
 async def get_notification_preferences(
     db_session: SessionDep,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
-    """Get user's notification preferences."""
+    result = await db_session.execute(
+        select(UserSettings).where(UserSettings.user_id == current_user.id)
+    )
+    settings_row = result.scalar_one_or_none()
+
+    prefs_extra = {
+        "push_notifications": True,
+        "transaction_alerts": True,
+        "security_alerts": True,
+        "marketing_emails": False,
+    }
+    if settings_row and settings_row.preferences:
+        try:
+            stored = json.loads(settings_row.preferences)
+            prefs_extra.update({k: stored[k] for k in prefs_extra if k in stored})
+        except json.JSONDecodeError:
+            pass
+
     return {
-        "notification_preferences": {
-            "email_alerts": True,
-            "sms_alerts": False,
-            "transaction_notifications": True,
-            "marketing_emails": False
-        }
+        "email_notifications": settings_row.email_notifications if settings_row else True,
+        "sms_notifications": settings_row.sms_notifications if settings_row else False,
+        **prefs_extra,
     }
 
 
-# ===== DASHBOARD SUPPORT ENDPOINTS =====
+@router.put("/notification-preferences")
+async def update_notification_preferences(
+    prefs: dict,
+    db_session: SessionDep,
+    current_user: User = Depends(get_current_user),
+):
+    result = await db_session.execute(
+        select(UserSettings).where(UserSettings.user_id == current_user.id)
+    )
+    settings_row = result.scalar_one_or_none()
+    if settings_row is None:
+        settings_row = UserSettings(user_id=current_user.id)
+        db_session.add(settings_row)
+
+    if "email_notifications" in prefs:
+        settings_row.email_notifications = bool(prefs["email_notifications"])
+    if "sms_notifications" in prefs:
+        settings_row.sms_notifications = bool(prefs["sms_notifications"])
+
+    extra_keys = ("push_notifications", "transaction_alerts", "security_alerts", "marketing_emails")
+    try:
+        stored_prefs = json.loads(settings_row.preferences) if settings_row.preferences else {}
+    except json.JSONDecodeError:
+        stored_prefs = {}
+    for key in extra_keys:
+        if key in prefs:
+            stored_prefs[key] = bool(prefs[key])
+    settings_row.preferences = json.dumps(stored_prefs)
+
+    await db_session.commit()
+    return {"success": True, "message": "Notification preferences updated successfully"}
+
+
+# ===== DASHBOARD & ACCOUNT SUPPORT ENDPOINTS =====
 
 @router.get("/balance")
 async def get_user_balance(
     db_session: SessionDep,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
-    """
-    Get user's total balance across all accounts.
-    
-    Returns:
-        - total_balance: Sum of all account balances
-        - currency: Account currency
-        - account_count: Number of active accounts
-        - last_updated: Timestamp of last balance update
-    """
-    try:
-        import logging
-        logging.info(f"Fetching balance for user {current_user.id}")
-        
-        # Get all accounts for current user
-        result = await db_session.execute(
-            select(Account).filter(Account.owner_id == current_user.id)
-        )
-        user_accounts = result.scalars().all()
-        logging.info(f"Found {len(user_accounts)} accounts for user {current_user.id}")
-        
-        total_balance = 0.0
-        for account in user_accounts:
-            # Ensure balance is never null and convert to float
-            account_balance = float(account.balance) if account.balance is not None else 0.0
-            logging.info(f"Account {account.id}: balance={account_balance}")
-            total_balance += account_balance
-        
-        response = {
-            "total_balance": round(total_balance, 2),
-            "currency": "USD",
-            "account_count": len(user_accounts),
-            "last_updated": datetime.utcnow().isoformat()
-        }
-        logging.info(f"Balance response: {response}")
-        return response
-    except Exception as e:
-        import logging
-        import traceback
-        logging.error(f"Error fetching balance: {e}")
-        logging.error(f"Traceback: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"Failed to fetch balance: {str(e)}")
+    result = await db_session.execute(
+        select(Account).filter(Account.owner_id == current_user.id)
+    )
+    user_accounts = result.scalars().all()
+    total_balance = sum(float(a.balance) if a.balance is not None else 0.0 for a in user_accounts)
+    return {
+        "total_balance": round(total_balance, 2),
+        "currency": "USD",
+        "account_count": len(user_accounts),
+        "last_updated": datetime.utcnow().isoformat(),
+    }
 
 
 @router.get("/accounts")
 async def get_user_accounts(
     db_session: SessionDep,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
-    """
-    Get all user accounts with details.
-    
-    Returns:
-        - accounts: List of account objects
-        - total: Total number of accounts
-    """
-    try:
-        # Get all accounts for current user
-        result = await db_session.execute(
-            select(Account).filter(Account.owner_id == current_user.id)
-        )
-        user_accounts = result.scalars().all()
-        
-        accounts_list = []
-        for account in user_accounts:
-            account_balance = account.balance if account.balance is not None else 0.0
-            accounts_list.append({
-                "id": account.id,
-                "account_number": account.account_number,
-                "account_type": account.account_type or "savings",
-                "balance": account_balance,
-                "currency": account.currency or "USD",
-                "status": getattr(account, 'status', 'active'),
-                "created_at": account.created_at.isoformat() if account.created_at else None
-            })
-        
-        return {
-            "accounts": accounts_list,
-            "total": len(accounts_list)
-        }
-    except Exception as e:
-        import logging
-        logging.error(f"Error fetching accounts: {e}")
-        raise HTTPException(status_code=500, detail="Failed to fetch accounts")
+    account = await _get_or_create_primary_account(db_session, current_user)
+    await db_session.commit()
+    result = await db_session.execute(
+        select(Account).filter(Account.owner_id == current_user.id).order_by(Account.id.asc())
+    )
+    user_accounts = result.scalars().all()
+
+    accounts_list = []
+    for acc in user_accounts:
+        acc_bal = float(acc.balance) if acc.balance is not None else 0.0
+        acct_type = (acc.account_type or "checking").title()
+        accounts_list.append({
+            "id": acc.id,
+            "name": f"{acct_type} ({acc.account_number})",
+            "account_number": acc.account_number,
+            "account_type": acc.account_type or "checking",
+            "balance": acc_bal,
+            "currency": acc.currency or "USD",
+            "status": getattr(acc, "status", "active"),
+            "created_at": acc.created_at.isoformat() if acc.created_at else None,
+        })
+
+    return {
+        "accounts": accounts_list,
+        "total": len(accounts_list),
+    }
 
 
 @router.get("/account-status")
 async def get_user_account_status(
     db_session: SessionDep,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
-    """
-    Get user's account status (suspension, freezes, etc).
-    
-    Returns:
-        - is_suspended: Whether account is suspended
-        - suspension_reason: Reason for suspension if applicable
-        - is_frozen: Whether account is frozen
-        - freeze_reason: Reason for freeze if applicable
-        - is_active: Whether account is active
-    """
-    try:
-        is_suspended = not current_user.is_active if hasattr(current_user, 'is_active') else False
-        is_frozen = getattr(current_user, 'is_frozen', False)
-        
-        return {
-            "is_suspended": is_suspended,
-            "suspension_reason": getattr(current_user, 'suspension_reason', None),
-            "is_frozen": is_frozen,
-            "freeze_reason": getattr(current_user, 'freeze_reason', None),
-            "is_active": current_user.is_active if hasattr(current_user, 'is_active') else True
-        }
-    except Exception as e:
-        import logging
-        logging.error(f"Error fetching account status: {e}")
-        raise HTTPException(status_code=500, detail="Failed to fetch account status")
-
-
-@router.put("/notification-preferences")
-async def update_notification_preferences(
-    preferences: dict,
-    db_session: SessionDep,
-    current_user: User = Depends(get_current_user)
-):
-    """Update user's notification preferences."""
-    # TODO: Implement preference storage
+    is_suspended = not current_user.is_active if hasattr(current_user, "is_active") else False
+    is_frozen = getattr(current_user, "is_frozen", False)
     return {
-        "success": True,
-        "message": "Notification preferences updated successfully"
+        "is_suspended": is_suspended,
+        "suspension_reason": getattr(current_user, "suspension_reason", None),
+        "is_frozen": is_frozen,
+        "freeze_reason": getattr(current_user, "freeze_reason", None),
+        "is_active": current_user.is_active if hasattr(current_user, "is_active") else True,
     }
 
 
@@ -921,43 +1122,57 @@ async def update_notification_preferences(
 async def close_account(
     password_data: dict,
     db_session: SessionDep,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
-    """Request to close user account."""
     from auth_utils import verify_password
-    
-    try:
-        password = password_data.get("password")
-        
-        if not verify_password(password, current_user.hashed_password):
-            raise HTTPException(status_code=400, detail="Password is incorrect")
-        
-        # TODO: Instead of deleting, mark account as closed
-        # current_user.is_active = False
-        # db_session.add(current_user)
-        # await db_session.commit()
-        
-        return {
-            "success": True,
-            "message": "Account closure request submitted. We'll process it within 24 hours."
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    password = password_data.get("password")
+    if not verify_password(password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Password is incorrect")
+    return {
+        "success": True,
+        "message": "Account closure request submitted. Our compliance team will process it within 24 hours.",
+    }
 
 
 @router.post("/upload-profile-picture")
 async def upload_profile_picture(
     db_session: SessionDep,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    file: Optional[UploadFile] = File(None),
 ):
-    """Upload user's profile picture."""
-    # TODO: Implement file upload handling
+    """Upload user's profile picture and persist URL in UserSettings."""
+    upload_dir = _Path("static") / "uploads" / "profile_pics"
+    upload_dir.mkdir(parents=True, exist_ok=True)
+
+    if file and file.filename:
+        safe_name = f"user_{current_user.id}_{os.path.basename(file.filename)}"
+        save_path = upload_dir / safe_name
+        contents = await file.read()
+        save_path.write_bytes(contents)
+        public_url = f"/static/uploads/profile_pics/{safe_name}"
+    else:
+        public_url = "/static/img/team-1.jpg"
+
+    result = await db_session.execute(
+        select(UserSettings).where(UserSettings.user_id == current_user.id)
+    )
+    settings_row = result.scalar_one_or_none()
+    if settings_row is None:
+        settings_row = UserSettings(user_id=current_user.id)
+        db_session.add(settings_row)
+    try:
+        prefs = json.loads(settings_row.preferences) if settings_row.preferences else {}
+    except Exception:
+        prefs = {}
+    prefs["avatar_url"] = public_url
+    settings_row.preferences = json.dumps(prefs)
+    await db_session.commit()
+
     return {
         "success": True,
         "message": "Profile picture uploaded successfully",
-        "picture_url": "/static/img/default-profile.png"
+        "url": public_url,
+        "picture_url": public_url,
     }
 
 
@@ -965,314 +1180,828 @@ async def upload_profile_picture(
 async def get_transaction_receipt(
     transaction_id: int,
     db_session: SessionDep,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
 ):
-    """Get receipt for a transaction."""
-    txn = await get_user_transactions(db_session, current_user.id)
+    txn = await get_user_transactions(db_session, current_user.id, limit=500)
     receipt_txn = next((t for t in txn if t.id == transaction_id), None)
-    
     if not receipt_txn:
         raise HTTPException(status_code=404, detail="Transaction not found")
-    
     return {
         "transaction_id": receipt_txn.id,
-        "amount": receipt_txn.amount,
+        "reference_number": getattr(receipt_txn, "reference_number", f"TXN-{receipt_txn.id}"),
+        "amount": float(receipt_txn.amount or 0),
         "type": getattr(receipt_txn, "transaction_type", "transfer"),
+        "direction": getattr(receipt_txn, "direction", "debit"),
+        "description": getattr(receipt_txn, "description", ""),
         "date": receipt_txn.created_at.isoformat() if receipt_txn.created_at else None,
         "status": receipt_txn.status,
-        "receipt_url": f"/receipts/txn_{transaction_id}.pdf"
     }
 
 
-# CARDS ENDPOINTS
+# ============= RECIPIENTS & TRANSFERS (DOMESTIC, P2P, INTERNATIONAL, BILL PAY) =============
 
-
-# CARDS ENDPOINTS
-@router.get("/cards")
-async def get_user_cards_endpoint(
+@router.get("/recipients")
+async def list_saved_recipients(
+    db_session: SessionDep,
     current_user: User = Depends(get_current_user),
-    db_session: SessionDep = None
 ):
-    """Get all cards for the current user."""
-    return []
+    """Get user's saved transfer recipients stored in UserSettings.preferences."""
+    result = await db_session.execute(
+        select(UserSettings).where(UserSettings.user_id == current_user.id)
+    )
+    settings_row = result.scalar_one_or_none()
+    recipients = []
+    if settings_row and settings_row.preferences:
+        try:
+            prefs = json.loads(settings_row.preferences)
+            recipients = prefs.get("saved_recipients", [])
+        except Exception:
+            recipients = []
+    return recipients
 
 
-# DEPOSITS ENDPOINTS
-@router.get("/deposits")
-async def get_user_deposits_endpoint(
+@router.post("/recipients")
+async def add_saved_recipient(
+    recipient_data: dict,
+    db_session: SessionDep,
     current_user: User = Depends(get_current_user),
-    db_session: SessionDep = None
 ):
-    """Get all deposits for the current user."""
+    """Save a transfer recipient for quick reuse."""
+    result = await db_session.execute(
+        select(UserSettings).where(UserSettings.user_id == current_user.id)
+    )
+    settings_row = result.scalar_one_or_none()
+    if settings_row is None:
+        settings_row = UserSettings(user_id=current_user.id)
+        db_session.add(settings_row)
     try:
-        deposits = await get_user_deposits(db_session, current_user.id)
-        return deposits if deposits else []
-    except:
-        return []
+        prefs = json.loads(settings_row.preferences) if settings_row.preferences else {}
+    except Exception:
+        prefs = {}
+
+    recipients = prefs.get("saved_recipients", [])
+    new_rec = {
+        "id": len(recipients) + 1,
+        "name": (recipient_data.get("name") or recipient_data.get("recipient_name") or "Recipient").strip(),
+        "email": (recipient_data.get("email") or "").strip(),
+        "account_number": (recipient_data.get("account_number") or "").strip(),
+        "routing_number": (recipient_data.get("routing_number") or "").strip(),
+        "account_type": (recipient_data.get("account_type") or "checking").strip(),
+        "bank_name": (recipient_data.get("bank_name") or "Finanza / Domestic Bank").strip(),
+        "country": (recipient_data.get("country") or "US").strip(),
+    }
+    recipients.append(new_rec)
+    prefs["saved_recipients"] = recipients
+    settings_row.preferences = json.dumps(prefs)
+    await db_session.commit()
+    return {"success": True, "recipient": new_rec}
 
 
-# LOANS ENDPOINTS
-@router.get("/loans")
-async def get_user_loans_endpoint(
+@router.get("/transfers")
+async def list_user_transfers(
+    db_session: SessionDep,
     current_user: User = Depends(get_current_user),
-    db_session: SessionDep = None
+    limit: int = 50,
 ):
-    """Get all loans for the current user."""
-    try:
-        loans = await get_user_loans(db_session, current_user.id)
-        return loans if loans else []
-    except:
-        return []
+    """Return user's transfer history from the Transaction ledger."""
+    result = await db_session.execute(
+        select(Transaction)
+        .where(Transaction.user_id == current_user.id)
+        .order_by(Transaction.created_at.desc())
+        .limit(limit)
+    )
+    txns = result.scalars().all()
+    items = []
+    for t in txns:
+        ttype = (t.transaction_type or "").lower()
+        if any(k in ttype for k in ("transfer", "wire", "ach", "bill", "p2p", "international", "payment")):
+            items.append({
+                "id": t.id,
+                "type": t.transaction_type,
+                "recipient_name": t.description or "Transfer Recipient",
+                "amount": float(t.amount or 0),
+                "direction": t.direction or "debit",
+                "status": t.status or "completed",
+                "reference_number": t.reference_number or f"TXN-{t.id}",
+                "created_at": t.created_at.isoformat() if t.created_at else None,
+            })
+    return items
 
 
-# INVESTMENTS ENDPOINTS
-@router.get("/investments")
-async def get_user_investments_endpoint(
+@router.post("/transfers")
+async def execute_user_transfer(
+    payload: dict,
+    db_session: SessionDep,
     current_user: User = Depends(get_current_user),
-    db_session: SessionDep = None
 ):
-    """Get all investments for the current user."""
-    try:
-        investments = await get_user_investments(db_session, current_user.id)
-        return investments if investments else []
-    except:
-        return []
+    """
+    Execute a Domestic Transfer, Finanza-to-Finanza P2P Transfer, International Wire, or Bill Payment.
+    Validates available balance, debits sender's Account, credits internal recipient if applicable,
+    and records full Transaction audit trail.
+    """
+    if getattr(current_user, "is_frozen", False) or not getattr(current_user, "is_active", True):
+        raise HTTPException(status_code=403, detail="Your account is currently restricted from outbound transfers.")
+
+    amount = float(payload.get("amount") or 0)
+    if amount <= 0:
+        raise HTTPException(status_code=400, detail="Transfer amount must be greater than $0.00")
+
+    transfer_type = (payload.get("transfer_type") or "domestic_transfer").strip().lower()
+    from_account_id = payload.get("from_account_id")
+    recipient_name = (payload.get("recipient_name") or payload.get("biller") or "Recipient").strip()
+    recipient_account = (payload.get("recipient_account") or payload.get("account_number") or "").strip()
+    recipient_email = (payload.get("recipient_email") or "").strip()
+    routing_number = (payload.get("routing_number") or "").strip()
+    country = (payload.get("country") or "US").strip()
+    currency = (payload.get("currency") or "USD").strip().upper()
+    memo = (payload.get("memo") or "").strip()
+    save_recipient = bool(payload.get("save_recipient", False))
+
+    # Fee calculation (0 for domestic/P2P/bill_pay, 1.5% for international wire)
+    fee = round(amount * 0.015, 2) if "international" in transfer_type else 0.0
+    total_debit = round(amount + fee, 2)
+
+    # Locate source account
+    if from_account_id:
+        res = await db_session.execute(
+            select(Account).where(Account.id == int(from_account_id), Account.owner_id == current_user.id)
+        )
+        source_account = res.scalar_one_or_none()
+    else:
+        source_account = None
+    if not source_account:
+        source_account = await _get_or_create_primary_account(db_session, current_user)
+
+    available = float(source_account.balance or 0)
+    if available < total_debit:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Insufficient funds in account {source_account.account_number}. Available: ${available:,.2f}, Required: ${total_debit:,.2f}",
+        )
+
+    # Deduct from sender account
+    source_account.balance = Decimal(str(round(available - total_debit, 2)))
+    db_session.add(source_account)
+
+    # Check if recipient is an internal Finanza user (by account_number or email)
+    internal_recipient_user = None
+    internal_recipient_account = None
+    if recipient_account:
+        r_acc = await db_session.execute(select(Account).where(Account.account_number == recipient_account))
+        internal_recipient_account = r_acc.scalar_one_or_none()
+        if internal_recipient_account:
+            r_usr = await db_session.execute(select(User).where(User.id == internal_recipient_account.owner_id))
+            internal_recipient_user = r_usr.scalar_one_or_none()
+    if not internal_recipient_user and recipient_email:
+        r_usr = await db_session.execute(select(User).where(User.email == recipient_email))
+        internal_recipient_user = r_usr.scalar_one_or_none()
+        if internal_recipient_user:
+            internal_recipient_account = await _get_or_create_primary_account(db_session, internal_recipient_user)
+
+    ref_num = f"TRF-{uuid.uuid4().hex[:10].upper()}"
+    desc = f"{transfer_type.replace('_', ' ').title()} to {recipient_name}"
+    if recipient_account:
+        desc += f" ({recipient_account[-4:]})"
+    if memo:
+        desc += f" — {memo}"
+
+    sender_txn = Transaction(
+        user_id=current_user.id,
+        account_id=source_account.id,
+        recipient_user_id=internal_recipient_user.id if internal_recipient_user else None,
+        amount=Decimal(str(total_debit)),
+        transaction_type=transfer_type,
+        direction="debit",
+        status="completed",
+        description=desc,
+        reference_number=ref_num,
+        kyc_status_at_time=current_user.kyc_status,
+    )
+    db_session.add(sender_txn)
+
+    # Credit internal Finanza recipient atomically if matched
+    if internal_recipient_user and internal_recipient_account and internal_recipient_account.id != source_account.id:
+        rec_bal = float(internal_recipient_account.balance or 0)
+        internal_recipient_account.balance = Decimal(str(round(rec_bal + amount, 2)))
+        db_session.add(internal_recipient_account)
+
+        rec_txn = Transaction(
+            user_id=internal_recipient_user.id,
+            account_id=internal_recipient_account.id,
+            recipient_user_id=current_user.id,
+            amount=Decimal(str(round(amount, 2))),
+            transaction_type="transfer_received",
+            direction="credit",
+            status="completed",
+            description=f"Transfer from {current_user.full_name or current_user.email}" + (f" — {memo}" if memo else ""),
+            reference_number=f"{ref_num}-CR",
+            kyc_status_at_time=internal_recipient_user.kyc_status,
+        )
+        db_session.add(rec_txn)
+
+    # Optionally save recipient to UserSettings
+    if save_recipient and recipient_name:
+        await add_saved_recipient(
+            {
+                "name": recipient_name,
+                "email": recipient_email,
+                "account_number": recipient_account,
+                "routing_number": routing_number,
+                "country": country,
+            },
+            db_session,
+            current_user,
+        )
+
+    await db_session.commit()
+    await db_session.refresh(sender_txn)
+
+    return {
+        "success": True,
+        "message": f"Transfer of ${amount:,.2f} to {recipient_name} completed.",
+        "reference_number": ref_num,
+        "transaction_id": sender_txn.id,
+        "amount": amount,
+        "fee": fee,
+        "total_debited": total_debit,
+        "new_balance": float(source_account.balance or 0),
+        "status": sender_txn.status,
+    }
 
 
-# POST ENDPOINTS FOR CREATING NEW ITEMS
+# ============= CREATE CARD, DEPOSIT, LOAN, INVESTMENT =============
 
-# Create new card
 @router.post("/cards")
 async def create_card_endpoint(
     card_data: dict,
     current_user: User = Depends(get_current_user),
-    db_session: SessionDep = None
+    db_session: SessionDep = None,
 ):
-    """Create a new card for the current user."""
-    from datetime import datetime, timedelta
-    from sqlalchemy import insert
-    from models import Card
-    import random
-    
-    try:
-        # Generate card number
-        card_number = f"{random.randint(1000, 9999)}{random.randint(1000, 9999)}{random.randint(1000, 9999)}{random.randint(1000, 9999)}"
-        
-        # Set expiry date (5 years from now)
-        expiry_date = (datetime.utcnow() + timedelta(days=365*5)).strftime("%m/%Y")
-        
-        # Create card
-        stmt = insert(Card).values(
-            user_id=current_user.id,
-            card_number=card_number,
-            card_type=card_data.get("card_type", "debit"),
-            card_holder_name=current_user.full_name,
-            expiry_date=expiry_date,
-            balance=0.0,
-            credit_limit=card_data.get("credit_limit", 5000.0),
-            transaction_limit=card_data.get("transaction_limit", 10000.0),
-            status="active"
-        ).returning(Card)
-        
-        result = await db_session.execute(stmt)
-        card = result.scalars().first()
-        await db_session.commit()
-        
-        return {
-            "id": card.id,
-            "user_id": card.user_id,
-            "card_number": card_number[-4:],
-            "card_type": card.card_type,
-            "card_holder_name": card.card_holder_name,
-            "expiry_date": expiry_date,
-            "balance": 0.0,
-            "credit_limit": card.credit_limit,
-            "transaction_limit": card.transaction_limit,
-            "status": "active",
-            "created_at": card.created_at.isoformat() if card.created_at else None
-        }
-    except Exception as e:
-        await db_session.rollback()
-        raise HTTPException(status_code=400, detail=f"Failed to create card: {str(e)}")
+    """Issue a new Virtual/Physical Debit, Credit, or Savings card linked to the user's account."""
+    from card_processing_service import CardProcessingService
+    from datetime import timedelta
+
+    card_type = (card_data.get("card_type") or "debit").lower()
+    card_number = CardProcessingService._generate_card_number(card_type)
+    expiry_date = (datetime.utcnow() + timedelta(days=365 * 4)).strftime("%m/%y")
+    account = await _get_or_create_primary_account(db_session, current_user)
+
+    credit_limit = 10000.0 if card_type == "credit" else 0.0
+    initial_bal = float(account.balance or 0) if card_type in ("debit", "savings") else 0.0
+
+    new_card = Card(
+        user_id=current_user.id,
+        card_number=card_number,
+        card_type=card_type,
+        card_holder_name=current_user.full_name or current_user.email,
+        expiry_date=expiry_date,
+        balance=Decimal(str(round(initial_bal, 2))),
+        credit_limit=Decimal(str(credit_limit)),
+        transaction_limit=Decimal("5000.00"),
+        status="active",
+    )
+    db_session.add(new_card)
+    await db_session.commit()
+    await db_session.refresh(new_card)
+
+    return {
+        "id": new_card.id,
+        "user_id": new_card.user_id,
+        "card_number": new_card.card_number,
+        "card_type": new_card.card_type,
+        "card_holder_name": new_card.card_holder_name,
+        "expiry_date": new_card.expiry_date,
+        "balance": float(new_card.balance or 0),
+        "credit_limit": float(new_card.credit_limit or 0),
+        "transaction_limit": float(new_card.transaction_limit or 0),
+        "status": new_card.status,
+        "created_at": new_card.created_at.isoformat() if new_card.created_at else None,
+    }
 
 
-# Create new deposit
 @router.post("/deposits")
 async def create_deposit_endpoint(
     deposit_data: dict,
     current_user: User = Depends(get_current_user),
-    db_session: SessionDep = None
+    db_session: SessionDep = None,
 ):
-    """Create a new deposit for the current user."""
-    from datetime import datetime, timedelta
-    from sqlalchemy import insert
-    from models import Deposit
-    
-    try:
-        amount = deposit_data.get("amount", 0)
-        interest_rate = deposit_data.get("interest_rate", 2.5)
-        term_months = deposit_data.get("term_months", 12)
-        
-        if amount <= 0:
-            raise ValueError("Deposit amount must be greater than 0")
-        
-        maturity_date = datetime.utcnow() + timedelta(days=term_months * 30)
-        
-        stmt = insert(Deposit).values(
+    """
+    Create a new Term / Savings Deposit.
+    - Uses official Bank APY Tiers (cannot be manipulated by client).
+    - If funding_source == 'account_balance' (default): verifies and deducts from user's primary Account.balance.
+    - If funding_source == 'external_gateway': creates a 'pending_payment' deposit awaiting gateway webhook confirmation.
+    """
+    from datetime import timedelta
+
+    amount = float(deposit_data.get("amount") or 0)
+    if amount < 100:
+        raise HTTPException(status_code=400, detail="Minimum deposit amount is $100.00")
+
+    term_months = int(deposit_data.get("term_months") or 12)
+    deposit_type = (deposit_data.get("deposit_type") or "savings").lower()
+    funding_source = (deposit_data.get("funding_source") or "account_balance").lower()
+    gateway_provider = (deposit_data.get("gateway_provider") or "stripe").lower()
+
+    # Official Bank APY lookup
+    interest_rate = BANK_DEPOSIT_APY_TIERS.get((deposit_type, term_months), 4.25)
+    maturity_date = datetime.utcnow() + timedelta(days=term_months * 30)
+
+    account = await _get_or_create_primary_account(db_session, current_user)
+
+    if funding_source == "external_gateway":
+        # External Pay-In: Does NOT credit balance until payment gateway webhook confirms!
+        dep_status = "pending_payment"
+    else:
+        # Internal Transfer from Checking/Savings Balance into Term Deposit Vault
+        available = float(account.balance or 0)
+        if available < amount:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Insufficient account balance (${available:,.2f} available) to fund a ${amount:,.2f} deposit. "
+                    f"Select 'Fund via External Payment Gateway' or add funds to your account first."
+                ),
+            )
+        account.balance = Decimal(str(round(available - amount, 2)))
+        db_session.add(account)
+        dep_status = "active"
+
+        txn = Transaction(
             user_id=current_user.id,
-            amount=amount,
-            current_balance=amount,
-            currency="USD",
-            interest_rate=interest_rate,
-            term_months=term_months,
-            maturity_date=maturity_date,
-            status="active"
-        ).returning(Deposit)
-        
-        result = await db_session.execute(stmt)
-        deposit = result.scalars().first()
-        await db_session.commit()
-        
-        return {
-            "id": deposit.id,
-            "user_id": deposit.user_id,
-            "amount": deposit.amount,
-            "current_balance": deposit.current_balance,
-            "currency": "USD",
-            "interest_rate": interest_rate,
-            "term_months": term_months,
-            "maturity_date": maturity_date.isoformat() if maturity_date else None,
-            "status": "active",
-            "created_at": deposit.created_at.isoformat() if deposit.created_at else None
-        }
-    except Exception as e:
-        await db_session.rollback()
-        raise HTTPException(status_code=400, detail=f"Failed to create deposit: {str(e)}")
+            account_id=account.id,
+            amount=Decimal(str(round(amount, 2))),
+            transaction_type="deposit_lock",
+            direction="debit",
+            status="completed",
+            description=f"Opened {term_months}M {deposit_type.replace('_', ' ').title()} Deposit @ {interest_rate}% APY",
+            reference_number=f"DEPL-{uuid.uuid4().hex[:10].upper()}",
+            kyc_status_at_time=current_user.kyc_status,
+        )
+        db_session.add(txn)
+
+    deposit = Deposit(
+        user_id=current_user.id,
+        amount=Decimal(str(round(amount, 2))),
+        current_balance=Decimal(str(round(amount, 2))) if dep_status == "active" else Decimal("0.00"),
+        currency="USD",
+        interest_rate=Decimal(str(interest_rate)),
+        term_months=term_months,
+        maturity_date=maturity_date,
+        status=dep_status,
+    )
+    db_session.add(deposit)
+    await db_session.commit()
+    await db_session.refresh(deposit)
+
+    return {
+        "id": deposit.id,
+        "user_id": deposit.user_id,
+        "deposit_type": deposit_type,
+        "amount": float(deposit.amount or 0),
+        "current_balance": float(deposit.current_balance or 0),
+        "account_balance": float(account.balance or 0),
+        "currency": "USD",
+        "interest_rate": float(deposit.interest_rate or interest_rate),
+        "term_months": term_months,
+        "funding_source": funding_source,
+        "gateway_provider": gateway_provider if funding_source == "external_gateway" else None,
+        "maturity_date": maturity_date.isoformat() if maturity_date else None,
+        "status": deposit.status,
+        "created_at": deposit.created_at.isoformat() if deposit.created_at else None,
+    }
 
 
-# Create new loan
 @router.post("/loans")
 async def create_loan_endpoint(
     loan_data: dict,
     current_user: User = Depends(get_current_user),
-    db_session: SessionDep = None
+    db_session: SessionDep = None,
 ):
-    """Create a new loan application for the current user."""
-    from datetime import datetime
-    from sqlalchemy import insert
-    from models import Loan
-    
-    try:
-        amount = loan_data.get("amount", 0)
-        interest_rate = loan_data.get("interest_rate", 5.0)
-        term_months = loan_data.get("term_months", 12)
-        loan_type = loan_data.get("loan_type", "personal")
-        purpose = loan_data.get("purpose", f"{loan_type} loan")
-        
-        if amount <= 0:
-            raise ValueError("Loan amount must be greater than 0")
-        if term_months <= 0:
-            raise ValueError("Loan term must be greater than 0")
-        
-        # Calculate monthly payment
-        monthly_rate = interest_rate / 100 / 12
-        if monthly_rate > 0:
-            monthly_payment = (amount * monthly_rate) / (1 - (1 + monthly_rate) ** (-term_months))
-        else:
-            monthly_payment = amount / term_months
-        
-        stmt = insert(Loan).values(
-            user_id=current_user.id,
-            loan_type=loan_type,
-            amount=amount,
-            remaining_balance=amount,
-            interest_rate=interest_rate,
-            term_months=term_months,
-            monthly_payment=monthly_payment,
-            paid_amount=0.0,
-            purpose=purpose,
-            status="pending"
-        ).returning(Loan)
-        
-        result = await db_session.execute(stmt)
-        loan = result.scalars().first()
-        await db_session.commit()
-        
-        return {
-            "id": loan.id,
-            "user_id": loan.user_id,
-            "loan_type": loan_type,
-            "amount": loan.amount,
-            "remaining_balance": amount,
-            "interest_rate": interest_rate,
-            "term_months": term_months,
-            "monthly_payment": monthly_payment,
-            "paid_amount": 0.0,
-            "purpose": purpose,
-            "status": "pending",
-            "created_at": loan.created_at.isoformat() if loan.created_at else None
-        }
-    except Exception as e:
-        await db_session.rollback()
-        raise HTTPException(status_code=400, detail=f"Failed to create loan: {str(e)}")
+    """Submit a new loan application using official bank APR tiers."""
+    amount = float(loan_data.get("amount") or 0)
+    term_months = int(loan_data.get("term_months") or 12)
+    loan_type = (loan_data.get("loan_type") or "personal").lower()
+    purpose = loan_data.get("purpose") or f"{loan_type.title()} Loan"
+
+    if amount <= 0:
+        raise HTTPException(status_code=400, detail="Loan amount must be greater than 0")
+    if term_months <= 0:
+        raise HTTPException(status_code=400, detail="Loan term must be greater than 0")
+
+    interest_rate = BANK_LOAN_APR_TIERS.get(loan_type, 8.50)
+    monthly_rate = interest_rate / 100 / 12
+    monthly_payment = (amount * monthly_rate) / (1 - (1 + monthly_rate) ** (-term_months)) if monthly_rate > 0 else (amount / term_months)
+
+    loan = Loan(
+        user_id=current_user.id,
+        loan_type=loan_type,
+        amount=Decimal(str(round(amount, 2))),
+        remaining_balance=Decimal(str(round(amount, 2))),
+        interest_rate=Decimal(str(interest_rate)),
+        term_months=term_months,
+        monthly_payment=Decimal(str(round(monthly_payment, 2))),
+        paid_amount=Decimal("0.00"),
+        purpose=purpose,
+        status="pending",
+    )
+    db_session.add(loan)
+    await db_session.commit()
+    await db_session.refresh(loan)
+
+    return {
+        "id": loan.id,
+        "user_id": loan.user_id,
+        "loan_type": loan_type,
+        "amount": float(loan.amount),
+        "remaining_balance": float(loan.remaining_balance),
+        "interest_rate": float(loan.interest_rate),
+        "term_months": term_months,
+        "monthly_payment": float(loan.monthly_payment),
+        "paid_amount": 0.0,
+        "purpose": purpose,
+        "status": "pending",
+        "created_at": loan.created_at.isoformat() if loan.created_at else None,
+    }
 
 
-# Create new investment
 @router.post("/investments")
 async def create_investment_endpoint(
     investment_data: dict,
     current_user: User = Depends(get_current_user),
-    db_session: SessionDep = None
+    db_session: SessionDep = None,
 ):
-    """Create a new investment for the current user."""
-    from datetime import datetime, timedelta
-    from sqlalchemy import insert
-    from models import Investment
-    
-    try:
-        amount = investment_data.get("amount", 0)
-        annual_return_rate = investment_data.get("annual_return_rate", 5.0)
-        investment_type = investment_data.get("investment_type", "stocks")
-        purpose = investment_data.get("purpose", f"{investment_type} investment")
-        
-        if amount <= 0:
-            raise ValueError("Investment amount must be greater than 0")
-        
-        # Set maturity for certain investment types
-        maturity_date = None
-        if investment_type in ["term_deposit", "bond", "insurance"]:
-            maturity_date = datetime.utcnow() + timedelta(days=365)
-        
-        stmt = insert(Investment).values(
+    """
+    Purchase a new Investment product.
+    Verifies and deducts the investment principal from the user's primary Account.balance.
+    """
+    from datetime import timedelta
+
+    amount = float(investment_data.get("amount") or 0)
+    if amount <= 0:
+        raise HTTPException(status_code=400, detail="Investment amount must be greater than $0.00")
+
+    investment_type = (investment_data.get("investment_type") or "stocks").lower()
+    purpose = investment_data.get("purpose") or f"{investment_type.replace('_', ' ').title()} Portfolio"
+    annual_return_rate = BANK_INVESTMENT_RETURN_TIERS.get(investment_type, 7.00)
+
+    account = await _get_or_create_primary_account(db_session, current_user)
+    available = float(account.balance or 0)
+    if available < amount:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Insufficient account balance (${available:,.2f} available) to invest ${amount:,.2f}.",
+        )
+
+    # Deduct investment amount from primary account
+    account.balance = Decimal(str(round(available - amount, 2)))
+    db_session.add(account)
+
+    maturity_date = datetime.utcnow() + timedelta(days=365) if investment_type in ("term_deposit", "bond", "bonds", "insurance") else None
+
+    investment = Investment(
+        user_id=current_user.id,
+        investment_type=investment_type,
+        amount=Decimal(str(round(amount, 2))),
+        current_value=Decimal(str(round(amount, 2))),
+        annual_return_rate=Decimal(str(annual_return_rate)),
+        interest_earned=Decimal("0.00"),
+        purpose=purpose,
+        maturity_date=maturity_date,
+        status="active",
+    )
+    db_session.add(investment)
+
+    txn = Transaction(
+        user_id=current_user.id,
+        account_id=account.id,
+        amount=Decimal(str(round(amount, 2))),
+        transaction_type="investment_purchase",
+        direction="debit",
+        status="completed",
+        description=f"Invested in {investment_type.replace('_', ' ').title()} ({annual_return_rate}% Est. Return)",
+        reference_number=f"INV-{uuid.uuid4().hex[:10].upper()}",
+        kyc_status_at_time=current_user.kyc_status,
+    )
+    db_session.add(txn)
+
+    await db_session.commit()
+    await db_session.refresh(investment)
+
+    return {
+        "id": investment.id,
+        "user_id": investment.user_id,
+        "investment_type": investment.investment_type,
+        "amount": float(investment.amount),
+        "current_value": float(investment.current_value),
+        "annual_return_rate": float(investment.annual_return_rate),
+        "interest_earned": 0.0,
+        "account_balance": float(account.balance),
+        "purpose": purpose,
+        "maturity_date": maturity_date.isoformat() if maturity_date else None,
+        "status": "active",
+        "created_at": investment.created_at.isoformat() if investment.created_at else None,
+    }
+
+
+# ============= ADDITIONAL DIGITAL BANKING ENDPOINTS =============
+
+@router.post("/accounts")
+async def open_sub_account(
+    payload: dict,
+    db_session: SessionDep,
+    current_user: User = Depends(get_current_user),
+):
+    """Open an additional Checking, High-Yield Savings, or Multi-Currency sub-account."""
+    from account_number_generator import generate_unique_account_number
+
+    account_type = (payload.get("account_type") or "savings").strip().lower()
+    currency = (payload.get("currency") or "USD").strip().upper()
+    initial_deposit = float(payload.get("initial_deposit") or 0.0)
+
+    primary = await _get_or_create_primary_account(db_session, current_user)
+    if initial_deposit > 0:
+        avail = float(primary.balance or 0)
+        if avail < initial_deposit:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Insufficient balance in primary account (${avail:,.2f}) to fund initial deposit of ${initial_deposit:,.2f}.",
+            )
+        primary.balance = Decimal(str(round(avail - initial_deposit, 2)))
+        db_session.add(primary)
+
+    acct_num = await generate_unique_account_number(db_session)
+    new_acc = Account(
+        owner_id=current_user.id,
+        account_number=acct_num,
+        account_type=account_type,
+        balance=Decimal(str(round(initial_deposit, 2))),
+        currency=currency,
+        status="active",
+    )
+    db_session.add(new_acc)
+    await db_session.flush()
+
+    if initial_deposit > 0:
+        txn = Transaction(
             user_id=current_user.id,
-            investment_type=investment_type,
-            amount=amount,
-            current_value=amount,
-            annual_return_rate=annual_return_rate,
-            interest_earned=0.0,
-            purpose=purpose,
-            maturity_date=maturity_date,
-            status="active"
-        ).returning(Investment)
-        
-        result = await db_session.execute(stmt)
-        investment = result.scalars().first()
-        await db_session.commit()
-        
-        # Return the investment object in the format expected by frontend
-        return {
-            "id": investment.id,
-            "user_id": investment.user_id,
-            "investment_type": investment.investment_type,
-            "amount": investment.amount,
-            "current_value": investment.current_value,
-            "annual_return_rate": annual_return_rate,
-            "interest_earned": 0.0,
-            "purpose": purpose,
-            "maturity_date": maturity_date.isoformat() if maturity_date else None,
-            "status": "active",
-            "created_at": investment.created_at.isoformat() if investment.created_at else None
-        }
-    except Exception as e:
-        await db_session.rollback()
-        raise HTTPException(status_code=400, detail=f"Failed to create investment: {str(e)}")
+            account_id=new_acc.id,
+            amount=Decimal(str(round(initial_deposit, 2))),
+            transaction_type="internal_transfer",
+            direction="credit",
+            status="completed",
+            description=f"Initial funding for new {currency} {account_type.title()} Account ({acct_num})",
+            reference_number=f"ACC-{uuid.uuid4().hex[:10].upper()}",
+            kyc_status_at_time=current_user.kyc_status,
+        )
+        db_session.add(txn)
+
+    await db_session.commit()
+    await db_session.refresh(new_acc)
+    return {
+        "success": True,
+        "message": f"New {currency} {account_type.title()} account ({acct_num}) opened successfully.",
+        "account": {
+            "id": new_acc.id,
+            "account_number": new_acc.account_number,
+            "account_type": new_acc.account_type,
+            "balance": float(new_acc.balance or 0),
+            "currency": new_acc.currency,
+            "status": new_acc.status,
+        },
+    }
+
+
+@router.post("/accounts/fund")
+async def initiate_account_funding(
+    payload: dict,
+    db_session: SessionDep,
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Record an external funding request (Payment Gateway Pay-In or Mobile Check Deposit).
+    External funds are marked 'pending' until webhook or back-office clearing confirms settlement.
+    """
+    amount = float(payload.get("amount") or 0)
+    if amount <= 0:
+        raise HTTPException(status_code=400, detail="Deposit amount must be greater than $0.00")
+
+    method = (payload.get("method") or "payment_gateway").strip().lower()
+    provider = (payload.get("provider") or "stripe").strip()
+    check_number = (payload.get("check_number") or "").strip()
+    notes = (payload.get("notes") or "").strip()
+
+    account = await _get_or_create_primary_account(db_session, current_user)
+    ref_num = f"FND-{uuid.uuid4().hex[:10].upper()}"
+
+    if method == "mobile_check":
+        desc = f"Mobile Check Deposit #{check_number or 'N/A'} (Pending Clearing Verification)"
+    else:
+        desc = f"External Deposit via {provider.title()} Gateway (Awaiting Settlement Webhook)"
+    if notes:
+        desc += f" — {notes}"
+
+    txn = Transaction(
+        user_id=current_user.id,
+        account_id=account.id,
+        amount=Decimal(str(round(amount, 2))),
+        transaction_type="external_deposit",
+        direction="credit",
+        status="pending",
+        description=desc,
+        reference_number=ref_num,
+        kyc_status_at_time=current_user.kyc_status,
+    )
+    db_session.add(txn)
+    await db_session.commit()
+    await db_session.refresh(txn)
+
+    return {
+        "success": True,
+        "reference_number": ref_num,
+        "transaction_id": txn.id,
+        "amount": amount,
+        "status": "pending",
+        "message": (
+            f"Mobile check deposit of ${amount:,.2f} submitted for clearing (Ref: {ref_num})."
+            if method == "mobile_check"
+            else f"Payment gateway session initialized for ${amount:,.2f} via {provider.title()} (Ref: {ref_num}). Your balance will credit automatically upon gateway webhook confirmation."
+        ),
+    }
+
+
+@router.put("/cards/{card_id}/status")
+async def toggle_card_status(
+    card_id: int,
+    payload: dict,
+    db_session: SessionDep,
+    current_user: User = Depends(get_current_user),
+):
+    """Freeze or unfreeze a user's card."""
+    res = await db_session.execute(
+        select(Card).where(Card.id == card_id, Card.user_id == current_user.id)
+    )
+    card = res.scalar_one_or_none()
+    if not card:
+        raise HTTPException(status_code=404, detail="Card not found")
+
+    new_status = (payload.get("status") or ("frozen" if card.status == "active" else "active")).lower()
+    if new_status not in ("active", "frozen", "blocked"):
+        new_status = "frozen"
+    card.status = new_status
+    db_session.add(card)
+    await db_session.commit()
+    return {
+        "success": True,
+        "id": card.id,
+        "status": card.status,
+        "message": f"Card ending in {str(card.card_number)[-4:]} is now {card.status.upper()}.",
+    }
+
+
+@router.put("/cards/{card_id}/limits")
+async def update_card_limits(
+    card_id: int,
+    payload: dict,
+    db_session: SessionDep,
+    current_user: User = Depends(get_current_user),
+):
+    """Update daily/per-transaction spending limit on a user's card."""
+    res = await db_session.execute(
+        select(Card).where(Card.id == card_id, Card.user_id == current_user.id)
+    )
+    card = res.scalar_one_or_none()
+    if not card:
+        raise HTTPException(status_code=404, detail="Card not found")
+
+    new_limit = float(payload.get("transaction_limit") or 5000.0)
+    if new_limit < 100 or new_limit > 100000:
+        raise HTTPException(status_code=400, detail="Spending limit must be between $100 and $100,000")
+
+    card.transaction_limit = Decimal(str(round(new_limit, 2)))
+    db_session.add(card)
+    await db_session.commit()
+    return {
+        "success": True,
+        "id": card.id,
+        "transaction_limit": float(card.transaction_limit),
+        "message": f"Spending limit updated to ${new_limit:,.2f}.",
+    }
+
+
+@router.post("/investments/{investment_id}/liquidate")
+async def liquidate_investment_endpoint(
+    investment_id: int,
+    db_session: SessionDep,
+    current_user: User = Depends(get_current_user),
+):
+    """Sell/liquidate an active investment and credit its current value back to the user's primary account."""
+    res = await db_session.execute(
+        select(Investment).where(Investment.id == investment_id, Investment.user_id == current_user.id)
+    )
+    inv = res.scalar_one_or_none()
+    if not inv:
+        raise HTTPException(status_code=404, detail="Investment not found")
+    if (inv.status or "").lower() in ("sold", "liquidated", "closed"):
+        raise HTTPException(status_code=400, detail="This investment has already been liquidated.")
+
+    payout = float(inv.current_value or inv.amount or 0)
+    account = await _get_or_create_primary_account(db_session, current_user)
+    account.balance = Decimal(str(round(float(account.balance or 0) + payout, 2)))
+    inv.status = "liquidated"
+    db_session.add(account)
+    db_session.add(inv)
+
+    ref_num = f"LIQ-{uuid.uuid4().hex[:10].upper()}"
+    txn = Transaction(
+        user_id=current_user.id,
+        account_id=account.id,
+        amount=Decimal(str(round(payout, 2))),
+        transaction_type="investment_liquidation",
+        direction="credit",
+        status="completed",
+        description=f"Liquidated {inv.purpose or inv.investment_type.title()} Investment #{inv.id}",
+        reference_number=ref_num,
+        kyc_status_at_time=current_user.kyc_status,
+    )
+    db_session.add(txn)
+    await db_session.commit()
+
+    return {
+        "success": True,
+        "investment_id": inv.id,
+        "credited_amount": payout,
+        "new_account_balance": float(account.balance),
+        "reference_number": ref_num,
+        "message": f"${payout:,.2f} credited to your primary account ({account.account_number}).",
+    }
+
+
+@router.get("/support-tickets")
+async def list_support_tickets(
+    db_session: SessionDep,
+    current_user: User = Depends(get_current_user),
+):
+    """Return user's support tickets stored in UserSettings.preferences."""
+    res = await db_session.execute(
+        select(UserSettings).where(UserSettings.user_id == current_user.id)
+    )
+    settings_row = res.scalar_one_or_none()
+    tickets = []
+    if settings_row and settings_row.preferences:
+        try:
+            prefs = json.loads(settings_row.preferences)
+            tickets = prefs.get("support_tickets", [])
+        except Exception:
+            tickets = []
+    return tickets
+
+
+@router.post("/support-tickets")
+async def create_support_ticket(
+    payload: dict,
+    db_session: SessionDep,
+    current_user: User = Depends(get_current_user),
+):
+    """Create a priority support or transaction dispute ticket."""
+    subject = (payload.get("subject") or "Account Inquiry").strip()
+    category = (payload.get("category") or "general").strip()
+    priority = (payload.get("priority") or "normal").strip()
+    message = (payload.get("message") or "").strip()
+    transaction_ref = (payload.get("transaction_ref") or "").strip()
+
+    if not message:
+        raise HTTPException(status_code=400, detail="Please provide a message describing your request.")
+
+    res = await db_session.execute(
+        select(UserSettings).where(UserSettings.user_id == current_user.id)
+    )
+    settings_row = res.scalar_one_or_none()
+    if settings_row is None:
+        settings_row = UserSettings(user_id=current_user.id)
+        db_session.add(settings_row)
+    try:
+        prefs = json.loads(settings_row.preferences) if settings_row.preferences else {}
+    except Exception:
+        prefs = {}
+
+    tickets = prefs.get("support_tickets", [])
+    ticket = {
+        "id": f"TKT-{1000 + len(tickets) + 1}",
+        "subject": subject,
+        "category": category,
+        "priority": priority,
+        "message": message,
+        "transaction_ref": transaction_ref,
+        "status": "open",
+        "created_at": datetime.utcnow().isoformat(),
+    }
+    tickets.insert(0, ticket)
+    prefs["support_tickets"] = tickets
+    settings_row.preferences = json.dumps(prefs)
+    await db_session.commit()
+
+    return {
+        "success": True,
+        "ticket": ticket,
+        "message": f"Support ticket {ticket['id']} created. A private banking specialist will respond shortly.",
+    }

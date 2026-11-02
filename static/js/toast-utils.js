@@ -379,6 +379,7 @@
   ───────────────────────────────────────────── */
   window.showToast   = showToast;
   window.showConfirm = showConfirm;
+  window.escapeHtml  = _escapeHtml;
 
   /* Global Alert Override */
   window.alert = function (message) {

@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 from deps import CurrentUserDep
 
-router = APIRouter(prefix="/account", tags=["account"])
+router = APIRouter(prefix="/api/v1/account", tags=["account"])
 
 UPLOAD_DIR = Path("static") / "uploads" / "profile_pics"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)

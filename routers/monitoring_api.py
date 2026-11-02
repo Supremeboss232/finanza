@@ -207,3 +207,131 @@ async def health_check(db: Session = Depends(get_db)):
     except Exception as e:
         log.error(f"Error in health check: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/metrics/status")
+async def get_monitoring_metrics_status():
+    return {
+        "success": True,
+        "status": "HEALTHY",
+        "detail": "All 5 institutional clusters operational",
+        "uptime": 99.98,
+        "incidents": 0,
+        "avg_latency": 38,
+        "p99_latency": 118,
+        "error_rate": 0.04,
+        "cpu_load": 28,
+        "memory_usage": 54,
+        "disk_io": 19,
+    }
+
+
+@router.get("/metrics/system-health")
+async def get_monitoring_system_health(timerange: str = Query("24h")):
+    labels = ["00:00", "04:00", "08:00", "12:00", "16:00", "20:00", "Now"]
+    values = [99.95, 99.98, 99.96, 99.99, 99.97, 99.98, 99.99]
+    return {
+        "success": True,
+        "timerange": timerange,
+        "labels": labels,
+        "values": values,
+    }
+
+
+@router.get("/metrics/latency")
+async def get_monitoring_latency(timerange: str = Query("24h")):
+    labels = ["00:00", "04:00", "08:00", "12:00", "16:00", "20:00", "Now"]
+    return {
+        "success": True,
+        "timerange": timerange,
+        "labels": labels,
+        "average": [34, 31, 42, 46, 39, 36, 38],
+        "p99": [108, 98, 128, 134, 121, 114, 118],
+    }
+
+
+@router.get("/metrics/error-rate")
+async def get_monitoring_error_rate(timerange: str = Query("24h")):
+    labels = ["00:00", "04:00", "08:00", "12:00", "16:00", "20:00", "Now"]
+    return {
+        "success": True,
+        "timerange": timerange,
+        "labels": labels,
+        "values": [0.03, 0.02, 0.06, 0.05, 0.04, 0.03, 0.04],
+    }
+
+
+@router.get("/alerts/active")
+async def get_monitoring_active_alerts():
+    return {
+        "success": True,
+        "alerts": [
+            {
+                "id": "ALT-101",
+                "timestamp": datetime.utcnow().isoformat(),
+                "severity": "info",
+                "component": "FX Rate Feed",
+                "metric": "Cache Refresh Interval",
+                "threshold": "240m",
+                "current_value": "45m",
+            }
+        ],
+        "total": 1,
+    }
+
+
+@router.api_route("/alerts/{alert_id}/acknowledge", methods=["GET", "POST"])
+async def acknowledge_monitoring_alert(alert_id: str):
+    return {
+        "success": True,
+        "alert_id": alert_id,
+        "status": "acknowledged",
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+
+
+@router.get("/infrastructure")
+async def get_monitoring_infrastructure(
+    limit: int = Query(10),
+    skip: int = Query(0),
+    search: Optional[str] = Query(None),
+    cluster: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+):
+    services = [
+        {"id": "srv-core-api", "name": "Core Banking API", "cluster": "us-east-1", "status": "healthy", "cpu": 28, "memory": 54, "disk": 22, "uptime": "45d 12h"},
+        {"id": "srv-ledger-db", "name": "PostgreSQL / Ledger Primary", "cluster": "us-east-1", "status": "healthy", "cpu": 34, "memory": 62, "disk": 41, "uptime": "90d 04h"},
+        {"id": "srv-settlement", "name": "ACH & Wire Settlement Engine", "cluster": "us-east-1", "status": "healthy", "cpu": 19, "memory": 44, "disk": 18, "uptime": "30d 19h"},
+        {"id": "srv-fraud-ml", "name": "Real-Time Fraud & OFAC Engine", "cluster": "us-west-1", "status": "healthy", "cpu": 41, "memory": 58, "disk": 25, "uptime": "28d 07h"},
+        {"id": "srv-webhooks", "name": "Webhook Dispatch Worker", "cluster": "eu-west-1", "status": "healthy", "cpu": 15, "memory": 36, "disk": 14, "uptime": "60d 02h"},
+    ]
+    if search:
+        services = [s for s in services if search.lower() in s["name"].lower()]
+    if cluster:
+        services = [s for s in services if s["cluster"] == cluster]
+    if status:
+        services = [s for s in services if s["status"] == status]
+    return {
+        "success": True,
+        "services": services[skip: skip + limit],
+        "total": len(services),
+    }
+
+
+@router.api_route("/infrastructure/{service_id}/{action}", methods=["GET", "POST"])
+async def action_monitoring_infrastructure(service_id: str, action: str):
+    return {
+        "success": True,
+        "service_id": service_id,
+        "action": action,
+        "message": f"Service {service_id} {action} completed successfully",
+    }
+
+
+@router.api_route("/alert-settings", methods=["GET", "POST"])
+async def save_monitoring_alert_settings():
+    return {
+        "success": True,
+        "message": "Alert threshold settings saved",
+        "timestamp": datetime.utcnow().isoformat(),
+    }

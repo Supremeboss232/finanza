@@ -144,3 +144,107 @@ async def get_transfer_compliance_data(
         "audit_log_id": audit_log.id,
         "created_at": audit_log.created_at.isoformat() if audit_log.created_at else None,
     }
+
+
+@international_router.get("/transfers")
+async def list_international_transfers(
+    status: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    db_session: SessionDep = None,
+):
+    """List international transfers for the current user, optionally filtered by status."""
+    from models import Transaction
+    from sqlalchemy import select
+
+    stmt = select(Transaction).where(
+        (Transaction.user_id == current_user.id)
+        & (Transaction.transaction_type.in_(["international_transfer", "wire_transfer", "international", "swift"]))
+    )
+    if status:
+        if status == "pending":
+            stmt = stmt.where(Transaction.status.in_(["pending", "pending_approval", "processing"]))
+        else:
+            stmt = stmt.where(Transaction.status == status)
+    stmt = stmt.order_by(Transaction.created_at.desc()).limit(50)
+    result = await db_session.execute(stmt)
+    txns = result.scalars().all()
+    items = []
+    for t in txns:
+        desc = t.description or "International Transfer"
+        recipient_name = desc
+        recipient_country = "INTL"
+        if "International transfer to " in desc:
+            body = desc.split("International transfer to ", 1)[1]
+            if " (" in body and ")" in body:
+                recipient_name = body.split(" (", 1)[0].strip()
+                recipient_country = body.split(" (", 1)[1].split(")", 1)[0].strip()
+            elif " - " in body:
+                parts = body.split(" - ", 1)
+                recipient_country = parts[0].strip()
+                recipient_name = parts[1].strip()
+        elif "International Transfer to " in desc:
+            body = desc.split("International Transfer to ", 1)[1]
+            if " (" in body and ")" in body:
+                recipient_name = body.split(" (", 1)[0].strip()
+                recipient_country = body.split(" (", 1)[1].split(")", 1)[0].strip()
+
+        items.append({
+            "id": t.id,
+            "amount": abs(float(t.amount or 0)),
+            "currency": getattr(t, "currency", "USD") or "USD",
+            "status": t.status,
+            "recipient_name": recipient_name,
+            "recipient_country": recipient_country,
+            "description": desc,
+            "reference": getattr(t, "reference_number", None) or f"INTL-{t.id}",
+            "reference_number": getattr(t, "reference_number", None) or f"INTL-{t.id}",
+            "step_1_completed": True,
+            "step_2_completed": t.status in ("processing", "pending_approval", "completed"),
+            "step_3_completed": t.status in ("in_transit", "completed"),
+            "estimated_delivery": "1-3 business days",
+            "created_at": t.created_at.isoformat() if t.created_at else None,
+        })
+    return items
+
+
+@international_router.get("/stats")
+async def get_international_transfer_stats(
+    current_user: User = Depends(get_current_user),
+    db_session: SessionDep = None,
+):
+    """Get summary statistics of international transfers for the current user."""
+    from models import Transaction, UserSettings
+    from sqlalchemy import select
+    import json
+
+    stmt = select(Transaction).where(
+        (Transaction.user_id == current_user.id)
+        & (Transaction.transaction_type.in_(["international_transfer", "wire_transfer", "international", "swift"]))
+    )
+    result = await db_session.execute(stmt)
+    txns = result.scalars().all()
+    pending = [t for t in txns if t.status in ("pending", "pending_approval", "processing")]
+    completed = [t for t in txns if t.status == "completed"]
+    total_used = round(sum(abs(float(t.amount or 0)) for t in txns if t.status != "failed"), 2)
+
+    saved_count = 0
+    try:
+        us_res = await db_session.execute(select(UserSettings).where(UserSettings.user_id == current_user.id))
+        us = us_res.scalar_one_or_none()
+        if us and us.preferences:
+            prefs = json.loads(us.preferences)
+            saved_count = len(prefs.get("saved_recipients", []))
+    except Exception:
+        pass
+
+    return {
+        "monthly_limit": 100000.0,
+        "limit_used": total_used,
+        "pending_count": len(pending),
+        "completed_count": len(completed),
+        "this_month_transfers": len(txns),
+        "this_month_amount": total_used,
+        "total_sent": round(sum(abs(float(t.amount or 0)) for t in completed), 2),
+        "countries_count": 140,
+        "recipient_count": saved_count,
+    }

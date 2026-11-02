@@ -1,10 +1,10 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta name="description" content="Finanza Financial Services - Admin International Compliance portal and banking management.">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>International Compliance Admin - Finanza</title>
-    <link href="/static/css/style.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.js" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
@@ -60,6 +60,8 @@
     </style>
 
     <script src="/static/js/toast-utils.js"></script>
+    <link href="/static/css/admin-portal.css" rel="stylesheet">
+    <script src="/static/js/admin-guard.js?v=3"></script>
 </head>
 <body>
     <!-- Navigation -->
@@ -695,10 +697,7 @@
         // Initialize Page
         document.addEventListener('DOMContentLoaded', async () => {
             // Check token
-            if (!token) {
-                window.location.href = '/user/login';
-                return;
-            }
+            /* token managed by admin-guard.js */
 
             try {
                 await loadMetrics();
@@ -1385,6 +1384,6 @@
             window.location.href = `/api/v1/compliance/documents/${docId}/download`;
         }
     </script>
-    <script src="/static/js/admin-guard.js"></script>
+<script src="/static/js/admin-shell.js?v=3"></script>
 </body>
 </html>

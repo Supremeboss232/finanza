@@ -1,449 +1,224 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="utf-8">
-    <title>Finanza - Profile</title>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport">
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Jost:wght@500;600;700&family=Open+Sans:wght@400;500&display=swap" rel="stylesheet">  
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/css/all.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css" rel="stylesheet">
-
-    <link href="/static/lib/animate/animate.min.css" rel="stylesheet">
-    <link href="/static/lib/owlcarousel/assets/owl.carousel.min.css" rel="stylesheet">
-    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
-    <link href="/static/css/style.css" rel="stylesheet">
-
-    <script src="/static/js/toast-utils.js"></script>
-    <link href="/static/css/mobile.css" rel="stylesheet">
+    <title>My Profile - Finanza Bank</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/css/user-portal.css" rel="stylesheet">
 </head>
+<body data-page-title="Client Profile" data-page-subtitle="Personal identity, residential address & employment records">
 
-<body>
-    <div id="spinner" class="show bg-white position-fixed translate-middle w-100 vh-100 top-50 start-50 d-flex align-items-center justify-content-center">
-        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
-            <span class="sr-only">Loading...</span>
-        </div>
-    </div>
-
-    <!-- Navbar Start -->
-    <div class="container-fluid fixed-top px-0 wow fadeIn" data-wow-delay="0.1s">
-        <nav class="navbar navbar-expand-lg navbar-light py-lg-0 px-lg-5 wow fadeIn" data-wow-delay="0.1s">
-            <a href="/user/dashboard" class="navbar-brand ms-4 ms-lg-0">
-                <h5 class="m-0 text-primary"><i class="fa fa-university me-2"></i>Finanza</h5>
-            </a>
-            <button type="button" class="navbar-toggler me-4" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarCollapse">
-                <div class="navbar-nav ms-auto p-4 p-lg-0">
-                    <a href="/user/dashboard" class="nav-item nav-link">Dashboard</a>
-                    <a href="/user/account" class="nav-item nav-link">Account</a>
-                    <a href="/user/kyc_form" class="nav-item nav-link">KYC</a>
-                    <div class="nav-item dropdown">
-                        <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Products</a>
-                        <div class="dropdown-menu border-light m-0">
-                            <a href="/user/cards" class="dropdown-item">Cards</a>
-                            <a href="/user/deposits" class="dropdown-item">Deposits</a>
-                            <a href="/user/loans" class="dropdown-item">Loans</a>
-                            <a href="/user/investments" class="dropdown-item">Investments</a>
-                        </div>
-                    </div>
-                    <div class="nav-item dropdown">
-                        <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Services</a>
-                        <div class="dropdown-menu border-light m-0">
-                            <a href="/user/analytics" class="dropdown-item">Business Analysis</a>
-                            <a href="/user/treasury_portfolio" class="dropdown-item">Financial Planning</a>
-                            <a href="/user/insurance" class="dropdown-item">Insurance</a>
-                            <a href="/user/treasury_portfolio" class="dropdown-item">Projects</a>
-                        </div>
-                    </div>
-                    <div class="nav-item dropdown">
-                        <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">More</a>
-                        <div class="dropdown-menu border-light m-0">
-                            <a href="/user/profile" class="dropdown-item active">Profile</a>
-                            <a href="/user/settings" class="dropdown-item">Settings</a>
-                            <a href="/user/notifications" class="dropdown-item">Notifications</a>
-                            <a href="/user/contact" class="dropdown-item">Contact/Support</a>
-                            <hr class="m-2">
-                            <a href="/logout" class="dropdown-item text-danger">Logout</a>
-                        </div>
+<div id="bank-page-content" style="display:none;">
+    <div class="row g-4">
+        <!-- Left Card: Avatar & Account Summary -->
+        <div class="col-lg-4">
+            <div class="fb-card text-center p-4 mb-4">
+                <div class="position-relative d-inline-block mx-auto mb-3">
+                    <div id="profAvatarBox" class="rounded-circle d-flex align-items-center justify-content-center mx-auto fw-extrabold fs-2 text-white" style="width:96px;height:96px;background:linear-gradient(135deg,#2563eb,#059669);overflow:hidden;">
+                        FB
                     </div>
                 </div>
-            </div>
-        </nav>
-    </div>
-    <!-- Navbar End -->
+                <h4 class="fw-bold mb-1" id="profDisplayName">—</h4>
+                <div class="text-muted small mb-3" id="profDisplayEmail">—</div>
 
-    <div class="container-fluid page-header mb-5 wow fadeIn" data-wow-delay="0.1s">
-        <div class="container">
-            <h1 class="display-4 pb-3 animated slideInDown">Profile</h1>
-            <nav aria-label="breadcrumb animated slideInDown">
-                <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item"><a class="text-white" href="/user/dashboard">Home</a></li>
-                    <li class="breadcrumb-item text-primary active" aria-current="page">Profile</li>
-                </ol>
-            </nav>
-        </div>
-    </div>
+                <form id="avatarUploadForm" class="mb-3">
+                    <label class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-camera me-1"></i> Upload Photo
+                        <input type="file" id="avatarFileInput" accept="image/*" hidden onchange="uploadAvatarNow(this)">
+                    </label>
+                </form>
 
-    <div class="container-xxl py-5">
-        <div class="container">
-            <div class="row g-5">
-                <div class="col-lg-12 wow fadeInUp" data-wow-delay="0.1s">
-                    <h1 class="mb-4">Your Profile</h1>
-                    <p class="mb-5">Manage your personal information, identity documents, and contact details.</p>
-
-                    <div class="row g-4">
-                        <!-- Personal Information Section -->
-                        <div class="col-lg-8">
-                            <div class="card mb-4">
-                                <div class="card-header bg-light">
-                                    <h5 class="mb-0">Personal Information</h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="row g-3">
-                                        <div class="col-md-6">
-                                            <label class="form-label">Full Legal Name</label>
-                                            <p class="profile-fullname" id="profile-fullname">—</p>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label">Date of Birth</label>
-                                            <p id="profile-dob">—</p>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label">Email Address</label>
-                                            <p id="profile-email">—</p>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label">Phone Number</label>
-                                            <p id="profile-phone">—</p>
-                                        </div>
-                                        <div class="col-12">
-                                            <label class="form-label">Address</label>
-                                            <p id="profile-address">—</p>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label">City</label>
-                                            <p id="profile-city">—</p>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label">State/Province</label>
-                                            <p id="profile-state">—</p>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label">Postal Code</label>
-                                            <p id="profile-postal">—</p>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label">Country</label>
-                                            <p id="profile-country">—</p>
-                                        </div>
-                                    </div>
-                                    <button class="btn btn-primary mt-3" id="edit-profile-btn">Edit Profile</button>
-                                </div>
-                            </div>
-
-                            <!-- Employment Information -->
-                            <div class="card mb-4">
-                                <div class="card-header bg-light">
-                                    <h5 class="mb-0">Employment Information</h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="row g-3">
-                                        <div class="col-md-6">
-                                            <label class="form-label">Employer Name</label>
-                                            <p id="profile-employer">—</p>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label">Job Title</label>
-                                            <p id="profile-jobTitle">—</p>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label">Industry</label>
-                                            <p id="profile-industry">—</p>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label class="form-label">Annual Income</label>
-                                            <p id="profile-income">—</p>
-                                        </div>
-                                    </div>
-                                    <button class="btn btn-primary mt-3" id="edit-employment-btn">Edit Employment Info</button>
-                                </div>
-                            </div>
-
-                            <!-- Identity & Verification -->
-                            <div class="card">
-                                <div class="card-header bg-light">
-                                    <h5 class="mb-0">Identity & Verification</h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="alert alert-info mb-3">
-                                        <i class="bi bi-info-circle me-2"></i>
-                                        Complete your KYC verification to unlock all features.
-                                    </div>
-                                    <div class="row g-3">
-                                        <div class="col-12">
-                                            <label class="form-label">Social Security Number (Masked)</label>
-                                            <p id="profile-ssn">—</p>
-                                        </div>
-                                        <div class="col-12">
-                                            <label class="form-label">Government ID Type</label>
-                                            <p id="profile-idtype">—</p>
-                                        </div>
-                                        <div class="col-12">
-                                            <label class="form-label">ID Number (Masked)</label>
-                                            <p id="profile-idnumber">—</p>
-                                        </div>
-                                        <div class="col-12">
-                                            <label class="form-label">KYC Verification Status</label>
-                                            <p>
-                                                <span class="badge bg-success" id="kyc-status">Verified</span>
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <a href="/user/kyc_form" class="btn btn-primary mt-3">Manage KYC Documents</a>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Profile Picture Sidebar -->
-                        <div class="col-lg-4">
-                            <div class="card">
-                                <div class="card-header bg-light">
-                                    <h5 class="mb-0">Profile Picture</h5>
-                                </div>
-                                <div class="card-body text-center">
-                                    <img id="profile-picture" src="/img/default-avatar.png" alt="Profile Picture" class="img-fluid rounded-circle mb-3" style="width: 150px; height: 150px; object-fit: cover;">
-                                    <form id="upload-picture-form" enctype="multipart/form-data">
-                                        <div class="mb-3">
-                                            <input type="file" class="form-control" id="profilePicture" name="profilePicture" accept="image/*">
-                                        </div>
-                                        <button type="submit" class="btn btn-primary w-100">Upload Picture</button>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
+                <div class="text-start pt-3 border-top small">
+                    <div class="d-flex justify-content-between py-2 border-bottom">
+                        <span class="text-muted">Primary Account #</span>
+                        <code class="bank-code fw-bold text-primary" id="profAcctNum">—</code>
+                    </div>
+                    <div class="d-flex justify-content-between py-2 border-bottom">
+                        <span class="text-muted">Account Tier</span>
+                        <span class="fw-semibold" id="profTierLabel">Private Client</span>
+                    </div>
+                    <div class="d-flex justify-content-between pt-2">
+                        <span class="text-muted">Member Since</span>
+                        <span class="fw-semibold" id="profCreatedAt">—</span>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Footer Start -->
-    <div class="container-fluid bg-dark text-light footer mt-5 py-3 wow fadeIn" data-wow-delay="0.1s">
-        <div class="container">
-            <div class="row">
-                <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">&copy; <a class="border-bottom" href="#">Finanza</a>, All Right Reserved.</div>
-                <div class="col-md-6 text-center text-md-end">Designed By <a class="border-bottom" href="https://htmlcodex.com">HTML Codex</a></div>
+        <!-- Right Card: Complete Profile Form -->
+        <div class="col-lg-8">
+            <div class="fb-card">
+                <div class="fb-card-header">
+                    <h2 class="fb-card-title"><i class="fas fa-user-tie text-primary"></i> Personal, Residential & Employment Profile</h2>
+                </div>
+                <div class="fb-card-body">
+                    <form id="profileUpdateForm">
+                        <h6 class="text-uppercase text-muted fw-bold small mb-3">1. Personal Information</h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label">Full Legal Name</label>
+                                <input type="text" class="form-control" id="pfFullName" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Email Address</label>
+                                <input type="email" class="form-control" id="pfEmail" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Mobile Phone</label>
+                                <input type="text" class="form-control" id="pfPhone" placeholder="+1 (555) 000-0000">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Date of Birth</label>
+                                <input type="date" class="form-control" id="pfDob">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Nationality</label>
+                                <input type="text" class="form-control" id="pfNationality" placeholder="United States">
+                            </div>
+                        </div>
+
+                        <h6 class="text-uppercase text-muted fw-bold small mb-3">2. Residential Address</h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-12">
+                                <label class="form-label">Street Address</label>
+                                <input type="text" class="form-control" id="pfStreet" placeholder="100 Financial Avenue, Suite 14B">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">City</label>
+                                <input type="text" class="form-control" id="pfCity">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">State / Province</label>
+                                <input type="text" class="form-control" id="pfState">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Postal / ZIP Code</label>
+                                <input type="text" class="form-control" id="pfZip">
+                            </div>
+                        </div>
+
+                        <h6 class="text-uppercase text-muted fw-bold small mb-3">3. Employment & Income Profile</h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <label class="form-label">Occupation / Title</label>
+                                <input type="text" class="form-control" id="pfOccupation" placeholder="Executive / Engineer">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Employer / Organization</label>
+                                <input type="text" class="form-control" id="pfEmployer" placeholder="Company Name">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Annual Income Bracket</label>
+                                <select class="form-select" id="pfIncome">
+                                    <option value="$50,000 - $100,000">$50,000 – $100,000</option>
+                                    <option value="$100,000 - $250,000">$100,000 – $250,000</option>
+                                    <option value="$250,000 - $500,000">$250,000 – $500,000</option>
+                                    <option value="$500,000+">$500,000+</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end">
+                            <button type="submit" class="btn btn-primary px-4" id="pfSaveBtn">
+                                <i class="fas fa-floppy-disk me-2"></i> Save Profile Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
-    <!-- Footer End -->
+</div>
 
-    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/static/lib/wow/wow.min.js"></script>
-    <script src="/static/lib/easing/easing.min.js"></script>
-    <script src="/static/lib/waypoints/waypoints.min.js"></script>
-    <script src="/static/lib/owlcarousel/owl.carousel.min.js"></script>
-    <script src="/static/lib/counterup/counterup.min.js"></script>
-    <script src="/static/js/main.js"></script>
-    <script src="/static/js/user-guard.js"></script>
-    <script src="/static/js/realtime.js"></script>
-    <script src="/static/js/page-sync.js"></script>
-    <script>
-        // Load user profile data from /api/user/profile endpoint
-        async function loadProfile() {
-            try {
-                const res = await fetch('/api/user/profile', { credentials: 'include' });
-                if (!res.ok) throw new Error('Failed to load profile');
-                const user = await res.json();
-                
-                // Populate profile fields from actual user data
-                document.getElementById('profile-fullname').textContent = user.full_name || user.email || '—';
-                document.getElementById('profile-email').textContent = user.email || '—';
-                document.getElementById('profile-phone').textContent = user.phone_number || '—';
-                document.getElementById('profile-address').textContent = user.address || '—';
-                document.getElementById('profile-city').textContent = user.city || '—';
-                document.getElementById('profile-state').textContent = user.state || '—';
-                document.getElementById('profile-postal').textContent = user.postal_code || '—';
-                document.getElementById('profile-country').textContent = user.country || 'USA';
-                document.getElementById('profile-dob').textContent = user.date_of_birth ? new Date(user.date_of_birth).toLocaleDateString() : '—';
-                
-                // Masked sensitive information
-                const ssn = user.ssn || user.account_number || '';
-                document.getElementById('profile-ssn').textContent = '***-**-' + ssn.slice(-4);
-                
-                document.getElementById('profile-idtype').textContent = user.id_type || 'National ID';
-                const idNum = user.id_number || '';
-                document.getElementById('profile-idnumber').textContent = '****' + idNum.slice(-4);
-                
-                document.getElementById('profile-employer').textContent = user.employer || '—';
-                document.getElementById('profile-jobTitle').textContent = user.job_title || '—';
-                document.getElementById('profile-industry').textContent = user.industry || '—';
-                document.getElementById('profile-income').textContent = user.annual_income ? '$' + parseFloat(user.annual_income).toLocaleString('en-US') : '—';
-                
-                if (user.profile_picture_url) {
-                    document.getElementById('profile-picture').src = user.profile_picture_url;
-                }
-                
-                if (user.kyc_verified || user.status === 'verified') {
-                    document.getElementById('kyc-status').textContent = 'Verified';
-                    document.getElementById('kyc-status').className = 'badge bg-success';
-                } else {
-                    document.getElementById('kyc-status').textContent = 'Pending';
-                    document.getElementById('kyc-status').className = 'badge bg-warning';
-                }
-            } catch (err) {
-                console.error('Error loading profile:', err);
-                document.getElementById('profile-fullname').textContent = 'Unable to load profile';
-            }
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/static/js/user-shell.js"></script>
+<script>
+async function loadProfilePage() {
+    try {
+        const p = await FinanzaShell.api('/api/user/profile');
+        document.getElementById('profDisplayName').textContent = p.full_name || p.username || 'Client';
+        document.getElementById('profDisplayEmail').textContent = p.email || '';
+        document.getElementById('profAcctNum').textContent = p.account_number || '—';
+        document.getElementById('profCreatedAt').textContent = FinanzaShell.fmtDate(p.created_at);
+
+        const avatarBox = document.getElementById('profAvatarBox');
+        if (p.profile_picture_url || p.avatar_url) {
+            avatarBox.innerHTML = `<img src="${p.profile_picture_url || p.avatar_url}" style="width:100%;height:100%;object-fit:cover;">`;
         }
 
-        // Upload profile picture
-        document.getElementById('upload-picture-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const formData = new FormData(e.target);
-            try {
-                const res = await fetch('/api/user/upload-profile-picture', {
-                    method: 'POST',
-                    credentials: 'include',
-                    body: formData
-                });
-                if (res.ok) {
-                    const result = await res.json();
-                    alert('Profile picture uploaded successfully!');
-                    loadProfile();
-                } else {
-                    alert('Failed to upload profile picture');
-                }
-            } catch (err) {
-                console.error('Upload error:', err);
-                alert('Error uploading picture');
-            }
-        });
-
-        // Edit profile button
-        document.getElementById('edit-profile-btn').addEventListener('click', () => {
-            alert('Edit profile feature coming soon!');
-        });
-
-        document.getElementById('edit-employment-btn').addEventListener('click', () => {
-            alert('Edit employment info feature coming soon!');
-        });
-
-        // Load profile when page ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', loadProfile);
-        } else {
-            loadProfile();
-        }
-
-        // SECURE Logout handler - Clear all session state
-        document.addEventListener('click', function(e) {
-            if (e.target && e.target.getAttribute('href') === '/logout') {
-                e.preventDefault();
-                if (confirm('Are you sure you want to logout?')) {
-                    // Clear all client-side storage
-                    localStorage.clear();
-                    sessionStorage.clear();
-                    // Navigate to logout endpoint (server clears cookie)
-                    window.location.href = '/logout';
-                }
-            }
-        });
-        
-        // Prevent back button from restoring cached pages
-        window.addEventListener('pageshow', function(event) {
-            if (event.persisted) {  // Page restored from back/forward cache
-                if (!localStorage.getItem('token')) {
-                    window.location.href = '/signin';
-                }
-            }
-        });
-    </script>
-    <!-- Mobile Bottom Navigation Bar -->
-    <div id="mobile-bottom-nav" role="navigation" aria-label="Mobile navigation">
-        <a href="/user/dashboard" class="mobile-nav-item" id="mbnav-home">
-            <i class="fas fa-home"></i>
-            Home
-        </a>
-        <a href="/user/transfers" class="mobile-nav-item" id="mbnav-transfer">
-            <i class="fas fa-exchange-alt"></i>
-            Transfer
-        </a>
-        <a href="/user/cards" class="mobile-nav-item" id="mbnav-cards">
-            <i class="fas fa-credit-card"></i>
-            Cards
-        </a>
-        <a href="/user/transactions" class="mobile-nav-item" id="mbnav-txn">
-            <i class="fas fa-list-alt"></i>
-            Activity
-        </a>
-        <div class="mobile-nav-item" id="mbnav-more" onclick="toggleMobileMoreMenu()">
-            <i class="fas fa-th"></i>
-            More
-        </div>
-    </div>
-
-    <!-- Mobile More Menu -->
-    <div id="mobile-more-overlay" onclick="closeMobileMoreMenu()"></div>
-    <div id="mobile-more-menu">
-        <a href="/user/account" class="mobile-more-item"><i class="fas fa-university"></i>Account</a>
-        <a href="/user/loans" class="mobile-more-item"><i class="fas fa-hand-holding-usd"></i>Loans</a>
-        <a href="/user/deposits" class="mobile-more-item"><i class="fas fa-piggy-bank"></i>Deposits</a>
-        <a href="/user/investments" class="mobile-more-item"><i class="fas fa-chart-line"></i>Invest</a>
-        <a href="/user/kyc_form" class="mobile-more-item"><i class="fas fa-id-card"></i>KYC</a>
-        <a href="/user/notifications" class="mobile-more-item"><i class="fas fa-bell"></i>Alerts</a>
-        <a href="/user/settings" class="mobile-more-item"><i class="fas fa-cog"></i>Settings</a>
-        <a href="/user/security" class="mobile-more-item"><i class="fas fa-shield-alt"></i>Security</a>
-        <a href="/user/profile" class="mobile-more-item"><i class="fas fa-user"></i>Profile</a>
-        <a href="/user/bill_pay" class="mobile-more-item"><i class="fas fa-file-invoice-dollar"></i>Bill Pay</a>
-        <a href="/user/international_transfers" class="mobile-more-item"><i class="fas fa-globe"></i>Intl Transfer</a>
-        <a href="#" onclick="typeof handleLogout !== 'undefined' ? handleLogout(event) : (window.location='/auth/logout')" class="mobile-more-item" style="color:#dc3545;"><i class="fas fa-sign-out-alt" style="color:#dc3545;"></i>Logout</a>
-    </div>
-
-    <script>
-    // Mobile more menu toggle
-    function toggleMobileMoreMenu() {
-        var menu = document.getElementById('mobile-more-menu');
-        var overlay = document.getElementById('mobile-more-overlay');
-        var isOpen = menu.classList.contains('open');
-        if (isOpen) {
-            menu.classList.remove('open');
-            overlay.classList.remove('open');
-        } else {
-            menu.classList.add('open');
-            overlay.classList.add('open');
-        }
+        document.getElementById('pfFullName').value = p.full_name || '';
+        document.getElementById('pfEmail').value = p.email || '';
+        document.getElementById('pfPhone').value = p.phone || p.phone_number || '';
+        document.getElementById('pfDob').value = p.date_of_birth ? String(p.date_of_birth).slice(0, 10) : '';
+        document.getElementById('pfNationality').value = p.nationality || '';
+        document.getElementById('pfStreet').value = p.street_address || p.address || '';
+        document.getElementById('pfCity').value = p.city || '';
+        document.getElementById('pfState').value = p.state || '';
+        document.getElementById('pfZip').value = p.zip_code || p.postal_code || '';
+        document.getElementById('pfOccupation').value = p.occupation || '';
+        document.getElementById('pfEmployer').value = p.employer || '';
+        if (p.income_range) document.getElementById('pfIncome').value = p.income_range;
+    } catch (err) {
+        console.error('[Profile] Error:', err);
     }
-    function closeMobileMoreMenu() {
-        document.getElementById('mobile-more-menu').classList.remove('open');
-        document.getElementById('mobile-more-overlay').classList.remove('open');
+}
+
+async function uploadAvatarNow(inputEl) {
+    if (!inputEl.files || !inputEl.files[0]) return;
+    const fd = new FormData();
+    fd.append('file', inputEl.files[0]);
+    try {
+        const res = await FinanzaShell.api('/api/user/upload-profile-picture', {
+            method: 'POST',
+            body: fd
+        });
+        FinanzaShell.toast('Profile photo updated!', 'success');
+        await FinanzaShell.refreshUserContext();
+        await loadProfilePage();
+    } catch (err) {
+        FinanzaShell.toast(err.message, 'error');
     }
-    // Highlight the active mobile nav tab based on current URL
-    (function() {
-        var path = window.location.pathname;
-        var map = {
-            '/user/dashboard': 'mbnav-home',
-            '/user/transfers': 'mbnav-transfer',
-            '/user/bill_pay': 'mbnav-transfer',
-            '/user/cards': 'mbnav-cards',
-            '/user/transactions': 'mbnav-txn',
-        };
-        var activeId = null;
-        for (var key in map) {
-            if (path.indexOf(key) !== -1) { activeId = map[key]; break; }
-        }
-        if (activeId) {
-            var el = document.getElementById(activeId);
-            if (el) el.classList.add('active');
-        }
-    })();
-    </script>
+}
+
+document.getElementById('profileUpdateForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('pfSaveBtn');
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+    try {
+        await FinanzaShell.api('/api/user/profile', {
+            method: 'PUT',
+            body: {
+                full_name: document.getElementById('pfFullName').value,
+                email: document.getElementById('pfEmail').value,
+                phone: document.getElementById('pfPhone').value,
+                date_of_birth: document.getElementById('pfDob').value,
+                nationality: document.getElementById('pfNationality').value,
+                street_address: document.getElementById('pfStreet').value,
+                address: document.getElementById('pfStreet').value,
+                city: document.getElementById('pfCity').value,
+                state: document.getElementById('pfState').value,
+                zip_code: document.getElementById('pfZip').value,
+                occupation: document.getElementById('pfOccupation').value,
+                employer: document.getElementById('pfEmployer').value,
+                income_range: document.getElementById('pfIncome').value
+            }
+        });
+        FinanzaShell.toast('Profile updated and saved.', 'success');
+        await FinanzaShell.refreshUserContext();
+        await loadProfilePage();
+    } catch (err) {
+        FinanzaShell.toast(err.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = orig;
+    }
+});
+
+document.addEventListener('DOMContentLoaded', loadProfilePage);
+</script>
 </body>
-
 </html>

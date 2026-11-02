@@ -346,39 +346,133 @@ async def get_recipients(
     db_session: SessionDep = None
 ):
     """Get saved recipients for transfers."""
+    from models import UserSettings
+    saved_recipients = []
     try:
-        # For now, return empty list (recipients would be stored in a separate table)
-        # This can be implemented later when the recipient management is added
-        # For now, users can enter new recipients for each transfer
-        return []
-    except Exception as e:
-        print(f"Error fetching recipients: {e}")
-        return []
+        us_res = await db_session.execute(
+            select(UserSettings).where(UserSettings.user_id == current_user.id)
+        )
+        user_settings = us_res.scalar_one_or_none()
+        if user_settings and user_settings.preferences:
+            prefs = json.loads(user_settings.preferences)
+            saved_recipients = prefs.get("saved_recipients", [])
+    except Exception:
+        saved_recipients = []
+
+    other_users_res = await db_session.execute(
+        select(DBUser, DBAccount)
+        .join(DBAccount, DBAccount.owner_id == DBUser.id)
+        .where(DBUser.id != current_user.id, DBUser.is_active == True)
+        .limit(10)
+    )
+    internal_list = []
+    for u, a in other_users_res.all():
+        internal_list.append({
+            "id": f"internal_{a.id}",
+            "name": u.full_name or u.username or u.email,
+            "email": u.email,
+            "account_number": a.account_number,
+            "routing_number": "021000021",
+            "account_type": a.account_type or "checking",
+            "bank_name": "Finanza Bank (Internal)",
+            "is_internal": True,
+        })
+    return saved_recipients + internal_list
 
 
-# Bill Pay endpoints
 @router.post("/bills", status_code=status.HTTP_201_CREATED)
 async def pay_bill(
     bill_data: dict,
-    current_user: User = Depends(get_current_user),
+    current_user: DBUser = Depends(get_current_user),
     db_session: SessionDep = None
 ):
-    """Create a bill payment."""
+    """Create a ledger-backed bill payment."""
+    amount = float(bill_data.get("amount") or 0)
+    biller = (bill_data.get("biller") or bill_data.get("payee_name") or "Utility Biller").strip()
+    from_account_id = bill_data.get("from_account_id")
+
+    if amount <= 0:
+        raise HTTPException(status_code=400, detail="Bill payment amount must be greater than $0.00")
+
+    acct_stmt = select(DBAccount).where(DBAccount.owner_id == current_user.id)
+    if from_account_id:
+        try:
+            acct_stmt = select(DBAccount).where(
+                DBAccount.id == int(from_account_id),
+                DBAccount.owner_id == current_user.id,
+            )
+        except (ValueError, TypeError):
+            pass
+
+    acct_res = await db_session.execute(acct_stmt.order_by(DBAccount.id.asc()))
+    sender_account = acct_res.scalars().first()
+    if not sender_account:
+        raise HTTPException(status_code=400, detail="No active bank account found")
+
+    if float(sender_account.balance or 0) < amount:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Insufficient account balance (${float(sender_account.balance or 0):,.2f}) to pay bill of ${amount:,.2f}",
+        )
+
+    sender_account.balance = float(sender_account.balance or 0) - amount
+    db_session.add(sender_account)
+
+    ref_num = f"BILL-{int(datetime.utcnow().timestamp())}-{current_user.id}"
+    tx = DBTransaction(
+        user_id=current_user.id,
+        account_id=sender_account.id,
+        amount=amount,
+        transaction_type="bill_pay",
+        direction="debit",
+        status="completed",
+        description=f"Bill Payment to {biller}",
+        reference_number=ref_num,
+    )
+    db_session.add(tx)
+    await db_session.commit()
+    await db_session.refresh(tx)
+
     return {
-        "id": 1,
+        "id": tx.id,
         "type": "bill_pay",
-        "status": "scheduled",
-        "message": "Bill payment scheduled successfully"
+        "amount": amount,
+        "biller": biller,
+        "reference_number": ref_num,
+        "new_balance": float(sender_account.balance),
+        "status": "completed",
+        "message": f"Bill payment of ${amount:,.2f} to {biller} completed",
     }
 
 
 @router.get("/bills")
 async def get_bill_payments(
-    current_user: User = Depends(get_current_user),
+    current_user: DBUser = Depends(get_current_user),
     db_session: SessionDep = None,
     skip: int = 0,
-    limit: int = 10
+    limit: int = 20
 ):
     """Get bill payment history."""
-    return []
-
+    res = await db_session.execute(
+        select(DBTransaction)
+        .where(
+            DBTransaction.user_id == current_user.id,
+            DBTransaction.transaction_type == "bill_pay",
+        )
+        .order_by(DBTransaction.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+    )
+    txns = res.scalars().all()
+    return [
+        {
+            "id": t.id,
+            "type": "bill_pay",
+            "amount": abs(float(t.amount or 0)),
+            "biller": (t.description or "Bill Payment").replace("Bill Payment to ", ""),
+            "status": t.status or "completed",
+            "reference_number": t.reference_number or f"BILL-{t.id}",
+            "created_at": t.created_at.isoformat() if t.created_at else None,
+        }
+        for t in txns
+    ]

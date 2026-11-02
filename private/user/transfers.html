@@ -1,424 +1,316 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="utf-8">
-    <title>Transfers - Finanza Bank</title>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport">
-    <meta content="" name="keywords">
-    <meta content="" name="description">
-
-    <!-- Favicon -->
-    <link href="/img/favicon.ico" rel="icon">
-
-    <!-- Google Web Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Jost:wght@500;600;700&family=Open+Sans:wght@400;500&display=swap" rel="stylesheet">  
-
-    <!-- Icon Font Stylesheet -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/css/all.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css" rel="stylesheet">
-
-    <!-- Libraries Stylesheet -->
-    <link href="/static/lib/animate/animate.min.css" rel="stylesheet">
-    <link href="/static/lib/owlcarousel/assets/owl.carousel.min.css" rel="stylesheet">
-
-    <!-- Customized Bootstrap Stylesheet -->
-    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- Template Stylesheet -->
-    <link href="/static/css/style.css" rel="stylesheet">
-
-    <script src="/static/js/toast-utils.js"></script>
-    <link href="/static/css/mobile.css" rel="stylesheet">
+    <title>Send & Wire Money - Finanza Bank</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/css/user-portal.css" rel="stylesheet">
 </head>
+<body data-page-title="Move Money & Wires" data-page-subtitle="Instant Finanza P2P, Domestic ACH/Fedwire, International SWIFT & Standing Orders">
 
-<body>
-    <!-- Spinner Start -->
-    <div id="spinner" class="show bg-white position-fixed translate-middle w-100 vh-100 top-50 start-50 d-flex align-items-center justify-content-center">
-        <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
-            <span class="sr-only">Loading...</span>
+<div id="bank-page-content" style="display:none;">
+    <!-- Navigation Tabs -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div class="fb-tabs" id="transferNavTabs">
+            <button type="button" class="fb-tab-btn active" data-tab="domestic" onclick="switchTransferTab('domestic', this)">
+                <i class="fas fa-paper-plane"></i> Domestic & Finanza P2P
+            </button>
+            <button type="button" class="fb-tab-btn" data-tab="international" onclick="switchTransferTab('international', this)">
+                <i class="fas fa-earth-americas"></i> International SWIFT Wire
+            </button>
+            <button type="button" class="fb-tab-btn" data-tab="scheduled" onclick="switchTransferTab('scheduled', this)">
+                <i class="fas fa-calendar-check"></i> Scheduled & Recurring
+            </button>
+            <button type="button" class="fb-tab-btn" data-tab="recipients" onclick="switchTransferTab('recipients', this)">
+                <i class="fas fa-address-book"></i> Beneficiaries Book
+            </button>
         </div>
     </div>
-    <!-- Spinner End -->
 
-    <!-- Navbar Start -->
-    <div class="container-fluid fixed-top px-0 wow fadeIn" data-wow-delay="0.1s">
-        <nav class="navbar navbar-expand-lg navbar-light py-lg-0 px-lg-5 wow fadeIn" data-wow-delay="0.1s">
-            <a href="/user/dashboard" class="navbar-brand ms-4 ms-lg-0">
-                <h5 class="m-0 text-primary"><i class="fa fa-university me-2"></i>Finanza</h5>
-            </a>
-            <button type="button" class="navbar-toggler me-4" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarCollapse">
-                <div class="navbar-nav ms-auto p-4 p-lg-0">
-                    <a href="/user/dashboard" class="nav-item nav-link">Dashboard</a>
-                    <a href="/user/account" class="nav-item nav-link">Account</a>
-                    <a href="/user/kyc_form" class="nav-item nav-link">KYC</a>
-                    <div class="nav-item dropdown">
-                        <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Products</a>
-                        <div class="dropdown-menu border-light m-0">
-                            <a href="/user/cards" class="dropdown-item">Cards</a>
-                            <a href="/user/deposits" class="dropdown-item">Deposits</a>
-                            <a href="/user/loans" class="dropdown-item">Loans</a>
-                            <a href="/user/investments" class="dropdown-item">Investments</a>
-                            <a href="/user/bill_pay" class="dropdown-item">Transfers</a>
-                        </div>
-                    </div>
-                    <div class="nav-item dropdown">
-                        <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Services</a>
-                        <div class="dropdown-menu border-light m-0">
-                            <a href="/user/analytics" class="dropdown-item">Business Analysis</a>
-                            <a href="/user/treasury_portfolio" class="dropdown-item">Financial Planning</a>
-                            <a href="/user/insurance" class="dropdown-item">Insurance</a>
-                            <a href="/user/treasury_portfolio" class="dropdown-item">Projects</a>
-                        </div>
-                    </div>
-                    <div class="nav-item dropdown">
-                        <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">More</a>
-                        <div class="dropdown-menu border-light m-0">
-                            <a href="/user/profile" class="dropdown-item">Profile</a>
-                            <a href="/user/settings" class="dropdown-item">Settings</a>
-                            <a href="/user/notifications" class="dropdown-item">Notifications</a>
-                            <a href="/user/transactions" class="dropdown-item">Transactions</a>
-                            <a href="/user/security" class="dropdown-item">Security</a>
-                            <a href="/user/alerts" class="dropdown-item">Alerts</a>
-                            <a href="/user/contact" class="dropdown-item">Contact/Support</a>
-                            <hr class="m-2">
-                            <a href="/logout" class="dropdown-item text-danger">Logout</a>
-                        </div>
-                    </div>
+    <div class="row g-4">
+        <!-- Main Form Column -->
+        <div class="col-lg-7">
+            <!-- TAB 1: DOMESTIC & FINANZA P2P -->
+            <div class="fb-card transfer-pane" id="pane-domestic">
+                <div class="fb-card-header">
+                    <h2 class="fb-card-title"><i class="fas fa-paper-plane text-primary"></i> Domestic ACH / Wire & Finanza Instant Transfer</h2>
+                    <span class="fb-badge fb-badge-success">$0.00 Fee</span>
                 </div>
-            </div>
-        </nav>
-    </div>
-    <!-- Navbar End -->
-
-    <!-- Page Header Start -->
-    <div class="container-fluid page-header mb-5 wow fadeIn" data-wow-delay="0.1s">
-        <div class="container">
-            <h1 class="display-4 pb-3 animated slideInDown">Transfers</h1>
-            <nav aria-label="breadcrumb animated slideInDown">
-                <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item"><a class="text-white" href="/user/dashboard">Home</a></li>
-                    <li class="breadcrumb-item text-primary active" aria-current="page">Transfers</li>
-                </ol>
-            </nav>
-        </div>
-    </div>
-    <!-- Page Header End -->
-
-    <!-- Content Start -->
-    <div class="container-xxl py-5">
-        <div class="container">
-            <div class="row g-5">
-                <div class="col-lg-12 wow fadeInUp" data-wow-delay="0.1s">
-
-    <div class="container-fluid pt-4 pb-4">
-    <div class="row mb-4">
-        <div class="col-md-6">
-            <h2 class="mb-0">
-                <i class="fas fa-paper-plane me-2"></i>Send Money
-            </h2>
-        </div>
-    </div>
-
-    <!-- Transfer Tabs -->
-    <ul class="nav nav-tabs mb-4" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active" id="domesticTab" data-bs-toggle="tab" data-bs-target="#domesticTransfer" type="button" role="tab">
-                <i class="fas fa-exchange-alt me-1"></i>Domestic Transfer
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="internationTab" data-bs-toggle="tab" data-bs-target="#internationalTransfer" type="button" role="tab">
-                <i class="fas fa-globe me-1"></i>International Transfer
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="billPayTab" data-bs-toggle="tab" data-bs-target="#billPay" type="button" role="tab">
-                <i class="fas fa-file-invoice-dollar me-1"></i>Bill Pay
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link" id="historyTab" data-bs-toggle="tab" data-bs-target="#history" type="button" role="tab">
-                <i class="fas fa-history me-1"></i>History
-            </button>
-        </li>
-    </ul>
-
-    <!-- Tab Content -->
-    <div class="tab-content">
-        <!-- Domestic Transfer -->
-        <div class="tab-pane fade show active" id="domesticTransfer" role="tabpanel">
-            <div class="row">
-                <div class="col-lg-8">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="mb-0">Domestic Transfer</h5>
-                        </div>
-                        <div class="card-body">
-                            <form id="domesticForm">
-                                <h6 class="mb-3">From Account</h6>
-                                <div class="mb-3">
-                                    <label for="fromAccount" class="form-label">Select Account</label>
-                                    <select class="form-select" id="fromAccount" name="fromAccount" required>
-                                        <option value="">Choose account...</option>
-                                    </select>
-                                </div>
-
-                                <hr>
-                                <h6 class="mb-3">Recipient</h6>
-
-                                <div class="mb-3">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="recipientType" id="existingRecipient" value="existing" checked>
-                                        <label class="form-check-label" for="existingRecipient">
-                                            Existing Recipient
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <div class="mb-3" id="existingRecipientGroup">
-                                    <label for="recipientSelect" class="form-label">Select Recipient</label>
-                                    <select class="form-select" id="recipientSelect" name="recipientSelect">
-                                        <option value="">Loading recipients...</option>
-                                    </select>
-                                </div>
-
-                                <div class="mb-3">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="recipientType" id="newRecipient" value="new">
-                                        <label class="form-check-label" for="newRecipient">
-                                            New Recipient
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <div id="newRecipientGroup" style="display: none;">
-                                    <div class="mb-3">
-                                        <label for="recipientName" class="form-label">Recipient Name</label>
-                                        <input type="text" class="form-control" id="recipientName" name="recipientName">
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="recipientEmail" class="form-label">Email Address</label>
-                                        <input type="email" class="form-control" id="recipientEmail" name="recipientEmail">
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="accountType" class="form-label">Account Type</label>
-                                        <select class="form-select" id="accountType" name="accountType">
-                                            <option value="">Select type...</option>
-                                            <option value="checking">Checking</option>
-                                            <option value="savings">Savings</option>
-                                            <option value="money_market">Money Market</option>
-                                        </select>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="routingNumber" class="form-label">Routing Number</label>
-                                        <input type="text" class="form-control" id="routingNumber" name="routingNumber" placeholder="9 digits">
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="accountNumber" class="form-label">Account Number</label>
-                                        <input type="text" class="form-control" id="accountNumber" name="accountNumber" placeholder="Your account number">
-                                    </div>
-                                </div>
-
-                                <hr>
-                                <h6 class="mb-3">Transfer Details</h6>
-
-                                <div class="mb-3">
-                                    <label for="amount" class="form-label">Amount (USD)</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text">$</span>
-                                        <input type="number" class="form-control" id="amount" name="amount" step="0.01" min="0" required>
-                                    </div>
-                                    <small class="form-text text-muted">Minimum: $0.01 | Maximum: $10,000.00</small>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label for="transferDate" class="form-label">Transfer Date</label>
-                                    <select class="form-select" id="transferDate" name="transferDate" required>
-                                        <option value="today">Today</option>
-                                        <option value="schedule">Schedule for later</option>
-                                    </select>
-                                </div>
-
-                                <div id="scheduleDateGroup" style="display: none;">
-                                    <div class="mb-3">
-                                        <label for="scheduleDate" class="form-label">Date</label>
-                                        <input type="date" class="form-control" id="scheduleDate" name="scheduleDate">
-                                    </div>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label for="transferMemo" class="form-label">Memo (Optional)</label>
-                                    <textarea class="form-control" id="transferMemo" name="transferMemo" rows="2" maxlength="140"></textarea>
-                                    <small class="form-text text-muted">140 characters max</small>
-                                </div>
-
-                                <div class="alert alert-info" role="alert">
-                                    <i class="fas fa-info-circle me-2"></i>
-                                    <strong>Transfer Details:</strong>
-                                    <ul class="mb-0 mt-2">
-                                        <li>Domestic transfers typically arrive within 1-2 business days</li>
-                                        <li>Recipient will receive email notification</li>
-                                        <li>No transfer fees for domestic transfers</li>
-                                    </ul>
-                                </div>
-
-                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                                    <button type="reset" class="btn btn-outline-secondary">Clear</button>
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="fas fa-arrow-right me-1"></i>Continue to Review
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-lg-4">
-                    <div class="card mb-3">
-                        <div class="card-header">
-                            <h6 class="mb-0">Need Help?</h6>
-                        </div>
-                        <div class="card-body">
-                            <p class="mb-2"><strong>How long does it take?</strong></p>
-                            <p class="small text-muted mb-3">Domestic transfers usually arrive within 1-2 business days.</p>
-                            
-                            <p class="mb-2"><strong>Are there fees?</strong></p>
-                            <p class="small text-muted mb-3">No fees for transfers to US accounts. International transfers may apply.</p>
-                            
-                            <p class="mb-2"><strong>What information do I need?</strong></p>
-                            <p class="small text-muted">Routing number and account number of the recipient.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- International Transfer -->
-        <div class="tab-pane fade" id="internationalTransfer" role="tabpanel">
-            <div class="row">
-                <div class="col-lg-8">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="mb-0">International Transfer</h5>
-                        </div>
-                        <div class="card-body">
-                            <div class="alert alert-warning" role="alert">
-                                <i class="fas fa-exclamation-triangle me-2"></i>
-                                International transfers incur additional fees and may take 3-5 business days.
+                <div class="fb-card-body">
+                    <form id="domesticTransferForm">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">From Source Account</label>
+                                <select class="form-select source-account-select" id="domSourceAccount" required></select>
                             </div>
-                            
-                            <form id="internationalForm">
-                                <div class="mb-3">
-                                    <label for="intFromAccount" class="form-label">From Account</label>
-                                    <select class="form-select" id="intFromAccount" name="fromAccount" required>
-                                        <option value="">Choose account...</option>
-                                    </select>
+                            <div class="col-md-6">
+                                <label class="form-label">Transfer Rail</label>
+                                <select class="form-select" id="domTransferType">
+                                    <option value="p2p_transfer">Finanza Instant Internal Transfer (Real-Time)</option>
+                                    <option value="ach_transfer">Domestic ACH Bank Transfer (1–2 Business Days)</option>
+                                    <option value="domestic_wire">Domestic Same-Day Fedwire</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Quick Select Saved Beneficiary</label>
+                                <select class="form-select" id="domSavedRecipientSelect" onchange="prefillFromSavedRecipient(this.value)">
+                                    <option value="">— Enter New Recipient Below —</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Recipient Full Name / Business</label>
+                                <input type="text" class="form-control" id="domRecipientName" placeholder="e.g., Jonathan Sterling" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Recipient Account Number</label>
+                                <input type="text" class="form-control font-mono" id="domRecipientAccount" placeholder="10-digit Account Number" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">ABA Routing Number / Finanza Email</label>
+                                <input type="text" class="form-control" id="domRoutingOrEmail" placeholder="021000021 or user@email.com">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Transfer Amount (USD)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text fw-bold">$</span>
+                                    <input type="number" class="form-control fw-bold" id="domAmount" min="1" step="0.01" placeholder="0.00" required>
                                 </div>
-
-                                <div class="mb-3">
-                                    <label for="recipientCountry" class="form-label">Recipient Country</label>
-                                    <select class="form-select" id="recipientCountry" name="country" required>
-                                        <option value="">Select country...</option>
-                                    </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Reference / Memo</label>
+                                <input type="text" class="form-control" id="domMemo" placeholder="Invoice #402 / Family Transfer">
+                            </div>
+                            <div class="col-12">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="domSaveRecipient" checked>
+                                    <label class="form-check-label small" for="domSaveRecipient">
+                                        Save this beneficiary to my address book for future 1-click transfers
+                                    </label>
                                 </div>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-end mt-4">
+                            <button type="submit" class="btn btn-primary px-4" id="domSubmitBtn">
+                                <i class="fas fa-paper-plane me-2"></i> Authorize & Send Funds
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
 
-                                <div class="mb-3">
-                                    <label for="intRecipientName" class="form-label">Recipient Name</label>
-                                    <input type="text" class="form-control" id="intRecipientName" name="recipientName" required>
+            <!-- TAB 2: INTERNATIONAL SWIFT WIRE -->
+            <div class="fb-card transfer-pane" id="pane-international" style="display:none;">
+                <div class="fb-card-header">
+                    <h2 class="fb-card-title"><i class="fas fa-earth-americas text-primary"></i> International SWIFT / IBAN Wire Transfer</h2>
+                    <span class="fb-badge fb-badge-info">1.50% Wire Fee</span>
+                </div>
+                <div class="fb-card-body">
+                    <form id="intlTransferForm">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Debit From Account</label>
+                                <select class="form-select source-account-select" id="intlSourceAccount" required></select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Destination Country</label>
+                                <select class="form-select" id="intlCountry" required>
+                                    <option value="GB">United Kingdom (GBP / EUR)</option>
+                                    <option value="DE">Germany / Eurozone (EUR)</option>
+                                    <option value="CA">Canada (CAD)</option>
+                                    <option value="CH">Switzerland (CHF)</option>
+                                    <option value="JP">Japan (JPY)</option>
+                                    <option value="AU">Australia (AUD)</option>
+                                    <option value="NG">Nigeria (NGN / USD)</option>
+                                    <option value="ZA">South Africa (ZAR)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Beneficiary Full Name</label>
+                                <input type="text" class="form-control" id="intlRecipientName" placeholder="Beneficiary Legal Name" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Beneficiary Bank Name</label>
+                                <input type="text" class="form-control" id="intlBankName" placeholder="e.g., Barclays Bank PLC" required>
+                            </div>
+                            <div class="col-md-7">
+                                <label class="form-label">IBAN or International Account Number</label>
+                                <input type="text" class="form-control font-mono" id="intlIban" placeholder="GB29 NWBK 6016 1331 9268 19" required>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label">SWIFT / BIC Code</label>
+                                <input type="text" class="form-control font-mono text-uppercase" id="intlSwift" placeholder="BARCGB22XXX" required>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label">Send Amount (USD)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text fw-bold">$</span>
+                                    <input type="number" class="form-control fw-bold" id="intlAmount" min="10" step="0.01" placeholder="1000.00" oninput="updateIntlPreview()" required>
                                 </div>
-
-                                <div class="mb-3">
-                                    <label for="intAmount" class="form-label">Amount (USD)</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text">$</span>
-                                        <input type="number" class="form-control" id="intAmount" name="amount" step="0.01" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Target Currency</label>
+                                <select class="form-select" id="intlCurrency" onchange="updateIntlPreview()">
+                                    <option value="EUR" data-rate="0.92">EUR — Euro</option>
+                                    <option value="GBP" data-rate="0.79">GBP — British Pound</option>
+                                    <option value="CAD" data-rate="1.36">CAD — Canadian Dollar</option>
+                                    <option value="CHF" data-rate="0.88">CHF — Swiss Franc</option>
+                                    <option value="JPY" data-rate="151.40">JPY — Japanese Yen</option>
+                                    <option value="AUD" data-rate="1.52">AUD — Australian Dollar</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Wire Fee (1.5%)</label>
+                                <input type="text" class="form-control bg-light font-mono" id="intlFeeDisplay" value="$0.00" readonly>
+                            </div>
+                            <div class="col-12">
+                                <div class="p-3 rounded-3 bg-light border d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <small class="text-muted d-block">Estimated Recipient Payout</small>
+                                        <span class="fs-5 fw-extrabold text-primary tabular-nums" id="intlConvertedPreview">0.00 EUR</span>
+                                    </div>
+                                    <div class="text-end">
+                                        <small class="text-muted d-block">Total Debit (Principal + Fee)</small>
+                                        <span class="fs-6 fw-bold tabular-nums" id="intlTotalDebitPreview">$0.00</span>
                                     </div>
                                 </div>
-
-                                <div class="alert alert-info">
-                                    <strong>Estimated Fee:</strong> <span id="estFee">$0.00</span>
-                                </div>
-
-                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                                    <button type="reset" class="btn btn-outline-secondary">Clear</button>
-                                    <button type="submit" class="btn btn-primary">Continue to Review</button>
-                                </div>
-                            </form>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Purpose of Wire / Compliance Remittance Note</label>
+                                <input type="text" class="form-control" id="intlMemo" placeholder="International supplier invoice / tuition / family support" required>
+                            </div>
                         </div>
-                    </div>
+                        <div class="d-flex justify-content-end mt-4">
+                            <button type="submit" class="btn btn-primary px-4" id="intlSubmitBtn">
+                                <i class="fas fa-globe me-2"></i> Execute SWIFT Wire
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- TAB 3: SCHEDULED & RECURRING STANDING ORDERS -->
+            <div class="fb-card transfer-pane" id="pane-scheduled" style="display:none;">
+                <div class="fb-card-header">
+                    <h2 class="fb-card-title"><i class="fas fa-calendar-check text-primary"></i> Create Standing Order / Scheduled Transfer</h2>
+                </div>
+                <div class="fb-card-body">
+                    <form id="scheduledTransferForm">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">From Source Account</label>
+                                <select class="form-select source-account-select" id="schedSourceAccount" required></select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Frequency</label>
+                                <select class="form-select" id="schedFrequency">
+                                    <option value="once">One-Time Future Date</option>
+                                    <option value="weekly">Weekly Standing Order</option>
+                                    <option value="biweekly">Bi-Weekly (Every 2 Weeks)</option>
+                                    <option value="monthly" selected>Monthly Standing Order</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Beneficiary Name</label>
+                                <input type="text" class="form-control" id="schedRecipientName" placeholder="Recipient or Landlord Name" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Beneficiary Account #</label>
+                                <input type="text" class="form-control font-mono" id="schedRecipientAccount" placeholder="Account Number" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Amount (USD)</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    <input type="number" class="form-control" id="schedAmount" min="1" step="0.01" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">First Execution Date</label>
+                                <input type="date" class="form-control" id="schedStartDate" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Memo</label>
+                                <input type="text" class="form-control" id="schedMemo" placeholder="Monthly Rent / Savings">
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-end mt-4">
+                            <button type="submit" class="btn btn-primary px-4" id="schedSubmitBtn">
+                                <i class="fas fa-clock me-2"></i> Schedule Standing Order
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- TAB 4: BENEFICIARIES ADDRESS BOOK -->
+            <div class="fb-card transfer-pane" id="pane-recipients" style="display:none;">
+                <div class="fb-card-header">
+                    <h2 class="fb-card-title"><i class="fas fa-address-book text-primary"></i> Saved Beneficiaries</h2>
+                </div>
+                <div class="fb-card-body">
+                    <form id="addBeneficiaryForm" class="row g-2 pb-4 mb-3 border-bottom">
+                        <div class="col-md-4">
+                            <input type="text" class="form-control form-control-sm" id="benName" placeholder="Full Name / Company" required>
+                        </div>
+                        <div class="col-md-3">
+                            <input type="text" class="form-control form-control-sm font-mono" id="benAccount" placeholder="Account # / IBAN" required>
+                        </div>
+                        <div class="col-md-3">
+                            <input type="text" class="form-control form-control-sm" id="benBank" placeholder="Bank Name / Routing">
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-sm btn-primary w-100"><i class="fas fa-plus me-1"></i>Save</button>
+                        </div>
+                    </form>
+                    <div id="beneficiariesListContainer"></div>
                 </div>
             </div>
         </div>
 
-        <!-- Bill Pay -->
-        <div class="tab-pane fade" id="billPay" role="tabpanel">
-            <div class="row">
-                <div class="col-lg-8">
-                    <div class="card">
-                        <div class="card-header">
-                            <h5 class="mb-0">Pay a Bill</h5>
-                        </div>
-                        <div class="card-body">
-                            <form id="billPayForm">
-                                <div class="mb-3">
-                                    <label for="billFromAccount" class="form-label">From Account</label>
-                                    <select class="form-select" id="billFromAccount" name="fromAccount" required>
-                                        <option value="">Choose account...</option>
-                                    </select>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label for="biller" class="form-label">Select Biller</label>
-                                    <input type="text" class="form-control" id="biller" name="biller" placeholder="Search billers...">
-                                    <div id="billerList" class="mt-2"></div>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label for="billAmount" class="form-label">Amount</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text">$</span>
-                                        <input type="number" class="form-control" id="billAmount" name="amount" step="0.01" required>
-                                    </div>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label for="billDate" class="form-label">Payment Date</label>
-                                    <input type="date" class="form-control" id="billDate" name="paymentDate" required>
-                                </div>
-
-                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                                    <button type="reset" class="btn btn-outline-secondary">Clear</button>
-                                    <button type="submit" class="btn btn-primary">Schedule Payment</button>
-                                </div>
-                            </form>
-                        </div>
+        <!-- Right Column: Transfer History & Limits -->
+        <div class="col-lg-5">
+            <div class="fb-card mb-4">
+                <div class="fb-card-header">
+                    <h3 class="fb-card-title"><i class="fas fa-shield-halved text-success"></i> Real-Time Settlement & Limits</h3>
+                </div>
+                <div class="fb-card-body small">
+                    <div class="d-flex justify-content-between py-2 border-bottom">
+                        <span class="text-muted">Finanza P2P Internal Transfer</span>
+                        <span class="fw-bold text-success">Instant • $0.00 Fee</span>
+                    </div>
+                    <div class="d-flex justify-content-between py-2 border-bottom">
+                        <span class="text-muted">Domestic ACH Transfer</span>
+                        <span class="fw-bold">1–2 Days • $0.00 Fee</span>
+                    </div>
+                    <div class="d-flex justify-content-between py-2 border-bottom">
+                        <span class="text-muted">International SWIFT Wire</span>
+                        <span class="fw-bold">Same/Next Day • 1.50% Fee</span>
+                    </div>
+                    <div class="d-flex justify-content-between pt-2">
+                        <span class="text-muted">Available Primary Balance</span>
+                        <span class="fw-extrabold text-primary tabular-nums" id="transferSideBalance">$0.00</span>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- History -->
-        <div class="tab-pane fade" id="history" role="tabpanel">
-            <div class="card">
+            <div class="fb-card">
+                <div class="fb-card-header">
+                    <h3 class="fb-card-title"><i class="fas fa-clock-rotate-left text-primary"></i> Recent Outbound & Inbound Transfers</h3>
+                </div>
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
+                    <table class="fb-table">
+                        <thead>
                             <tr>
                                 <th>Date</th>
-                                <th>Type</th>
-                                <th>Recipient</th>
-                                <th>Amount</th>
-                                <th>Status</th>
-                                <th>Action</th>
+                                <th>Recipient / Type</th>
+                                <th class="text-end">Amount</th>
+                                <th class="text-end">Receipt</th>
                             </tr>
                         </thead>
-                        <tbody id="transferHistory">
-                            <tr><td colspan="6" class="text-center py-4">Loading...</td></tr>
+                        <tbody id="recentTransfersBody">
+                            <tr><td colspan="4" class="text-center py-4 text-muted">Loading transfer history...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -427,241 +319,271 @@
     </div>
 </div>
 
-<!-- Review Modal -->
-<div class="modal fade" id="reviewModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Review Transfer</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="reviewContent">
-                <!-- Will be populated by JavaScript -->
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" id="confirmTransfer">Confirm Transfer</button>
-            </div>
-        </div>
-    </div>
-</div>
-
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/static/js/user-shell.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    loadAccounts();
-    loadRecipients();
-    loadTransferHistory();
+let savedRecipients = [];
+let transferHistory = [];
 
-    // Handle tab switches
-    document.getElementById('transferDate').addEventListener('change', function() {
-        const scheduleGroup = document.getElementById('scheduleDateGroup');
-        scheduleGroup.style.display = this.value === 'schedule' ? 'block' : 'none';
-    });
+function switchTransferTab(tabName, btnEl) {
+    document.querySelectorAll('.transfer-pane').forEach(p => p.style.display = 'none');
+    const target = document.getElementById(`pane-${tabName}`);
+    if (target) target.style.display = 'block';
 
-    // Handle recipient type toggle
-    document.querySelectorAll('input[name="recipientType"]').forEach(radio => {
-        radio.addEventListener('change', function() {
-            document.getElementById('existingRecipientGroup').style.display = this.value === 'existing' ? 'block' : 'none';
-            document.getElementById('newRecipientGroup').style.display = this.value === 'new' ? 'block' : 'none';
+    document.querySelectorAll('#transferNavTabs .fb-tab-btn').forEach(b => b.classList.remove('active'));
+    if (btnEl) {
+        btnEl.classList.add('active');
+    } else {
+        const matchBtn = document.querySelector(`#transferNavTabs .fb-tab-btn[data-tab="${tabName}"]`);
+        if (matchBtn) matchBtn.classList.add('active');
+    }
+}
+
+function updateIntlPreview() {
+    const amt = parseFloat(document.getElementById('intlAmount').value || 0);
+    const sel = document.getElementById('intlCurrency');
+    const opt = sel.options[sel.selectedIndex];
+    const rate = parseFloat(opt.dataset.rate || 1);
+    const cur = sel.value;
+    const fee = Math.round(amt * 0.015 * 100) / 100;
+    const total = amt + fee;
+    const converted = (amt * rate).toFixed(2);
+
+    document.getElementById('intlFeeDisplay').value = `$${fee.toFixed(2)}`;
+    document.getElementById('intlConvertedPreview').textContent = `${Number(converted).toLocaleString()} ${cur}`;
+    document.getElementById('intlTotalDebitPreview').textContent = `$${total.toFixed(2)}`;
+}
+
+async function loadTransfersWorkspace() {
+    // Auto-select tab based on URL path
+    const path = window.location.pathname;
+    if (path.includes('international_transfers')) switchTransferTab('international');
+    else if (path.includes('scheduled_transfers')) switchTransferTab('scheduled');
+
+    const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+    const schedDate = document.getElementById('schedStartDate');
+    if (schedDate && !schedDate.value) schedDate.value = tomorrow;
+
+    try {
+        const [accRes, recRes, trfRes] = await Promise.allSettled([
+            FinanzaShell.api('/api/user/accounts'),
+            FinanzaShell.api('/api/user/recipients'),
+            FinanzaShell.api('/api/user/transfers?limit=25')
+        ]);
+
+        const accounts = accRes.status === 'fulfilled'
+            ? (Array.isArray(accRes.value) ? accRes.value : (accRes.value.accounts || []))
+            : [];
+        savedRecipients = (recRes.status === 'fulfilled' && Array.isArray(recRes.value)) ? recRes.value : [];
+        transferHistory = (trfRes.status === 'fulfilled' && Array.isArray(trfRes.value)) ? trfRes.value : [];
+
+        // Populate source account selects
+        const acctOptions = accounts.map(a =>
+            `<option value="${a.id}">${(a.account_type || 'Checking').toUpperCase()} (${a.account_number}) — ${FinanzaShell.fmt(a.balance, a.currency || 'USD', true)}</option>`
+        ).join('');
+        document.querySelectorAll('.source-account-select').forEach(sel => {
+            sel.innerHTML = acctOptions || '<option value="">Primary Checking Account</option>';
         });
-    });
 
-    // Form submissions
-    document.getElementById('domesticForm').addEventListener('submit', handleDomesticTransfer);
-    document.getElementById('billPayForm').addEventListener('submit', handleBillPay);
+        const totalBal = accounts.reduce((s, a) => s + Number(a.balance || 0), 0);
+        document.getElementById('transferSideBalance').textContent = FinanzaShell.fmt(totalBal);
+
+        // Populate saved recipients dropdown & list
+        const recSelect = document.getElementById('domSavedRecipientSelect');
+        recSelect.innerHTML = '<option value="">— Enter New Recipient Below —</option>' +
+            savedRecipients.map((r, idx) => `<option value="${idx}">${r.name} (${r.account_number || r.email || 'Saved'})</option>`).join('');
+
+        const benContainer = document.getElementById('beneficiariesListContainer');
+        if (!savedRecipients.length) {
+            benContainer.innerHTML = `<div class="text-center py-4 text-muted small">No saved beneficiaries yet. Add one above or check "Save beneficiary" during a transfer.</div>`;
+        } else {
+            benContainer.innerHTML = savedRecipients.map((r, i) => `
+                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                    <div>
+                        <div class="fw-bold">${r.name}</div>
+                        <small class="text-muted"><code class="bank-code">${r.account_number || r.email || '—'}</code> • ${r.bank_name || 'Bank'}</small>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectBeneficiaryAndSend(${i})">
+                        <i class="fas fa-paper-plane me-1"></i>Send Money
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // Render recent transfers
+        const tbody = document.getElementById('recentTransfersBody');
+        if (!transferHistory.length) {
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-muted small">No transfers executed yet.</td></tr>`;
+        } else {
+            tbody.innerHTML = transferHistory.slice(0, 12).map((t, idx) => {
+                const isCredit = (t.direction || '').toLowerCase() === 'credit';
+                return `
+                    <tr>
+                        <td class="text-nowrap small">${FinanzaShell.fmtDate(t.created_at)}</td>
+                        <td>
+                            <div class="fw-semibold small">${t.recipient_name || 'Transfer'}</div>
+                            <code class="bank-code text-muted" style="font-size:0.72rem;">${t.reference_number || ('TXN-' + t.id)}</code>
+                        </td>
+                        <td class="text-end tabular-nums fw-bold ${isCredit ? 'text-success' : 'text-dark'}">
+                            ${isCredit ? '+' : '-'}${FinanzaShell.fmt(t.amount)}
+                        </td>
+                        <td class="text-end">
+                            <button type="button" class="btn btn-sm btn-light border py-0 px-2" onclick="FinanzaShell.showReceipt(transferHistory[${idx}])">
+                                <i class="fas fa-receipt"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+    } catch (err) {
+        console.error('[Transfers] Load error:', err);
+    }
+}
+
+function prefillFromSavedRecipient(indexStr) {
+    if (indexStr === '') return;
+    const r = savedRecipients[Number(indexStr)];
+    if (!r) return;
+    document.getElementById('domRecipientName').value = r.name || '';
+    document.getElementById('domRecipientAccount').value = r.account_number || '';
+    document.getElementById('domRoutingOrEmail').value = r.routing_number || r.email || '';
+}
+
+function selectBeneficiaryAndSend(index) {
+    switchTransferTab('domestic');
+    document.getElementById('domSavedRecipientSelect').value = String(index);
+    prefillFromSavedRecipient(String(index));
+    document.getElementById('domAmount').focus();
+}
+
+// Domestic & P2P Form Submit
+document.getElementById('domesticTransferForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('domSubmitBtn');
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing Transfer...';
+    try {
+        const routingOrEmail = document.getElementById('domRoutingOrEmail').value.trim();
+        const isEmail = routingOrEmail.includes('@');
+        const res = await FinanzaShell.api('/api/user/transfers', {
+            method: 'POST',
+            body: {
+                from_account_id: document.getElementById('domSourceAccount').value,
+                transfer_type: document.getElementById('domTransferType').value,
+                recipient_name: document.getElementById('domRecipientName').value,
+                recipient_account: document.getElementById('domRecipientAccount').value,
+                recipient_email: isEmail ? routingOrEmail : '',
+                routing_number: !isEmail ? routingOrEmail : '',
+                amount: parseFloat(document.getElementById('domAmount').value),
+                memo: document.getElementById('domMemo').value,
+                save_recipient: document.getElementById('domSaveRecipient').checked
+            }
+        });
+        FinanzaShell.toast(`${res.message} (Ref: ${res.reference_number})`, 'success');
+        e.target.reset();
+        await FinanzaShell.refreshUserContext();
+        await loadTransfersWorkspace();
+    } catch (err) {
+        FinanzaShell.toast(err.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = orig;
+    }
 });
 
-async function loadAccounts() {
-    try {
-        const response = await fetch('/api/accounts', {
-            credentials: 'include'
-        });
-        const accounts = await response.json();
-        
-        const selects = ['fromAccount', 'intFromAccount', 'billFromAccount'];
-        selects.forEach(id => {
-            const select = document.getElementById(id);
-            select.innerHTML = accounts.map(a => 
-                `<option value="${a.id}">${a.name} - $${a.balance.toFixed(2)}</option>`
-            ).join('');
-        });
-    } catch (error) {
-        console.error('Error loading accounts:', error);
-    }
-}
-
-async function loadRecipients() {
-    try {
-        const response = await fetch('/api/recipients', {
-            credentials: 'include'
-        });
-        const recipients = await response.json();
-        
-        const select = document.getElementById('recipientSelect');
-        select.innerHTML = recipients.map(r => 
-            `<option value="${r.id}">${r.name} (${r.account_type})</option>`
-        ).join('');
-    } catch (error) {
-        console.error('Error loading recipients:', error);
-    }
-}
-
-async function loadTransferHistory() {
-    try {
-        const response = await fetch('/api/transfers?limit=10', {
-            credentials: 'include'
-        });
-        const transfers = await response.json();
-        
-        const tbody = document.getElementById('transferHistory');
-        if (transfers.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-4">No transfers yet</td></tr>';
-            return;
-        }
-
-        tbody.innerHTML = transfers.map(t => `
-            <tr>
-                <td>${new Date(t.created_at).toLocaleDateString()}</td>
-                <td><span class="badge bg-light text-dark">${t.type}</span></td>
-                <td>${t.recipient_name}</td>
-                <td>$${t.amount.toFixed(2)}</td>
-                <td><span class="badge badge-${t.status}">${t.status}</span></td>
-                <td><button class="btn btn-sm btn-outline-primary">Details</button></td>
-            </tr>
-        `).join('');
-    } catch (error) {
-        console.error('Error loading transfer history:', error);
-    }
-}
-
-async function handleDomesticTransfer(e) {
+// International SWIFT Wire Submit
+document.getElementById('intlTransferForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    // Validate and show review modal
-    const reviewModal = new bootstrap.Modal(document.getElementById('reviewModal'));
-    reviewModal.show();
-}
+    const btn = document.getElementById('intlSubmitBtn');
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Transmitting SWIFT Wire...';
+    try {
+        const res = await FinanzaShell.api('/api/user/transfers', {
+            method: 'POST',
+            body: {
+                from_account_id: document.getElementById('intlSourceAccount').value,
+                transfer_type: 'international_wire',
+                recipient_name: document.getElementById('intlRecipientName').value,
+                recipient_account: document.getElementById('intlIban').value,
+                routing_number: document.getElementById('intlSwift').value,
+                country: document.getElementById('intlCountry').value,
+                currency: document.getElementById('intlCurrency').value,
+                amount: parseFloat(document.getElementById('intlAmount').value),
+                memo: `${document.getElementById('intlBankName').value} — ${document.getElementById('intlMemo').value}`,
+                save_recipient: true
+            }
+        });
+        FinanzaShell.toast(`International wire completed! Ref: ${res.reference_number}`, 'success');
+        e.target.reset();
+        updateIntlPreview();
+        await FinanzaShell.refreshUserContext();
+        await loadTransfersWorkspace();
+    } catch (err) {
+        FinanzaShell.toast(err.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = orig;
+    }
+});
 
-async function handleBillPay(e) {
+// Scheduled Standing Order Submit
+document.getElementById('scheduledTransferForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    // Handle bill pay submission
-}
+    const btn = document.getElementById('schedSubmitBtn');
+    const orig = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Scheduling...';
+    try {
+        const freq = document.getElementById('schedFrequency').value;
+        const startDate = document.getElementById('schedStartDate').value;
+        const res = await FinanzaShell.api('/api/user/transfers', {
+            method: 'POST',
+            body: {
+                from_account_id: document.getElementById('schedSourceAccount').value,
+                transfer_type: `scheduled_${freq}_transfer`,
+                recipient_name: document.getElementById('schedRecipientName').value,
+                recipient_account: document.getElementById('schedRecipientAccount').value,
+                amount: parseFloat(document.getElementById('schedAmount').value),
+                memo: `${document.getElementById('schedMemo').value || 'Standing Order'} (Starts ${startDate})`
+            }
+        });
+        FinanzaShell.toast(`Standing order authorized! Ref: ${res.reference_number}`, 'success');
+        e.target.reset();
+        await FinanzaShell.refreshUserContext();
+        await loadTransfersWorkspace();
+    } catch (err) {
+        FinanzaShell.toast(err.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = orig;
+    }
+});
 
-window.confirmTransfer = async function() {
-    // Implement transfer confirmation logic
-    console.log('Transfer confirmed');
-};
+// Add Beneficiary Form
+document.getElementById('addBeneficiaryForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+        await FinanzaShell.api('/api/user/recipients', {
+            method: 'POST',
+            body: {
+                name: document.getElementById('benName').value,
+                account_number: document.getElementById('benAccount').value,
+                bank_name: document.getElementById('benBank').value
+            }
+        });
+        FinanzaShell.toast('Beneficiary saved to address book.', 'success');
+        e.target.reset();
+        await loadTransfersWorkspace();
+    } catch (err) {
+        FinanzaShell.toast(err.message, 'error');
+    }
+});
+
+document.addEventListener('DOMContentLoaded', loadTransfersWorkspace);
+window.addEventListener('finanza:mask-changed', loadTransfersWorkspace);
 </script>
-
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- Content End -->
-
-    <!-- Footer Start -->
-    <div class="container-fluid bg-dark text-light footer mt-5 py-5 wow fadeIn" data-wow-delay="0.1s">
-        <div class="container py-5">
-            <div class="row g-5">
-                <div class="col-lg-3 col-md-6">
-                    <h5 class="text-white mb-4">Address</h5>
-                    <p class="mb-2"><i class="fa fa-map-marker-alt me-3"></i>100 Financial Ave, New York, NY 10001</p>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- Footer End -->
-
-    <a href="#" class="btn btn-lg btn-primary btn-lg-square back-to-top"><i class="bi bi-arrow-up"></i></a>
-
-    <!-- JavaScript Libraries -->
-    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/static/lib/wow/wow.min.js"></script>
-    <script src="/static/lib/easing/easing.min.js"></script>
-    <script src="/static/lib/waypoints/waypoints.min.js"></script>
-    <script src="/static/lib/counterup/counterup.min.js"></script>
-    <script src="/static/lib/owlcarousel/owl.carousel.min.js"></script>
-    <script src="/static/js/main.js"></script>
-    <script src="/static/js/user-guard.js"></script>
-    <!-- Mobile Bottom Navigation Bar -->
-    <div id="mobile-bottom-nav" role="navigation" aria-label="Mobile navigation">
-        <a href="/user/dashboard" class="mobile-nav-item" id="mbnav-home">
-            <i class="fas fa-home"></i>
-            Home
-        </a>
-        <a href="/user/transfers" class="mobile-nav-item" id="mbnav-transfer">
-            <i class="fas fa-exchange-alt"></i>
-            Transfer
-        </a>
-        <a href="/user/cards" class="mobile-nav-item" id="mbnav-cards">
-            <i class="fas fa-credit-card"></i>
-            Cards
-        </a>
-        <a href="/user/transactions" class="mobile-nav-item" id="mbnav-txn">
-            <i class="fas fa-list-alt"></i>
-            Activity
-        </a>
-        <div class="mobile-nav-item" id="mbnav-more" onclick="toggleMobileMoreMenu()">
-            <i class="fas fa-th"></i>
-            More
-        </div>
-    </div>
-
-    <!-- Mobile More Menu -->
-    <div id="mobile-more-overlay" onclick="closeMobileMoreMenu()"></div>
-    <div id="mobile-more-menu">
-        <a href="/user/account" class="mobile-more-item"><i class="fas fa-university"></i>Account</a>
-        <a href="/user/loans" class="mobile-more-item"><i class="fas fa-hand-holding-usd"></i>Loans</a>
-        <a href="/user/deposits" class="mobile-more-item"><i class="fas fa-piggy-bank"></i>Deposits</a>
-        <a href="/user/investments" class="mobile-more-item"><i class="fas fa-chart-line"></i>Invest</a>
-        <a href="/user/kyc_form" class="mobile-more-item"><i class="fas fa-id-card"></i>KYC</a>
-        <a href="/user/notifications" class="mobile-more-item"><i class="fas fa-bell"></i>Alerts</a>
-        <a href="/user/settings" class="mobile-more-item"><i class="fas fa-cog"></i>Settings</a>
-        <a href="/user/security" class="mobile-more-item"><i class="fas fa-shield-alt"></i>Security</a>
-        <a href="/user/profile" class="mobile-more-item"><i class="fas fa-user"></i>Profile</a>
-        <a href="/user/bill_pay" class="mobile-more-item"><i class="fas fa-file-invoice-dollar"></i>Bill Pay</a>
-        <a href="/user/international_transfers" class="mobile-more-item"><i class="fas fa-globe"></i>Intl Transfer</a>
-        <a href="#" onclick="typeof handleLogout !== 'undefined' ? handleLogout(event) : (window.location='/auth/logout')" class="mobile-more-item" style="color:#dc3545;"><i class="fas fa-sign-out-alt" style="color:#dc3545;"></i>Logout</a>
-    </div>
-
-    <script>
-    // Mobile more menu toggle
-    function toggleMobileMoreMenu() {
-        var menu = document.getElementById('mobile-more-menu');
-        var overlay = document.getElementById('mobile-more-overlay');
-        var isOpen = menu.classList.contains('open');
-        if (isOpen) {
-            menu.classList.remove('open');
-            overlay.classList.remove('open');
-        } else {
-            menu.classList.add('open');
-            overlay.classList.add('open');
-        }
-    }
-    function closeMobileMoreMenu() {
-        document.getElementById('mobile-more-menu').classList.remove('open');
-        document.getElementById('mobile-more-overlay').classList.remove('open');
-    }
-    // Highlight the active mobile nav tab based on current URL
-    (function() {
-        var path = window.location.pathname;
-        var map = {
-            '/user/dashboard': 'mbnav-home',
-            '/user/transfers': 'mbnav-transfer',
-            '/user/bill_pay': 'mbnav-transfer',
-            '/user/cards': 'mbnav-cards',
-            '/user/transactions': 'mbnav-txn',
-        };
-        var activeId = null;
-        for (var key in map) {
-            if (path.indexOf(key) !== -1) { activeId = map[key]; break; }
-        }
-        if (activeId) {
-            var el = document.getElementById(activeId);
-            if (el) el.classList.add('active');
-        }
-    })();
-    </script>
 </body>
-
 </html>

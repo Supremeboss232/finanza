@@ -9,7 +9,7 @@ from models import User
 from loan_origination_service import LoanOriginationService
 from rbac import require_permission
 
-router = APIRouter(prefix="/loans", tags=["loans"])
+router = APIRouter(prefix="/api/v1/loans", tags=["loans"])
 
 
 @router.post("/apply")

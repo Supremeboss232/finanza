@@ -17,7 +17,7 @@ from decimal import Decimal
 from deps import CurrentUserDep, SessionDep
 from payment_processing_service import PaymentProcessingService
 
-router = APIRouter(prefix="/payments", tags=["payments"])
+router = APIRouter(prefix="/api/v1/payments", tags=["payments"])
 
 
 @router.post("/initiate")

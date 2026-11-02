@@ -8,7 +8,7 @@ from deps import get_current_admin_user, SessionDep
 from schemas import FormSubmission as PydanticFormSubmission, FormSubmissionCreate
 from crud import get_form_submission, create_form_submission
 
-forms_router = APIRouter(prefix="/forms", tags=["forms"])
+forms_router = APIRouter(prefix="/api/v1/forms", tags=["forms"])
 
 
 @forms_router.post("/", response_model=PydanticFormSubmission, status_code=status.HTTP_201_CREATED)

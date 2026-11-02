@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -190,7 +190,7 @@
                                         Keep me signed in (14 days)
                                     </label>
                                 </div>
-                                <a href="/static/forgot_password.html" class="text-decoration-none small">Forgot password?</a>
+                                <a href="/forgot-password" class="text-decoration-none small">Forgot password?</a>
                             </div>
                             
                             <!-- Sign In Button with Loading State -->
@@ -275,7 +275,7 @@
         // ==================== API CONFIGURATION MANAGEMENT ====================
         const CONFIG = {
             // API Configuration - allows easy switching between environments
-            API_BASE_URL: window.location.origin,  // Auto-detect: http://localhost or https://yourdomain.com
+            API_BASE_URL: window.location.origin,  // Auto-detect:  or https://yourdomain.com
             ENDPOINTS: {
                 LOGIN: '/api/v1/auth/login',              // POST - Main login endpoint
                 CSRF_TOKEN: '/api/v1/auth/csrf-token',    // GET - CSRF token provider
@@ -949,6 +949,14 @@
                 if (response.ok) {
                     // ==================== SUCCESS: LOGIN SUCCESSFUL ====================
                     debugLog('Login successful');
+                    
+                    // Check if response explicitly indicates failure despite 200 OK
+                    if (data.success === false) {
+                        const errMsg = data.detail || 'Authentication failed.';
+                        showAlert(`❌ ${errMsg}`, 'danger');
+                        await logLoginAudit(false, username, false);
+                        return;
+                    }
                     
                     // ==================== CRITICAL SECURITY CHECK #1: Verify response contains required auth fields ====================
                     if (!data.user_id || !data.email || !data.access_token) {

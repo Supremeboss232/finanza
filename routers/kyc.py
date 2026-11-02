@@ -9,7 +9,7 @@ from models import User, KYCInfo
 from sqlalchemy import select
 from kyc_service import KYCService
 
-kyc_router = APIRouter(tags=["kyc"])
+kyc_router = APIRouter(prefix="/api/v1", tags=["kyc"])
 
 UPLOAD_DIR = Path("private/uploads/kyc")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)

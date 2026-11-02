@@ -1,154 +1,157 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Bulk Operations - Finanza Admin Dashboard. Perform batch actions on users, transactions, and accounts.">
     <title>Bulk Operations - Finanza Admin</title>
-    <link href="/static/css/style.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/static/js/toast-utils.js"></script>
+    <link href="/static/css/admin-portal.css" rel="stylesheet">
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; }
-        .admin-nav { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .page-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 25px; }
-        .op-card { background: white; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.07); padding: 25px; margin-bottom: 20px; border-left: 4px solid #667eea; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .page-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 8px 25px rgba(102, 126, 234, 0.25); }
+        .op-card { background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.07); padding: 25px; margin-bottom: 20px; border-left: 4px solid #667eea; transition: transform 0.2s ease, box-shadow 0.2s ease; }
         .op-card:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.12); }
-        .op-card h5 { color: #333; font-weight: 600; margin-bottom: 8px; }
-        .op-card p { color: #666; font-size: 0.9rem; margin-bottom: 15px; }
+        .op-card h5 { color: #2d3748; font-weight: 700; margin-bottom: 8px; }
+        .op-card p { color: #64748b; font-size: 0.9rem; margin-bottom: 15px; }
         .op-card.danger { border-left-color: #dc3545; }
         .op-card.warning { border-left-color: #ffc107; }
         .op-card.success { border-left-color: #28a745; }
-        .badge-count { font-size: 0.75rem; background: #667eea; color: white; padding: 3px 8px; border-radius: 12px; }
-        .section-title { font-size: 1.1rem; font-weight: 700; color: #444; border-bottom: 2px solid #667eea; padding-bottom: 8px; margin: 25px 0 15px; }
-        .result-log { background: #1e1e2e; color: #cdd6f4; font-family: monospace; font-size: 0.85rem; border-radius: 8px; padding: 15px; min-height: 120px; max-height: 300px; overflow-y: auto; }
+        .section-title { font-size: 1.1rem; font-weight: 700; color: #2d3748; border-bottom: 2px solid #667eea; padding-bottom: 8px; margin: 25px 0 15px; }
+        .result-log { background: #1e1e2e; color: #cdd6f4; font-family: monospace; font-size: 0.85rem; border-radius: 10px; padding: 15px; min-height: 160px; max-height: 320px; overflow-y: auto; }
         .result-log .log-success { color: #a6e3a1; }
         .result-log .log-error { color: #f38ba8; }
         .result-log .log-info { color: #89b4fa; }
     </style>
-
-    <script src="/static/js/toast-utils.js"></script>
+    <script src="/static/js/admin-guard.js?v=3"></script>
 </head>
 <body>
-    <nav class="admin-nav navbar navbar-expand-lg navbar-dark px-4">
-        <a class="navbar-brand fw-bold" href="/user/admin/dashboard"><i class="fas fa-chart-line me-2"></i>Finanza Admin</a>
-        <div class="collapse navbar-collapse">
-            <ul class="navbar-nav ms-auto">
-                <li class="nav-item"><a class="nav-link" href="/user/admin/dashboard"><i class="fas fa-home me-1"></i>Dashboard</a></li>
-                <li class="nav-item"><a class="nav-link" href="/user/admin/users"><i class="fas fa-users me-1"></i>Users</a></li>
-                <li class="nav-item"><a class="nav-link" href="/logout"><i class="fas fa-sign-out-alt me-1"></i>Logout</a></li>
-            </ul>
-        </div>
-    </nav>
-
-    <div class="container-fluid py-4 px-4">
-        <div class="page-header d-flex align-items-center justify-content-between">
+    <div class="container-fluid py-4 px-4" style="max-width: 1440px;">
+        <div class="page-header d-flex align-items-center justify-content-between flex-wrap gap-3">
             <div>
-                <h1 class="mb-1"><i class="fas fa-layer-group me-2"></i>Bulk Operations</h1>
-                <p class="mb-0 opacity-75">Perform batch actions across users, transactions, and accounts</p>
+                <h1 class="mb-1 fw-bold"><i class="fas fa-layer-group me-2"></i>Bulk Operations Console</h1>
+                <p class="mb-0 opacity-90">Perform audited batch actions across customer KYC verifications, accounts, and held transactions</p>
             </div>
-            <span class="badge bg-warning text-dark fs-6"><i class="fas fa-shield-alt me-1"></i>SUPER_ADMIN Only</span>
+            <span class="badge bg-warning text-dark fs-6 px-3 py-2"><i class="fas fa-shield-alt me-1"></i>SUPER_ADMIN Governance</span>
         </div>
 
-        <!-- Notifications -->
         <div id="bulkAlert" class="alert d-none mb-3" role="alert"></div>
 
-        <div class="row">
-            <!-- Left Column: Operation Types -->
+        <div class="row g-4">
             <div class="col-lg-8">
+                <div class="section-title mt-0"><i class="fas fa-users me-2 text-primary"></i>Customer &amp; Identity Batch Operations</div>
 
-                <div class="section-title"><i class="fas fa-users me-2"></i>User Operations</div>
-
-                <div class="op-card">
+                <div class="op-card success">
                     <h5><i class="fas fa-user-check text-success me-2"></i>Bulk KYC Approval</h5>
-                    <p>Approve all pending KYC submissions that have been under review for more than 72 hours.</p>
+                    <p>Approve all pending KYC submissions that have been queued beyond the SLA threshold.</p>
                     <div class="input-group mb-3" style="max-width: 300px;">
-                        <input type="number" id="kycThresholdHours" class="form-control" value="72" min="1" max="720" placeholder="Hours threshold">
-                        <span class="input-group-text">hours</span>
+                        <input type="number" id="kycThresholdHours" class="form-control" value="72" min="1" max="720">
+                        <span class="input-group-text">hours threshold</span>
                     </div>
-                    <button class="btn btn-success btn-sm" onclick="runOperation('bulk_kyc_approve')">
+                    <button class="btn btn-success btn-sm px-3" onclick="openConfirmModal('bulk_kyc_approve', 'Bulk KYC Approval')">
                         <i class="fas fa-play me-1"></i>Run Operation
                     </button>
                     <button class="btn btn-outline-secondary btn-sm ms-2" onclick="previewOperation('bulk_kyc_approve')">
-                        <i class="fas fa-eye me-1"></i>Preview
+                        <i class="fas fa-eye me-1"></i>Preview Impact
                     </button>
                 </div>
 
                 <div class="op-card warning">
-                    <h5><i class="fas fa-user-lock text-warning me-2"></i>Bulk Suspend Inactive Users</h5>
-                    <p>Suspend user accounts that have had no login activity for a specified number of days.</p>
+                    <h5><i class="fas fa-user-lock text-warning me-2"></i>Bulk Suspend Dormant Accounts</h5>
+                    <p>Place a protective dormancy hold on user accounts with zero login activity for the specified period.</p>
                     <div class="input-group mb-3" style="max-width: 300px;">
-                        <input type="number" id="inactiveDays" class="form-control" value="180" min="30" max="730" placeholder="Days inactive">
-                        <span class="input-group-text">days</span>
+                        <input type="number" id="inactiveDays" class="form-control" value="180" min="30" max="730">
+                        <span class="input-group-text">days inactive</span>
                     </div>
-                    <button class="btn btn-warning btn-sm" onclick="runOperation('bulk_suspend_inactive')">
+                    <button class="btn btn-warning text-dark fw-semibold btn-sm px-3" onclick="openConfirmModal('bulk_suspend_inactive', 'Bulk Suspend Dormant Accounts')">
                         <i class="fas fa-play me-1"></i>Run Operation
                     </button>
                     <button class="btn btn-outline-secondary btn-sm ms-2" onclick="previewOperation('bulk_suspend_inactive')">
-                        <i class="fas fa-eye me-1"></i>Preview
+                        <i class="fas fa-eye me-1"></i>Preview Impact
                     </button>
                 </div>
 
-                <div class="section-title"><i class="fas fa-exchange-alt me-2"></i>Transaction Operations</div>
+                <div class="section-title"><i class="fas fa-exchange-alt me-2 text-primary"></i>Ledger &amp; Settlement Batch Operations</div>
 
                 <div class="op-card">
-                    <h5><i class="fas fa-clock text-primary me-2"></i>Release Held Transactions</h5>
-                    <p>Release all "pending" transactions older than a threshold that have passed compliance checks.</p>
+                    <h5><i class="fas fa-clock text-primary me-2"></i>Release Held / Pending Transactions</h5>
+                    <p>Release all "pending" transactions that have cleared compliance screening.</p>
                     <div class="input-group mb-3" style="max-width: 300px;">
-                        <input type="number" id="holdHours" class="form-control" value="48" min="1" max="240" placeholder="Hold hours">
-                        <span class="input-group-text">hours old</span>
+                        <input type="number" id="holdHours" class="form-control" value="48" min="1" max="240">
+                        <span class="input-group-text">hours held</span>
                     </div>
-                    <button class="btn btn-primary btn-sm" onclick="runOperation('release_held_transactions')">
+                    <button class="btn btn-primary btn-sm px-3" onclick="openConfirmModal('release_held_transactions', 'Release Held Transactions')">
                         <i class="fas fa-play me-1"></i>Run Operation
                     </button>
                     <button class="btn btn-outline-secondary btn-sm ms-2" onclick="previewOperation('release_held_transactions')">
-                        <i class="fas fa-eye me-1"></i>Preview
+                        <i class="fas fa-eye me-1"></i>Preview Impact
                     </button>
                 </div>
 
                 <div class="op-card danger">
-                    <h5><i class="fas fa-trash-alt text-danger me-2"></i>Purge Failed Transactions</h5>
-                    <p>Permanently archive failed/cancelled transactions older than 90 days. This action cannot be undone.</p>
+                    <h5><i class="fas fa-trash-alt text-danger me-2"></i>Archive Failed Transactions</h5>
+                    <p>Archive failed or cancelled transaction records older than 90 days into cold storage.</p>
                     <div class="form-check mb-3">
                         <input class="form-check-input" type="checkbox" id="confirmPurge">
                         <label class="form-check-label text-danger fw-semibold" for="confirmPurge">
-                            I understand this action is irreversible
+                            I confirm this archival batch operation has been authorized
                         </label>
                     </div>
-                    <button class="btn btn-danger btn-sm" onclick="runOperation('purge_failed_transactions')" id="purgeBtn" disabled>
+                    <button class="btn btn-danger btn-sm px-3" onclick="openConfirmModal('purge_failed_transactions', 'Archive Failed Transactions')" id="purgeBtn" disabled>
                         <i class="fas fa-play me-1"></i>Run Operation
                     </button>
                 </div>
-
             </div>
 
-            <!-- Right Column: Operation Log -->
             <div class="col-lg-4">
-                <div class="section-title"><i class="fas fa-terminal me-2"></i>Operation Log</div>
+                <div class="section-title mt-0"><i class="fas fa-terminal me-2 text-primary"></i>Live Execution Terminal</div>
                 <div class="result-log" id="operationLog">
                     <span class="log-info">&gt; Bulk Operations Console ready.</span><br>
-                    <span class="log-info">&gt; Select an operation and click Run to begin.</span>
+                    <span class="log-info">&gt; Use Preview Impact or Run Operation to begin.</span><br>
                 </div>
                 <button class="btn btn-outline-secondary btn-sm mt-2 w-100" onclick="clearLog()">
-                    <i class="fas fa-trash me-1"></i>Clear Log
+                    <i class="fas fa-eraser me-1"></i>Clear Terminal Output
                 </button>
 
-                <div class="section-title mt-4"><i class="fas fa-history me-2"></i>Recent Operations</div>
-                <div id="recentOps" class="text-muted small">
-                    <i>No operations run this session.</i>
+                <div class="section-title mt-4"><i class="fas fa-history me-2 text-primary"></i>Session Execution History</div>
+                <div id="recentOps" class="bg-white p-3 rounded-3 shadow-sm text-muted small">
+                    <i>No batch operations executed in this session yet.</i>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="/static/js/admin-guard.js"></script>
+    <!-- Confirmation Modal -->
+    <div class="modal fade" id="bulkConfirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <h5 class="modal-title fw-bold"><i class="fas fa-shield-alt me-2"></i>Confirm Batch Execution</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="mb-2">You are about to execute the following batch operation across the core database:</p>
+                    <div class="p-3 bg-light rounded border fw-bold text-primary mb-3" id="modalOpLabel">-</div>
+                    <p class="small text-muted mb-0">This action will be recorded in the immutable Admin Activity Audit Log.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-admin-gradient" id="confirmRunBtn"><i class="fas fa-check me-1"></i>Confirm &amp; Execute</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const opLog = document.getElementById('operationLog');
         const recentOps = document.getElementById('recentOps');
         let opHistory = [];
+        let pendingOpType = null;
+        let bulkModal = null;
 
-        // Enable purge button only when confirmed
         document.getElementById('confirmPurge').addEventListener('change', function() {
             document.getElementById('purgeBtn').disabled = !this.checked;
         });
@@ -163,7 +166,7 @@
         }
 
         function clearLog() {
-            opLog.innerHTML = '<span class="log-info">> Log cleared.</span><br>';
+            opLog.innerHTML = '<span class="log-info">&gt; Terminal cleared.</span><br>';
         }
 
         function showAlert(message, type = 'info') {
@@ -173,20 +176,29 @@
             setTimeout(() => alert.classList.add('d-none'), 5000);
         }
 
+        function openConfirmModal(opType, label) {
+            pendingOpType = opType;
+            document.getElementById('modalOpLabel').textContent = label;
+            if (!bulkModal) {
+                bulkModal = new bootstrap.Modal(document.getElementById('bulkConfirmModal'));
+            }
+            bulkModal.show();
+        }
+
+        document.getElementById('confirmRunBtn').addEventListener('click', function() {
+            if (bulkModal) bulkModal.hide();
+            if (pendingOpType) runOperation(pendingOpType);
+        });
+
         async function previewOperation(opType) {
             log(`Previewing operation: ${opType}...`, 'info');
-            const token = localStorage.getItem('token');
             try {
-                const response = await fetch(`/api/v1/admin/bulk/${opType}/preview`, {
-                    method: 'GET',
-                    headers: { 'Authorization': `Bearer ${token}` },
-                    credentials: 'include'
-                });
+                const response = await fetch(`/api/v1/admin/bulk/${opType}/preview`, { credentials: 'include' });
                 if (response.ok) {
                     const data = await response.json();
-                    log(`Preview: ${data.affected_count || 0} records would be affected.`, 'info');
+                    log(`Preview complete: ${data.affected_count || 0} record(s) match criteria for ${opType}.`, 'success');
                 } else {
-                    log(`Preview not available for ${opType} (${response.status})`, 'error');
+                    log(`Preview returned HTTP ${response.status} for ${opType}`, 'error');
                 }
             } catch (e) {
                 log(`Preview error: ${e.message}`, 'error');
@@ -194,13 +206,9 @@
         }
 
         async function runOperation(opType) {
-            const confirmMsg = `Are you sure you want to run: ${opType.replace(/_/g, ' ')}?`;
-            if (!confirm(confirmMsg)) return;
+            log(`Executing batch operation: ${opType}...`, 'info');
+            showAlert(`Running ${opType.replace(/_/g, ' ')}...`, 'info');
 
-            log(`Starting operation: ${opType}...`, 'info');
-            showAlert(`Running ${opType}...`, 'info');
-
-            const token = localStorage.getItem('token');
             const params = {
                 kyc_threshold_hours: parseInt(document.getElementById('kycThresholdHours')?.value || 72),
                 inactive_days: parseInt(document.getElementById('inactiveDays')?.value || 180),
@@ -210,23 +218,20 @@
             try {
                 const response = await fetch(`/api/v1/admin/bulk/${opType}`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
                     body: JSON.stringify(params)
                 });
 
                 if (response.ok) {
                     const data = await response.json();
-                    log(`Operation complete: ${data.affected_count || 0} records affected.`, 'success');
-                    showAlert(`Operation ${opType} completed successfully!`, 'success');
+                    log(`Execution succeeded: ${data.affected_count || 0} record(s) updated.`, 'success');
+                    showAlert(`Batch operation ${opType.replace(/_/g, ' ')} completed (${data.affected_count || 0} affected)!`, 'success');
                     addToHistory(opType, 'success', data.affected_count || 0);
                 } else {
                     const err = await response.json().catch(() => ({}));
                     log(`Operation failed: ${err.detail || response.statusText}`, 'error');
-                    showAlert(`Operation failed: ${err.detail || 'Unknown error'}`, 'danger');
+                    showAlert(`Operation failed: ${err.detail || 'Error'}`, 'danger');
                     addToHistory(opType, 'failed', 0);
                 }
             } catch (e) {
@@ -238,14 +243,17 @@
 
         function addToHistory(opType, status, count) {
             opHistory.unshift({ op: opType, status, count, time: new Date().toLocaleTimeString() });
-            const html = opHistory.slice(0, 5).map(h =>
-                `<div class="d-flex justify-content-between border-bottom py-1">
-                    <small class="text-truncate">${h.op.replace(/_/g, ' ')}</small>
-                    <small class="badge bg-${h.status === 'success' ? 'success' : 'danger'} ms-2">${h.status}</small>
+            recentOps.innerHTML = opHistory.slice(0, 6).map(h =>
+                `<div class="d-flex justify-content-between align-items-center border-bottom py-2">
+                    <div>
+                        <strong class="text-dark">${h.op.replace(/_/g, ' ')}</strong>
+                        <small class="text-muted d-block">${h.time} &bull; ${h.count} record(s)</small>
+                    </div>
+                    <span class="badge bg-${h.status === 'success' ? 'success' : 'danger'}">${h.status.toUpperCase()}</span>
                 </div>`
             ).join('');
-            recentOps.innerHTML = html || '<i>No operations run this session.</i>';
         }
     </script>
+    <script src="/static/js/admin-shell.js?v=3"></script>
 </body>
 </html>

@@ -2,15 +2,18 @@
 Compliance & AML Service - Sanctions screening, transaction monitoring, SAR filing
 """
 
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from typing import Dict, Optional, List
+from urllib.parse import quote
 from sqlalchemy.orm import Session
 from models import (
     User, Transaction, TransactionMonitoring, SanctionsCheck, SAR,
     KYCReverification
 )
+import httpx
 import logging
 import json
+import os
 
 log = logging.getLogger(__name__)
 
@@ -21,17 +24,16 @@ class SanctionsScreeningService:
     @staticmethod
     async def screen_user(db: Session, user_id: int, full_name: str) -> Dict:
         """
-        Screen user against sanctions lists
-        Sources: OFAC, UN, EU, UK
+        Screen user against sanctions lists.
+        Sources: OFAC SDN (primary), UN, EU, UK (future).
         """
         try:
-            # Check if already screened recently
+            # Check if already screened recently (user-level, 30-day cache)
             recent_check = db.query(SanctionsCheck).filter(
                 SanctionsCheck.user_id == user_id
             ).order_by(SanctionsCheck.check_date.desc()).first()
-            
+
             if recent_check:
-                # If checked within 30 days and clear, return
                 days_since = (datetime.utcnow() - recent_check.check_date).days
                 if days_since < 30 and recent_check.status == "clear":
                     return {
@@ -39,74 +41,176 @@ class SanctionsScreeningService:
                         "status": "clear",
                         "cached": True
                     }
-            
-            # Perform screening against OFAC, UN, EU lists
-            # TODO: Call actual screening APIs
-            match_score = await SanctionsScreeningService.check_ofac(full_name)
-            
-            # Determine status based on match score
-            if match_score > 0.95:
-                status = "confirmed_match"
-                action = "block"
-            elif match_score > 0.85:
-                status = "possible_match"
-                action = "manual_review"
-            else:
-                status = "clear"
-                action = "allow"
-            
-            # Record screening
+
+            # Call real OFAC SDN API
+            ofac_result = await SanctionsScreeningService.check_ofac(db, full_name)
+
+            status = ofac_result["result"]
+            match_score = ofac_result["score"] or 0.0
+            source = ofac_result.get("source", "pending_manual_review")
+
+            # Map result to action
+            action_map = {
+                "confirmed_match": "block",
+                "possible_match": "manual_review",
+                "clear": "allow",
+                "pending_manual_review": "manual_review",
+            }
+            action = action_map.get(status, "manual_review")
+
+            # Persist screening record
             check = SanctionsCheck(
                 user_id=user_id,
                 full_name=full_name,
-                source="ofac",  # TODO: Check all sources
+                source=source,
                 match_score=match_score,
                 status=status,
                 action_taken=action
             )
             db.add(check)
             db.commit()
-            
-            log.info(f"Sanctions screening for user {user_id}: {status} (score: {match_score})")
+
+            log.info(
+                f"Sanctions screening for user {user_id}: {status} "
+                f"(score: {match_score}, source: {source})"
+            )
             return {
                 "success": True,
                 "status": status,
                 "match_score": match_score,
-                "action": action
+                "action": action,
+                "matches": ofac_result.get("matches", []),
+                "screened": ofac_result.get("screened", False),
             }
         except Exception as e:
             log.error(f"Error screening sanctions: {str(e)}")
             return {"success": False, "error": str(e)}
     
     @staticmethod
-    async def check_ofac(full_name: str) -> float:
+    async def check_ofac(db: Session, full_name: str) -> dict:
         """
-        Check against OFAC list
-        Returns match score (0.0 to 1.0)
+        Check the full name against the US Treasury OFAC SDN list using the
+        free public REST API (no API key required).
+
+        Endpoint:
+            GET https://sanctionssearch.ofac.treas.gov/api/search/name/{encoded_name}
+
+        Score thresholds:
+            > 95  → confirmed_match
+            > 85  → possible_match
+            else  → clear
+
+        Returns a dict:
+            {
+                "screened": bool,
+                "result": "clear" | "possible_match" | "confirmed_match" | "pending_manual_review",
+                "score": float | None,
+                "matches": list[str],
+                "source": "ofac_sdn" | "ofac_sdn_cached" | "pending_manual_review"
+            }
         """
+        OFAC_API_KEY = os.environ.get("OFAC_API_KEY", "")
+
+        # ── 24-hour name-level cache (clear results only) ──────────────────────
+        cache_cutoff = datetime.utcnow() - timedelta(hours=24)
+        cached = (
+            db.query(SanctionsCheck)
+            .filter(
+                SanctionsCheck.full_name == full_name,
+                SanctionsCheck.status == "clear",
+                SanctionsCheck.check_date >= cache_cutoff,
+            )
+            .order_by(SanctionsCheck.check_date.desc())
+            .first()
+        )
+        if cached:
+            log.info(f"OFAC cache hit for '{full_name}' (cached at {cached.check_date})")
+            return {
+                "screened": True,
+                "result": "clear",
+                "score": cached.match_score or 0.0,
+                "matches": [],
+                "source": "ofac_sdn_cached",
+            }
+
+        # ── Primary: free US Treasury OFAC SDN REST API ────────────────────────
+        encoded_name = quote(full_name, safe="")
+        ofac_url = (
+            f"https://sanctionssearch.ofac.treas.gov/api/search/name/{encoded_name}"
+        )
+        headers = {"Accept": "application/json"}
+
         try:
-            # TODO: Call actual OFAC API or download database
-            # For now, return mock score
-            name_lower = full_name.lower()
-            
-            # Mock blocked names
-            blocked_names = [
-                "putin", "xi jinping", "kim jong", "maduro", "hassan nasrallah"
-            ]
-            
-            for blocked in blocked_names:
-                if blocked in name_lower:
-                    return 0.99
-            
-            # Check name complexity and format
-            name_parts = name_lower.split()
-            if len(name_parts) < 2:
-                return 0.1  # Single name is common
-            
-            return 0.05  # Default low score
-        except Exception as e:
-            log.error(f"Error checking OFAC: {str(e)}")
-            return 0.0
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                response = await client.get(ofac_url, headers=headers)
+                response.raise_for_status()
+                data = response.json()
+
+            # The OFAC API returns a list of match objects with a "score" field
+            results = data if isinstance(data, list) else data.get("results", [])
+
+            best_score: float = 0.0
+            matched_names: list[str] = []
+
+            for item in results:
+                raw_score = float(item.get("score", 0))
+                if raw_score > best_score:
+                    best_score = raw_score
+                # Collect matched entity names for audit trail
+                name_field = (
+                    item.get("name")
+                    or item.get("firstName", "") + " " + item.get("lastName", "")
+                ).strip()
+                if name_field:
+                    matched_names.append(name_field)
+
+            # Classify
+            if best_score > 95:
+                result_status = "confirmed_match"
+            elif best_score > 85:
+                result_status = "possible_match"
+            else:
+                result_status = "clear"
+
+            # ── Secondary: Comply Advantage (if OFAC_API_KEY is set) ──────────
+            if OFAC_API_KEY:
+                log.info(
+                    "OFAC_API_KEY detected — secondary Comply Advantage check "
+                    "would run here (not yet integrated)."
+                )
+
+            log.info(
+                f"OFAC SDN screen for '{full_name}': {result_status} "
+                f"(best_score={best_score:.2f}, matches={len(matched_names)})"
+            )
+            return {
+                "screened": True,
+                "result": result_status,
+                "score": best_score,
+                "matches": matched_names,
+                "source": "ofac_sdn",
+            }
+
+        except (httpx.TimeoutException, httpx.NetworkError, httpx.HTTPStatusError) as exc:
+            log.error(f"OFAC API unreachable for '{full_name}': {exc}")
+            return {
+                "screened": False,
+                "result": "pending_manual_review",
+                "reason": "OFAC API unreachable — manual review required",
+                "score": None,
+                "matches": [],
+                "source": "pending_manual_review",
+            }
+        except Exception as exc:
+            log.error(f"Unexpected error during OFAC check for '{full_name}': {exc}")
+            return {
+                "screened": False,
+                "result": "pending_manual_review",
+                "reason": f"OFAC check failed: {exc}",
+                "score": None,
+                "matches": [],
+                "source": "pending_manual_review",
+            }
 
 
 class TransactionMonitoringService:

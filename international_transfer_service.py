@@ -208,15 +208,35 @@ class InternationalTransferService:
             if not sender_account:
                 return {"success": False, "error": "Sender has no account"}
 
+            # Calculate international wire fee (1.5% standard, 2.5% high-risk, min $15.00)
+            risk_level = (compliance_data or {}).get("country_risk", {}).get("risk_level", "low")
+            fee_pct = Decimal("0.025") if risk_level == "high" else Decimal("0.015")
+            fee_amount = max(Decimal("15.00"), (amount * fee_pct).quantize(Decimal("0.01")))
+            total_debit = amount + fee_amount
+
+            current_balance = Decimal(str(sender_account.balance or 0))
+            if current_balance < total_debit:
+                return {
+                    "success": False,
+                    "error": (
+                        f"Insufficient account balance (${float(current_balance):,.2f}) to cover "
+                        f"international transfer (${float(amount):,.2f}) + wire fee (${float(fee_amount):,.2f})."
+                    ),
+                }
+
+            # Deduct/reserve funds from sender's account balance immediately to prevent double-spending
+            sender_account.balance = float(current_balance - total_debit)
+            db.add(sender_account)
+
             # Create transaction record
             transaction = Transaction(
                 user_id=sender_id,
                 account_id=sender_account.id,
                 transaction_type="international_transfer",
-                amount=amount,
+                amount=float(total_debit),
                 direction="debit",
                 status="pending_approval",
-                description=f"International transfer to {recipient_country} - {recipient_name}",
+                description=f"International transfer to {recipient_name} ({recipient_country}) [Acct: {recipient_account}] - Purpose: {purpose} (Fee: ${float(fee_amount):.2f})",
                 reference_number=f"INTL-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{sender_id}",
             )
             db.add(transaction)

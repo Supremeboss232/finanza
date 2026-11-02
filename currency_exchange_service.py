@@ -201,8 +201,75 @@ class CurrencyService:
 
 
 class ExchangeRateService:
-    """Service for managing exchange rates"""
-    
+    """Service for managing exchange rates, backed by live Fixer.io data."""
+
+    # Common currency pairs refreshed by refresh_all_rates()
+    COMMON_PAIRS = [
+        ("USD", "EUR"),
+        ("USD", "GBP"),
+        ("USD", "CAD"),
+        ("USD", "JPY"),
+        ("USD", "AUD"),
+        ("USD", "CHF"),
+        ("USD", "NGN"),
+        ("USD", "ZAR"),
+        ("GBP", "EUR"),
+    ]
+
+    # How long a cached rate is considered fresh before hitting the live API
+    CACHE_TTL_HOURS = 4
+
+    @staticmethod
+    async def fetch_live_rate(
+        from_currency: str,
+        to_currency: str
+    ) -> Optional[float]:
+        """
+        Fetch a live exchange rate from live FX providers (ExchangeRate-API,
+        ECB Frankfurter, and Fixer.io if configured with a paid key).
+        """
+        from_currency = from_currency.upper().strip()
+        to_currency = to_currency.upper().strip()
+        if from_currency == to_currency:
+            return 1.0
+
+        timeout = aiohttp.ClientTimeout(total=10)
+        try:
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                # 1. Primary Live Feed: Open ExchangeRate-API (160+ currencies including NGN, ZAR, EUR, GBP, JPY)
+                er_url = f"https://open.er-api.com/v6/latest/{from_currency}"
+                async with session.get(er_url) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        rates = data.get("rates", {})
+                        if to_currency in rates and rates[to_currency] is not None:
+                            return float(rates[to_currency])
+
+                # 2. Secondary Live Feed: European Central Bank (Frankfurter API)
+                fk_url = f"https://api.frankfurter.app/latest?from={from_currency}&to={to_currency}"
+                async with session.get(fk_url) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        rates = data.get("rates", {})
+                        if to_currency in rates and rates[to_currency] is not None:
+                            return float(rates[to_currency])
+
+                # 3. Optional Fixer.io feed
+                from config import settings
+                api_key = getattr(settings, "FIXER_IO_API_KEY", None)
+                if api_key and not str(api_key).startswith("fx_live_"):
+                    fx_url = (
+                        f"https://data.fixer.io/api/latest"
+                        f"?access_key={api_key}&base={from_currency}&symbols={to_currency}"
+                    )
+                    async with session.get(fx_url) as resp:
+                        data = await resp.json()
+                        if data.get("success") and to_currency in data.get("rates", {}):
+                            return float(data["rates"][to_currency])
+        except Exception as exc:
+            log.warning("fetch_live_rate failed for %s/%s: %s", from_currency, to_currency, exc)
+        return None
+
     @staticmethod
     async def get_exchange_rate(
         db: Session,
@@ -210,106 +277,225 @@ class ExchangeRateService:
         to_currency: str
     ) -> dict:
         """
-        Get current exchange rate between currencies
-        
+        Get the current exchange rate between two currencies.
+
+        Cache strategy (4-hour TTL):
+        1. If a DB record exists and is **fresh** (≤ 4 h old)  → return it with
+           ``source: "live_cached"``.
+        2. If cache is **stale or absent**, call :meth:`fetch_live_rate`:
+           - On success: upsert the DB record, return ``source: "live"``.
+           - On failure with a stale record: return stale with
+             ``source: "stale_cache"`` and a ``warning`` key.
+           - On failure with no record at all: return a structured error dict.
+
+        Fake / invented rates are **never** written to the database.
+
         Returns:
-            {"success": bool, "rate": float, "timestamp": str}
+            A dict with at minimum ``{"success": bool}`` and, on success,
+            ``{"rate": float, "source": str, "timestamp": str}``.
         """
         try:
             from models import ExchangeRate
-            
-            # Check cache first (within last hour)
-            cutoff_time = datetime.utcnow() - timedelta(hours=1)
-            
+
+            now = datetime.utcnow()
+            fresh_cutoff = now - timedelta(hours=ExchangeRateService.CACHE_TTL_HOURS)
+
+            # ------------------------------------------------------------------
+            # 1. Look up any existing record (fresh or stale)
+            # ------------------------------------------------------------------
             rate_record = db.query(ExchangeRate).filter(
                 ExchangeRate.from_currency == from_currency,
                 ExchangeRate.to_currency == to_currency,
-                ExchangeRate.last_updated >= cutoff_time
             ).first()
-            
+
+            # Determine the timestamp field — the model uses either
+            # ``last_updated`` or ``updated_at`` depending on migration history.
+            def _record_timestamp(rec) -> Optional[datetime]:
+                return getattr(rec, "last_updated", None) or getattr(rec, "updated_at", None)
+
+            cache_is_fresh = False
             if rate_record:
+                ts = _record_timestamp(rate_record)
+                cache_is_fresh = ts is not None and ts >= fresh_cutoff
+
+            # ------------------------------------------------------------------
+            # 2. Return early if cache is still fresh
+            # ------------------------------------------------------------------
+            if cache_is_fresh:
+                ts = _record_timestamp(rate_record)
                 return {
                     "success": True,
                     "from_currency": from_currency,
                     "to_currency": to_currency,
                     "rate": rate_record.rate,
-                    "timestamp": rate_record.last_updated.isoformat(),
-                    "source": "cached"
+                    "timestamp": ts.isoformat(),
+                    "source": "live_cached",
                 }
-            
-            # Rate not in cache - would fetch from external API in production
-            # For now, return simulated rate
-            simulated_rate = await ExchangeRateService._get_simulated_rate(
-                from_currency,
-                to_currency
+
+            # ------------------------------------------------------------------
+            # 3. Cache is stale or missing — try a live fetch
+            # ------------------------------------------------------------------
+            live_rate = await ExchangeRateService.fetch_live_rate(
+                from_currency, to_currency
             )
-            
-            # Store in cache
-            if not rate_record:
-                rate_record = ExchangeRate(
-                    from_currency=from_currency,
-                    to_currency=to_currency,
-                    rate=simulated_rate,
-                    last_updated=datetime.utcnow()
+
+            if live_rate is not None:
+                # Upsert DB record with the real live rate
+                if rate_record:
+                    rate_record.rate = live_rate
+                    rate_record.source = "live"
+                    if hasattr(rate_record, "last_updated"):
+                        rate_record.last_updated = now
+                    if hasattr(rate_record, "updated_at"):
+                        rate_record.updated_at = now
+                else:
+                    rate_record = ExchangeRate(
+                        from_currency=from_currency,
+                        to_currency=to_currency,
+                        rate=live_rate,
+                        source="live",
+                        **(
+                            {"last_updated": now}
+                            if hasattr(ExchangeRate, "last_updated")
+                            else {"updated_at": now}
+                        ),
+                    )
+                    db.add(rate_record)
+
+                db.commit()
+                log.info(
+                    "Live FX rate updated: %s/%s = %.6f",
+                    from_currency, to_currency, live_rate,
                 )
-                db.add(rate_record)
-            else:
-                rate_record.rate = simulated_rate
-                rate_record.last_updated = datetime.utcnow()
-            
-            db.commit()
-            
-            log.info(f"Exchange rate retrieved: {from_currency}/{to_currency} = {simulated_rate}")
-            
+                return {
+                    "success": True,
+                    "from_currency": from_currency,
+                    "to_currency": to_currency,
+                    "rate": live_rate,
+                    "timestamp": now.isoformat(),
+                    "source": "live",
+                }
+
+            # ------------------------------------------------------------------
+            # 4. Live fetch failed — fall back to stale cache if available
+            # ------------------------------------------------------------------
+            if rate_record:
+                ts = _record_timestamp(rate_record)
+                log.warning(
+                    "Live rate unavailable for %s/%s; serving stale cache "
+                    "(last updated: %s)",
+                    from_currency, to_currency, ts,
+                )
+                return {
+                    "success": True,
+                    "from_currency": from_currency,
+                    "to_currency": to_currency,
+                    "rate": rate_record.rate,
+                    "timestamp": ts.isoformat() if ts else None,
+                    "source": "stale_cache",
+                    "warning": (
+                        "Live exchange rate unavailable. "
+                        "Showing cached rate which may be outdated."
+                    ),
+                }
+
+            # ------------------------------------------------------------------
+            # 5. No rate at all — structured error
+            # ------------------------------------------------------------------
+            log.error(
+                "Exchange rate completely unavailable for %s/%s",
+                from_currency, to_currency,
+            )
             return {
-                "success": True,
-                "from_currency": from_currency,
-                "to_currency": to_currency,
-                "rate": simulated_rate,
-                "timestamp": datetime.utcnow().isoformat(),
-                "source": "live"
+                "success": False,
+                "error": (
+                    "Exchange rate unavailable. "
+                    "FIXER_IO_API_KEY not configured or provider unreachable."
+                ),
+                "rate": None,
             }
-        except Exception as e:
-            log.error(f"Error getting exchange rate: {e}")
-            return {"success": False, "error": str(e)}
-    
-    @staticmethod
-    async def _get_simulated_rate(
-        from_currency: str,
-        to_currency: str
-    ) -> float:
+
+        except Exception as exc:
+            log.error("Error getting exchange rate: %s", exc)
+            return {"success": False, "error": str(exc)}
+
+    @classmethod
+    async def refresh_all_rates(
+        cls,
+        db: Session
+    ) -> dict:
         """
-        Get simulated exchange rate (would call external API in production)
-        
-        Common rates as of 2024:
-        - USD/CAD: 1.35
-        - USD/GBP: 0.79
-        - USD/EUR: 0.92
-        - USD/AUD: 1.51
-        - USD/JPY: 110.50
+        Fetch and persist live rates for all :attr:`COMMON_PAIRS`.
+
+        Calls :meth:`fetch_live_rate` for each pair and upserts the result
+        into the database.  Pairs where the live fetch fails are skipped
+        without affecting the others.
+
+        Args:
+            db: Active SQLAlchemy session.
+
+        Returns:
+            ``{"USD/EUR": 0.91, ...}`` — only pairs that were successfully
+            fetched and stored are included.
         """
-        rates = {
-            ("USD", "CAD"): 1.35,
-            ("USD", "GBP"): 0.79,
-            ("USD", "EUR"): 0.92,
-            ("USD", "AUD"): 1.51,
-            ("USD", "JPY"): 110.50,
-            ("CAD", "USD"): 0.74,
-            ("GBP", "USD"): 1.27,
-            ("EUR", "USD"): 1.09,
-            ("AUD", "USD"): 0.66,
-            ("JPY", "USD"): 0.009,
-        }
-        
-        # Return rate or inverse if available
-        if (from_currency, to_currency) in rates:
-            return rates[(from_currency, to_currency)]
-        elif (to_currency, from_currency) in rates:
-            return 1 / rates[(to_currency, from_currency)]
-        else:
-            # Default to 1.0 if not in mapping
-            return 1.0
-    
+        from models import ExchangeRate
+
+        results: dict = {}
+        now = datetime.utcnow()
+
+        for from_currency, to_currency in cls.COMMON_PAIRS:
+            pair_label = f"{from_currency}/{to_currency}"
+            try:
+                live_rate = await cls.fetch_live_rate(from_currency, to_currency)
+
+                if live_rate is None:
+                    log.warning("refresh_all_rates: no rate returned for %s", pair_label)
+                    continue
+
+                # Upsert
+                record = db.query(ExchangeRate).filter(
+                    ExchangeRate.from_currency == from_currency,
+                    ExchangeRate.to_currency == to_currency,
+                ).first()
+
+                if record:
+                    record.rate = live_rate
+                    record.source = "live"
+                    if hasattr(record, "last_updated"):
+                        record.last_updated = now
+                    if hasattr(record, "updated_at"):
+                        record.updated_at = now
+                else:
+                    record = ExchangeRate(
+                        from_currency=from_currency,
+                        to_currency=to_currency,
+                        rate=live_rate,
+                        source="live",
+                        **(
+                            {"last_updated": now}
+                            if hasattr(ExchangeRate, "last_updated")
+                            else {"updated_at": now}
+                        ),
+                    )
+                    db.add(record)
+
+                db.commit()
+                results[pair_label] = live_rate
+                log.info("refresh_all_rates: %s = %.6f ✓", pair_label, live_rate)
+
+            except Exception as exc:
+                log.error("refresh_all_rates: failed for %s — %s", pair_label, exc)
+                try:
+                    db.rollback()
+                except Exception:
+                    pass
+
+        log.info(
+            "refresh_all_rates complete: %d/%d pairs refreshed",
+            len(results), len(cls.COMMON_PAIRS),
+        )
+        return results
+
     @staticmethod
     async def get_rate_history(
         db: Session,
@@ -507,7 +693,7 @@ class CurrencyConversionService:
             db.add(currency_transfer)
             db.commit()
             
-            log.info(f"Cross-currency transfer: {amount} {from_currency} → {converted_amount} {to_currency} (fee: {fx_fee})")
+            log.info(f"Cross-currency transfer: {amount} {from_currency} -> {converted_amount} {to_currency} (fee: {fx_fee})")
             
             return {
                 "success": True,
@@ -547,7 +733,7 @@ class CurrencyConversionService:
                         to_currency=currency
                     )
                     
-                    if rate_result["success"]:
+                    if rate_result and rate_result.get("success"):
                         rates[currency] = rate_result["rate"]
             
             return {

@@ -957,3 +957,35 @@ async def freeze_account(
     except Exception as e:
         logger.error(f"Error freezing accounts: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to freeze accounts: {str(e)}")
+
+
+
+@admin_users_router.get("/{user_id}/balance")
+async def get_user_balance_endpoint(
+    user_id: int,
+    db_session: SessionDep,
+    current_admin: PydanticUser = Depends(get_current_admin_user),
+):
+    """Get a specific user's real-time ledger balance and account balances."""
+    user_res = await db_session.execute(select(DBUser).where(DBUser.id == user_id))
+    user = user_res.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    ledger_balance = await BalanceServiceLedger.get_user_balance(db_session, user_id)
+    acc_res = await db_session.execute(select(DBAccount).where(DBAccount.owner_id == user_id))
+    accounts = acc_res.scalars().all()
+    return {
+        "success": True,
+        "user_id": user_id,
+        "balance": float(ledger_balance),
+        "accounts": [
+            {
+                "id": a.id,
+                "account_number": a.account_number,
+                "account_type": a.account_type,
+                "balance": float(a.balance or 0),
+                "currency": a.currency,
+            }
+            for a in accounts
+        ],
+    }

@@ -212,8 +212,10 @@ class DashboardStateManager {
         localStorage.clear();
         sessionStorage.clear();
         
-        // Show alert and redirect
-        alert('Your session has expired. Please sign in again.');
+        // Show toast/alert and redirect
+        if (window.showToast) {
+            window.showToast('Your session has expired. Please sign in again.', 'warning', 3000);
+        }
         window.location.replace('/signin');
     }
     

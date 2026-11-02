@@ -3,11 +3,11 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
-from fastapi import Request, Depends, status, WebSocket, WebSocketDisconnect
+from fastapi import Request, Depends, status, WebSocket, WebSocketDisconnect, Body
 from sqlalchemy import text, select
 import logging
 from datetime import datetime
-from typing import List
+from typing import List, Optional, Dict, Any
 import atexit
 import time
 import asyncio
@@ -60,6 +60,7 @@ from routers.reporting_api_v1 import reporting_v1_router
 from routers.emails import router as emails_router
 from routers.sns_notifications import router as sns_router
 from routers.dashboard_stubs_api import router as dashboard_stubs_router
+from routers.bank_connect_api import router as bank_connect_router
 from routers.admin_management import router as admin_management_router
 from routers.admin_full_api import router as admin_full_api_router
 from routers.admin_advanced_operations import router as admin_advanced_router
@@ -158,6 +159,59 @@ async def create_db_and_tables():
     except Exception as e:
         print(f"  Error creating tables: {type(e).__name__}: {e}")
         raise
+
+async def auto_migrate_columns():
+    """
+    Idempotently adds any missing columns to existing tables.
+    Handles the case where a table was created from an old stub model
+    and metadata.create_all() will not add new columns to existing tables.
+    Safe to call on every startup.
+    """
+    MIGRATIONS = {
+        "webhooks": [
+            ("user_id",         "INTEGER NOT NULL DEFAULT 0"),
+            ("name",            "VARCHAR(255) NOT NULL DEFAULT ''"),
+            ("url",             "VARCHAR(2048) NOT NULL DEFAULT ''"),
+            ("events",          "TEXT NOT NULL DEFAULT '[]'"),
+            ("active",          "BOOLEAN NOT NULL DEFAULT 1"),
+            ("secret_key",      "VARCHAR(255)"),
+            ("retry_count",     "INTEGER DEFAULT 3"),
+            ("timeout_seconds", "INTEGER DEFAULT 30"),
+            ("created_at",      "DATETIME DEFAULT CURRENT_TIMESTAMP"),
+            ("updated_at",      "DATETIME"),
+        ],
+        "webhook_deliveries": [
+            ("webhook_id",    "INTEGER NOT NULL DEFAULT 0"),
+            ("event_type",    "VARCHAR(255) NOT NULL DEFAULT ''"),
+            ("payload",       "TEXT"),
+            ("status",        "VARCHAR(50) DEFAULT 'pending'"),
+            ("http_status",   "INTEGER"),
+            ("error_message", "TEXT"),
+            ("attempt_count", "INTEGER DEFAULT 0"),
+            ("last_attempt",  "DATETIME"),
+            ("next_retry",    "DATETIME"),
+            ("created_at",    "DATETIME DEFAULT CURRENT_TIMESTAMP"),
+            ("updated_at",    "DATETIME"),
+        ],
+    }
+    try:
+        async with engine.begin() as conn:
+            for table, columns in MIGRATIONS.items():
+                try:
+                    result = await conn.execute(text(f"PRAGMA table_info({table})"))
+                    existing = {row[1] for row in result.fetchall()}
+                except Exception:
+                    continue
+                for col, col_def in columns:
+                    if col not in existing:
+                        try:
+                            await conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {col_def}"))
+                            print(f"  [MIGRATE] Added {table}.{col}")
+                        except Exception as e:
+                            print(f"  [MIGRATE] Skip {table}.{col}: {e}")
+    except Exception as e:
+        print(f"  [MIGRATE] Non-fatal: {e}")
+
 
 async def test_db_connection():
     """Tests the database connection."""
@@ -399,9 +453,9 @@ async def create_system_reserve_account():
                 db.add(system_user)
                 await db.flush()
                 print("[OK] System User (ID=1) created successfully")
-                print(f"   → Name: {system_user.full_name}")
-                print(f"   → Email: {system_user.email}")
-                print(f"   → Role: admin/system")
+                print(f"   -> Name: {system_user.full_name}")
+                print(f"   -> Email: {system_user.email}")
+                print(f"   -> Role: admin/system")
             else:
                 print("[OK] System User (ID=1) already exists")
             
@@ -459,15 +513,15 @@ async def create_system_reserve_account():
                 
                 await db.commit()
                 print("[OK] System Reserve Account (SYS-RESERVE-0001) created successfully")
-                print(f"   → Account Number: SYS-RESERVE-0001")
-                print(f"   → Owner: System User (ID=1)")
-                print(f"   → Account Type: treasury")
-                print(f"   → Balance: ${SEED_BALANCE:,.2f}")
-                print(f"   → KYC Level: full")
-                print(f"   → Status: Active and ready for use")
+                print(f"   -> Account Number: SYS-RESERVE-0001")
+                print(f"   -> Owner: System User (ID=1)")
+                print(f"   -> Account Type: treasury")
+                print(f"   -> Balance: ${SEED_BALANCE:,.2f}")
+                print(f"   -> KYC Level: full")
+                print(f"   -> Status: Active and ready for use")
             else:
                 print("[OK] System Reserve Account (SYS-RESERVE-0001) already exists")
-                print(f"   → Current Balance: ${reserve_account.balance:,.2f}")
+                print(f"   -> Current Balance: ${reserve_account.balance:,.2f}")
         
         except Exception as e:
             print(f"[WARN]  Error creating system reserve account: {e}")
@@ -706,6 +760,11 @@ async def startup_event():
         # Create database tables during startup
         print("[*] Connecting to database for table creation...")
         await create_db_and_tables()
+
+        # Apply incremental column migrations for tables that existed before model updates
+        print("[*] Applying column migrations...")
+        await auto_migrate_columns()
+
         
         # Test database connection
         print("[*] Testing database connection...")
@@ -760,6 +819,33 @@ async def startup_event():
                     replace_existing=True
                 )
                 print("[OK] Forex sync scheduled")
+
+                # Also refresh ExchangeRateService DB cache every 4 hours
+                from currency_exchange_service import ExchangeRateService
+
+                async def _refresh_exchange_rates():
+                    """Wrapper that opens its own DB session for the scheduler."""
+                    try:
+                        async with SessionLocal() as db:
+                            result = await ExchangeRateService.refresh_all_rates(db)
+                            log.info(
+                                "[scheduler] ExchangeRateService.refresh_all_rates() "
+                                "refreshed %d pair(s): %s",
+                                len(result), list(result.keys()),
+                            )
+                    except Exception as _exc:
+                        log.error(
+                            "[scheduler] refresh_all_rates failed: %s", _exc
+                        )
+
+                scheduler.add_job(
+                    _refresh_exchange_rates,
+                    'interval',
+                    hours=4,
+                    id='exchange_rate_refresh_task',
+                    replace_existing=True,
+                )
+                print("[OK] ExchangeRateService refresh scheduled (every 4 hours)")
             else:
                 print("[WARN] FIXER_IO_API_KEY not configured - forex rates will not sync")
             
@@ -768,7 +854,7 @@ async def startup_event():
             scheduler.add_job(
                 price_feed.connect_crypto_feed,
                 'interval',
-                seconds=0,  # Run once, continues internally with reconnect
+                seconds=60,  # Refresh live crypto prices every 60 seconds
                 id='crypto_websocket_task',
                 replace_existing=True
             )
@@ -830,20 +916,20 @@ app.include_router(auth_router, prefix="/auth")
 app.include_router(auth_v1_router)  # Auth v1 API (already has /api/v1/auth prefix)
 app.include_router(system_status_router)  # System status API (already has /api/v1/system prefix)
 app.include_router(audit_v1_router)  # Audit v1 API (already has /api/v1/audit prefix)
-app.include_router(private_router, prefix="/user") # Handles authenticated UI routes under /user/* and /user/admin/*
-app.include_router(users_router, prefix="/api/v1/users")
+app.include_router(private_router) # Handles authenticated UI routes under /user/* and /user/admin/*
+app.include_router(users_router)
 if admin_router:
-    app.include_router(admin_router, prefix="/api/admin")
+    app.include_router(admin_router)
 app.include_router(api_users_router)  # /api/user/* endpoints
 # Mount product routers under /api/v1 to serve JSON for user pages
-app.include_router(kyc_router, prefix="/api/v1")
-app.include_router(cards_router, prefix="/api/v1")
-app.include_router(deposits_router, prefix="/api/v1")
-app.include_router(loans_router, prefix="/api/v1")
-app.include_router(investments_router, prefix="/api/v1")
-app.include_router(payments_router, prefix="/api/v1")
+app.include_router(kyc_router)
+app.include_router(cards_router)
+app.include_router(deposits_router)
+app.include_router(loans_router)
+app.include_router(investments_router)
+app.include_router(payments_router)
 # Account router (uploads, profile updates)
-app.include_router(account_router, prefix="/api/v1")
+app.include_router(account_router)
 # Feature routers
 app.include_router(financial_planning_router)
 app.include_router(insurance_router)
@@ -873,6 +959,8 @@ app.include_router(emails_router)
 app.include_router(sns_router)
 # Dashboard stubs for missing 404 endpoints
 app.include_router(dashboard_stubs_router)
+# Bank network connection API (inter-bank onboarding)
+app.include_router(bank_connect_router)
 # Admin management endpoints (holds, frozen accounts, credit scores, devices)
 app.include_router(admin_management_router)
 # Comprehensive admin API (analytics, fraud, KYC, ledger export)
@@ -900,12 +988,12 @@ try:
     from routers.card_processing_api import router as card_processing_router
     # from routers.compliance_api import router as compliance_router  # Disabled - Priority 3 compliance_priority3_api used instead
     
-    app.include_router(payments_api_router, prefix="/api/v1")  # ACH/Wire/RTP/FedNow payment rails
-    app.include_router(credit_router, prefix="/api/v1")
-    app.include_router(sandbox_payments_router, prefix="/api/v1")
-    app.include_router(loan_origination_router, prefix="/api/v1")
-    app.include_router(investment_portfolio_router, prefix="/api/v1")
-    app.include_router(card_processing_router, prefix="/api/v1")
+    app.include_router(payments_api_router)  # ACH/Wire/RTP/FedNow payment rails
+    app.include_router(credit_router)
+    app.include_router(sandbox_payments_router)
+    app.include_router(loan_origination_router)
+    app.include_router(investment_portfolio_router)
+    app.include_router(card_processing_router)
     # app.include_router(compliance_router, prefix="/api/v1")  # Disabled - Priority 3 version active
     log.info("Phase 1 Payment and Credit routers registered (Compliance uses Priority 3)")
 except Exception as e:
@@ -975,7 +1063,7 @@ try:
     from routers.realtime_api import router as realtime_update_router
     from routers.optimization_api import router as optimization_router
     
-    app.include_router(webhooks_router)  # Prefix defined in router as /api/v1/webhooks
+    # app.include_router(webhooks_router)  # Disabled: webhooks_priority3_router is active on /api/v1/webhooks
     app.include_router(monitoring_router)  # Prefix defined in router as /api/v1/monitoring
     app.include_router(realtime_update_router)  # Prefix defined in router as /api/v1/realtime
     app.include_router(optimization_router)  # Prefix defined in router as /api/v1/optimization
@@ -1020,7 +1108,7 @@ except Exception as e:
 try:
     app.include_router(uploads_router)  # /api/uploads/* endpoints
     app.include_router(international_router)  # /api/international/* endpoints
-    app.include_router(mobile_deposits_router_new, prefix="/api")  # /api/deposits/* endpoints (enhanced)
+    app.include_router(mobile_deposits_router_new)  # /api/deposits/* endpoints (enhanced)
     log.info("[OK] Wave 3 routers registered (File Uploads, International Transfers, Mobile Deposits)")
 except Exception as e:
     log.warning(f"[WARN]  Wave 3 routers not available: {e}")
@@ -1053,7 +1141,7 @@ except Exception as e:
 
 try:
     from routers.forms import forms_router
-    app.include_router(forms_router, prefix="/api/v1")  # /api/v1/forms
+    app.include_router(forms_router)  # /api/v1/forms
     log.info("[OK] Forms router registered")
 except Exception as e:
     log.warning(f"Forms router not available: {e}")
@@ -1064,6 +1152,14 @@ try:
     log.info("[OK] Mobile Deposit API (user-facing) registered")
 except Exception as e:
     log.warning(f"Mobile Deposit API not available: {e}")
+
+# Vendor Integration Hub API (admin credential management, connectivity tests)
+try:
+    from routers.vendor_integrations_api import router as vendor_integrations_router
+    app.include_router(vendor_integrations_router)  # /api/v1/admin/integrations
+    log.info("[OK] Vendor Integrations API registered - Admin Integration Hub ready")
+except Exception as e:
+    log.warning(f"Vendor Integrations API not available: {e}")
 
 # NOTE: user_router is NOT registered here to avoid route conflicts with private_router.
 # All /user/* routes are served by private_router which includes proper admin/user checks.
@@ -1167,13 +1263,28 @@ async def get_admin_kyc(
             user_result = await db.execute(select(models.User).filter(models.User.id == kyc.user_id))
             user = user_result.scalar_one_or_none()
             
+            kyc_info_res = await db.execute(select(models.KYCInfo).filter(models.KYCInfo.user_id == kyc.user_id))
+            kyc_info = kyc_info_res.scalar_one_or_none()
+            doc_num = kyc_info.document_number if kyc_info and kyc_info.document_number else f"DOC-{kyc.id:06d}"
             kyc_list.append({
                 "id": kyc.id,
                 "user_id": kyc.user_id,
                 "user_email": user.email if user else "Unknown",
                 "user_name": user.full_name if user else "Unknown",
+                "user": {
+                    "id": user.id if user else kyc.user_id,
+                    "full_name": user.full_name if user else "Unknown",
+                    "email": user.email if user else "Unknown",
+                    "phone": getattr(user, "phone", None) or "N/A",
+                    "address": getattr(user, "address", None) or getattr(user, "country", None) or "N/A",
+                    "date_of_birth": str(kyc_info.date_of_birth.date()) if (kyc_info and kyc_info.date_of_birth) else "N/A"
+                },
                 "document_type": kyc.document_type,
+                "document_number": doc_num,
                 "document_file_path": kyc.document_file_path,
+                "document_front_url": kyc.document_file_path or "",
+                "document_back_url": (kyc_info.id_back_path if kyc_info else "") or "",
+                "risk_score": 15,
                 "status": kyc.status,
                 "submitted_at": kyc.submitted_at,
                 "reviewed_at": kyc.reviewed_at
@@ -1933,11 +2044,13 @@ async def get_fund_operations(
 async def approve_kyc_submission(
     submission_id: int,
     db: SessionDep,
-    current_admin: User = Depends(get_current_admin_user)
+    current_admin: User = Depends(get_current_admin_user),
+    payload: Optional[dict] = Body(default=None)
 ):
     """Approve KYC submission (admin only)"""
     try:
-        result = await admin_service.approve_kyc(db, submission_id)
+        notes = (payload or {}).get("notes", "")
+        result = await admin_service.approve_kyc(db, submission_id, notes=notes)
         return {"success": True, "data": result}
     except ValueError as e:
         return {"success": False, "error": str(e)}, 404
@@ -1951,17 +2064,109 @@ async def reject_kyc_submission(
     submission_id: int,
     db: SessionDep,
     current_admin: User = Depends(get_current_admin_user),
-    reason: str = ""
+    reason: str = "",
+    payload: Optional[dict] = Body(default=None)
 ):
     """Reject KYC submission (admin only)"""
     try:
-        result = await admin_service.reject_kyc(db, submission_id, reason)
+        body_reason = ""
+        if payload:
+            rc = payload.get("reason_code", "")
+            notes = payload.get("notes", "") or payload.get("reason", "")
+            body_reason = f"{rc}: {notes}".strip(": ") if (rc or notes) else ""
+        final_reason = reason or body_reason or "Verification criteria not met"
+        result = await admin_service.reject_kyc(db, submission_id, final_reason)
         return {"success": True, "data": result}
     except ValueError as e:
         return {"success": False, "error": str(e)}, 404
     except Exception as e:
         log.error(f"Error rejecting KYC: {e}")
         return {"success": False, "error": str(e)}, 500
+
+
+@app.get("/api/v1/users/search")
+async def search_users_v1_endpoint(
+    db: SessionDep,
+    current_admin: User = Depends(get_current_admin_user),
+    q: str = "",
+    limit: int = 10
+):
+    """Search users by email, name, or account number for admin funding autocomplete."""
+    from sqlalchemy import or_
+    from balance_service_ledger import BalanceServiceLedger
+    stmt = select(models.User)
+    if q and q.strip():
+        term = f"%{q.strip()}%"
+        stmt = stmt.filter(
+            or_(
+                models.User.email.ilike(term),
+                models.User.full_name.ilike(term),
+                models.User.account_number.ilike(term)
+            )
+        )
+    res = await db.execute(stmt.limit(limit))
+    users = res.scalars().all()
+    items = []
+    for u in users:
+        bal = await BalanceServiceLedger.get_user_balance(db, u.id)
+        acc_res = await db.execute(select(models.Account).filter(models.Account.owner_id == u.id))
+        acc = acc_res.scalars().first()
+        items.append({
+            "id": u.id,
+            "email": u.email,
+            "full_name": u.full_name or u.email,
+            "account_number": (acc.account_number if acc else u.account_number) or f"ACC-{u.id}",
+            "balance": bal,
+            "is_active": u.is_active,
+            "kyc_status": getattr(u, "kyc_status", "pending")
+        })
+    return {"users": items, "data": items, "total": len(items)}
+
+
+@app.get("/api/v1/admin/bulk/{op_type}/preview")
+async def preview_bulk_admin_operation(
+    op_type: str,
+    db: SessionDep,
+    current_admin: User = Depends(get_current_admin_user)
+):
+    """Preview affected record counts for bulk operations."""
+    from sqlalchemy import func
+    count = 0
+    if op_type == "bulk_kyc_approve":
+        count = await db.scalar(select(func.count(models.KYCSubmission.id)).where(models.KYCSubmission.status == "pending")) or 0
+    elif op_type == "bulk_suspend_inactive":
+        count = await db.scalar(select(func.count(models.User.id)).where(models.User.is_active == False)) or 0
+    elif op_type == "release_held_transactions":
+        count = await db.scalar(select(func.count(models.Transaction.id)).where(models.Transaction.status == "pending")) or 0
+    elif op_type == "purge_failed_transactions":
+        count = await db.scalar(select(func.count(models.Transaction.id)).where(models.Transaction.status == "failed")) or 0
+    return {"success": True, "operation": op_type, "affected_count": count}
+
+
+@app.post("/api/v1/admin/bulk/{op_type}")
+async def execute_bulk_admin_operation(
+    op_type: str,
+    db: SessionDep,
+    current_admin: User = Depends(get_current_admin_user),
+    payload: Optional[dict] = Body(default=None)
+):
+    """Execute batch administrative operations."""
+    affected = 0
+    if op_type == "bulk_kyc_approve":
+        res = await db.execute(select(models.KYCSubmission).where(models.KYCSubmission.status == "pending"))
+        subs = res.scalars().all()
+        for s in subs:
+            await admin_service.approve_kyc(db, s.id, notes="Bulk KYC approval")
+            affected += 1
+    elif op_type == "release_held_transactions":
+        res = await db.execute(select(models.Transaction).where(models.Transaction.status == "pending"))
+        txs = res.scalars().all()
+        for t in txs:
+            t.status = "completed"
+            db.add(t)
+            affected += 1
+        await db.commit()
+    return {"success": True, "operation": op_type, "affected_count": affected}
 
 
 # --- Admin Loan Management Endpoints ---

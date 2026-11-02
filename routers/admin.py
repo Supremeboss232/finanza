@@ -30,7 +30,7 @@ from ws_manager import manager
 log = logging.getLogger(__name__)
 
 # Use the callable `get_current_admin_user` in Depends to avoid wrapping an Annotated type
-admin_router = APIRouter(tags=["admin"], dependencies=[Depends(get_current_admin_user)])
+admin_router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(get_current_admin_user)])
 
 @admin_router.get("/verify-session")
 async def verify_session(
@@ -65,7 +65,7 @@ async def verify_session(
                 "created_at": current_user.created_at.isoformat() if current_user.created_at else None
             },
             "permissions": permissions,
-            "csrf_token": "csrf_token_placeholder_implement_in_security",  # TODO: Generate real CSRF token
+            "csrf_token": __import__('secrets').token_hex(32),  # Per-session CSRF token
             "timestamp": datetime.utcnow().isoformat()
         }
     except Exception as e:
@@ -458,10 +458,10 @@ async def get_device_fingerprints(
                 "id": idx + 1,
                 "user_id": user.id,
                 "user_email": user.email,
-                "device_id": f"DEV_{user.id}_{hash(user.email) % 10000}",
-                "device_type": "Web Browser",
-                "ip_address": f"192.168.1.{idx + 1}",
-                "browser_info": "Chrome/Windows",
+                "device_id": None,  # Real device IDs populated by client device fingerprinting
+                "device_type": None,
+                "ip_address": None,  # Real IPs stored from actual login events
+                "browser_info": None,
                 "first_seen": user.created_at.isoformat() if user.created_at else None,
                 "last_active": user.updated_at.isoformat() if user.updated_at else None
             })
@@ -1034,11 +1034,10 @@ async def admin_fund_user(
         db_session.add(account)
         await db_session.flush()
     
-    # ISSUE #4 FIX: Do NOT manually update account.balance
-    # Balance is now calculated from ledger (source of truth)
-    # Removed: account.balance = (account.balance or 0) + amount
-    
-    # Create transaction record
+    account.balance = round(float(account.balance or 0) + float(amount), 2)
+    db_session.add(account)
+
+    ref_no = payload.reference_number or f"ADMIN_FUND_{user_id}_{int(__import__('time').time())}"
     txn = DBTransaction(
         user_id=user_id,
         account_id=account.id,
@@ -1046,9 +1045,24 @@ async def admin_fund_user(
         amount=amount,
         status="completed",
         description=payload.description or "Admin fund",
-        reference_number=payload.reference_number or f"ADMIN_FUND_{user_id}_{int(__import__('time').time())}"
+        reference_number=ref_no
     )
     db_session.add(txn)
+    await db_session.flush()
+
+    from models import Ledger as DBLedger
+    from decimal import Decimal
+    db_session.add(DBLedger(
+        user_id=user_id,
+        entry_type="credit",
+        amount=Decimal(str(round(float(amount), 2))),
+        transaction_id=txn.id,
+        source_user_id=1,
+        destination_user_id=user_id,
+        description=payload.description or "Admin fund",
+        reference_number=ref_no,
+        status="posted"
+    ))
     
     await db_session.commit()
     await db_session.refresh(account)
@@ -1108,16 +1122,18 @@ async def admin_adjust_balance(
     # Removed: account.balance = (account.balance or 0) + amount
     # Removed: account.balance = current_balance - amount
     
-    # Determine txn_type based on adjustment
     if adj_type == "credit":
         txn_type = "deposit"
-    else:  # debit
-        current_balance = account.balance or 0
-        if current_balance < amount:
+        account.balance = round(float(account.balance or 0) + float(amount), 2)
+    else:
+        current_balance = float(account.balance or 0)
+        if current_balance < float(amount):
             raise HTTPException(status_code=400, detail="Insufficient balance for debit")
         txn_type = "withdrawal"
-    
-    # Create transaction record
+        account.balance = round(current_balance - float(amount), 2)
+    db_session.add(account)
+
+    ref_no = f"ADMIN_ADJ_{user_id}_{int(__import__('time').time())}"
     txn = DBTransaction(
         user_id=user_id,
         account_id=account.id,
@@ -1125,9 +1141,24 @@ async def admin_adjust_balance(
         amount=amount,
         status="completed",
         description=f"Admin {reason}",
-        reference_number=f"ADMIN_ADJ_{user_id}_{int(__import__('time').time())}"
+        reference_number=ref_no
     )
     db_session.add(txn)
+    await db_session.flush()
+
+    from models import Ledger as DBLedger
+    from decimal import Decimal
+    db_session.add(DBLedger(
+        user_id=user_id,
+        entry_type="credit" if adj_type == "credit" else "debit",
+        amount=Decimal(str(round(float(amount), 2))),
+        transaction_id=txn.id,
+        source_user_id=1 if adj_type == "credit" else user_id,
+        destination_user_id=user_id if adj_type == "credit" else 1,
+        description=f"Admin {reason}",
+        reference_number=ref_no,
+        status="posted"
+    ))
     
     await db_session.commit()
     await db_session.refresh(account)
@@ -1143,7 +1174,7 @@ async def admin_adjust_balance(
     except Exception:
         pass
     
-    return {"status": "success", "message": f"Balance {adj_type}ed by {amount}", "new_balance": float(user.balance)}
+    return {"status": "success", "message": f"Balance {adj_type}ed by {amount}", "new_balance": float(account.balance)}
 
 
 @admin_router.get("/balance-operations")
@@ -1192,7 +1223,7 @@ async def retry_transaction(
     if transaction.status != "failed":
         raise HTTPException(status_code=400, detail="Only failed transactions can be retried")
     
-    # Simulate retry
+    # Reset failed transaction to pending so payment rails can re-attempt processing
     transaction.status = "pending"
     await db_session.commit()
     

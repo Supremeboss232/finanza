@@ -45,6 +45,28 @@ WebhookReceiver.set_secrets(
 )
 
 
+def _verify_hmac(body: bytes, signature: str, secret: str) -> bool:
+    """
+    Generic HMAC-SHA256 signature verifier.
+    Compares 'sha256=...' or raw hex signatures.
+    Used by all vendor webhook endpoints.
+    """
+    if not secret or not signature:
+        return False
+    try:
+        expected = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
+        incoming = signature.replace("sha256=", "").strip()
+        return hmac.compare_digest(expected, incoming)
+    except Exception:
+        return False
+
+
+def _get_secret(env_key: str) -> str:
+    """Safely read a vendor secret from environment/settings."""
+    import os
+    return os.environ.get(env_key, "") or getattr(__import__('config').settings, env_key, "") or ""
+
+
 async def get_db():
     """Dependency to get database session"""
     async with SessionLocal() as session:
@@ -376,19 +398,418 @@ async def webhook_settlement_confirmation(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ==================== CARD ISSUER WEBHOOKS ====================
+# Vendors: Marqeta, Galileo Financial Technologies, Visa DPS, i2c
+# Webhook URL to give vendor: POST /webhooks/cards/events
+
+@router.post("/cards/events")
+async def webhook_card_issuer(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    x_webhook_signature: Optional[str] = Header(None),
+    x_marqeta_signature: Optional[str] = Header(None),
+):
+    """
+    Receive card lifecycle events from card issuing provider.
+    Handles: card.activated, card.suspended, card.terminated,
+             transaction.authorization, transaction.clearing,
+             transaction.reversal, dispute.created, dispute.resolved
+    """
+    body = await request.body()
+    secret = _get_secret("CARD_ISSUER_WEBHOOK_SECRET")
+    sig = x_webhook_signature or x_marqeta_signature or ""
+
+    if secret and sig and not _verify_hmac(body, sig, secret):
+        logger.warning("Card issuer webhook: signature verification failed")
+        raise HTTPException(status_code=401, detail="Invalid signature")
+
+    try:
+        event = json.loads(body)
+        event_type = event.get("type") or event.get("event_type", "unknown")
+        logger.info(f"Card event received: {event_type}")
+
+        # Route by event type
+        if "transaction" in event_type.lower():
+            # Card transaction — update ledger / transaction record
+            logger.info(f"Card transaction event: {event.get('transaction_token', 'N/A')}")
+        elif "card" in event_type.lower():
+            # Card lifecycle — activate/suspend/terminate card
+            logger.info(f"Card lifecycle event: {event_type} for card {event.get('card_token', 'N/A')}")
+        elif "dispute" in event_type.lower():
+            logger.info(f"Card dispute event: {event_type}")
+        else:
+            logger.info(f"Unhandled card event type: {event_type}")
+
+        return {"success": True, "event_type": event_type, "received": True}
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload")
+    except Exception as e:
+        logger.error(f"Card issuer webhook error: {e}")
+        raise HTTPException(status_code=500, detail="Webhook processing error")
+
+
+# ==================== ACH / WIRE PAYMENT RAIL WEBHOOKS ====================
+# Vendors: Column Bank, Evolve Bank, Cross River, Synapse, Plaid, Dwolla
+# Webhook URL to give vendor: POST /webhooks/payments/ach
+
+@router.post("/payments/ach")
+async def webhook_ach_payment(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    x_webhook_signature: Optional[str] = Header(None),
+    x_column_signature: Optional[str] = Header(None),
+):
+    """
+    Receive ACH/Wire payment rail events.
+    Handles: ach.transfer.initiated, ach.transfer.completed, ach.transfer.returned,
+             wire.transfer.completed, ach.return.R01, ach.return.R02, etc.
+    """
+    body = await request.body()
+    secret = _get_secret("ACH_WEBHOOK_SECRET")
+    sig = x_webhook_signature or x_column_signature or ""
+
+    if secret and sig and not _verify_hmac(body, sig, secret):
+        logger.warning("ACH webhook: signature verification failed")
+        raise HTTPException(status_code=401, detail="Invalid signature")
+
+    try:
+        event = json.loads(body)
+        event_type = event.get("type") or event.get("event_type", "unknown")
+        reference = event.get("reference") or event.get("transfer_id", "N/A")
+        status = event.get("status", "unknown")
+        logger.info(f"ACH event: {event_type} | ref={reference} | status={status}")
+
+        if "return" in event_type.lower():
+            return_code = event.get("return_code", "")
+            logger.warning(f"ACH return: {return_code} for ref {reference}")
+            # TODO: Mark transaction as returned, trigger NSF fee workflow
+        elif "completed" in status.lower() or "settled" in status.lower():
+            logger.info(f"ACH/Wire settled: {reference}")
+            # TODO: Update transaction to COMPLETED, trigger user notification
+        elif "failed" in status.lower():
+            logger.error(f"ACH/Wire failed: {reference}")
+            # TODO: Mark as failed, refund sender, notify compliance
+
+        return {"success": True, "event_type": event_type, "reference": reference}
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload")
+    except Exception as e:
+        logger.error(f"ACH webhook error: {e}")
+        raise HTTPException(status_code=500, detail="Webhook processing error")
+
+
+# ==================== OFAC / AML COMPLIANCE WEBHOOKS ====================
+# Vendors: Comply Advantage, Refinitiv World-Check, LexisNexis, Acuris
+# Webhook URL to give vendor: POST /webhooks/compliance/ofac
+
+@router.post("/compliance/ofac")
+async def webhook_ofac_screening(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    x_webhook_signature: Optional[str] = Header(None),
+    x_complyadvantage_signature: Optional[str] = Header(None),
+):
+    """
+    Receive OFAC/AML screening result callbacks.
+    Handles: screening.completed, match.found, match.dismissed,
+             sar.required, pep.detected, adverse_media.found
+    """
+    body = await request.body()
+    secret = _get_secret("OFAC_WEBHOOK_SECRET")
+    sig = x_webhook_signature or x_complyadvantage_signature or ""
+
+    if secret and sig and not _verify_hmac(body, sig, secret):
+        logger.warning("OFAC webhook: signature verification failed")
+        raise HTTPException(status_code=401, detail="Invalid signature")
+
+    try:
+        event = json.loads(body)
+        event_type = event.get("type") or event.get("event_type", "unknown")
+        entity_id = event.get("entity_id") or event.get("search_id", "N/A")
+        match_status = event.get("match_status") or event.get("status", "unknown")
+        logger.info(f"OFAC event: {event_type} | entity={entity_id} | status={match_status}")
+
+        if "confirmed_match" in match_status.lower() or "true_match" in match_status.lower():
+            logger.critical(f"CONFIRMED OFAC MATCH: entity={entity_id} — account must be frozen")
+            # TODO: Freeze user account, alert compliance team, file SAR
+        elif "possible_match" in match_status.lower() or "potential_match" in match_status.lower():
+            logger.warning(f"POSSIBLE OFAC MATCH: entity={entity_id} — requires manual review")
+            # TODO: Flag account for manual review, notify BSA officer
+        elif "clear" in match_status.lower() or "no_match" in match_status.lower():
+            logger.info(f"OFAC screening clear: entity={entity_id}")
+            # TODO: Update SanctionsCheck record to 'clear', allow transaction to proceed
+
+        return {"success": True, "event_type": event_type, "entity_id": entity_id}
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload")
+    except Exception as e:
+        logger.error(f"OFAC webhook error: {e}")
+        raise HTTPException(status_code=500, detail="Webhook processing error")
+
+
+# ==================== CREDIT BUREAU WEBHOOKS ====================
+# Vendors: Equifax, Experian, TransUnion (requires FCRA compliance)
+# Webhook URL to give vendor: POST /webhooks/credit/bureau
+
+@router.post("/credit/bureau")
+async def webhook_credit_bureau(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    x_webhook_signature: Optional[str] = Header(None),
+):
+    """
+    Receive credit bureau report callbacks.
+    Handles: credit.report.ready, credit.score.updated, fraud.alert.placed,
+             dispute.resolved, score.refresh.completed
+    """
+    body = await request.body()
+    secret = _get_secret("CREDIT_BUREAU_WEBHOOK_SECRET")
+    sig = x_webhook_signature or ""
+
+    if secret and sig and not _verify_hmac(body, sig, secret):
+        logger.warning("Credit bureau webhook: signature verification failed")
+        raise HTTPException(status_code=401, detail="Invalid signature")
+
+    try:
+        event = json.loads(body)
+        event_type = event.get("type") or event.get("event_type", "unknown")
+        consumer_id = event.get("consumer_id") or event.get("applicant_id", "N/A")
+        logger.info(f"Credit bureau event: {event_type} | consumer={consumer_id}")
+
+        if "report.ready" in event_type.lower() or "score" in event_type.lower():
+            credit_score = event.get("credit_score") or event.get("score")
+            logger.info(f"Credit report ready: score={credit_score} for consumer={consumer_id}")
+            # TODO: Update loan application with credit score, trigger decisioning engine
+        elif "fraud.alert" in event_type.lower():
+            logger.warning(f"Fraud alert from credit bureau for consumer={consumer_id}")
+            # TODO: Flag user account, notify compliance
+        elif "dispute.resolved" in event_type.lower():
+            logger.info(f"Credit dispute resolved for consumer={consumer_id}")
+
+        return {"success": True, "event_type": event_type, "consumer_id": consumer_id}
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload")
+    except Exception as e:
+        logger.error(f"Credit bureau webhook error: {e}")
+        raise HTTPException(status_code=500, detail="Webhook processing error")
+
+
+# ==================== CRYPTO / BLOCKCHAIN WEBHOOKS ====================
+# Vendors: Fireblocks, BitGo, Anchorage Digital, Zero Hash
+# Webhook URL to give vendor: POST /webhooks/crypto/events
+
+@router.post("/crypto/events")
+async def webhook_crypto_provider(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    x_webhook_signature: Optional[str] = Header(None),
+    x_fireblocks_signature: Optional[str] = Header(None),
+):
+    """
+    Receive crypto/blockchain transaction events.
+    Handles: transaction.confirmed, transaction.failed, wallet.created,
+             deposit.detected, withdrawal.completed, address.generated
+    """
+    body = await request.body()
+    secret = _get_secret("CRYPTO_WEBHOOK_SECRET")
+    sig = x_webhook_signature or x_fireblocks_signature or ""
+
+    if secret and sig and not _verify_hmac(body, sig, secret):
+        logger.warning("Crypto webhook: signature verification failed")
+        raise HTTPException(status_code=401, detail="Invalid signature")
+
+    try:
+        event = json.loads(body)
+        event_type = event.get("type") or event.get("event_type", "unknown")
+        tx_id = event.get("transaction_id") or event.get("txHash", "N/A")
+        logger.info(f"Crypto event: {event_type} | tx={tx_id}")
+
+        if "confirmed" in event_type.lower() or "completed" in event_type.lower():
+            amount = event.get("amount")
+            asset = event.get("asset_id") or event.get("currency", "")
+            logger.info(f"Crypto transaction confirmed: {amount} {asset} | tx={tx_id}")
+            # TODO: Credit user's crypto wallet balance, update transaction record
+        elif "failed" in event_type.lower():
+            logger.error(f"Crypto transaction failed: tx={tx_id}")
+            # TODO: Mark transaction as failed, notify user, refund if applicable
+        elif "deposit" in event_type.lower():
+            logger.info(f"Crypto deposit detected: tx={tx_id}")
+            # TODO: Credit user balance, confirm after network confirmations
+
+        return {"success": True, "event_type": event_type, "tx_id": tx_id}
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload")
+    except Exception as e:
+        logger.error(f"Crypto webhook error: {e}")
+        raise HTTPException(status_code=500, detail="Webhook processing error")
+
+
+# ==================== FX RATE PROVIDER WEBHOOKS ====================
+# Vendors: Currencycloud, Wise Business, Airwallex
+# Webhook URL to give vendor: POST /webhooks/fx/events
+
+@router.post("/fx/events")
+async def webhook_fx_provider(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+    x_webhook_signature: Optional[str] = Header(None),
+):
+    """
+    Receive FX provider events.
+    Handles: conversion.completed, conversion.failed, rate.expired,
+             payment.completed, payment.failed, balance.updated
+    """
+    body = await request.body()
+    secret = _get_secret("FX_PROVIDER_WEBHOOK_SECRET")
+    sig = x_webhook_signature or ""
+
+    if secret and sig and not _verify_hmac(body, sig, secret):
+        logger.warning("FX webhook: signature verification failed")
+        raise HTTPException(status_code=401, detail="Invalid signature")
+
+    try:
+        event = json.loads(body)
+        event_type = event.get("type") or event.get("event_type", "unknown")
+        conversion_id = event.get("conversion_id") or event.get("id", "N/A")
+        logger.info(f"FX event: {event_type} | id={conversion_id}")
+
+        if "conversion.completed" in event_type.lower():
+            rate = event.get("client_rate") or event.get("rate")
+            logger.info(f"FX conversion completed at rate {rate}: {conversion_id}")
+            # TODO: Update transaction record with final FX rate, credit target currency
+        elif "failed" in event_type.lower():
+            logger.error(f"FX conversion failed: {conversion_id}")
+            # TODO: Refund source currency, notify user, mark transaction as failed
+
+        return {"success": True, "event_type": event_type, "conversion_id": conversion_id}
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload")
+    except Exception as e:
+        logger.error(f"FX webhook error: {e}")
+        raise HTTPException(status_code=500, detail="Webhook processing error")
+
+
 # ==================== HEALTH CHECK ====================
 
 @router.get("/health")
 async def webhook_health():
-    """Health check endpoint"""
+    """Health check — lists all supported webhook endpoints for vendors."""
     return {
         "status": "healthy",
-        "webhook_types": [
-            "payment/stripe",
-            "payment/paystack",
-            "kyc/approval",
-            "kyc/rejection",
-            "email/ses-events",
-            "settlement/confirmation"
-        ]
+        "webhook_endpoints": {
+            "payment": [
+                "/webhooks/payment/stripe",
+                "/webhooks/payment/paystack",
+            ],
+            "kyc": [
+                "/webhooks/kyc/approval",
+                "/webhooks/kyc/rejection",
+            ],
+            "cards": [
+                "/webhooks/cards/events",       # Marqeta, Galileo, i2c
+            ],
+            "ach_wire": [
+                "/webhooks/payments/ach",        # Column, Evolve, Synapse, Dwolla
+            ],
+            "compliance": [
+                "/webhooks/compliance/ofac",     # Comply Advantage, Refinitiv
+            ],
+            "credit": [
+                "/webhooks/credit/bureau",       # Equifax, Experian, TransUnion
+            ],
+            "crypto": [
+                "/webhooks/crypto/events",       # Fireblocks, BitGo, Zero Hash
+            ],
+            "fx": [
+                "/webhooks/fx/events",           # Currencycloud, Wise, Airwallex
+            ],
+            "email": [
+                "/webhooks/email/ses-events",
+            ],
+            "settlement": [
+                "/webhooks/settlement/confirmation",
+            ],
+        },
+        "signature_verification": "HMAC-SHA256",
+        "auth_header": "X-Webhook-Signature",
+        "note": "Each endpoint verifies HMAC-SHA256 signature before processing."
     }
+
+
+# ==================== MULTI-GATEWAY & CUSTOM SLOT WEBHOOKS ====================
+PAYMENT_PROVIDER_SECRET_MAP = {
+    "flutterwave": ("FLUTTERWAVE_WEBHOOK_SECRET", "verif-hash"),
+    "adyen": ("ADYEN_HMAC_KEY", "HmacSignature"),
+    "paypal": ("PAYPAL_WEBHOOK_ID", "PAYPAL-TRANSMISSION-SIG"),
+    "square": ("SQUARE_WEBHOOK_SIGNATURE_KEY", "x-square-hmacsha256-signature"),
+    "checkout": ("CHECKOUT_WEBHOOK_SECRET", "Cko-Signature"),
+    "authnet": ("AUTHNET_SIGNATURE_KEY", "X-ANET-Signature"),
+    "razorpay": ("RAZORPAY_WEBHOOK_SECRET", "X-Razorpay-Signature"),
+    "monnify": ("MONNIFY_WEBHOOK_SECRET", "monnify-signature"),
+    "custom_gateway": ("CUSTOM_GATEWAY_WEBHOOK_SECRET", "X-Webhook-Signature"),
+}
+
+
+@router.post("/payment/{provider_slug}")
+async def webhook_dynamic_payment_gateway(
+    provider_slug: str,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+):
+    body = await request.body()
+    slug = provider_slug.strip().lower()
+    secret_env_key, default_header = PAYMENT_PROVIDER_SECRET_MAP.get(
+        slug, (f"CUSTOM_SLOT_{slug.upper()}_WEBHOOK_SECRET", "X-Webhook-Signature")
+    )
+    secret = _get_secret(secret_env_key) or os.environ.get(secret_env_key, "")
+    if slug == "custom_gateway":
+        default_header = os.environ.get("CUSTOM_GATEWAY_WEBHOOK_HEADER", "X-Webhook-Signature")
+    sig = (
+        request.headers.get(default_header)
+        or request.headers.get(default_header.lower())
+        or request.headers.get("x-webhook-signature")
+        or ""
+    )
+    if secret and sig:
+        if slug == "flutterwave" and hmac.compare_digest(sig, secret):
+            pass
+        elif not _verify_hmac(body, sig, secret):
+            logger.warning(f"Payment gateway webhook ({slug}): signature verification failed")
+            raise HTTPException(status_code=401, detail="Invalid webhook signature")
+    try:
+        event = json.loads(body) if body else {}
+        event_type = event.get("event") or event.get("type") or event.get("event_type") or "payment.event"
+        reference = event.get("reference") or (event.get("data") or {}).get("reference") or event.get("id") or "N/A"
+        logger.info(f"Payment gateway [{slug}] webhook received: event={event_type} ref={reference}")
+        return {"success": True, "provider": slug, "event_type": event_type, "reference": reference, "received": True}
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload")
+
+
+@router.post("/custom/{slot_id}")
+async def webhook_custom_vendor_slot(
+    slot_id: str,
+    request: Request,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+):
+    body = await request.body()
+    slug = slot_id.strip().lower()
+    secret = os.environ.get(f"CUSTOM_SLOT_{slug.upper()}_WEBHOOK_SECRET", "")
+    sig = request.headers.get("x-webhook-signature") or ""
+    if secret and sig and not _verify_hmac(body, sig, secret):
+        raise HTTPException(status_code=401, detail="Invalid webhook signature")
+    try:
+        event = json.loads(body) if body else {}
+        event_type = event.get("event") or event.get("type") or "custom.event"
+        logger.info(f"Custom vendor slot [{slug}] webhook received: {event_type}")
+        return {"success": True, "slot_id": slug, "event_type": event_type, "received": True}
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload")

@@ -1,1182 +1,422 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Dashboard - Finanza Bank (Production)</title>
-    
-    <!-- Content Security Policy (CSP) - Prevents XSS attacks -->
-    <meta http-equiv="Content-Security-Policy" content="
-        default-src 'self';
-        script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://code.jquery.com https://cdnjs.cloudflare.com;
-        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com;
-        font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net;
-        img-src 'self' data: https:;
-        connect-src 'self' https://api.finanzabank.local;
-        base-uri 'self';
-        form-action 'self';">
-    
-    <!-- CRITICAL: Global Guard Script - Must be FIRST script to prevent FOUC -->
-    <script src="/static/js/dashboard-guard.js"></script>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport">
-    <link href="/img/favicon.ico" rel="icon">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Jost:wght@500;600;700&family=Open+Sans:wght@400;500&display=swap" rel="stylesheet">  
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/css/all.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="/static/lib/animate/animate.min.css" rel="stylesheet">
-    <link href="/static/lib/owlcarousel/assets/owl.carousel.min.css" rel="stylesheet">
-    <link href="/static/css/bootstrap.min.css" rel="stylesheet">
-    <link href="/static/css/style.css" rel="stylesheet">
-    
-    <style>
-        /* Loading Skeleton Animation */
-        .skeleton-loader {
-            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-            background-size: 200% 100%;
-            animation: skeleton-loading 1.5s infinite;
-        }
-        
-        @keyframes skeleton-loading {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
-        }
-        
-        /* PII Masking & Balance Masking */
-        .pii-toggle { cursor: pointer; transition: all 0.3s ease; }
-        .pii-toggle:hover { color: #0d47a1; transform: scale(1.1); }
-        .pii-masked { font-family: monospace; letter-spacing: 2px; user-select: none; }
-        .balance-masked { 
-            font-family: monospace; 
-            letter-spacing: 3px; 
-            user-select: none;
-            font-weight: bold;
-        }
-        
-        /* Account Suspension Banner */
-        .suspension-banner {
-            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
-            color: white; padding: 1.5rem; border-radius: 8px; margin-bottom: 2rem;
-            animation: slide-down 0.3s ease;
-        }
-        
-        @keyframes slide-down {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        /* Error State UI */
-        .error-card {
-            background: #fff5f5;
-            border: 1px solid #ffebee;
-            border-radius: 8px;
-            padding: 1.5rem;
-            text-align: center;
-            color: #c62828;
-        }
-        
-        .error-card .btn {
-            margin-top: 1rem;
-        }
-        
-        .retry-button {
-            padding: 0.5rem 1.5rem;
-            font-weight: 600;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .retry-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-        
-        /* Token Expiry Warning */
-        .token-expiry-warning {
-            background: #fff3cd; border: 1px solid #ffc107; color: #856404;
-            padding: 1rem; border-radius: 4px; margin-bottom: 1rem;
-        }
-        
-        /* Empty State */
-        .empty-state { text-align: center; padding: 3rem; color: #999; }
-        .empty-state-icon { font-size: 4rem; margin-bottom: 1rem; opacity: 0.2; }
-        
-        /* Pagination */
-        .load-more-btn { padding: 0.75rem 2rem; font-weight: 600; border-radius: 4px; }
-        
-        /* Data Cards */
-        .data-card-skeleton { height: 100px; border-radius: 8px; }
-        
-        /* State Indicator */
-        .state-indicator {
-            display: inline-block; width: 8px; height: 8px; border-radius: 50%;
-            background: #28a745; animation: pulse 2s infinite;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        
-        .last-updated { font-size: 0.85rem; color: #999; margin-top: 0.5rem; }
-        
-        /* Failed Data State */
-        .data-error-state {
-            background: #fff5f5;
-            border-left: 4px solid #dc3545;
-            padding: 1rem;
-            border-radius: 4px;
-            color: #721c24;
-            margin-bottom: 1rem;
-        }
-        
-        .data-error-state .retry-btn {
-            background: #dc3545;
-            color: white;
-            border: none;
-            padding: 0.5rem 1rem;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-top: 0.5rem;
-            font-size: 0.85rem;
-        }
-        
-        .data-error-state .retry-btn:hover {
-            background: #c82333;
-        }
-    </style>
-
-    <script src="/static/js/toast-utils.js"></script>
-    <link href="/static/css/mobile.css" rel="stylesheet">
+    <title>Dashboard - Finanza Bank</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/css/user-portal.css" rel="stylesheet">
 </head>
-<body>
-    
-    
-    <!-- Maintenance Mode Redirect (Hidden) -->
-    <div id="maintenance-mode-redirect" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:white; z-index:10000; align-items:center; justify-content:center;">
-        <div style="text-align:center; padding:2rem;">
-            <i class="fas fa-wrench" style="font-size:4rem; color:#ffc107; margin-bottom:1rem;"></i>
-            <h2>Maintenance in Progress</h2>
-            <p class="text-muted">We're performing scheduled maintenance. Please try again in a few moments.</p>
-            <div class="spinner-border text-primary mt-3" role="status" style="width: 2rem; height: 2rem;">
-                <span class="sr-only">Checking status...</span>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Error Boundary Banner -->
-    <div id="error-boundary-banner" style="display:none;" class="container-fluid bg-danger bg-gradient text-white py-3 sticky-top" style="z-index:100;">
-        <div class="container">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <i class="fas fa-exclamation-circle me-2"></i>
-                    <strong id="error-boundary-message">We're having trouble reaching the server. Some data may be outdated.</strong>
+<body data-page-title="Banking Overview" data-page-subtitle="Real-time ledger balances, accounts & activity">
+
+<div id="bank-page-content" style="display:none;">
+    <!-- Account / Compliance Status Banner -->
+    <div id="dashStatusBanner" class="mb-4" style="display:none;"></div>
+
+    <!-- Top KPI Row -->
+    <div class="row g-3 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="fb-kpi-card kpi-primary">
+                <div class="fb-kpi-top">
+                    <span class="fb-kpi-label">Available Cash Balance</span>
+                    <span class="fb-kpi-icon" style="background:rgba(255,255,255,0.14);color:#fff;">
+                        <i class="fas fa-wallet"></i>
+                    </span>
                 </div>
-                <button class="btn btn-sm btn-light" onclick="location.reload()" title="Retry loading data">
-                    <i class="fas fa-sync-alt me-1"></i>Retry
-                </button>
-            </div>
-        </div>
-    </div>
-    <!-- Navbar Start -->
-    <div class="container-fluid fixed-top px-0 wow fadeIn" data-wow-delay="0.1s">
-        <nav class="navbar navbar-expand-lg navbar-light py-lg-0 px-lg-5 wow fadeIn" data-wow-delay="0.1s">
-            <a href="/user/dashboard" class="navbar-brand ms-4 ms-lg-0">
-                <h5 class="m-0 text-primary"><i class="fa fa-university me-2"></i>Finanza</h5>
-            </a>
-            <button type="button" class="navbar-toggler me-4" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarCollapse">
-                <div class="navbar-nav ms-auto p-4 p-lg-0">
-                    <a href="/user/dashboard" class="nav-item nav-link">Dashboard</a>
-                    <a href="/user/account" class="nav-item nav-link">Account</a>
-                    <a href="/user/kyc_form" class="nav-item nav-link">KYC</a>
-                    <div class="nav-item dropdown">
-                        <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Products</a>
-                        <div class="dropdown-menu border-light m-0">
-                            <a href="/user/cards" class="dropdown-item">Cards</a>
-                            <a href="/user/deposits" class="dropdown-item">Deposits</a>
-                            <a href="/user/loans" class="dropdown-item">Loans</a>
-                            <a href="/user/investments" class="dropdown-item">Investments</a>
-                            <a href="/user/bill_pay" class="dropdown-item">Transfers</a>
-                        </div>
-                    </div>
-                    <div class="nav-item dropdown">
-                        <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Services</a>
-                        <div class="dropdown-menu border-light m-0">
-                            <a href="/user/analytics" class="dropdown-item">Business Analysis</a>
-                            <a href="/user/treasury_portfolio" class="dropdown-item">Financial Planning</a>
-                            <a href="/user/insurance" class="dropdown-item">Insurance</a>
-                        </div>
-                    </div>
-                    <div class="nav-item dropdown">
-                        <a href="javascript:void(0)" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">More</a>
-                        <div class="dropdown-menu border-light m-0">
-                            <a href="/user/profile" class="dropdown-item">Profile</a>
-                            <a href="/user/settings" class="dropdown-item">Settings</a>
-                            <a href="/user/notifications" class="dropdown-item">Notifications</a>
-                            <a href="/user/transactions" class="dropdown-item">Transactions</a>
-                            <a href="/user/security" class="dropdown-item">Security</a>
-                            <a href="/user/alerts" class="dropdown-item">Alerts</a>
-                            <a href="/user/contact" class="dropdown-item">Contact/Support</a>
-                            <hr class="m-2">
-                            <a href="#" class="dropdown-item text-danger" onclick="handleLogout(event)">Logout</a>
-                        </div>
-                    </div>
+                <div class="fb-kpi-value" id="kpiTotalBalance">$0.00</div>
+                <div class="fb-kpi-sub">
+                    <i class="fas fa-building-columns"></i>
+                    <span id="kpiAccountCount">Primary Checking & Savings</span>
                 </div>
             </div>
-        </nav>
-    </div>
-    <!-- Page Header -->
-    <div class="container-fluid page-header mb-4 wow fadeIn" data-wow-delay="0.1s">
-        <div class="container">
-            <h1 class="display-4 pb-3 animated slideInDown">Dashboard</h1>
-            <nav aria-label="breadcrumb animated slideInDown">
-                <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item"><a class="text-white" href="/user/dashboard">Home</a></li>
-                    <li class="breadcrumb-item text-primary active" aria-current="page">Dashboard</li>
-                </ol>
-            </nav>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="fb-kpi-card">
+                <div class="fb-kpi-top">
+                    <span class="fb-kpi-label">Savings & Term CDs</span>
+                    <span class="fb-kpi-icon" style="background:var(--fb-emerald-soft);color:var(--fb-emerald);">
+                        <i class="fas fa-vault"></i>
+                    </span>
+                </div>
+                <div class="fb-kpi-value text-success" id="kpiTotalDeposits">$0.00</div>
+                <div class="fb-kpi-sub">
+                    <span id="kpiDepositsMeta">Up to 5.50% Official Bank APY</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="fb-kpi-card">
+                <div class="fb-kpi-top">
+                    <span class="fb-kpi-label">Investment Portfolio</span>
+                    <span class="fb-kpi-icon" style="background:var(--fb-primary-soft);color:var(--fb-primary);">
+                        <i class="fas fa-arrow-trend-up"></i>
+                    </span>
+                </div>
+                <div class="fb-kpi-value text-primary" id="kpiTotalInvestments">$0.00</div>
+                <div class="fb-kpi-sub">
+                    <span id="kpiInvestmentsMeta">Equities, Bonds & Funds</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6">
+            <div class="fb-kpi-card">
+                <div class="fb-kpi-top">
+                    <span class="fb-kpi-label">Active Credit / Loans</span>
+                    <span class="fb-kpi-icon" style="background:var(--fb-amber-soft);color:var(--fb-amber);">
+                        <i class="fas fa-hand-holding-dollar"></i>
+                    </span>
+                </div>
+                <div class="fb-kpi-value" id="kpiTotalLoans">$0.00</div>
+                <div class="fb-kpi-sub">
+                    <span id="kpiLoansMeta">No active credit facilities</span>
+                </div>
+            </div>
         </div>
     </div>
-    
-    <!-- Main Content -->
-    <div class="container-xxl py-5">
-        <div class="container">
-            <div class="row g-5">
-                <div class="col-lg-12 wow fadeInUp" data-wow-delay="0.1s">
-                    
-                    <!-- Account Suspension Banner -->
-                    <div id="suspension-banner" style="display:none;"></div>
-                    
-                    <!-- Token Expiry Warning -->
-                    <div id="token-expiry-warning" style="display:none;" class="token-expiry-warning">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        <strong>Session Expiring Soon</strong> - Your session will expire in <span id="expiry-countdown"></span> minutes.
-                    </div>
-                    
-                    <!-- Welcome Section -->
-                    <div class="card mb-4 bg-primary bg-gradient text-white skeleton-loader" id="welcome-section" style="height: 120px;">
-                        <div class="card-body">
-                            <div class="row align-items-center">
-                                <div class="col-md-8">
-                                    <h3 class="card-title mb-1">Welcome, <span id="user-full-name">...</span>!</h3>
-                                    <p class="card-text mb-2">
-                                        <i class="fas fa-envelope me-2"></i><span id="user-email">—</span>
-                                    </p>
-                                    <p class="card-text mb-0">
-                                        <span id="verification-badge"></span>
-                                    </p>
-                                </div>
-                                <div class="col-md-4 text-md-end">
-                                    <span class="state-indicator"></span> <span id="session-status">Real-time</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- KYC Status Alert -->
-                    <div id="kyc-alert-container" class="mb-4"></div>
-                    
-                    <!-- Account Summary Cards -->
-                    <div class="row mb-4">
-                        <!-- Balance Card -->
-                        <div class="col-lg-3 col-6 mb-3 stat-card-col">
-                            <div class="card border-left border-primary">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-start mb-3">
-                                        <div>
-                                            <h6 class="card-title text-muted mb-1">Total Balance</h6>
-                                            <h4 class="mb-0" id="user-balance">
-                                                <span class="skeleton-loader" style="display:inline-block; width: 120px; height: 28px; border-radius: 4px;"></span>
-                                            </h4>
-                                            <small class="text-muted">Across all accounts</small>
-                                        </div>
-                                        <button class="btn btn-sm btn-outline-primary pii-toggle" id="toggle-balance-mask" onclick="toggleBalanceMasking()" title="Show/Hide Balance">
-                                            <i class="fas fa-eye me-1"></i>
-                                        </button>
-                                    </div>
-                                    <div class="last-updated" id="balance-updated"></div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Investments Card -->
-                        <div class="col-lg-3 col-6 mb-3 stat-card-col">
-                            <div class="card border-left border-success">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <div>
-                                            <h6 class="card-title text-muted mb-1">Active Investments</h6>
-                                            <h4 class="mb-0" id="user-investments">
-                                                <span class="skeleton-loader" style="display:inline-block; width: 120px; height: 28px; border-radius: 4px;"></span>
-                                            </h4>
-                                            <small class="text-muted" id="investment-count">—</small>
-                                        </div>
-                                        <i class="fas fa-chart-line fa-2x text-success opacity-50"></i>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Loans Card -->
-                        <div class="col-lg-3 col-6 mb-3 stat-card-col">
-                            <div class="card border-left border-warning">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <div>
-                                            <h6 class="card-title text-muted mb-1">Outstanding Loans</h6>
-                                            <h4 class="mb-0" id="user-loans">
-                                                <span class="skeleton-loader" style="display:inline-block; width: 120px; height: 28px; border-radius: 4px;"></span>
-                                            </h4>
-                                            <small class="text-muted" id="loan-count">—</small>
-                                        </div>
-                                        <i class="fas fa-hand-holding-usd fa-2x text-warning opacity-50"></i>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Deposits Card -->
-                        <div class="col-lg-3 col-6 mb-3 stat-card-col">
-                            <div class="card border-left border-info">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <div>
-                                            <h6 class="card-title text-muted mb-1">Total Deposits</h6>
-                                            <h4 class="mb-0" id="deposits-total">
-                                                <span class="skeleton-loader" style="display:inline-block; width: 120px; height: 28px; border-radius: 4px;"></span>
-                                            </h4>
-                                            <small class="text-muted" id="deposit-count">—</small>
-                                        </div>
-                                        <i class="fas fa-piggy-bank fa-2x text-info opacity-50"></i>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
-                    <!-- Accounts Section -->
-                    <div class="card mb-4 shadow-sm">
-                        <div class="card-header bg-primary bg-gradient text-white">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0"><i class="fas fa-university me-2"></i>Your Accounts</h5>
-                                <button class="btn btn-sm btn-light" id="toggle-account-numbers" onclick="togglePIIMasking()" title="Show/Hide Account Numbers">
-                                    <i class="fas fa-eye me-1 pii-toggle"></i><span id="pii-toggle-text">Show</span> Numbers
-                                </button>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <div id="accounts-container">
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <div class="card border-start border-4 border-primary data-card-skeleton"></div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="card border-start border-4 border-primary data-card-skeleton"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+    <!-- Quick Action Tiles -->
+    <div class="fb-quick-actions mb-4">
+        <a href="/user/transfers" class="fb-action-tile">
+            <span class="tile-icon" style="background:var(--fb-primary-soft);color:var(--fb-primary);"><i class="fas fa-paper-plane"></i></span>
+            <div>
+                <div>Send Money</div>
+                <small class="text-muted fw-normal">P2P, ACH & SWIFT</small>
+            </div>
+        </a>
+        <div class="fb-action-tile" onclick="FinanzaShell.openAddMoneyModal('gateway')">
+            <span class="tile-icon" style="background:var(--fb-emerald-soft);color:var(--fb-emerald);"><i class="fas fa-circle-plus"></i></span>
+            <div>
+                <div>Add Money</div>
+                <small class="text-muted fw-normal">Gateway, Check, Wire</small>
+            </div>
+        </div>
+        <a href="/user/bill_pay" class="fb-action-tile">
+            <span class="tile-icon" style="background:var(--fb-amber-soft);color:var(--fb-amber);"><i class="fas fa-file-invoice-dollar"></i></span>
+            <div>
+                <div>Pay Bills</div>
+                <small class="text-muted fw-normal">Utilities & Merchants</small>
+            </div>
+        </a>
+        <a href="/user/currency_exchange" class="fb-action-tile">
+            <span class="tile-icon" style="background:var(--fb-purple-soft);color:var(--fb-purple);"><i class="fas fa-coins"></i></span>
+            <div>
+                <div>FX Exchange</div>
+                <small class="text-muted fw-normal">Live Multi-Currency</small>
+            </div>
+        </a>
+        <a href="/user/cards" class="fb-action-tile">
+            <span class="tile-icon" style="background:#f1f5f9;color:#0f172a;"><i class="fas fa-credit-card"></i></span>
+            <div>
+                <div>Cards Studio</div>
+                <small class="text-muted fw-normal">Virtual & Physical</small>
+            </div>
+        </a>
+        <a href="/user/deposits" class="fb-action-tile">
+            <span class="tile-icon" style="background:var(--fb-emerald-soft);color:var(--fb-emerald);"><i class="fas fa-piggy-bank"></i></span>
+            <div>
+                <div>Open Fixed CD</div>
+                <small class="text-muted fw-normal">Earn up to 5.50% APY</small>
+            </div>
+        </a>
+    </div>
 
-                    <!-- Deposits & Loans Quick View -->
-                    <div class="row mb-4">
-                        <!-- Deposits Section -->
-                        <div class="col-lg-6 mb-4">
-                            <div class="card shadow-sm">
-                                <div class="card-header bg-info bg-gradient text-white">
-                                    <h5 class="mb-0"><i class="fas fa-piggy-bank me-2"></i>Your Deposits</h5>
-                                </div>
-                                <div class="card-body">
-                                    <div id="deposits-list">
-                                        <div class="skeleton-loader" style="height: 60px; border-radius: 4px; margin-bottom: 10px;"></div>
-                                        <div class="skeleton-loader" style="height: 60px; border-radius: 4px;"></div>
-                                    </div>
-                                    <a href="/user/deposits" class="btn btn-sm btn-info mt-3">View All Deposits</a>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Loans Section -->
-                        <div class="col-lg-6 mb-4">
-                            <div class="card shadow-sm">
-                                <div class="card-header bg-warning bg-gradient text-white">
-                                    <h5 class="mb-0"><i class="fas fa-hand-holding-usd me-2"></i>Your Loans</h5>
-                                </div>
-                                <div class="card-body">
-                                    <div id="loans-list">
-                                        <div class="skeleton-loader" style="height: 60px; border-radius: 4px; margin-bottom: 10px;"></div>
-                                        <div class="skeleton-loader" style="height: 60px; border-radius: 4px;"></div>
-                                    </div>
-                                    <a href="/user/loans" class="btn btn-sm btn-warning mt-3">View All Loans</a>
-                                </div>
-                            </div>
+    <div class="row g-4 mb-4">
+        <!-- Left Column: Accounts + Recent Ledger -->
+        <div class="col-lg-8">
+            <!-- Accounts Card -->
+            <div class="fb-card mb-4">
+                <div class="fb-card-header">
+                    <h2 class="fb-card-title"><i class="fas fa-building-columns text-primary"></i> My Bank Accounts</h2>
+                    <div class="d-flex gap-2">
+                        <a href="/user/account" class="btn btn-sm btn-outline-primary">Manage & Statements</a>
+                    </div>
+                </div>
+                <div class="fb-card-body">
+                    <div class="row g-3" id="dashAccountsGrid">
+                        <div class="col-12 text-center py-4 text-muted">
+                            <i class="fas fa-spinner fa-spin me-2"></i>Loading accounts...
                         </div>
                     </div>
-                    
-                    <!-- Recent Transactions -->
-                    <div class="card shadow-sm">
-                        <div class="card-header bg-success bg-gradient text-white">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0"><i class="fas fa-exchange-alt me-2"></i>Recent Transactions</h5>
-                                <a href="/user/transactions" class="btn btn-sm btn-light">View All</a>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <div class="table-responsive">
-<table class="table table-sm table-hover mb-0" id="transactions-table">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>Description</th>
-                                        <th class="text-end">Amount</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="transactions-body">
-                                    <tr><td colspan="4"><div class="spinner-border spinner-border-sm text-success" role="status" style="margin: 1rem auto; display: block;"><span class="visually-hidden">Loading...</span></div></td></tr>
-                                </tbody>
-                            </table>
+                </div>
+            </div>
+
+            <!-- Recent Ledger Transactions -->
+            <div class="fb-card">
+                <div class="fb-card-header">
+                    <h2 class="fb-card-title"><i class="fas fa-list-check text-primary"></i> Recent Ledger Activity</h2>
+                    <a href="/user/transactions" class="btn btn-sm btn-outline-secondary">View Full Ledger</a>
+                </div>
+                <div class="table-responsive">
+                    <table class="fb-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Description & Reference</th>
+                                <th>Type</th>
+                                <th>Status</th>
+                                <th class="text-end">Amount</th>
+                                <th class="text-end">Receipt</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dashTransactionsBody">
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-muted">
+                                    <i class="fas fa-spinner fa-spin me-2"></i>Loading recent transactions...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Active Cards, Deposits & Loans Snapshot -->
+        <div class="col-lg-4">
+            <!-- Primary Card Preview -->
+            <div class="fb-card mb-4">
+                <div class="fb-card-header">
+                    <h2 class="fb-card-title"><i class="fas fa-credit-card text-primary"></i> Active Card</h2>
+                    <a href="/user/cards" class="small text-decoration-none fw-semibold">All Cards &rarr;</a>
+                </div>
+                <div class="fb-card-body" id="dashCardPreview">
+                    <div class="text-center py-3 text-muted small">Loading card preview...</div>
+                </div>
+            </div>
+
+            <!-- Active Savings / Deposits -->
+            <div class="fb-card mb-4">
+                <div class="fb-card-header">
+                    <h2 class="fb-card-title"><i class="fas fa-vault text-success"></i> Active Vaults & CDs</h2>
+                    <a href="/user/deposits" class="small text-decoration-none fw-semibold">Open New &rarr;</a>
+                </div>
+                <div class="fb-card-body" id="dashDepositsList">
+                    <div class="text-center py-3 text-muted small">No active fixed deposits.</div>
+                </div>
+            </div>
+
+            <!-- Active Loans & Credit -->
+            <div class="fb-card">
+                <div class="fb-card-header">
+                    <h2 class="fb-card-title"><i class="fas fa-hand-holding-dollar text-warning"></i> Credit & Loans</h2>
+                    <a href="/user/loans" class="small text-decoration-none fw-semibold">Manage &rarr;</a>
+                </div>
+                <div class="fb-card-body" id="dashLoansList">
+                    <div class="text-center py-3 text-muted small">No active loans.</div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
-                            <div id="no-transactions" style="display:none;">
-                                <div class="empty-state">
-                                    <div class="empty-state-icon"><i class="fas fa-inbox"></i></div>
-                                    <p><strong>No Transactions Yet</strong></p>
-                                    <p class="small text-muted">Your transaction history will appear here once you complete your first transaction.</p>
-                                </div>
-                            </div>
-                            <div id="pagination-container" class="pagination-container"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/static/js/user-shell.js"></script>
+<script>
+let cachedDashTxns = [];
+
+async function loadDashboardWorkspace() {
+    try {
+        const [accRes, depRes, invRes, loanRes, cardRes, txnRes, profRes] = await Promise.allSettled([
+            FinanzaShell.api('/api/user/accounts'),
+            FinanzaShell.api('/api/user/deposits'),
+            FinanzaShell.api('/api/user/investments'),
+            FinanzaShell.api('/api/user/loans'),
+            FinanzaShell.api('/api/user/cards'),
+            FinanzaShell.api('/api/user/transactions?limit=8'),
+            FinanzaShell.api('/api/user/profile')
+        ]);
+
+        const accounts = accRes.status === 'fulfilled'
+            ? (Array.isArray(accRes.value) ? accRes.value : (accRes.value.accounts || []))
+            : [];
+        const deposits = (depRes.status === 'fulfilled' && Array.isArray(depRes.value)) ? depRes.value : [];
+        const investments = (invRes.status === 'fulfilled' && Array.isArray(invRes.value)) ? invRes.value : [];
+        const loans = (loanRes.status === 'fulfilled' && Array.isArray(loanRes.value)) ? loanRes.value : [];
+        const cards = (cardRes.status === 'fulfilled' && Array.isArray(cardRes.value)) ? cardRes.value : [];
+        const txns = txnRes.status === 'fulfilled'
+            ? (Array.isArray(txnRes.value) ? txnRes.value : (txnRes.value.transactions || []))
+            : [];
+        const profile = profRes.status === 'fulfilled' ? profRes.value : {};
+
+        cachedDashTxns = txns;
+
+        // Status / KYC Banner
+        const banner = document.getElementById('dashStatusBanner');
+        const kycStatus = (profile.kyc_status || (profile.is_verified ? 'approved' : 'unverified')).toLowerCase();
+        if (kycStatus !== 'approved' && kycStatus !== 'verified' && !profile.is_verified) {
+            banner.style.display = 'block';
+            banner.innerHTML = `
+                <div class="fb-card p-3 border-start border-4 border-warning d-flex flex-wrap align-items-center justify-content-between gap-3">
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="fb-kpi-icon" style="background:var(--fb-amber-soft);color:var(--fb-amber);">
+                            <i class="fas fa-id-card-clip"></i>
+                        </span>
+                        <div>
+                            <div class="fw-bold">Complete Your Identity Verification (KYC)</div>
+                            <div class="small text-muted">Verify your government ID to unlock higher wire limits, international SWIFT transfers, and instant credit underwriting.</div>
                         </div>
                     </div>
+                    <a href="/user/kyc" class="btn btn-sm btn-warning fw-semibold">Verify Identity Now</a>
                 </div>
-            </div>
-        </div>
-    </div>
-    <!-- Footer -->
-    <div class="container-fluid bg-dark text-light footer mt-5 py-5 wow fadeIn" data-wow-delay="0.1s">
-        <div class="container py-5">
-            <div class="row g-5">
-                <div class="col-lg-3 col-md-6">
-                    <h5 class="text-white mb-4">Address</h5>
-                    <p class="mb-2"><i class="fa fa-map-marker-alt me-3"></i>100 Financial Ave, New York, NY 10001</p>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- Footer End -->
-    
-    <a href="#" class="btn btn-lg btn-primary btn-lg-square back-to-top"><i class="bi bi-arrow-up"></i></a>
-    
-    <!-- Scripts -->
-    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/static/lib/wow/wow.min.js"></script>
-    <script src="/static/lib/easing/easing.min.js"></script>
-    <script src="/static/lib/waypoints/waypoints.min.js"></script>
-    <script src="/static/lib/counterup/counterup.min.js"></script>
-    <script src="/static/lib/owlcarousel/owl.carousel.min.js"></script>
-    <script src="/static/js/main.js"></script>
-    
-    <!-- Production Dashboard Scripts (in order) -->
-    <script src="/static/js/dashboard-state.js"></script>
-    <script src="/static/js/csrf-manager.js"></script>
-    <script src="/static/js/dashboard-error-handler.js"></script>
-    <script src="/static/js/dashboard-silent-refresh.js"></script>
-    <script src="/static/js/dashboard-micro-fetches.js"></script>
-    <script src="/static/js/dashboard-audit.js"></script>
-    
-    <!-- Immediate bootstrap - ensure globals are set -->
-    <script>
-        console.log('[BOOTSTRAP] Scripts loaded. Checking globals...');
-        console.log('[BOOTSTRAP] dashboardState exists?', typeof dashboardState !== 'undefined');
-        console.log('[BOOTSTRAP] DashboardMicroFetes exists?', typeof DashboardMicroFetes !== 'undefined');
-        
-        // Ensure dashboardState is global if it exists
-        if (typeof dashboardState !== 'undefined' && !window.dashboardState) {
-            window.dashboardState = dashboardState;
-            console.log('[BOOTSTRAP] ✓ Exposed dashboardState to window');
-        }
-        
-        // Ensure DashboardMicroFetes is global if it exists
-        if (typeof DashboardMicroFetes !== 'undefined' && !window.DashboardMicroFetes) {
-            window.DashboardMicroFetes = DashboardMicroFetes;
-            console.log('[BOOTSTRAP] ✓ Exposed DashboardMicroFetes to window');
-        }
-        
-        // Create microFetches instance immediately if dependencies exist
-        if (window.dashboardState && window.DashboardMicroFetes && !window.microFetches) {
-            try {
-                window.microFetches = new window.DashboardMicroFetes(window.dashboardState);
-                console.log('[BOOTSTRAP] ✓ microFetches created');
-            } catch (e) {
-                console.error('[BOOTSTRAP] ❌ Failed to create microFetches:', e);
-            }
-        }
-    </script>
-    
-    <!-- Dashboard Initialization -->
-    <script>
-        // Check if guard already passed
-        if (window.DASHBOARD_GUARD_PASSED === true) {
-            console.log('[DASHBOARD] Guard already passed. Initializing dashboard...');
-            initializeDashboard();
+            `;
         } else {
-            // Wait for guard to pass
-            window.addEventListener('dashboardGuardPassed', function() {
-                console.log('[DASHBOARD] Guard passed. Initializing dashboard...');
-                initializeDashboard();
-            });
+            banner.style.display = 'none';
         }
-        
-        if (window.WOW) {
-            new WOW().init();
-        }
-        
-        let piiMasking = false;
-        let balanceMasking = false;
-        let currentTransactionPage = 1;
-        const transactionPageSize = 10; // Show only 10 transactions per page
-        
-        /**
-         * Initialize production dashboard
-         */
-        async function initializeDashboard() {
-            try {
-                console.log('[DASHBOARD] Initializing production dashboard...');
-                
-                // 1. Initialize error handler (CRITICAL)
-                dashboardErrorHandler.init();
-                
-                // 2. Register components for error handling
-                registerDashboardComponents();
-                
-                // 3. Check maintenance mode
-                const maintenanceCheck = await checkMaintenanceMode();
-                if (maintenanceCheck) {
-                    console.warn('[DASHBOARD] System in maintenance. Dashboard unavailable.');
-                    return;
-                }
-                
-                // 4. Initialize CSRF manager
-                await csrfManager.init();
-                
-                // 5. Initialize audit logger
-                dashboardAudit.init();
-                
-                // 6. Initialize silent refresh manager (prevents mid-transaction session loss)
-                silentRefreshManager.init();
-                
-                // 7. Setup state listeners
-                setupStateListeners();
-                
-                // 8. Start session heartbeat
-                dashboardState.startSessionHeartbeat();
-                
-                // 9. Setup auto-logout
-                setupAutoLogout();
-                
-                // 10. Setup token expiry countdown
-                setupTokenExpiryCountdown();
-                
-                // 11. microFetches should already be created by bootstrap script
-                if (!window.microFetches) {
-                    console.error('[DASHBOARD] ❌ microFetches not available!');
-                } else {
-                    console.log('[MICRO-FETCH] ✓ microFetches ready');
-                }
-                
-                // 12. Load all data
-                if (window.microFetches) {
-                    const maxLoadTimeout = setTimeout(() => {
-                        console.warn('[DASHBOARD] Load timeout - hiding spinner');
-                        const spinner = document.getElementById('page-spinner');
-                        if (spinner) spinner.style.display = 'none';
-                    }, 10000);
-                    
-                    window.microFetches.loadAllDashboardData()
-                        .then(() => {
-                            clearTimeout(maxLoadTimeout);
-                            console.log('[DASHBOARD] ✓ Data loading complete, hiding spinner');
-                            const spinner = document.getElementById('page-spinner');
-                            if (spinner) spinner.style.display = 'none';
-                            dashboardErrorHandler.hideBanner();
-                        })
-                        .catch(error => {
-                            clearTimeout(maxLoadTimeout);
-                            console.error('[DASHBOARD] Data loading error:', error);
-                            dashboardErrorHandler.handleComponentError('dashboard-data', error, {
-                                showBanner: true,
-                                message: 'Failed to load dashboard data. Check console for details.'
-                            });
-                            // Still hide spinner after 3 seconds even if there's an error
-                            setTimeout(() => {
-                                const spinner = document.getElementById('page-spinner');
-                                if (spinner) spinner.style.display = 'none';
-                            }, 3000);
-                        });
-                } else {
-                    console.error('[DASHBOARD] ❌ microFetches not available - data will not load');
-                }
-                
-                
-                console.log('[DASHBOARD] ✓ Production dashboard initialized');
-                
-            } catch (e) {
-                console.error('[DASHBOARD] Init error:', e);
-                dashboardErrorHandler.handleComponentError('dashboard-init', e, {
-                    showBanner: true,
-                    message: 'Failed to initialize dashboard. Please refresh the page.'
-                });
-                const spinner = document.getElementById('page-spinner');
-                if (spinner) spinner.style.display = 'none';
-            }
-        }
-        
-        /**
-         * Register dashboard components for error tracking
-         */
-        function registerDashboardComponents() {
-            dashboardErrorHandler.registerComponent('user-profile', async () => {
-                return window.microFetches.fetchUserProfile();
-            });
-            
-            dashboardErrorHandler.registerComponent('user-balance', async () => {
-                return window.microFetches.fetchBalance();
-            });
-            
-            dashboardErrorHandler.registerComponent('accounts', async () => {
-                return window.microFetches.fetchAccounts();
-            });
-            
-            dashboardErrorHandler.registerComponent('deposits', async () => {
-                return window.microFetches.fetchDeposits();
-            });
-            
-            dashboardErrorHandler.registerComponent('loans', async () => {
-                return window.microFetches.fetchLoans();
-            });
-            
-            dashboardErrorHandler.registerComponent('transactions', async () => {
-                currentTransactionPage = 1;
-                return window.microFetches.fetchTransactions(currentTransactionPage, transactionPageSize);
-            });
-            
-            console.log('[DASHBOARD] ✓ Components registered for error handling');
-        }
-        
-        /**
-         * Check maintenance mode and handle gracefully
-         */
-        async function checkMaintenanceMode() {
-            try {
-                const response = await dashboardErrorHandler.retryFetch('/api/v1/system/status', {}, 2);
-                
-                if (response.status === 503) {
-                    dashboardErrorHandler.handleMaintenanceMode();
-                    return true;
-                }
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    if (data.maintenance === true) {
-                        dashboardErrorHandler.handleMaintenanceMode();
-                        return true;
-                    }
-                }
-                
-                return false;
-                
-            } catch (error) {
-                console.warn('[DASHBOARD] Could not check maintenance status:', error.message);
-                return false;
-            }
-        }
-        
-        /**
-         * Setup reactive state listeners
-         */
-        function setupStateListeners() {
-            // User profile
-            dashboardState.subscribe('user', (newState) => {
-                if (!newState.loading) {
-                    document.getElementById('user-full-name').textContent = newState.full_name || 'User';
-                    document.getElementById('user-email').textContent = newState.email || '—';
-                    
-                    if (newState.is_verified) {
-                        document.getElementById('verification-badge').innerHTML = '<span class="badge bg-success"><i class="fas fa-check-circle me-1"></i>Verified</span>';
-                    }
-                    
-                    if (document.getElementById('welcome-section').classList.contains('skeleton-loader')) {
-                        document.getElementById('welcome-section').classList.remove('skeleton-loader');
-                    }
-                }
-            });
-            
-            // Balance
-            dashboardState.subscribe('balance', (newState) => {
-                if (!newState.loading) {
-                    document.getElementById('user-balance').innerHTML = dashboardState.formatCurrency(newState.total);
-                    document.getElementById('balance-updated').textContent = `Updated ${formatRelativeTime(newState.lastUpdated)}`;
-                }
-            });
-            
-            // Accounts
-            dashboardState.subscribe('accounts', (newState) => {
-                if (!newState.loading) {
-                    renderAccounts(newState.list);
-                }
-            });
-            
-            // Deposits
-            dashboardState.subscribe('deposits', (newState) => {
-                if (!newState.loading) {
-                    document.getElementById('deposits-total').innerHTML = dashboardState.formatCurrency(newState.total_amount);
-                    document.getElementById('deposit-count').textContent = `${newState.count} account${newState.count !== 1 ? 's' : ''}`;
-                    renderDeposits(newState.list);
-                }
-            });
-            
-            // Loans
-            dashboardState.subscribe('loans', (newState) => {
-                if (!newState.loading) {
-                    document.getElementById('user-loans').innerHTML = dashboardState.formatCurrency(newState.total_amount);
-                    document.getElementById('loan-count').textContent = `${newState.count} loan${newState.count !== 1 ? 's' : ''}`;
-                    renderLoans(newState.list);
-                }
-            });
-            
-            // Investments
-            dashboardState.subscribe('investments', (newState) => {
-                if (!newState.loading) {
-                    document.getElementById('user-investments').innerHTML = dashboardState.formatCurrency(newState.total_amount);
-                    document.getElementById('investment-count').textContent = `${newState.count} account${newState.count !== 1 ? 's' : ''}`;
-                }
-            });
-            
-            // Transactions
-            dashboardState.subscribe('transactions', (newState) => {
-                if (!newState.loading) {
-                    renderTransactions(newState.list);
-                    renderPagination(newState);
-                }
-            });
-            
-            // Account status
-            dashboardState.subscribe('accountStatus', (newState) => {
-                if (newState.is_suspended || newState.is_frozen) {
-                    showSuspensionBanner(newState);
-                }
-            });
-        }
-        
-        /**
-         * Render accounts with PII masking
-         */
-        function renderAccounts(accounts) {
-            const container = document.getElementById('accounts-container');
-            
-            if (!accounts || accounts.length === 0) {
-                container.innerHTML = '<div class="empty-state"><p class="text-muted"><i class="fas fa-inbox me-2"></i>No accounts yet</p></div>';
-                return;
-            }
-            
-            let html = '<div class="row g-3">';
-            accounts.forEach(acc => {
-                const maskedNum = dashboardState.maskAccountNumber(acc.account_number, !piiMasking);
-                const status = acc.status === 'active' ? 'success' : 'warning';
-                
-                html += `
-                    <div class="col-md-6">
-                        <div class="card border-start border-4 border-primary h-100">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-start mb-3">
-                                    <div>
-                                        <h6 class="text-muted mb-1">${acc.account_type?.toUpperCase() || 'ACCOUNT'}</h6>
-                                        <p class="h5 mb-1">${dashboardState.formatCurrency(acc.balance || 0)}</p>
-                                    </div>
-                                    <span class="badge bg-${status}">${acc.status || 'ACTIVE'}</span>
-                                </div>
-                                <div class="mb-3">
-                                    <small class="text-muted d-block mb-2">Account Number:</small>
-                                    <code class="user-select-all pii-masked">${maskedNum}</code>
-                                </div>
-                                <div class="mb-0">
-                                    <small class="text-muted d-block mb-2">Status:</small>
-                                    <span class="badge bg-${acc.status === 'active' ? 'success' : 'warning'}">
-                                        <i class="fas fa-${acc.status === 'active' ? 'check' : 'exclamation'}-circle me-1"></i>
-                                        ${acc.status === 'active' ? 'Active' : 'Inactive'}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-            html += '</div>';
-            container.innerHTML = html;
-        }
-        
-        /**
-         * Render deposits
-         */
-        function renderDeposits(deposits) {
-            const container = document.getElementById('deposits-list');
-            
-            if (!deposits || deposits.length === 0) {
-                container.innerHTML = '<p class="text-muted text-center py-3"><i class="fas fa-inbox me-2"></i>No active deposits</p>';
-                return;
-            }
-            
-            let html = '';
-            deposits.slice(0, 3).forEach(dep => {
-                html += `
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between align-items-center">
+
+        // KPIs
+        const totalCash = accounts.reduce((s, a) => s + Number(a.balance || 0), 0);
+        const activeDeps = deposits.filter(d => (d.status || '').toLowerCase() === 'active');
+        const totalDeps = activeDeps.reduce((s, d) => s + Number(d.current_balance || d.amount || 0), 0);
+        const activeInvs = investments.filter(i => (i.status || '').toLowerCase() === 'active');
+        const totalInvs = activeInvs.reduce((s, i) => s + Number(i.current_value || i.amount || 0), 0);
+        const activeLoans = loans.filter(l => ['active', 'approved', 'pending'].includes((l.status || '').toLowerCase()));
+        const totalLoans = activeLoans.reduce((s, l) => s + Number(l.remaining_balance || l.amount || 0), 0);
+
+        document.getElementById('kpiTotalBalance').textContent = FinanzaShell.fmt(totalCash);
+        document.getElementById('kpiAccountCount').textContent = `${accounts.length} Active Account${accounts.length === 1 ? '' : 's'}`;
+        document.getElementById('kpiTotalDeposits').textContent = FinanzaShell.fmt(totalDeps);
+        document.getElementById('kpiDepositsMeta').textContent = `${activeDeps.length} Active Vault${activeDeps.length === 1 ? '' : 's'}`;
+        document.getElementById('kpiTotalInvestments').textContent = FinanzaShell.fmt(totalInvs);
+        document.getElementById('kpiInvestmentsMeta').textContent = `${activeInvs.length} Active Holding${activeInvs.length === 1 ? '' : 's'}`;
+        document.getElementById('kpiTotalLoans').textContent = FinanzaShell.fmt(totalLoans);
+        document.getElementById('kpiLoansMeta').textContent = `${activeLoans.length} Credit Facilit${activeLoans.length === 1 ? 'y' : 'ies'}`;
+
+        // Render Accounts
+        const accGrid = document.getElementById('dashAccountsGrid');
+        if (!accounts.length) {
+            accGrid.innerHTML = `<div class="col-12 text-center py-4 text-muted">No accounts found.</div>`;
+        } else {
+            accGrid.innerHTML = accounts.map(acc => `
+                <div class="col-md-6">
+                    <div class="p-3 rounded-3 border bg-light h-100 d-flex flex-column justify-content-between">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
                             <div>
-                                <h6 class="mb-1">${dep.name || 'Deposit'}</h6>
-                                <small class="text-muted">${dashboardState.formatDate(dep.created_at)}</small>
+                                <span class="badge bg-primary-subtle text-primary text-uppercase mb-1">${acc.account_type || 'Checking'}</span>
+                                <div class="fs-4 fw-extrabold tabular-nums">${FinanzaShell.fmt(acc.balance, acc.currency || 'USD')}</div>
                             </div>
-                            <div class="text-end">
-                                <p class="mb-0 fw-bold">${dashboardState.formatCurrency(dep.amount)}</p>
-                                <small class="text-success"><i class="fas fa-check-circle me-1"></i>${dep.status}</small>
-                            </div>
+                            <span class="fb-badge fb-badge-success"><i class="fas fa-circle-check"></i> ${acc.status || 'Active'}</span>
+                        </div>
+                        <div class="d-flex align-items-center justify-content-between pt-2 border-top mt-2 small">
+                            <span class="text-muted">Account #: <code class="bank-code fw-bold text-dark">${acc.account_number}</code></span>
+                            <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none" onclick="FinanzaShell.copyText('${acc.account_number}', 'Account Number')">
+                                <i class="far fa-copy me-1"></i>Copy
+                            </button>
                         </div>
                     </div>
-                `;
-            });
-            container.innerHTML = html;
+                </div>
+            `).join('');
         }
-        
-        /**
-         * Render loans
-         */
-        function renderLoans(loans) {
-            const container = document.getElementById('loans-list');
-            
-            if (!loans || loans.length === 0) {
-                container.innerHTML = '<p class="text-muted text-center py-3"><i class="fas fa-inbox me-2"></i>No active loans</p>';
-                return;
-            }
-            
-            let html = '';
-            loans.slice(0, 3).forEach(loan => {
-                const progress = Math.round((loan.paid_amount / loan.total_amount) * 100);
-                html += `
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <h6 class="mb-0">${loan.name || 'Loan'}</h6>
-                            <small class="fw-bold">${progress}%</small>
-                        </div>
-                        <div class="progress" style="height: 6px;">
-                            <div class="progress-bar bg-warning" style="width: ${progress}%;"></div>
-                        </div>
-                        <small class="text-muted d-block mt-1">${dashboardState.formatCurrency(loan.paid_amount)} of ${dashboardState.formatCurrency(loan.total_amount)}</small>
+
+        // Render Card Preview
+        const cardBox = document.getElementById('dashCardPreview');
+        if (!cards.length) {
+            cardBox.innerHTML = `
+                <div class="text-center py-3">
+                    <p class="small text-muted mb-3">Issue an instant virtual or physical Visa/Mastercard linked to your checking balance.</p>
+                    <a href="/user/cards" class="btn btn-sm btn-primary"><i class="fas fa-plus me-1"></i>Issue Instant Card</a>
+                </div>
+            `;
+        } else {
+            const c = cards[0];
+            const last4 = String(c.card_number || '0000').slice(-4);
+            cardBox.innerHTML = `
+                <div class="fb-bank-card card-${(c.card_type || 'debit').toLowerCase()} ${c.status === 'frozen' ? 'card-frozen' : ''}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="fb-card-chip"></div>
+                        <span class="badge bg-light text-dark text-uppercase">${c.card_type || 'Debit'} • ${c.status || 'Active'}</span>
                     </div>
-                `;
-            });
-            container.innerHTML = html;
+                    <div class="fb-card-number">•••• •••• •••• ${last4}</div>
+                    <div class="d-flex justify-content-between align-items-end small">
+                        <div>
+                            <div class="text-white-50" style="font-size:0.68rem;">CARDHOLDER</div>
+                            <div class="fw-semibold text-uppercase">${c.card_holder_name || profile.full_name || 'CLIENT'}</div>
+                        </div>
+                        <div class="text-end">
+                            <div class="text-white-50" style="font-size:0.68rem;">EXPIRES</div>
+                            <div class="font-mono fw-semibold">${c.expiry_date || '12/28'}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
-        
-        /**
-         * Render transactions with pagination
-         */
-        function renderTransactions(transactions) {
-            const tbody = document.getElementById('transactions-body');
-            const noTxn = document.getElementById('no-transactions');
-            
-            if (!transactions || transactions.length === 0) {
-                tbody.innerHTML = '';
-                noTxn.style.display = 'block';
-                return;
-            }
-            
-            noTxn.style.display = 'none';
-            tbody.innerHTML = '';
-            
-            // Limit to page size
-            const pageTransactions = transactions.slice(0, transactionPageSize);
-            
-            pageTransactions.forEach(txn => {
-                const statusBadgeClass = {
-                    'completed': 'bg-success',
-                    'pending': 'bg-warning',
-                    'failed': 'bg-danger',
-                    'blocked': 'bg-secondary',
-                    'cancelled': 'bg-dark'
-                }[txn.status?.toLowerCase()] || 'bg-secondary';
-                
-                const row = `
+
+        // Render Deposits Snapshot
+        const depBox = document.getElementById('dashDepositsList');
+        if (!activeDeps.length) {
+            depBox.innerHTML = `<div class="text-center py-3 text-muted small">No active fixed deposits. <a href="/user/deposits">Open a High-Yield CD</a></div>`;
+        } else {
+            depBox.innerHTML = activeDeps.slice(0, 3).map(d => `
+                <div class="d-flex justify-content-between align-items-center py-2 border-bottom last-border-0">
+                    <div>
+                        <div class="fw-semibold">${d.term_months || 12}M Fixed Deposit</div>
+                        <small class="text-success fw-semibold">${Number(d.interest_rate || 4.5).toFixed(2)}% APY</small>
+                    </div>
+                    <div class="text-end tabular-nums fw-bold">${FinanzaShell.fmt(d.current_balance || d.amount)}</div>
+                </div>
+            `).join('');
+        }
+
+        // Render Loans Snapshot
+        const loanBox = document.getElementById('dashLoansList');
+        if (!activeLoans.length) {
+            loanBox.innerHTML = `<div class="text-center py-3 text-muted small">No active loans. <a href="/user/loans">Explore Credit Options</a></div>`;
+        } else {
+            loanBox.innerHTML = activeLoans.slice(0, 3).map(l => `
+                <div class="py-2 border-bottom">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="fw-semibold text-capitalize">${l.loan_type || 'Personal'} Loan</span>
+                        <span class="tabular-nums fw-bold">${FinanzaShell.fmt(l.remaining_balance || l.amount)}</span>
+                    </div>
+                    <div class="d-flex justify-content-between small text-muted mt-1">
+                        <span>${Number(l.interest_rate || 6.5).toFixed(2)}% APR</span>
+                        <span class="text-uppercase badge bg-light text-dark">${l.status}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Render Recent Transactions
+        const tbody = document.getElementById('dashTransactionsBody');
+        if (!txns.length) {
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-muted">No ledger transactions recorded yet.</td></tr>`;
+        } else {
+            tbody.innerHTML = txns.slice(0, 8).map((t, idx) => {
+                const isCredit = (t.direction || '').toLowerCase() === 'credit' ||
+                                 ['deposit', 'credit', 'transfer_received', 'investment_liquidation'].includes((t.type || t.transaction_type || '').toLowerCase());
+                const st = (t.status || 'completed').toLowerCase();
+                const badge = st === 'completed' ? 'fb-badge-success' : (st === 'pending' ? 'fb-badge-warning' : 'fb-badge-danger');
+                return `
                     <tr>
-                        <td>${dashboardState.formatDate(txn.created_at)}</td>
-                        <td>${txn.type || 'Transaction'}</td>
-                        <td class="text-end fw-bold">${dashboardState.formatCurrency(txn.amount)}</td>
-                        <td><span class="badge ${statusBadgeClass}">${txn.status || 'Unknown'}</span></td>
+                        <td class="text-nowrap">${FinanzaShell.fmtDate(t.created_at || t.date)}</td>
+                        <td>
+                            <div class="fw-semibold">${t.description || 'Ledger Transaction'}</div>
+                            <code class="bank-code text-muted small">${t.reference_number || ('TXN-' + t.id)}</code>
+                        </td>
+                        <td class="text-capitalize">${String(t.transaction_type || t.type || 'transfer').replace(/_/g, ' ')}</td>
+                        <td><span class="fb-badge ${badge}">${st}</span></td>
+                        <td class="text-end tabular-nums fw-bold ${isCredit ? 'text-success' : 'text-dark'}">
+                            ${isCredit ? '+' : '-'}${FinanzaShell.fmt(t.amount)}
+                        </td>
+                        <td class="text-end">
+                            <button type="button" class="btn btn-sm btn-light border" onclick="FinanzaShell.showReceipt(cachedDashTxns[${idx}])">
+                                <i class="fas fa-receipt"></i>
+                            </button>
+                        </td>
                     </tr>
                 `;
-                tbody.innerHTML += row;
-            });
+            }).join('');
         }
-        
-        /**
-         * Render pagination with improved UI
-         */
-        function renderPagination(transactionState) {
-            const container = document.getElementById('pagination-container');
-            const totalTransactions = transactionState.list?.length || 0;
-            
-            if (!transactionState.hasMore || totalTransactions <= transactionPageSize) {
-                container.innerHTML = '';
-                return;
-            }
-            
-            container.innerHTML = `
-                <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
-                    <small class="text-muted">
-                        Showing 1–${Math.min(transactionPageSize, totalTransactions)} of ${totalTransactions} transactions
-                    </small>
-                    <div>
-                        <button class="btn btn-outline-success btn-sm load-more-btn me-2" onclick="loadMoreTransactions()">
-                            <i class="fas fa-chevron-down me-2"></i>Load More
-                        </button>
-                        <a href="/user/transactions" class="btn btn-outline-primary btn-sm load-more-btn">
-                            <i class="fas fa-list me-2"></i>View All
-                        </a>
-                    </div>
-                </div>
-            `;
-        }
-        
-        /**
-         * Load more transactions
-         */
-        async function loadMoreTransactions() {
-            if (microFetches) {
-                currentTransactionPage++;
-                try {
-                    await window.microFetches.fetchTransactions(currentTransactionPage, transactionPageSize);
-                } catch (error) {
-                    dashboardErrorHandler.handleComponentError('transactions', error, {
-                        showBanner: true,
-                        message: 'Failed to load more transactions.'
-                    });
-                }
-            }
-        }
-        
-        /**
-         * Toggle Balance Masking
-         */
-        function toggleBalanceMasking() {
-            balanceMasking = !balanceMasking;
-            
-            const balanceElement = document.getElementById('user-balance');
-            const balanceState = dashboardState.getState('balance');
-            
-            if (balanceMasking) {
-                // Mask the balance
-                balanceElement.innerHTML = '<span class="balance-masked">• • • • •</span>';
-                document.getElementById('toggle-balance-mask').innerHTML = '<i class="fas fa-eye-slash me-1"></i>';
-            } else {
-                // Show the balance
-                balanceElement.innerHTML = dashboardState.formatCurrency(balanceState.total);
-                document.getElementById('toggle-balance-mask').innerHTML = '<i class="fas fa-eye me-1"></i>';
-            }
-            
-            dashboardAudit.logAction('balance_masking_toggled', { masked: balanceMasking });
-        }
-        
-        /**
-         * Toggle PII masking (Account Numbers)
-         */
-        function togglePIIMasking() {
-            piiMasking = !piiMasking;
-            document.getElementById('pii-toggle-text').textContent = piiMasking ? 'Hide' : 'Show';
-            document.getElementById('toggle-account-numbers').innerHTML = `
-                <i class="fas fa-${piiMasking ? 'eye-slash' : 'eye'} me-1 pii-toggle"></i><span id="pii-toggle-text">${piiMasking ? 'Hide' : 'Show'}</span> Numbers
-            `;
-            
-            const accountState = dashboardState.getState('accounts');
-            renderAccounts(accountState.list);
-            dashboardAudit.logAction('pii_toggle', { revealed: piiMasking });
-        }
-        
-        /**
-         * Show suspension banner
-         */
-        function showSuspensionBanner(status) {
-            const banner = document.getElementById('suspension-banner');
-            
-            if (status.is_suspended) {
-                banner.innerHTML = `
-                    <div class="suspension-banner">
-                        <strong><i class="fas fa-lock me-2"></i>Account Suspended</strong>
-                        <p class="mb-0 mt-2">${status.suspension_reason || 'Your account has been suspended.'}</p>
-                    </div>
-                `;
-                banner.style.display = 'block';
-            }
-        }
-        
-        /**
-         * Setup auto-logout on inactivity
-         */
-        function setupAutoLogout() {
-            let inactivityTimeout;
-            
-            const resetTimeout = () => {
-                clearTimeout(inactivityTimeout);
-                dashboardState.recordActivity();
-                inactivityTimeout = setTimeout(() => {
-                    console.warn('[DASHBOARD] Inactivity timeout. Logging out.');
-                    handleLogout();
-                }, dashboardState.config.AUTO_LOGOUT_AFTER_INACTIVITY_MS);
-            };
-            
-            document.addEventListener('mousemove', resetTimeout);
-            document.addEventListener('keypress', resetTimeout);
-            document.addEventListener('click', resetTimeout);
-            resetTimeout();
-        }
-        
-        /**
-         * Setup token expiry countdown
-         */
-        function setupTokenExpiryCountdown() {
-            setInterval(() => {
-                if (dashboardState.isTokenExpiringSoon()) {
-                    const warning = document.getElementById('token-expiry-warning');
-                    warning.style.display = 'block';
-                    
-                    const expiry = dashboardState.state.security.token_expiry;
-                    const minutesLeft = Math.ceil((expiry - Date.now()) / 60000);
-                    document.getElementById('expiry-countdown').textContent = minutesLeft;
-                }
-            }, 10000);
-        }
-        
-        /**
-         * Handle logout
-         */
-        function handleLogout(event) {
-            if (event) event.preventDefault();
-            
-            if (confirm('Are you sure you want to logout?')) {
-                dashboardAudit.logAction('user_logout');
-                dashboardAudit.flushAuditData(true);
-                
-                localStorage.clear();
-                sessionStorage.clear();
-                
-                // Destroy all managers
-                dashboardState.destroy();
-                csrfManager.destroy();
-                dashboardAudit.destroy();
-                dashboardErrorHandler.destroy();
-                silentRefreshManager.destroy();
-                
-                window.location.replace('/logout');
-            }
-        }
-        
-        /**
-         * Format relative time
-         */
-        function formatRelativeTime(isoString) {
-            if (!isoString) return 'recently';
-            
-            const date = new Date(isoString);
-            const now = new Date();
-            const seconds = Math.floor((now - date) / 1000);
-            
-            if (seconds < 60) return `${seconds}s ago`;
-            if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-            if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-            return date.toLocaleDateString();
-        }
-        
-    </script>
-    <!-- Mobile Bottom Navigation Bar -->
-    <div id="mobile-bottom-nav" role="navigation" aria-label="Mobile navigation">
-        <a href="/user/dashboard" class="mobile-nav-item" id="mbnav-home">
-            <i class="fas fa-home"></i>
-            Home
-        </a>
-        <a href="/user/transfers" class="mobile-nav-item" id="mbnav-transfer">
-            <i class="fas fa-exchange-alt"></i>
-            Transfer
-        </a>
-        <a href="/user/cards" class="mobile-nav-item" id="mbnav-cards">
-            <i class="fas fa-credit-card"></i>
-            Cards
-        </a>
-        <a href="/user/transactions" class="mobile-nav-item" id="mbnav-txn">
-            <i class="fas fa-list-alt"></i>
-            Activity
-        </a>
-        <div class="mobile-nav-item" id="mbnav-more" onclick="toggleMobileMoreMenu()">
-            <i class="fas fa-th"></i>
-            More
-        </div>
-    </div>
-
-    <!-- Mobile More Menu -->
-    <div id="mobile-more-overlay" onclick="closeMobileMoreMenu()"></div>
-    <div id="mobile-more-menu">
-        <a href="/user/account" class="mobile-more-item"><i class="fas fa-university"></i>Account</a>
-        <a href="/user/loans" class="mobile-more-item"><i class="fas fa-hand-holding-usd"></i>Loans</a>
-        <a href="/user/deposits" class="mobile-more-item"><i class="fas fa-piggy-bank"></i>Deposits</a>
-        <a href="/user/investments" class="mobile-more-item"><i class="fas fa-chart-line"></i>Invest</a>
-        <a href="/user/kyc_form" class="mobile-more-item"><i class="fas fa-id-card"></i>KYC</a>
-        <a href="/user/notifications" class="mobile-more-item"><i class="fas fa-bell"></i>Alerts</a>
-        <a href="/user/settings" class="mobile-more-item"><i class="fas fa-cog"></i>Settings</a>
-        <a href="/user/security" class="mobile-more-item"><i class="fas fa-shield-alt"></i>Security</a>
-        <a href="/user/profile" class="mobile-more-item"><i class="fas fa-user"></i>Profile</a>
-        <a href="/user/bill_pay" class="mobile-more-item"><i class="fas fa-file-invoice-dollar"></i>Bill Pay</a>
-        <a href="/user/international_transfers" class="mobile-more-item"><i class="fas fa-globe"></i>Intl Transfer</a>
-        <a href="#" onclick="typeof handleLogout !== 'undefined' ? handleLogout(event) : (window.location='/auth/logout')" class="mobile-more-item" style="color:#dc3545;"><i class="fas fa-sign-out-alt" style="color:#dc3545;"></i>Logout</a>
-    </div>
-
-    <script>
-    // Mobile more menu toggle
-    function toggleMobileMoreMenu() {
-        var menu = document.getElementById('mobile-more-menu');
-        var overlay = document.getElementById('mobile-more-overlay');
-        var isOpen = menu.classList.contains('open');
-        if (isOpen) {
-            menu.classList.remove('open');
-            overlay.classList.remove('open');
-        } else {
-            menu.classList.add('open');
-            overlay.classList.add('open');
-        }
+    } catch (err) {
+        console.error('[Dashboard] Load error:', err);
     }
-    function closeMobileMoreMenu() {
-        document.getElementById('mobile-more-menu').classList.remove('open');
-        document.getElementById('mobile-more-overlay').classList.remove('open');
-    }
-    // Highlight the active mobile nav tab based on current URL
-    (function() {
-        var path = window.location.pathname;
-        var map = {
-            '/user/dashboard': 'mbnav-home',
-            '/user/transfers': 'mbnav-transfer',
-            '/user/bill_pay': 'mbnav-transfer',
-            '/user/cards': 'mbnav-cards',
-            '/user/transactions': 'mbnav-txn',
-        };
-        var activeId = null;
-        for (var key in map) {
-            if (path.indexOf(key) !== -1) { activeId = map[key]; break; }
-        }
-        if (activeId) {
-            var el = document.getElementById(activeId);
-            if (el) el.classList.add('active');
-        }
-    })();
-    </script>
+}
+
+document.addEventListener('DOMContentLoaded', loadDashboardWorkspace);
+window.addEventListener('finanza:mask-changed', loadDashboardWorkspace);
+window.addEventListener('finanza:context-ready', loadDashboardWorkspace);
+</script>
 </body>
-
 </html>

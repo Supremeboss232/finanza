@@ -16,10 +16,20 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+asyncpg://postgres:Supposedbe5@127.0.0.1:5432/Finanza"
     ALEMBIC_DATABASE_URL: Optional[str] = None
     ADMIN_EMAIL: str = "admin@admin.com"
-    ADMIN_PASSWORD: str = "admin123"
-    SECRET_KEY: str = "Supremeboss232"  # Change this in production
+    ADMIN_PASSWORD: str = "Finanza@Admin2026!"  # Override via ADMIN_PASSWORD env var
+    # SECRET_KEY must be set via environment variable — never hardcode in production
+    SECRET_KEY: str = "CHANGE_ME_SET_SECRET_KEY_ENV_VAR"  # 512-bit key via: python -c "import secrets; print(secrets.token_hex(64))"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    
+    # Multi-Database Configuration (Nile DB = Main, Supabase = Fallback, SQLite = Local)
+    NILE_DB_URL: Optional[str] = None
+    NILEDB_URL: Optional[str] = None
+    NILEDB_POSTGRES_URL: Optional[str] = None
+    NILEDB_API_URL: Optional[str] = None
+    NILEDB_USER: Optional[str] = None
+    NILEDB_PASSWORD: Optional[str] = None
+    SUPABASE_DB_URL: Optional[str] = None
     
     # AWS SES Configuration
     AWS_REGION: str = "eu-north-1"
@@ -57,6 +67,21 @@ class Settings(BaseSettings):
     MAILTRAP_FROM_EMAIL: str = "hello@demomailtrap.co"
     MAILTRAP_FROM_NAME: str = "Finanza Bank"
     
+    # ==================== REDIS CONFIGURATION ====================
+    # Used for OTP codes, password reset tokens, token blacklist, session caching
+    # Leave empty to use in-memory fallback (single-server deployments only)
+    REDIS_URL: Optional[str] = None
+
+    # ==================== THIRD-PARTY PROVIDER API KEYS ====================
+    FIXER_IO_API_KEY: Optional[str] = None          # FX rates (fixer.io)
+    OFAC_API_KEY: Optional[str] = None              # Sanctions screening
+    PAYMENT_GATEWAY_API_KEY: Optional[str] = None   # Stripe, Adyen, etc.
+    PAYMENT_GATEWAY_SECRET_KEY: Optional[str] = None
+    CARD_ISSUER_API_KEY: Optional[str] = None       # Marqeta, Galileo, etc.
+    CARD_ISSUER_BASE_URL: Optional[str] = None
+    CREDIT_BUREAU_API_KEY: Optional[str] = None     # Equifax / Experian / TransUnion
+    CREDIT_BUREAU_PROVIDER: Optional[str] = None    # e.g. "equifax"
+
     # ==================== RATE LIMITING CONFIGURATION ====================
     # Rate limiter can use: "memory" (in-process), "redis", or "database"
     RATE_LIMITER_BACKEND: str = "memory"  # memory, redis, or database
@@ -118,6 +143,48 @@ class Settings(BaseSettings):
     
     # AWS SNS/SES: Use SNS topic ARN for verification
     SES_SNS_WEBHOOK_SECRET: Optional[str] = None
+
+    # ── Vendor Webhook Secrets ────────────────────────────────────────────────
+    # Card Issuance providers (Marqeta, Galileo, Visa DPS, i2c)
+    # Each provider gives you a webhook signing secret during onboarding
+    CARD_ISSUER_WEBHOOK_SECRET: Optional[str] = None
+    MARQETA_APPLICATION_TOKEN: Optional[str] = None
+    MARQETA_ADMIN_ACCESS_TOKEN: Optional[str] = None
+    MARQETA_BASE_URL: str = "https://sandbox-api.marqeta.com/v3"
+
+    # ACH / Wire payment rails (Column Bank, Evolve, Synapse, Dwolla)
+    ACH_WEBHOOK_SECRET: Optional[str] = None
+    COLUMN_API_KEY: Optional[str] = None
+    COLUMN_BASE_URL: str = "https://sandbox.column.com"
+    DWOLLA_APP_KEY: Optional[str] = None
+    DWOLLA_APP_SECRET: Optional[str] = None
+
+    # OFAC / AML compliance (Comply Advantage, Refinitiv, LexisNexis)
+    OFAC_WEBHOOK_SECRET: Optional[str] = None
+    COMPLY_ADVANTAGE_API_KEY: Optional[str] = None
+    REFINITIV_API_KEY: Optional[str] = None
+
+    # Credit Bureau (Equifax, Experian, TransUnion) — FCRA compliance required
+    CREDIT_BUREAU_WEBHOOK_SECRET: Optional[str] = None
+    EQUIFAX_API_KEY: Optional[str] = None
+    EXPERIAN_CLIENT_ID: Optional[str] = None
+    EXPERIAN_CLIENT_SECRET: Optional[str] = None
+    TRANSUNION_API_KEY: Optional[str] = None
+
+    # Crypto / Blockchain custodian (Fireblocks, BitGo, Zero Hash)
+    CRYPTO_WEBHOOK_SECRET: Optional[str] = None
+    FIREBLOCKS_API_KEY: Optional[str] = None
+    FIREBLOCKS_API_SECRET_PATH: Optional[str] = None  # Path to RSA private key file
+    BITGO_ACCESS_TOKEN: Optional[str] = None
+    ZEROHASH_API_KEY: Optional[str] = None
+
+    # FX / International payments (Currencycloud, Wise, Airwallex)
+    FX_PROVIDER_WEBHOOK_SECRET: Optional[str] = None
+    CURRENCYCLOUD_API_KEY: Optional[str] = None
+    CURRENCYCLOUD_LOGIN_ID: Optional[str] = None
+    WISE_API_TOKEN: Optional[str] = None
+    AIRWALLEX_API_KEY: Optional[str] = None
+    AIRWALLEX_CLIENT_ID: Optional[str] = None
     
     # ==================== PRICE FEEDS ====================
     # Fixer.io API key for forex rates
@@ -176,18 +243,38 @@ class Settings(BaseSettings):
             self.ALEMBIC_DATABASE_URL = "sqlite:///finanza.db"
             return self
 
-        # For Supabase: prefer POSTGRES_URL_NON_POOLING (pooler on port 5432)
-        # since direct connections to db.*.supabase.co often fail with DNS on some networks
-        # Only use DATABASE_URL if no pooler URL is available
-        
-        if not getattr(self, 'SUPABASE_DB_URL', None):
-            for candidate in (getattr(self, 'POSTGRES_URL_NON_POOLING', None), getattr(self, 'POSTGRES_URL', None), getattr(self, 'POSTGRES_PRISMA_URL', None)):
+        # Multi-Database Resolution Order:
+        # 1. Supabase DB (Main Cloud DB - Primary)
+        # 2. Nile DB (Fallback Cloud DB - Secondary)
+        # 3. DATABASE_URL / Local SQLite (Emergency local fallback)
+
+        # --- Resolve Supabase URL (Primary) ---
+        supabase_url = getattr(self, 'SUPABASE_DB_URL', None)
+        if not supabase_url:
+            for candidate in (
+                getattr(self, 'POSTGRES_URL_NON_POOLING', None),
+                getattr(self, 'POSTGRES_URL', None),
+                getattr(self, 'POSTGRES_PRISMA_URL', None),
+            ):
                 if candidate:
+                    supabase_url = candidate
                     self.SUPABASE_DB_URL = candidate
                     break
 
-        if getattr(self, 'SUPABASE_DB_URL', None):
-            self.DATABASE_URL = self.SUPABASE_DB_URL
+        # --- Resolve Nile DB URL (Fallback) ---
+        nile_url = (
+            getattr(self, 'NILEDB_URL', None) or
+            getattr(self, 'NILE_DB_URL', None) or
+            os.environ.get('NILEDB_URL') or
+            os.environ.get('NILE_DB_URL')
+        )
+
+        # Apply resolution: Supabase first, then Nile
+        if supabase_url:
+            self.DATABASE_URL = supabase_url
+        elif nile_url:
+            self.DATABASE_URL = nile_url
+        # else: keep DATABASE_URL default (local postgres or sqlite fallback)
 
         if self.DATABASE_URL:
             # Allow .env to keep a plain PostgreSQL URL while the app uses an async driver.

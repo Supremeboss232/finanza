@@ -34,7 +34,7 @@ class SAMDeployer:
     
     def run_command(self, cmd, description):
         """Run a shell command and handle output"""
-        print(f"→ {description}...")
+        print(f"-> {description}...")
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, shell=False)
             if result.returncode == 0:
@@ -249,7 +249,7 @@ class SAMDeployer:
         print("\nMonitoring:")
         print("- CloudWatch Dashboard: finanza-realtime-{}-dashboard".format(self.environment))
         print("- Lambda Logs: /aws/lambda/finanza-realtime-dispatcher")
-        print("- X-Ray Service Map: AWS Console → X-Ray → Service Map")
+        print("- X-Ray Service Map: AWS Console -> X-Ray -> Service Map")
         print("="*70 + "\n")
         
         return True

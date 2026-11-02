@@ -99,10 +99,13 @@ async def login_v1(
         
         if not username_input or not password:
             print(f"[LOGIN] [FAIL] Missing username or password")
-            return {
-                "success": False,
-                "detail": "Username and password are required"
-            }
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "success": False,
+                    "detail": "Username and password are required"
+                }
+            )
         
         # Look up user by email or username
         user = None
@@ -120,18 +123,24 @@ async def login_v1(
         except Exception as db_error:
             print(f"[LOGIN] [FAIL] Database error: {db_error}")
             print(f"[LOGIN] [FAIL] DB Session is None: {db_session is None}")
-            return {
-                "success": False,
-                "detail": f"Database error: {str(db_error)}"
-            }
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "success": False,
+                    "detail": f"Database error: {str(db_error)}"
+                }
+            )
         
         # Verify user exists and password is correct
         if not user:
             print(f"[LOGIN] [FAIL] User not found: {username_input}")
-            return {
-                "success": False,
-                "detail": "Invalid email or password"
-            }
+            return JSONResponse(
+                status_code=401,
+                content={
+                    "success": False,
+                    "detail": "Invalid email or password"
+                }
+            )
         
         # Verify password
         print(f"[LOGIN] Verifying password for: {user.email}")
@@ -140,10 +149,13 @@ async def login_v1(
         
         if not is_password_valid:
             print(f"[LOGIN] [FAIL] Invalid password for: {username_input}")
-            return {
-                "success": False,
-                "detail": "Invalid email or password"
-            }
+            return JSONResponse(
+                status_code=401,
+                content={
+                    "success": False,
+                    "detail": "Invalid email or password"
+                }
+            )
         
         print(f"[LOGIN] [OK] User authenticated: {user.full_name} (ID: {user.id})")
         
@@ -226,76 +238,59 @@ async def login_v1(
         }
 
 
+@auth_v1_router.get("/verify")
+@auth_v1_router.post("/verify")
 @auth_v1_router.post("/verify-token")
 async def verify_token(
     request: Request,
     db_session: SessionDep
 ):
     """
-    Verify that a user's token is still valid
-    Called by dashboard guard to ensure session is active
-    Returns 200 if valid, 401 if invalid/expired
+    Verify that a user's token or cookie session is still valid.
+    Returns 200 if valid, 401 if invalid/expired.
     """
     try:
-        # Get token from Authorization header
         auth_header = request.headers.get('Authorization', '')
-        if not auth_header.startswith('Bearer '):
-            print(f"[VERIFY-TOKEN] [FAIL] No Bearer token in Authorization header")
-            return JSONResponse(
-                content={"detail": "No token provided"},
-                status_code=401
-            )
-        
-        token = auth_header.replace('Bearer ', '')
-        
-        # Decode token to get user email
-        email = decode_access_token(token)
+        token = None
+        if auth_header.startswith('Bearer '):
+            cand = auth_header.replace('Bearer ', '').strip()
+            if cand and cand not in ('null', 'undefined', 'cookie-session'):
+                token = cand
+        if not token:
+            token = request.cookies.get('access_token')
+
+        if not token:
+            return JSONResponse(content={"detail": "No token provided"}, status_code=401)
+
+        decoded = decode_access_token(token)
+        email = decoded.get("sub") if isinstance(decoded, dict) else decoded
         if not email:
-            print(f"[VERIFY-TOKEN] [FAIL] Token decode failed or expired")
-            return JSONResponse(
-                content={"detail": "Invalid or expired token"},
-                status_code=401
-            )
-        
-        # Look up user in database to ensure they still exist
-        result = await db_session.execute(
-            select(User).where(User.email == email)
-        )
+            return JSONResponse(content={"detail": "Invalid or expired token"}, status_code=401)
+
+        result = await db_session.execute(select(User).where(User.email == email))
         user = result.scalar_one_or_none()
-        
         if not user:
-            print(f"[VERIFY-TOKEN] [FAIL] User not found: {email}")
-            return JSONResponse(
-                content={"detail": "User not found"},
-                status_code=401
-            )
-        
-        # Check if user account is suspended/inactive - log warning but don't block
-        # (the login endpoint already validated these users)
-        if hasattr(user, 'is_active') and user.is_active is False:
-            print(f"[VERIFY-TOKEN] [WARN]  User account inactive but token valid: {email}")
-        
-        # Token is valid - user exists and token hasn't expired
-        print(f"[VERIFY-TOKEN] [OK] Token verified for user: {email}")
+            return JSONResponse(content={"detail": "User not found"}, status_code=401)
+
+        is_adm = bool(getattr(user, 'is_admin', False))
+        adm_role = getattr(user, 'admin_role', None) or ('SUPER_ADMIN' if is_adm else 'user')
         return JSONResponse(
             content={
+                "success": True,
                 "valid": True,
                 "email": email,
                 "user_id": user.id,
-                "is_admin": user.is_admin if hasattr(user, 'is_admin') else False,
-                "is_active": user.is_active if hasattr(user, 'is_active') else True
+                "full_name": user.full_name,
+                "is_admin": is_adm,
+                "is_active": user.is_active if hasattr(user, 'is_active') else True,
+                "role": "Treasury" if is_adm else "user",
+                "admin_role": adm_role,
+                "roles": ["SUPER_ADMIN", "ADMIN", "Treasury", "Operations", "Compliance", "Support"] if is_adm else ["user"],
             },
             status_code=200
         )
-        
     except Exception as e:
-        print(f"[VERIFY-TOKEN] [FAIL] Verification error: {e}")
-        import traceback
-        traceback.print_exc()
-        return JSONResponse(
-            content={"detail": f"Token verification failed: {str(e)}"},
-            status_code=401
-        )
+        return JSONResponse(content={"detail": f"Token verification failed: {str(e)}"}, status_code=401)
 
 
 @auth_v1_router.post("/forgot-password")
@@ -348,8 +343,8 @@ async def forgot_password_v1(payload: ForgotPasswordRequest, db_session: Session
         if user:
             print(f"[DEBUG] User exists, proceeding to generate token and send email")
             try:
-                # Generate reset token (simple base64 encoded user_id + random)
-                reset_token = f"{user.id}_{secrets.token_urlsafe(32)}"
+                from otp_service import otp_service
+                reset_token = await otp_service.create_reset_token(user.id)
                 base_url = getattr(settings, 'FRONTEND_URL', None) or getattr(settings, 'API_URL', None) or 'http://127.0.0.1:8000'
                 reset_link = f"{base_url}/reset-password?token={reset_token}"
                 
@@ -573,6 +568,7 @@ async def verify_email(
         )
     
     try:
+        from otp_service import otp_service
         user = await get_user_by_email(db_session, email=email.lower().strip())
         if not user:
             raise HTTPException(
@@ -580,8 +576,20 @@ async def verify_email(
                 detail="User not found"
             )
         
-        # TODO: Implement OTP verification logic
-        # For now, just mark as verified
+        if user.is_verified:
+            return {
+                "success": True,
+                "message": "Email is already verified",
+                "redirect_url": "/user/dashboard"
+            }
+        
+        ok = await otp_service.verify_email_otp(email.lower().strip(), code.strip())
+        if not ok:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired verification code"
+            )
+        
         user.is_verified = True
         db_session.add(user)
         await db_session.commit()
@@ -618,9 +626,9 @@ async def resend_verification_code(
         )
     
     try:
+        from otp_service import otp_service
         user = await get_user_by_email(db_session, email=email.lower().strip())
         if not user:
-            # Don't reveal if email exists
             return {
                 "success": True,
                 "message": "If this email is registered, a new verification code has been sent"
@@ -632,8 +640,31 @@ async def resend_verification_code(
                 "message": "This email is already verified"
             }
         
-        # TODO: Generate OTP and send via email
-        # For now, just return success
+        code = await otp_service.create_email_otp(user.email)
+        
+        if EMAIL_AVAILABLE:
+            email_body = f"""
+            <html><body>
+            <h2>Finanza Email Verification</h2>
+            <p>Hello {user.full_name},</p>
+            <p>Your verification code is: <strong style='font-size:24px;letter-spacing:4px'>{code}</strong></p>
+            <p>This code expires in <strong>10 minutes</strong>.</p>
+            <p>If you did not request this, please ignore this email.</p>
+            <p>Regards,<br>Finanza Team</p>
+            </body></html>
+            """
+            try:
+                await send_email(
+                    subject="Verify your Finanza account",
+                    recipients=[user.email],
+                    body=email_body,
+                    subtype="html"
+                )
+                log.info(f"Verification OTP sent to {user.email}")
+            except Exception as email_err:
+                log.error(f"Failed to send verification email: {email_err}")
+        else:
+            log.warning(f"EMAIL_AVAILABLE=False — OTP generated but not sent for {user.email}")
         
         return {
             "success": True,
@@ -657,25 +688,26 @@ async def validate_reset_token(
     Returns 200 if valid, 401 if invalid/expired
     """
     try:
-        # For now, accept any token (in production, validate against stored tokens in Redis)
-        # This is a placeholder endpoint to support the frontend flow
+        from otp_service import otp_service
         if not token or len(token) < 10:
+            raise HTTPException(status_code=401, detail="Invalid or malformed reset token")
+        user_id = await otp_service.verify_reset_token(token)
+        if user_id is None:
             raise HTTPException(
                 status_code=401,
-                detail="Invalid reset token"
+                detail="This reset link is invalid or has expired"
             )
-        
+        # Re-store token so it can still be used by the reset-password call
+        # (verify_reset_token consumes it, so we put it back with same TTL)
+        await otp_service._set("finanza:rst:" + token, str(user_id), 1800)
         return {
             "valid": True,
-            "message": "Token is valid"
+            "message": "Token is valid — please set your new password"
         }
     except HTTPException:
         raise
     except Exception:
-        raise HTTPException(
-            status_code=401,
-            detail="This reset link is invalid or has expired"
-        )
+        raise HTTPException(status_code=401, detail="This reset link is invalid or has expired")
 
 @auth_v1_router.post("/reset-password")
 async def reset_password(
@@ -691,18 +723,11 @@ async def reset_password(
         new_password = payload.get("password")
         
         if not token or not new_password:
-            raise HTTPException(
-                status_code=422,
-                detail="Token and password are required"
-            )
+            raise HTTPException(status_code=422, detail="Token and password are required")
         
         if len(new_password) < 8:
-            raise HTTPException(
-                status_code=422,
-                detail="Password must be at least 8 characters long"
-            )
+            raise HTTPException(status_code=422, detail="Password must be at least 8 characters long")
         
-        # Validate password complexity (4 rules: uppercase, number, special char, length)
         has_uppercase = any(c.isupper() for c in new_password)
         has_number = any(c.isdigit() for c in new_password)
         has_special = any(not c.isalnum() for c in new_password)
@@ -713,7 +738,22 @@ async def reset_password(
                 detail="Password must contain uppercase, number, and special character"
             )
         
-        # For now, just return success (in production, validate token against stored tokens)
+        # Verify and consume the reset token via OTP service
+        from otp_service import otp_service
+        user_id = await otp_service.verify_reset_token(token)
+        if user_id is None:
+            raise HTTPException(status_code=401, detail="Invalid or expired reset token")
+        
+        result = await db_session.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+        if not user:
+            raise HTTPException(status_code=401, detail="Invalid or expired reset token")
+        
+        from auth_utils import get_password_hash
+        user.hashed_password = get_password_hash(new_password)
+        db_session.add(user)
+        await db_session.commit()
+        log.info(f"Password reset completed for user {user_id}")
         return {
             "success": True,
             "message": "Password reset successful. Please log in with your new password.",
@@ -780,6 +820,7 @@ async def log_login_audit(
 
 
 @auth_v1_router.get("/heartbeat")
+@auth_v1_router.post("/heartbeat")
 async def heartbeat():
     """
     Heartbeat endpoint for token validation and session keep-alive.
@@ -853,6 +894,7 @@ async def get_system_status():
         }
 
 
+@auth_v1_router.post("/refresh")
 @auth_v1_router.post("/refresh-token")
 async def refresh_token(request: Request):
     """
@@ -932,3 +974,21 @@ async def refresh_token(request: Request):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to refresh token"
         )
+
+
+@auth_v1_router.get("/check-email")
+async def check_email_availability(email: str, db_session: SessionDep):
+    """Check if an email address is available for registration."""
+    if not email or not email.strip():
+        return {"available": False, "exists": False}
+    existing = await get_user_by_email(db_session, email=email.lower().strip())
+    return {"available": existing is None, "exists": existing is not None}
+
+
+@auth_v1_router.post("/logout")
+@auth_v1_router.get("/logout")
+async def logout_v1():
+    """Clear authentication cookie and end user session."""
+    response = JSONResponse(content={"success": True, "message": "Logged out successfully"})
+    response.delete_cookie(key="access_token", path="/")
+    return response

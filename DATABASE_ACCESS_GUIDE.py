@@ -31,7 +31,7 @@ OPTION 1: Use AWS RDS Query Editor (EASIEST - Recommended) [*]
 
 Steps:
 1. Go to AWS Console: https://console.aws.amazon.com/
-2. Navigate to: RDS → Databases
+2. Navigate to: RDS -> Databases
 3. Click on your database: "finbank-db"
 4. Click on the "Query Editor" tab
 5. Run SQL commands to see your data
@@ -75,15 +75,15 @@ OPTION 2: Use DBeaver (Desktop Tool) 🖥
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 1. Download: https://dbeaver.io/download/
-2. Create new connection → PostgreSQL
+2. Create new connection -> PostgreSQL
 3. Enter your connection details above
-4. Test Connection → If it fails, continue to Option 3
+4. Test Connection -> If it fails, continue to Option 3
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 OPTION 3: Fix AWS Security Group (If you need external access) [LOCK]
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-1. Go to AWS Console → RDS → Databases → finbank-db
+1. Go to AWS Console -> RDS -> Databases -> finbank-db
 2. Click "Connectivity & security" tab
 3. Under "VPC security group rules", click the security group
 4. Click "Edit inbound rules"

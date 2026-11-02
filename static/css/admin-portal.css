@@ -1,0 +1,310 @@
+/**
+ * Finanza Admin — Signature Purple-Indigo Gradient Design System
+ * Standardizes the #667eea -> #764ba2 navbar, cards, stat tiles,
+ * and 29-Module Mega-Menu across all Admin Control Center pages.
+ */
+
+:root {
+    --fin-adm-grad: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --fin-adm-primary: #667eea;
+    --fin-adm-secondary: #764ba2;
+    --fin-adm-bg: #f5f7fa;
+    --fin-adm-card-shadow: 0 4px 15px rgba(0, 0, 0, 0.07);
+    --fin-adm-card-hover: 0 8px 25px rgba(102, 126, 234, 0.16);
+}
+
+body.finanza-admin-shell-ready {
+    background: linear-gradient(135deg, #f5f7fa 0%, #e4e9f2 100%);
+    min-height: 100vh;
+    padding-top: 0 !important;
+    padding-left: 0 !important;
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, sans-serif;
+    color: #2d3748;
+}
+
+/* Hide legacy per-page top navbars so our unified purple-gradient navbar is the single top bar */
+body.finanza-admin-shell-ready > nav.navbar:not(#finanzaUnifiedAdminNav),
+body.finanza-admin-shell-ready > #spinner {
+    display: none !important;
+}
+
+/* ==================== UNIFIED PURPLE GRADIENT NAVBAR ==================== */
+#finanzaUnifiedAdminNav {
+    background: var(--fin-adm-grad) !important;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.32);
+    padding: 0.75rem 1.5rem;
+    position: sticky;
+    top: 0;
+    z-index: 1045;
+}
+
+#finanzaUnifiedAdminNav .adm-nav-container {
+    max-width: 1440px;
+    margin: 0 auto;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+#finanzaUnifiedAdminNav .adm-brand {
+    font-weight: 700;
+    font-size: 1.35rem;
+    color: #ffffff !important;
+    text-decoration: none !important;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    letter-spacing: 0.2px;
+}
+
+#finanzaUnifiedAdminNav .adm-brand-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.2);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.05rem;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
+}
+
+#finanzaUnifiedAdminNav .adm-links {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+#finanzaUnifiedAdminNav .adm-link {
+    color: rgba(255, 255, 255, 0.88) !important;
+    text-decoration: none !important;
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 7px 13px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    background: transparent;
+    cursor: pointer;
+}
+
+#finanzaUnifiedAdminNav .adm-link:hover,
+#finanzaUnifiedAdminNav .adm-link.active {
+    color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+#finanzaUnifiedAdminNav .adm-kyc-pill {
+    background: #ff4757;
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 999px;
+    line-height: 1.3;
+}
+
+/* ==================== ALL 29 MODULES MEGA-MENU ==================== */
+.adm-mega-wrap {
+    position: relative;
+}
+
+.adm-mega-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 0;
+    width: 780px;
+    max-width: 94vw;
+    background: #ffffff;
+    border-radius: 14px;
+    box-shadow: 0 20px 50px rgba(26, 32, 44, 0.25);
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    padding: 18px;
+    z-index: 1060;
+}
+
+.adm-mega-wrap.open .adm-mega-menu {
+    display: block;
+    animation: admFadeIn 0.16s ease-out;
+}
+
+@keyframes admFadeIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.adm-mega-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid #edf2f7;
+}
+
+.adm-mega-search {
+    flex: 1;
+    position: relative;
+}
+
+.adm-mega-search i {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #667eea;
+    font-size: 0.85rem;
+}
+
+.adm-mega-search input {
+    width: 100%;
+    padding: 8px 12px 8px 34px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e0;
+    font-size: 0.88rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.adm-mega-search input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.18);
+}
+
+.adm-mega-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px 18px;
+    max-height: 68vh;
+    overflow-y: auto;
+}
+
+.adm-mega-col-title {
+    font-size: 0.73rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    color: #764ba2;
+    margin-bottom: 6px;
+    padding-bottom: 4px;
+    border-bottom: 2px solid rgba(102, 126, 234, 0.15);
+}
+
+.adm-mega-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 7px;
+    color: #2d3748 !important;
+    text-decoration: none !important;
+    font-size: 0.84rem;
+    font-weight: 500;
+    transition: all 0.15s ease;
+}
+
+.adm-mega-item i {
+    width: 18px;
+    text-align: center;
+    color: #667eea;
+    font-size: 0.85rem;
+}
+
+.adm-mega-item:hover,
+.adm-mega-item.active {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.12) 0%, rgba(118, 75, 162, 0.12) 100%);
+    color: #5a67d8 !important;
+    font-weight: 600;
+    transform: translateX(2px);
+}
+
+/* ==================== RIGHT ACTION BUTTONS ==================== */
+.adm-right-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.adm-pill-btn {
+    color: #ffffff !important;
+    text-decoration: none !important;
+    font-size: 0.84rem;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+}
+
+.adm-pill-btn:hover {
+    background: rgba(255, 255, 255, 0.28);
+    transform: translateY(-1px);
+}
+
+.adm-pill-btn.logout {
+    background: rgba(220, 53, 69, 0.85);
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+.adm-pill-btn.logout:hover {
+    background: #dc3545;
+}
+
+/* ==================== SIGNATURE FINANZA ADMIN COMPONENTS ==================== */
+.fin-admin-page-banner {
+    background: var(--fin-adm-grad);
+    color: #ffffff;
+    border-radius: 14px;
+    padding: 24px 28px;
+    margin-bottom: 24px;
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.25);
+}
+
+.btn-admin-gradient {
+    background: var(--fin-adm-grad);
+    color: #ffffff !important;
+    border: none;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 8px 16px;
+    transition: all 0.2s ease;
+}
+
+.btn-admin-gradient:hover {
+    opacity: 0.94;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.35);
+}
+
+@media (max-width: 991.98px) {
+    .adm-mega-menu {
+        position: fixed;
+        top: 64px;
+        left: 3vw;
+        right: 3vw;
+        width: 94vw;
+    }
+    .adm-mega-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .adm-mega-grid {
+        grid-template-columns: 1fr;
+    }
+}

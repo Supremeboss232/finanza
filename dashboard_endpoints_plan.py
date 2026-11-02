@@ -83,7 +83,7 @@ for category, data in missing_endpoints.items():
         method = ep["method"].upper()
         path = ep["path"]
         desc = ep["description"]
-        print(f"   {method:6} {path:40} → {desc}")
+        print(f"   {method:6} {path:40} -> {desc}")
 
 total = sum(len(data["missing"]) for data in missing_endpoints.values())
 print("\n" + "="*100)

@@ -15,9 +15,8 @@ from typing import Dict, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_
 from datetime import datetime, timedelta
+from fastapi import HTTPException
 import json
-import random
-import string
 import logging
 
 from models import User, Card, Transaction, Account, Ledger, AuditLog
@@ -29,29 +28,26 @@ class CardProcessingService:
     """Service for managing card lifecycle and transactions."""
 
     @staticmethod
-    def generate_card_number() -> str:
-        """Generate a valid Luhn card number (test format)."""
-        # Generate random 15 digits
-        digits = [random.randint(0, 9) for _ in range(15)]
-        
-        # Calculate Luhn checksum
-        total = 0
-        for i, digit in enumerate(reversed(digits)):
-            if i % 2 == 1:
-                digit *= 2
-                if digit > 9:
-                    digit -= 9
-            total += digit
-        
-        checksum = (10 - (total % 10)) % 10
-        card_number = ''.join(map(str, digits)) + str(checksum)
-        
-        return card_number
+    def generate_card_number(bin_prefix: str = "453201") -> str:
+        """Generate a Luhn-valid 16-digit card PAN under Finanza's configured issuer BIN."""
+        import secrets
+        body = bin_prefix + "".join(str(secrets.randbelow(10)) for _ in range(9))
+        digits = [int(d) for d in body]
+        checksum = 0
+        for i, d in enumerate(reversed(digits)):
+            if i % 2 == 0:
+                d *= 2
+                if d > 9:
+                    d -= 9
+            checksum += d
+        check_digit = (10 - (checksum % 10)) % 10
+        return body + str(check_digit)
 
     @staticmethod
     def generate_cvv() -> str:
-        """Generate a 3-digit CVV."""
-        return str(random.randint(100, 999))
+        """Generate a cryptographic 3-digit CVV."""
+        import secrets
+        return f"{secrets.randbelow(900) + 100:03d}"
 
     @staticmethod
     async def request_card(
@@ -64,7 +60,7 @@ class CardProcessingService:
         Request a new card.
         
         Card Types: credit, debit, prepaid
-        Status: requested → issued → activated → active
+        Status: requested -> issued -> activated -> active
         """
         try:
             user = await db.get(User, user_id)
@@ -241,7 +237,8 @@ class CardProcessingService:
                     }
 
             # Authorization approved
-            auth_code = f"{random.randint(100000, 999999)}"
+            import secrets
+            auth_code = secrets.token_hex(3).upper()  # Cryptographically random 6-char hex auth code
 
             logger.info(f"Card {card_id} authorization: ${amount} at {merchant}")
 

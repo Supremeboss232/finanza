@@ -17,7 +17,7 @@ from payment_rail_service import (
 )
 from audit_service import AuditService
 
-router = APIRouter(prefix="/payments", tags=["payments"])
+router = APIRouter(prefix="/api/v1/payments", tags=["payments"])
 
 
 # ==================== PYDANTIC MODELS ====================

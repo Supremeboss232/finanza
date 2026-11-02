@@ -29,8 +29,8 @@
         API_BASE_URL: window.location.origin,
         ENDPOINTS: {
             ME: '/api/v1/users/me',
-            REFRESH: '/api/v1/auth/refresh',
-            LOGOUT: '/api/v1/auth/logout',
+            REFRESH: '/api/v1/auth/refresh-token',
+            LOGOUT: '/user/logout',
             ACCESS_LOG: '/api/v1/audit/page-access'
         },
         TIMEOUTS: {

@@ -12,6 +12,7 @@ import hmac
 import json
 from enum import Enum
 import asyncio
+import httpx
 
 log = logging.getLogger(__name__)
 
@@ -147,28 +148,37 @@ class WebhookManager:
             
             for attempt in range(max_retries):
                 try:
-                    # Simulate HTTP delivery (in production use actual HTTP client)
-                    success = await WebhookManager._send_http_request(
+                    result = await WebhookManager._send_http_request(
                         webhook_data["url"],
                         event_record,
-                        webhook_data["secret"]
+                        webhook_data["secret"],
+                        event_record.get("event_type", "")
                     )
-                    
-                    if success:
+
+                    if result["success"]:
                         event_record["delivery_status"] = "delivered"
                         event_record["delivered_at"] = datetime.utcnow().isoformat()
                         webhook_data["total_deliveries"] += 1
                         webhook_data["last_triggered_at"] = datetime.utcnow().isoformat()
-                        log.info(f"Webhook {webhook_id} delivered successfully")
+                        log.info(f"Webhook {webhook_id} delivered successfully (HTTP {result.get('status_code')})")
                         return
-                    
+                    else:
+                        log.warning(
+                            f"Webhook delivery attempt {attempt + 1} failed: {result.get('error')} "
+                            f"(HTTP {result.get('status_code')})"
+                        )
+                        event_record["delivery_attempts"] += 1
+
+                        if attempt < max_retries - 1:
+                            await asyncio.sleep(retry_delay)
+
                 except Exception as e:
-                    log.warning(f"Webhook delivery attempt {attempt + 1} failed: {e}")
+                    log.warning(f"Webhook delivery attempt {attempt + 1} unexpected error: {e}")
                     event_record["delivery_attempts"] += 1
-                    
+
                     if attempt < max_retries - 1:
                         await asyncio.sleep(retry_delay)
-            
+
             # All retries exhausted
             event_record["delivery_status"] = "failed"
             webhook_data["failed_deliveries"] += 1
@@ -181,21 +191,33 @@ class WebhookManager:
     async def _send_http_request(
         url: str,
         event_record: Dict,
-        secret: str
-    ) -> bool:
+        secret: str,
+        event_type: str = ""
+    ) -> dict:
         """Send HTTP POST request to webhook URL"""
+        signature = WebhookManager._generate_signature(event_record, secret)
+        headers = {
+            "Content-Type": "application/json",
+            "X-Finanza-Signature": signature,
+            "X-Finanza-Event": event_type,
+        }
+        payload = json.dumps(event_record, default=str)
         try:
-            # Simulate HTTP request (in production use aiohttp or httpx)
-            signature = WebhookManager._generate_signature(event_record, secret)
-            
-            # Simulate 95% success rate for demo
-            import random
-            success = random.random() < 0.95
-            
-            return success
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.post(url, content=payload, headers=headers)
+            if 200 <= response.status_code < 300:
+                return {"success": True, "status_code": response.status_code}
+            else:
+                return {
+                    "success": False,
+                    "error": f"HTTP {response.status_code}",
+                    "status_code": response.status_code,
+                }
+        except httpx.TimeoutException:
+            return {"success": False, "error": "timeout", "status_code": None}
         except Exception as e:
-            log.error(f"Error sending HTTP request: {e}")
-            return False
+            log.error(f"Error sending HTTP request to {url}: {e}")
+            return {"success": False, "error": str(e), "status_code": None}
     
     @staticmethod
     def _generate_signature(payload: Dict, secret: str) -> str:

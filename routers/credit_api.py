@@ -15,7 +15,7 @@ from credit_decisioning_service import (
 )
 from audit_service import AuditService
 
-router = APIRouter(prefix="/credit", tags=["credit"])
+router = APIRouter(prefix="/api/v1/credit", tags=["credit"])
 
 
 # ==================== PYDANTIC MODELS ====================

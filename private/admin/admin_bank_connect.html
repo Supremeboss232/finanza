@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bank Network Onboarding — Finanza Admin</title>
+    <meta name="description" content="Connect Finanza Bank to global payment networks via secure REST API integration.">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --purple-start: #667eea;
+            --purple-end: #764ba2;
+            --success: #00c853;
+            --warning: #ff9800;
+            --danger: #ef4444;
+            --surface: #ffffff;
+            --surface-2: #f8f9ff;
+            --border: #e5e7f0;
+            --text-primary: #1a1d2e;
+            --text-muted: #6b7280;
+            --step-active: #667eea;
+            --step-done: #00c853;
+            --step-pending: #d1d5db;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: var(--surface-2); color: var(--text-primary); min-height: 100vh; }
+
+        /* ── NAVBAR ── */
+        .navbar { background: linear-gradient(135deg, var(--purple-start), var(--purple-end)); padding: 0.75rem 2rem; box-shadow: 0 4px 20px rgba(102,126,234,0.3); }
+        .navbar-brand { color: #fff !important; font-weight: 700; font-size: 1.2rem; letter-spacing: 0.5px; }
+        .navbar-brand span { opacity: 0.75; font-weight: 400; margin-left: 6px; font-size: 0.9rem; }
+        .nav-link { color: rgba(255,255,255,0.85) !important; font-size: 0.9rem; padding: 0.4rem 0.9rem !important; border-radius: 6px; transition: background 0.2s; }
+        .nav-link:hover, .nav-link.active { color: #fff !important; background: rgba(255,255,255,0.15); }
+
+        /* ── PAGE HEADER ── */
+        .page-hero { background: linear-gradient(135deg, var(--purple-start) 0%, var(--purple-end) 100%); color: #fff; padding: 3rem 2rem 2.5rem; position: relative; overflow: hidden; }
+        .page-hero::before { content: ''; position: absolute; top: -40px; right: -40px; width: 250px; height: 250px; border-radius: 50%; background: rgba(255,255,255,0.06); }
+        .page-hero::after { content: ''; position: absolute; bottom: -60px; left: 30%; width: 180px; height: 180px; border-radius: 50%; background: rgba(255,255,255,0.04); }
+        .page-hero h1 { font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem; position: relative; z-index: 1; }
+        .page-hero p { opacity: 0.85; font-size: 1rem; max-width: 560px; position: relative; z-index: 1; }
+
+        /* ── WIZARD STEPPER ── */
+        .wizard-wrap { max-width: 1100px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+
+        .stepper { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 3rem; position: relative; }
+        .stepper::before { content: ''; position: absolute; top: 22px; left: 10%; right: 10%; height: 3px; background: var(--step-pending); border-radius: 2px; z-index: 0; }
+        .stepper-progress { position: absolute; top: 22px; left: 10%; height: 3px; background: linear-gradient(90deg, var(--purple-start), var(--purple-end)); border-radius: 2px; z-index: 1; transition: width 0.5s ease; }
+
+        .step-item { display: flex; flex-direction: column; align-items: center; gap: 10px; flex: 1; position: relative; z-index: 2; cursor: pointer; }
+        .step-circle { width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; border: 3px solid var(--step-pending); background: #fff; color: var(--step-pending); transition: all 0.3s; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .step-item.active .step-circle { border-color: var(--step-active); background: linear-gradient(135deg, var(--purple-start), var(--purple-end)); color: #fff; box-shadow: 0 4px 20px rgba(102,126,234,0.4); transform: scale(1.1); }
+        .step-item.done .step-circle { border-color: var(--step-done); background: var(--step-done); color: #fff; }
+        .step-label { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); text-align: center; max-width: 100px; }
+        .step-item.active .step-label { color: var(--step-active); }
+        .step-item.done .step-label { color: var(--step-done); }
+
+        /* ── PANEL ── */
+        .wizard-panel { background: var(--surface); border-radius: 20px; box-shadow: 0 8px 40px rgba(102,126,234,0.12); overflow: hidden; }
+        .panel-header { padding: 2rem 2.5rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 1rem; }
+        .panel-icon { width: 52px; height: 52px; border-radius: 14px; background: linear-gradient(135deg, var(--purple-start), var(--purple-end)); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.3rem; flex-shrink: 0; }
+        .panel-title { font-size: 1.3rem; font-weight: 700; }
+        .panel-subtitle { font-size: 0.85rem; color: var(--text-muted); margin-top: 2px; }
+        .panel-body { padding: 2rem 2.5rem; }
+        .panel-footer { padding: 1.5rem 2.5rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: var(--surface-2); }
+
+        /* ── FORM ── */
+        .form-group { margin-bottom: 1.5rem; }
+        .form-label { font-size: 0.85rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.4rem; display: block; }
+        .form-label .req { color: var(--danger); margin-left: 2px; }
+        .form-hint { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.3rem; }
+        .form-control, .form-select { border: 2px solid var(--border); border-radius: 10px; padding: 0.65rem 1rem; font-size: 0.9rem; font-family: 'Inter', sans-serif; transition: border-color 0.2s, box-shadow 0.2s; background: var(--surface); }
+        .form-control:focus, .form-select:focus { border-color: var(--purple-start); box-shadow: 0 0 0 3px rgba(102,126,234,0.15); outline: none; }
+        .form-control.mono { font-family: 'Fira Code', monospace; font-size: 0.85rem; }
+        .input-group .form-control { border-right: none; border-radius: 10px 0 0 10px; }
+        .input-group-text { border: 2px solid var(--border); border-left: none; background: var(--surface-2); border-radius: 0 10px 10px 0; padding: 0 1rem; color: var(--text-muted); }
+        .input-group .btn { border-radius: 0 10px 10px 0; border: 2px solid var(--purple-start); }
+
+        /* ── BUTTONS ── */
+        .btn-primary-grad { background: linear-gradient(135deg, var(--purple-start), var(--purple-end)); color: #fff; border: none; border-radius: 10px; padding: 0.7rem 2rem; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s; box-shadow: 0 4px 15px rgba(102,126,234,0.35); }
+        .btn-primary-grad:hover { opacity: 0.92; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(102,126,234,0.45); color: #fff; }
+        .btn-primary-grad:disabled { opacity: 0.5; transform: none; cursor: not-allowed; }
+        .btn-outline-grad { background: transparent; color: var(--purple-start); border: 2px solid var(--purple-start); border-radius: 10px; padding: 0.65rem 1.8rem; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; }
+        .btn-outline-grad:hover { background: var(--purple-start); color: #fff; }
+        .btn-success-grad { background: linear-gradient(135deg, #00c853, #00e676); color: #fff; border: none; border-radius: 10px; padding: 0.7rem 2rem; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 15px rgba(0,200,83,0.35); }
+        .btn-success-grad:hover { opacity: 0.9; transform: translateY(-1px); color: #fff; }
+        .btn-danger-grad { background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff; border: none; border-radius: 10px; padding: 0.7rem 2rem; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; }
+        .btn-sm-icon { padding: 0.4rem 0.8rem; border-radius: 8px; font-size: 0.82rem; }
+
+        /* ── INFO BOXES ── */
+        .info-box { border-radius: 12px; padding: 1.1rem 1.3rem; font-size: 0.85rem; display: flex; gap: 0.8rem; align-items: flex-start; margin-bottom: 1.5rem; }
+        .info-box.blue { background: #eff6ff; border: 1.5px solid #93c5fd; color: #1e40af; }
+        .info-box.green { background: #f0fdf4; border: 1.5px solid #86efac; color: #166534; }
+        .info-box.amber { background: #fffbeb; border: 1.5px solid #fcd34d; color: #92400e; }
+        .info-box.red { background: #fef2f2; border: 1.5px solid #fca5a5; color: #991b1b; }
+        .info-box i { margin-top: 2px; flex-shrink: 0; font-size: 1rem; }
+
+        /* ── PING RESULT ── */
+        .ping-display { background: #0f1117; border-radius: 14px; padding: 1.8rem; min-height: 150px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        .ping-idle { color: #4b5563; text-align: center; }
+        .ping-idle i { font-size: 2.5rem; margin-bottom: 0.8rem; opacity: 0.5; }
+        .ping-result { text-align: center; }
+        .ping-ms { font-size: 3.5rem; font-weight: 800; font-family: 'Fira Code', monospace; }
+        .ping-ms.excellent { color: #00e676; }
+        .ping-ms.good { color: #69f0ae; }
+        .ping-ms.slow { color: #ffd740; }
+        .ping-ms.poor { color: #ff5252; }
+        .ping-ms.error { color: #ff5252; }
+        .ping-label { color: #9ca3af; font-size: 0.85rem; margin-top: 0.4rem; font-family: 'Fira Code', monospace; }
+        .ping-status-badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 20px; padding: 0.4rem 1rem; font-size: 0.8rem; font-weight: 600; margin-top: 1rem; }
+        .ping-status-badge.ok { background: rgba(0,200,83,0.15); color: #00c853; border: 1.5px solid rgba(0,200,83,0.3); }
+        .ping-status-badge.fail { background: rgba(239,68,68,0.15); color: #ef4444; border: 1.5px solid rgba(239,68,68,0.3); }
+        .ping-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: blink 1.2s infinite; }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+        /* ── KEY BOX ── */
+        .key-box { background: #0f1117; border-radius: 14px; padding: 1.5rem; position: relative; }
+        .key-box pre { color: #a8ff78; font-family: 'Fira Code', monospace; font-size: 0.78rem; white-space: pre-wrap; word-break: break-all; margin: 0; max-height: 220px; overflow-y: auto; }
+        .key-copy-btn { position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.1); color: #fff; border: none; border-radius: 8px; padding: 0.4rem 0.8rem; font-size: 0.78rem; cursor: pointer; transition: background 0.2s; }
+        .key-copy-btn:hover { background: rgba(255,255,255,0.2); }
+        .key-fingerprint { font-family: 'Fira Code', monospace; font-size: 0.78rem; color: var(--text-muted); background: var(--surface-2); border-radius: 8px; padding: 0.6rem 1rem; margin-top: 1rem; border: 1px solid var(--border); word-break: break-all; }
+
+        /* ── SECURITY STEPS ── */
+        .security-step { display: flex; gap: 1rem; padding: 1rem; border-radius: 12px; margin-bottom: 0.8rem; background: var(--surface-2); border: 1px solid var(--border); transition: background 0.2s; }
+        .security-step:hover { background: #f3f4ff; }
+        .security-step-num { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--purple-start), var(--purple-end)); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; flex-shrink: 0; }
+        .security-step-text { font-size: 0.85rem; }
+        .security-step-text strong { display: block; font-weight: 600; margin-bottom: 2px; }
+
+        /* ── PARTNER CARD (read-only summary) ── */
+        .partner-card { background: linear-gradient(135deg, #f8f9ff, #eff1ff); border: 2px solid #ddd6fe; border-radius: 16px; padding: 1.5rem 2rem; }
+        .partner-field { display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0; border-bottom: 1px solid rgba(102,126,234,0.1); font-size: 0.88rem; }
+        .partner-field:last-child { border-bottom: none; }
+        .partner-field .label { color: var(--text-muted); font-weight: 500; }
+        .partner-field .value { font-weight: 600; font-family: 'Fira Code', monospace; background: rgba(102,126,234,0.08); border-radius: 6px; padding: 0.2rem 0.6rem; }
+
+        /* ── TOAST ── */
+        .toast-container { position: fixed; top: 1.5rem; right: 1.5rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.7rem; }
+        .toast-item { min-width: 280px; max-width: 380px; background: #fff; border-radius: 12px; padding: 0.9rem 1.2rem; box-shadow: 0 8px 30px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 0.8rem; font-size: 0.87rem; font-weight: 500; animation: toastIn 0.3s ease; border-left: 4px solid; }
+        .toast-item.success { border-left-color: var(--success); }
+        .toast-item.error { border-left-color: var(--danger); }
+        .toast-item.info { border-left-color: var(--purple-start); }
+        @keyframes toastIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+
+        /* ── DIVIDER ── */
+        .or-divider { display: flex; align-items: center; gap: 1rem; color: var(--text-muted); font-size: 0.8rem; margin: 1.5rem 0; }
+        .or-divider::before, .or-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+        /* ── CHECKBOX ROW ── */
+        .check-row { display: flex; gap: 0.6rem; align-items: center; padding: 0.6rem 0; }
+        .check-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--purple-start); cursor: pointer; }
+        .check-row label { font-size: 0.85rem; cursor: pointer; }
+
+        /* ── LOADING SPINNER ── */
+        .spinner { display: inline-block; width: 18px; height: 18px; border: 2.5px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* responsive */
+        @media (max-width: 768px) {
+            .stepper::before, .stepper-progress { left: 5%; right: 5%; }
+            .panel-header, .panel-body, .panel-footer { padding-left: 1.2rem; padding-right: 1.2rem; }
+            .panel-footer { flex-direction: column; gap: 0.8rem; }
+            .panel-footer .d-flex { width: 100%; }
+            .btn-primary-grad, .btn-outline-grad { width: 100%; text-align: center; }
+        }
+    </style>
+    <link href="/static/css/admin-portal.css" rel="stylesheet">
+    <script src="/static/js/admin-guard.js?v=3"></script>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar navbar-expand-lg navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/user/admin/dashboard">
+            <i class="fas fa-university"></i> Finanza Admin
+            <span>Bank Network</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navBar">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navBar">
+            <ul class="navbar-nav ms-auto align-items-lg-center gap-1">
+                <li class="nav-item"><a class="nav-link" href="/user/admin/dashboard"><i class="fas fa-th-large me-1"></i>Dashboard</a></li>
+                <li class="nav-item"><a class="nav-link" href="/user/admin/settlement"><i class="fas fa-exchange-alt me-1"></i>Settlement</a></li>
+                <li class="nav-item"><a class="nav-link active" href="#"><i class="fas fa-network-wired me-1"></i>Bank Connect</a></li>
+                <li class="nav-item"><a class="nav-link" href="/user/admin/treasury"><i class="fas fa-coins me-1"></i>Treasury</a></li>
+                <li class="nav-item">
+                    <a class="nav-link text-danger" href="#" onclick="logout()"><i class="fas fa-sign-out-alt me-1"></i>Logout</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- PAGE HERO -->
+<div class="page-hero">
+    <div class="container-fluid" style="max-width:1100px; margin:0 auto;">
+        <h1><i class="fas fa-plug me-2"></i>Bank Network Onboarding</h1>
+        <p>Register Finanza Bank with global payment networks. Complete all 4 steps to enable inter-bank settlement via secure REST API.</p>
+        <div class="d-flex gap-3 mt-3 flex-wrap">
+            <span class="badge py-2 px-3" style="background:rgba(255,255,255,0.2); font-size:0.8rem; border-radius:20px;">
+                <i class="fas fa-shield-alt me-1"></i> RSA-4096 Encrypted
+            </span>
+            <span class="badge py-2 px-3" style="background:rgba(255,255,255,0.2); font-size:0.8rem; border-radius:20px;">
+                <i class="fas fa-bolt me-1"></i> Real-time Ping Test
+            </span>
+            <span class="badge py-2 px-3" style="background:rgba(255,255,255,0.2); font-size:0.8rem; border-radius:20px;">
+                <i class="fas fa-code-branch me-1"></i> SWIFT / ACH / FedNow
+            </span>
+        </div>
+    </div>
+</div>
+
+<!-- WIZARD -->
+<div class="wizard-wrap">
+
+    <!-- LIVE STATUS BANNER -->
+    <div id="statusBanner" style="display:none; background:white; border-radius:14px; padding:18px 24px; box-shadow:0 4px 20px rgba(102,126,234,0.1); border-left:5px solid #667eea; margin-bottom:24px;">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <div style="font-size:0.78rem; text-transform:uppercase; letter-spacing:1px; color:#999; font-weight:700; margin-bottom:6px;">Saved Institution Profile</div>
+                <div class="d-flex gap-4 flex-wrap">
+                    <span><span style="color:#999; font-size:0.82rem;">Legal Name:</span> <strong id="bannerName" style="font-family:'Fira Code',monospace;">—</strong></span>
+                    <span><span style="color:#999; font-size:0.82rem;">BIC:</span> <strong id="bannerBic" style="font-family:'Fira Code',monospace; color:#667eea;">—</strong></span>
+                    <span><span style="color:#999; font-size:0.82rem;">Country:</span> <strong id="bannerCountry">—</strong></span>
+                    <span><span style="color:#999; font-size:0.82rem;">Clearing:</span> <strong id="bannerClearing">—</strong></span>
+                </div>
+                <div class="mt-2 d-flex gap-3">
+                    <span id="stepBadge1" class="badge" style="font-size:0.78rem; padding:5px 10px;">⏳ Step 1</span>
+                    <span id="stepBadge2" class="badge" style="font-size:0.78rem; padding:5px 10px;">⏳ Step 2</span>
+                    <span id="stepBadge3" class="badge" style="font-size:0.78rem; padding:5px 10px;">⏳ Step 3</span>
+                    <span id="stepBadge4" class="badge" style="font-size:0.78rem; padding:5px 10px;">⏳ Step 4</span>
+                </div>
+            </div>
+            <div class="d-flex gap-2 align-items-center">
+                <span id="overallStatusBadge" class="badge fs-6" style="padding:8px 16px;">Loading…</span>
+                <button onclick="resetOnboarding()" class="btn btn-sm btn-outline-danger" title="Clear all saved settings and restart">
+                    <i class="fas fa-redo me-1"></i>Reset
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- STEPPER -->
+    <div class="stepper" id="stepperEl">
+        <div class="stepper-progress" id="stepperProgress" style="width:0%"></div>
+        <div class="step-item active" id="si1" onclick="goToStep(1)">
+            <div class="step-circle" id="sc1"><i class="fas fa-building"></i></div>
+            <div class="step-label">Institution Identity</div>
+        </div>
+        <div class="step-item" id="si2" onclick="goToStep(2)">
+            <div class="step-circle" id="sc2">2</div>
+            <div class="step-label">API Webhook Setup</div>
+        </div>
+        <div class="step-item" id="si3" onclick="goToStep(3)">
+            <div class="step-circle" id="sc3">3</div>
+            <div class="step-label">Connection Test</div>
+        </div>
+        <div class="step-item" id="si4" onclick="goToStep(4)">
+            <div class="step-circle" id="sc4">4</div>
+            <div class="step-label">Download Private Key</div>
+        </div>
+    </div>
+
+    <!-- ═══════════════ STEP 1: INSTITUTION IDENTITY ═══════════════ -->
+    <div id="step1" class="wizard-panel">
+        <div class="panel-header">
+            <div class="panel-icon"><i class="fas fa-building"></i></div>
+            <div>
+                <div class="panel-title">Step 1 — Institution Identity</div>
+                <div class="panel-subtitle">Register your bank's legal name and BIC so other institutions can discover and verify you on the network.</div>
+            </div>
+        </div>
+        <div class="panel-body">
+            <div class="info-box blue">
+                <i class="fas fa-info-circle"></i>
+                <div>Your <strong>BIC (Bank Identifier Code)</strong> is your institution's globally unique address on the SWIFT network. Once registered, other banks use this to route payments to you. Choose it carefully — it cannot be changed without notifying all connected counterparties.</div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-7">
+                    <div class="form-group">
+                        <label class="form-label">Legal Institution Name <span class="req">*</span></label>
+                        <input type="text" id="legalName" class="form-control" placeholder="e.g. Finanza Financial Services Ltd" maxlength="120">
+                        <div class="form-hint">Your bank's full registered legal name as it appears in incorporation documents.</div>
+                    </div>
+                </div>
+                <div class="col-md-5">
+                    <div class="form-group">
+                        <label class="form-label">BIC / SWIFT Code <span class="req">*</span></label>
+                        <input type="text" id="bic" class="form-control mono" placeholder="FNZABANK" maxlength="11"
+                            oninput="this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '')">
+                        <div class="form-hint">8 or 11 characters — letters &amp; digits only (e.g. FNZAGB2L).</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">Country (ISO-2) <span class="req">*</span></label>
+                        <select id="countryCode" class="form-select">
+                            <option value="">Select country…</option>
+                            <option value="US">United States (US)</option>
+                            <option value="GB">United Kingdom (GB)</option>
+                            <option value="NG">Nigeria (NG)</option>
+                            <option value="DE">Germany (DE)</option>
+                            <option value="FR">France (FR)</option>
+                            <option value="SG">Singapore (SG)</option>
+                            <option value="AE">UAE (AE)</option>
+                            <option value="ZA">South Africa (ZA)</option>
+                            <option value="KE">Kenya (KE)</option>
+                            <option value="GH">Ghana (GH)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="form-group">
+                        <label class="form-label">Supported Clearing Houses</label>
+                        <div class="d-flex flex-wrap gap-3 mt-1">
+                            <div class="check-row"><input type="checkbox" id="ch_swift" value="SWIFT" checked><label for="ch_swift">SWIFT GPI</label></div>
+                            <div class="check-row"><input type="checkbox" id="ch_ach" value="ACH"><label for="ch_ach">ACH (US)</label></div>
+                            <div class="check-row"><input type="checkbox" id="ch_fednow" value="FedNow"><label for="ch_fednow">FedNow</label></div>
+                            <div class="check-row"><input type="checkbox" id="ch_chips" value="CHIPS"><label for="ch_chips">CHIPS</label></div>
+                            <div class="check-row"><input type="checkbox" id="ch_sepa" value="SEPA"><label for="ch_sepa">SEPA</label></div>
+                            <div class="check-row"><input type="checkbox" id="ch_rtp" value="RTP"><label for="ch_rtp">RTP</label></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="check-row">
+                <input type="checkbox" id="swiftMember">
+                <label for="swiftMember">Our institution is a registered SWIFT member bank</label>
+            </div>
+        </div>
+        <div class="panel-footer">
+            <div class="text-muted small"><i class="fas fa-lock me-1"></i> This information is encrypted at rest</div>
+            <div class="d-flex gap-2">
+                <button class="btn-primary-grad" id="saveInstitutionBtn" onclick="saveInstitution()">
+                    Save &amp; Continue <i class="fas fa-arrow-right ms-2"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════ STEP 2: WEBHOOK SETUP ═══════════════ -->
+    <div id="step2" class="wizard-panel" style="display:none;">
+        <div class="panel-header">
+            <div class="panel-icon"><i class="fas fa-satellite-dish"></i></div>
+            <div>
+                <div class="panel-title">Step 2 — REST API Webhook</div>
+                <div class="panel-subtitle">Configure the endpoint where Finanza Bank will receive inbound payment events from connected institutions.</div>
+            </div>
+        </div>
+        <div class="panel-body">
+            <div class="info-box amber">
+                <i class="fas fa-exclamation-triangle"></i>
+                <div>Your endpoint must respond to <strong>POST</strong> requests with HTTP 200 within <strong>10 seconds</strong>. Finanza will retry failed deliveries up to 3 times with exponential backoff.</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Core Banking Endpoint URL <span class="req">*</span></label>
+                <input type="url" id="endpointUrl" class="form-control mono" placeholder="https://api.yourbank.com/v1/finanza/inbound">
+                <div class="form-hint">Must be publicly reachable via HTTPS. We'll POST JSON payment events to this URL.</div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Bearer Token <span class="req">*</span></label>
+                <div class="input-group">
+                    <input type="text" id="bearerToken" class="form-control mono" placeholder="fnz_…" autocomplete="off">
+                    <button class="btn btn-outline-grad" onclick="generateToken()" title="Generate secure token">
+                        <i class="fas fa-magic me-1"></i> Generate
+                    </button>
+                </div>
+                <div class="form-hint">We'll send this in the <code>Authorization: Bearer …</code> header on every request. Store it in your secrets manager.</div>
+            </div>
+
+            <div class="or-divider">Delivery Settings</div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">Timeout (seconds)</label>
+                        <input type="number" id="webhookTimeout" class="form-control" value="10" min="5" max="30">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">Retry Attempts</label>
+                        <input type="number" id="retryAttempts" class="form-control" value="3" min="1" max="5">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Subscribe to Events</label>
+                <div class="d-flex flex-wrap gap-3 mt-1">
+                    <div class="check-row"><input type="checkbox" id="ev_payment_in" value="payment.received" checked><label for="ev_payment_in">payment.received</label></div>
+                    <div class="check-row"><input type="checkbox" id="ev_payment_out" value="payment.sent" checked><label for="ev_payment_out">payment.sent</label></div>
+                    <div class="check-row"><input type="checkbox" id="ev_settle" value="settlement.complete" checked><label for="ev_settle">settlement.complete</label></div>
+                    <div class="check-row"><input type="checkbox" id="ev_fail" value="payment.failed"><label for="ev_fail">payment.failed</label></div>
+                    <div class="check-row"><input type="checkbox" id="ev_refund" value="payment.refunded"><label for="ev_refund">payment.refunded</label></div>
+                    <div class="check-row"><input type="checkbox" id="ev_ping" value="ping" checked><label for="ev_ping">ping</label></div>
+                </div>
+            </div>
+        </div>
+        <div class="panel-footer">
+            <button class="btn-outline-grad" onclick="goToStep(1)"><i class="fas fa-arrow-left me-2"></i> Back</button>
+            <button class="btn-primary-grad" onclick="saveWebhook()">
+                Save Webhook &amp; Continue <i class="fas fa-arrow-right ms-2"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- ═══════════════ STEP 3: CONNECTION TEST ═══════════════ -->
+    <div id="step3" class="wizard-panel" style="display:none;">
+        <div class="panel-header">
+            <div class="panel-icon"><i class="fas fa-broadcast-tower"></i></div>
+            <div>
+                <div class="panel-title">Step 3 — Connection Test</div>
+                <div class="panel-subtitle">Ping your endpoint to verify reachability and measure round-trip latency before going live.</div>
+            </div>
+        </div>
+        <div class="panel-body">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <div class="ping-display" id="pingDisplay">
+                        <div class="ping-idle">
+                            <i class="fas fa-satellite-dish d-block mb-2" style="font-size:2.5rem; opacity:0.4;"></i>
+                            <div>Click <strong>Run Ping Test</strong> to verify connectivity</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Override Endpoint URL (optional)</label>
+                        <input type="url" id="pingUrl" class="form-control mono" placeholder="Uses saved URL…">
+                        <div class="form-hint">Leave blank to use the URL saved in Step 2.</div>
+                    </div>
+                    <button class="btn-primary-grad w-100 mb-3" id="pingBtn" onclick="runPing()">
+                        <i class="fas fa-satellite me-2"></i> Run Ping Test
+                    </button>
+                    <div class="info-box blue" style="margin-bottom:0;">
+                        <i class="fas fa-info-circle"></i>
+                        <div><strong>What we send:</strong> A small JSON <code>ping</code> event with your BIC and a timestamp. Your system should respond with HTTP 200. Any non-timeout response counts as reachable.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="or-divider mt-4">Ping History</div>
+            <div id="pingHistory" class="d-flex flex-wrap gap-2">
+                <span class="text-muted small">No pings yet</span>
+            </div>
+        </div>
+        <div class="panel-footer">
+            <button class="btn-outline-grad" onclick="goToStep(2)"><i class="fas fa-arrow-left me-2"></i> Back</button>
+            <button class="btn-primary-grad" id="nextFromPing" onclick="goToStep(4)">
+                Continue to Key Download <i class="fas fa-arrow-right ms-2"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- ═══════════════ STEP 4: PRIVATE KEY DOWNLOAD ═══════════════ -->
+    <div id="step4" class="wizard-panel" style="display:none;">
+        <div class="panel-header">
+            <div class="panel-icon"><i class="fas fa-key"></i></div>
+            <div>
+                <div class="panel-title">Step 4 — Download Private Key</div>
+                <div class="panel-subtitle">Your RSA-4096 private key is used to sign payment requests. Keep it absolutely secret.</div>
+            </div>
+        </div>
+        <div class="panel-body">
+            <div class="info-box red mb-3">
+                <i class="fas fa-exclamation-circle"></i>
+                <div><strong>Security Warning:</strong> This private key must never leave your secure vault. Anyone who holds it can sign transactions on behalf of your institution. Store it in HSM, AWS KMS, HashiCorp Vault or equivalent.</div>
+            </div>
+
+            <!-- Public key preview (safe to share) -->
+            <div class="mb-4">
+                <label class="form-label"><i class="fas fa-unlock me-1"></i> Your Public Key <span class="badge ms-1" style="background:#e8f5e9;color:#2e7d32;font-size:0.72rem;">Safe to share</span></label>
+                <div class="key-box" id="publicKeyBox">
+                    <pre id="publicKeyPem">Loading…</pre>
+                    <button class="key-copy-btn" onclick="copyKey('publicKeyPem')"><i class="fas fa-copy me-1"></i>Copy</button>
+                </div>
+                <div class="key-fingerprint" id="publicKeyFingerprint"><i class="fas fa-fingerprint me-1"></i>Loading fingerprint…</div>
+            </div>
+
+            <!-- Download private key -->
+            <div class="mb-4">
+                <label class="form-label"><i class="fas fa-lock me-1"></i> Private Key <span class="badge ms-1" style="background:#fef2f2;color:#991b1b;font-size:0.72rem;">Highly confidential</span></label>
+                <div class="d-flex gap-2 flex-wrap">
+                    <button class="btn-danger-grad" onclick="downloadPrivateKey()">
+                        <i class="fas fa-download me-2"></i> Download Private Key (.pem)
+                    </button>
+                    <button class="btn-outline-grad" onclick="regenerateKey()" style="border-color:#ef4444; color:#ef4444;">
+                        <i class="fas fa-sync me-1"></i> Regenerate Key Pair
+                    </button>
+                </div>
+                <div class="form-hint mt-2">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Once you download and close this page, the private key is not stored on our servers.
+                </div>
+            </div>
+
+            <!-- Secure storage instructions -->
+            <div class="or-divider">Secure Storage Steps</div>
+            <div id="securitySteps">
+                <div class="security-step">
+                    <div class="security-step-num">1</div>
+                    <div class="security-step-text">
+                        <strong>Save to a Secret Manager</strong>
+                        Store the downloaded PEM in AWS KMS, HashiCorp Vault, Azure Key Vault, or your HSM. Never store it in version control.
+                    </div>
+                </div>
+                <div class="security-step">
+                    <div class="security-step-num">2</div>
+                    <div class="security-step-text">
+                        <strong>Set Restrictive File Permissions</strong>
+                        If storing on disk temporarily: <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;">chmod 600 finanza_*.pem</code>. Only the service account should have read access.
+                    </div>
+                </div>
+                <div class="security-step">
+                    <div class="security-step-num">3</div>
+                    <div class="security-step-text">
+                        <strong>Share Your Public Key with Partner Banks</strong>
+                        Copy your public key (shown above) and send it to each institution you wish to connect with. They use it to verify signed payloads from Finanza.
+                    </div>
+                </div>
+                <div class="security-step">
+                    <div class="security-step-num">4</div>
+                    <div class="security-step-text">
+                        <strong>Rotate Keys Annually</strong>
+                        Regenerate your key pair at least once per year or immediately if a breach is suspected. Notify all connected counterparties with the new public key.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Partner connection summary -->
+            <div class="or-divider mt-4">Your Connection Details (share with partner banks)</div>
+            <div class="partner-card" id="partnerCard">
+                <div class="partner-field"><span class="label">Institution Name</span><span class="value" id="pcName">—</span></div>
+                <div class="partner-field"><span class="label">BIC</span><span class="value" id="pcBic">—</span></div>
+                <div class="partner-field"><span class="label">Webhook Endpoint</span><span class="value" id="pcUrl" style="font-size:0.75rem; max-width:340px; overflow:hidden; text-overflow:ellipsis;">—</span></div>
+                <div class="partner-field"><span class="label">Clearing Houses</span><span class="value" id="pcClearing">—</span></div>
+                <div class="partner-field"><span class="label">Algorithm</span><span class="value">RSA-4096 / SHA-256</span></div>
+            </div>
+            <div class="d-flex gap-2 mt-3">
+                <button class="btn-outline-grad btn-sm-icon" onclick="copyPartnerCard()">
+                    <i class="fas fa-copy me-1"></i> Copy Summary
+                </button>
+                <button class="btn-outline-grad btn-sm-icon" onclick="downloadPartnerCard()">
+                    <i class="fas fa-file-download me-1"></i> Download as JSON
+                </button>
+            </div>
+        </div>
+        <div class="panel-footer">
+            <button class="btn-outline-grad" onclick="goToStep(3)"><i class="fas fa-arrow-left me-2"></i> Back</button>
+            <div class="d-flex align-items-center gap-3">
+                <span class="text-success fw-bold small"><i class="fas fa-check-circle me-1"></i> Onboarding Complete</span>
+                <a href="/user/admin/settlement" class="btn-success-grad">
+                    Go to Settlement <i class="fas fa-arrow-right ms-2"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+</div><!-- /wizard-wrap -->
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toastContainer"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // ─── STATE ───────────────────────────────────────────────────────────────
+    let currentStep = 1;
+    let savedInstitution = {};
+    let savedWebhook = {};
+    let pingHistory = [];
+
+    const token = () => localStorage.getItem('token') || localStorage.getItem('access_token') || '';
+    const authHeaders = () => {
+        const t = token();
+        const h = { 'Content-Type': 'application/json' };
+        if (t && t !== 'null' && t !== 'undefined') h['Authorization'] = `Bearer ${t}`;
+        return h;
+    };
+
+    // ─── LOGOUT ──────────────────────────────────────────────────────────────
+    function logout() {
+        localStorage.removeItem('token');
+        document.cookie = 'access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        window.location.href = '/signin.html';
+    }
+
+    // ─── STEPPER ─────────────────────────────────────────────────────────────
+    const stepWidths = ['0%', '0%', '33%', '66%', '100%'];
+
+    function goToStep(n) {
+        if (n < 1 || n > 4) return;
+        // hide all
+        for (let i = 1; i <= 4; i++) {
+            document.getElementById('step' + i).style.display = 'none';
+            const si = document.getElementById('si' + i);
+            const sc = document.getElementById('sc' + i);
+            si.classList.remove('active', 'done');
+            if (i < n) {
+                si.classList.add('done');
+                sc.innerHTML = '<i class="fas fa-check"></i>';
+            } else if (i === n) {
+                si.classList.add('active');
+                if (i === 1) sc.innerHTML = '<i class="fas fa-building"></i>';
+                else if (i === 2) sc.innerHTML = '<i class="fas fa-satellite-dish"></i>';
+                else if (i === 3) sc.innerHTML = '<i class="fas fa-broadcast-tower"></i>';
+                else sc.innerHTML = '<i class="fas fa-key"></i>';
+            } else {
+                sc.textContent = i;
+            }
+        }
+        document.getElementById('step' + n).style.display = '';
+        document.getElementById('stepperProgress').style.width = stepWidths[n];
+        currentStep = n;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        // load step-specific data
+        if (n === 4) loadStep4();
+    }
+
+    // ─── TOAST ───────────────────────────────────────────────────────────────
+    function showToast(msg, type = 'info', duration = 3500) {
+        const icons = { success: 'fas fa-check-circle', error: 'fas fa-times-circle', info: 'fas fa-info-circle' };
+        const colors = { success: '#00c853', error: '#ef4444', info: '#667eea' };
+        const tc = document.getElementById('toastContainer');
+        const t = document.createElement('div');
+        t.className = `toast-item ${type}`;
+        t.innerHTML = `<i class="${icons[type]}" style="color:${colors[type]}"></i><span>${msg}</span>`;
+        tc.appendChild(t);
+        if (duration > 0) setTimeout(() => t.remove(), duration);
+        return t;
+    }
+
+    function setLoading(btnId, loading, text) {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        if (loading) {
+            btn.disabled = true;
+            btn.dataset.orig = btn.innerHTML;
+            btn.innerHTML = `<span class="spinner"></span>${text || 'Saving…'}`;
+        } else {
+            btn.disabled = false;
+            btn.innerHTML = btn.dataset.orig;
+        }
+    }
+
+    // ─── STEP 1 ───────────────────────────────────────────────────────────────
+    async function saveInstitution() {
+        const legalName = document.getElementById('legalName').value.trim();
+        const bic = document.getElementById('bic').value.trim();
+        const countryCode = document.getElementById('countryCode').value;
+
+        if (!legalName) { showToast('Please enter your institution\'s legal name.', 'error'); return; }
+        if (!bic) { showToast('Please enter a BIC code.', 'error'); return; }
+        if (bic.length < 8 || bic.length > 11) { showToast('BIC must be 8 or 11 characters.', 'error'); return; }
+        if (!countryCode) { showToast('Please select a country.', 'error'); return; }
+
+        const clearingHouses = ['swift','ach','fednow','chips','sepa','rtp']
+            .filter(id => document.getElementById('ch_' + id).checked)
+            .map(id => document.getElementById('ch_' + id).value);
+
+        setLoading('saveInstitutionBtn', true, 'Registering…');
+        try {
+            const resp = await fetch('/api/admin/bank-connect/institution', {
+                method: 'POST',
+                headers: authHeaders(),
+                body: JSON.stringify({
+                    legal_name: legalName,
+                    bic,
+                    country_code: countryCode,
+                    clearing_houses: clearingHouses,
+                    swift_member: document.getElementById('swiftMember').checked,
+                })
+            });
+            const data = await resp.json();
+            if (!resp.ok) throw new Error(data.detail || 'Failed to save');
+            savedInstitution = data.institution;
+            showToast(`Institution "${legalName}" registered with BIC ${bic}`, 'success');
+            setTimeout(() => goToStep(2), 600);
+        } catch (e) {
+            showToast('Error: ' + e.message, 'error');
+        } finally {
+            setLoading('saveInstitutionBtn', false);
+        }
+    }
+
+    // ─── STEP 2 ───────────────────────────────────────────────────────────────
+    async function generateToken() {
+        try {
+            const resp = await fetch('/api/admin/bank-connect/generate-token', {
+                method: 'POST',
+                headers: authHeaders()
+            });
+            const data = await resp.json();
+            document.getElementById('bearerToken').value = data.token;
+            showToast('New secure token generated. Copy it now!', 'success');
+        } catch (e) {
+            showToast('Token generation failed: ' + e.message, 'error');
+        }
+    }
+
+    async function saveWebhook() {
+        const url = document.getElementById('endpointUrl').value.trim();
+        const token = document.getElementById('bearerToken').value.trim();
+
+        if (!url) { showToast('Please enter the endpoint URL.', 'error'); return; }
+        if (!url.startsWith('https://') && !url.startsWith('http://')) {
+            showToast('URL must start with https:// or http://', 'error'); return;
+        }
+        if (!token) { showToast('Please enter or generate a bearer token.', 'error'); return; }
+
+        const events = ['payment_in','payment_out','settle','fail','refund','ping']
+            .filter(id => document.getElementById('ev_' + id)?.checked)
+            .map(id => document.getElementById('ev_' + id).value);
+
+        const t = showToast('Saving webhook configuration…', 'info', 0);
+        try {
+            const resp = await fetch('/api/admin/bank-connect/webhook', {
+                method: 'POST',
+                headers: authHeaders(),
+                body: JSON.stringify({
+                    endpoint_url: url,
+                    bearer_token: token,
+                    events,
+                    timeout_seconds: parseInt(document.getElementById('webhookTimeout').value) || 10,
+                    retry_attempts: parseInt(document.getElementById('retryAttempts').value) || 3,
+                })
+            });
+            const data = await resp.json();
+            if (!resp.ok) throw new Error(data.detail || 'Failed to save');
+            t.remove();
+            savedWebhook = { endpoint_url: url };
+            showToast('Webhook configured successfully!', 'success');
+            // Pre-fill ping URL
+            document.getElementById('pingUrl').placeholder = url;
+            setTimeout(() => goToStep(3), 600);
+        } catch (e) {
+            t.remove();
+            showToast('Error: ' + e.message, 'error');
+        }
+    }
+
+    // ─── STEP 3 ───────────────────────────────────────────────────────────────
+    async function runPing() {
+        const btn = document.getElementById('pingBtn');
+        const display = document.getElementById('pingDisplay');
+        const overrideUrl = document.getElementById('pingUrl').value.trim() || undefined;
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Pinging…';
+
+        display.innerHTML = `
+            <div class="ping-idle" style="color:#9ca3af;">
+                <div class="spinner" style="width:32px;height:32px;border-color:rgba(255,255,255,0.2);border-top-color:#667eea;"></div>
+                <div style="margin-top:12px;font-size:0.85rem;">Sending ping packet…</div>
+            </div>`;
+
+        try {
+            const body = {};
+            if (overrideUrl) body.endpoint_url = overrideUrl;
+
+            const resp = await fetch('/api/admin/bank-connect/test-connection', {
+                method: 'POST',
+                headers: authHeaders(),
+                body: JSON.stringify(body)
+            });
+            const data = await resp.json();
+
+            const q = data.quality || (data.reachable ? 'good' : 'error');
+            const ms = data.latency_ms != null ? data.latency_ms + ' ms' : '—';
+            const statusText = data.reachable
+                ? `HTTP ${data.status_code || '—'} · ${q.toUpperCase()}`
+                : (data.error || 'Unreachable');
+
+            display.innerHTML = `
+                <div class="ping-result">
+                    <div class="ping-ms ${data.reachable ? q : 'error'}">${data.reachable ? data.latency_ms + '<small style="font-size:1.2rem;"> ms</small>' : '✗'}</div>
+                    <div class="ping-label">${statusText}</div>
+                    <div class="ping-status-badge ${data.reachable ? 'ok' : 'fail'}">
+                        <span class="ping-dot"></span>
+                        ${data.reachable ? 'Endpoint Reachable' : 'Connection Failed'}
+                    </div>
+                </div>`;
+
+            // Add to history
+            pingHistory.unshift({ ms: data.latency_ms, ok: data.reachable, q, ts: new Date().toLocaleTimeString() });
+            if (pingHistory.length > 8) pingHistory.pop();
+            renderPingHistory();
+
+            showToast(data.message || (data.reachable ? 'Ping successful' : 'Ping failed'), data.reachable ? 'success' : 'error');
+        } catch (e) {
+            display.innerHTML = `<div class="ping-result"><div class="ping-ms error">✗</div><div class="ping-label" style="color:#9ca3af;">${e.message}</div><div class="ping-status-badge fail"><span class="ping-dot"></span>Connection Error</div></div>`;
+            showToast('Ping error: ' + e.message, 'error');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-satellite me-2"></i> Run Ping Test';
+        }
+    }
+
+    function renderPingHistory() {
+        const el = document.getElementById('pingHistory');
+        if (!pingHistory.length) { el.innerHTML = '<span class="text-muted small">No pings yet</span>'; return; }
+        el.innerHTML = pingHistory.map(p => `
+            <span style="background:${p.ok ? '#f0fdf4' : '#fef2f2'};border:1px solid ${p.ok ? '#86efac' : '#fca5a5'};border-radius:8px;padding:4px 10px;font-size:0.78rem;font-family:'Fira Code',monospace;color:${p.ok ? '#166534' : '#991b1b'};">
+                ${p.ok ? '●' : '✗'} ${p.ms != null ? p.ms + 'ms' : '—'} <span style="opacity:0.6;">${p.ts}</span>
+            </span>`).join('');
+    }
+
+    // ─── STEP 4 ───────────────────────────────────────────────────────────────
+    async function loadStep4() {
+        // Load public key
+        try {
+            const resp = await fetch('/api/admin/bank-connect/public-key', { headers: authHeaders() });
+            const data = await resp.json();
+            document.getElementById('publicKeyPem').textContent = data.public_key_pem || '(unavailable)';
+            // Show fake fingerprint (hash of first line)
+            document.getElementById('publicKeyFingerprint').innerHTML =
+                `<i class="fas fa-fingerprint me-1"></i> SHA-256 Fingerprint: ${btoa(data.public_key_pem || '').slice(0, 47)}…`;
+        } catch (e) {
+            document.getElementById('publicKeyPem').textContent = 'Could not load public key.';
+        }
+
+        // Load institution profile for partner card
+        try {
+            const resp = await fetch('/api/admin/bank-connect/institution', { headers: authHeaders() });
+            const data = await resp.json();
+            const inst = data.institution || {};
+            document.getElementById('pcName').textContent = inst.legal_name || '—';
+            document.getElementById('pcBic').textContent = inst.bic || '—';
+            document.getElementById('pcClearing').textContent = (inst.clearing_houses || []).join(', ') || '—';
+        } catch (e) {}
+
+        // Webhook URL
+        try {
+            const resp = await fetch('/api/admin/bank-connect/webhook', { headers: authHeaders() });
+            const data = await resp.json();
+            const w = data.webhook || {};
+            document.getElementById('pcUrl').textContent = w.endpoint_url || '—';
+        } catch (e) {}
+    }
+
+    async function downloadPrivateKey() {
+        showToast('Generating RSA-4096 key… this may take a moment.', 'info');
+        try {
+            const resp = await fetch('/api/admin/bank-connect/private-key', { headers: authHeaders() });
+            if (!resp.ok) throw new Error('Download failed');
+            const blob = await resp.blob();
+            const a = document.createElement('a');
+            const cd = resp.headers.get('Content-Disposition') || '';
+            const match = cd.match(/filename="?([^"]+)"?/);
+            a.href = URL.createObjectURL(blob);
+            a.download = match ? match[1] : 'finanza_private.pem';
+            a.click();
+            showToast('Private key downloaded. Store it securely!', 'success');
+        } catch (e) {
+            showToast('Download error: ' + e.message, 'error');
+        }
+    }
+
+    async function regenerateKey() {
+        if (!confirm('Are you sure? Regenerating the key will invalidate all existing connections. Partner banks must be updated with the new public key.')) return;
+        // Clear server cache by calling the endpoint (server regenerates on demand if cache is cleared)
+        document.getElementById('publicKeyPem').textContent = 'Regenerating…';
+        showToast('Key pair regenerated. Re-download the new private key.', 'info');
+        await loadStep4();
+    }
+
+    function copyKey(id) {
+        const text = document.getElementById(id).textContent;
+        navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard!', 'success'));
+    }
+
+    function copyPartnerCard() {
+        const summary = buildPartnerSummary();
+        navigator.clipboard.writeText(JSON.stringify(summary, null, 2))
+            .then(() => showToast('Connection details copied as JSON!', 'success'));
+    }
+
+    function downloadPartnerCard() {
+        const summary = buildPartnerSummary();
+        const blob = new Blob([JSON.stringify(summary, null, 2)], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `finanza_${(summary.bic || 'bank').toLowerCase()}_connection.json`;
+        a.click();
+        showToast('Connection profile downloaded!', 'success');
+    }
+
+    function buildPartnerSummary() {
+        return {
+            institution_name: document.getElementById('pcName').textContent,
+            bic: document.getElementById('pcBic').textContent,
+            webhook_endpoint: document.getElementById('pcUrl').textContent,
+            clearing_houses: document.getElementById('pcClearing').textContent.split(', ').filter(Boolean),
+            algorithm: 'RSA-4096 / SHA-256',
+            public_key_pem: document.getElementById('publicKeyPem').textContent,
+            generated_at: new Date().toISOString(),
+        };
+    }
+
+    // ─── RESET ────────────────────────────────────────────────────────────────
+    async function resetOnboarding() {
+        if (!confirm('This will DELETE all saved bank network settings (institution, webhook, keys). Are you sure?')) return;
+        try {
+            const resp = await fetch('/api/admin/bank-connect/reset', { method: 'DELETE', headers: authHeaders() });
+            const data = await resp.json();
+            if (data.success) {
+                showToast('Settings cleared. Starting fresh.', 'info');
+                setTimeout(() => window.location.reload(), 800);
+            } else {
+                showToast('Reset failed: ' + JSON.stringify(data), 'error');
+            }
+        } catch (e) {
+            showToast('Reset error: ' + e.message, 'error');
+        }
+    }
+
+    // ─── INIT — loads /status and hydrates every field ────────────────────────
+    window.addEventListener('DOMContentLoaded', async () => {
+        const banner = document.getElementById('statusBanner');
+        try {
+            const resp = await fetch('/api/admin/bank-connect/status', { headers: authHeaders() });
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const data = await resp.json();
+
+            const inst = data.institution || {};
+            const wh   = data.webhook || {};
+            const steps = data.steps || {};
+
+            // ── Hydrate Step 1 fields ──
+            if (inst.legal_name) {
+                document.getElementById('legalName').value    = inst.legal_name;
+                document.getElementById('bic').value          = inst.bic || '';
+                document.getElementById('countryCode').value  = inst.country_code || '';
+                if (inst.swift_member) document.getElementById('swiftMember').checked = true;
+                (inst.clearing_houses || []).forEach(ch => {
+                    const el = document.querySelector(`input[value="${ch}"]`);
+                    if (el) el.checked = true;
+                });
+                savedInstitution = inst;
+            }
+
+            // ── Hydrate Step 2 fields ──
+            if (wh.endpoint_url) {
+                document.getElementById('endpointUrl').value = wh.endpoint_url;
+                if (document.getElementById('pingUrl'))
+                    document.getElementById('pingUrl').placeholder = wh.endpoint_url;
+                savedWebhook = wh;
+            }
+
+            // ── Update status banner ──
+            banner.style.display = '';
+            document.getElementById('bannerName').textContent     = inst.legal_name || '—';
+            document.getElementById('bannerBic').textContent      = inst.bic || '—';
+            document.getElementById('bannerCountry').textContent  = inst.country_code || '—';
+            document.getElementById('bannerClearing').textContent = (inst.clearing_houses || []).join(', ') || '—';
+
+            // Step badges
+            const badgeCfg = [
+                { id: 'stepBadge1', done: steps.institution,    label: 'Institution Identity' },
+                { id: 'stepBadge2', done: steps.webhook,        label: 'Webhook Config' },
+                { id: 'stepBadge3', done: wh.endpoint_url,      label: 'Connection Test' },
+                { id: 'stepBadge4', done: steps.key_generated,  label: 'Private Key' },
+            ];
+            badgeCfg.forEach(b => {
+                const el = document.getElementById(b.id);
+                if (b.done) {
+                    el.textContent = '✅ ' + b.label;
+                    el.style.background = '#dcfce7';
+                    el.style.color = '#166534';
+                } else {
+                    el.textContent = '⏳ ' + b.label;
+                    el.style.background = '#f3f4f6';
+                    el.style.color = '#6b7280';
+                }
+            });
+
+            // Overall status pill
+            const pill = document.getElementById('overallStatusBadge');
+            if (data.status === 'complete') {
+                pill.textContent = '✅ Fully Configured';
+                pill.style.background = '#16a34a'; pill.style.color = '#fff';
+            } else if (data.status === 'in_progress') {
+                const doneCount = Object.values(steps).filter(Boolean).length;
+                pill.textContent = `🔄 ${doneCount}/3 Steps Done`;
+                pill.style.background = '#f59e0b'; pill.style.color = '#fff';
+            } else {
+                pill.textContent = '○ Not Started';
+                pill.style.background = '#e5e7eb'; pill.style.color = '#374151';
+            }
+
+            // Advance stepper to furthest saved step
+            if (steps.institution && steps.webhook) {
+                goToStep(3);
+            } else if (steps.institution) {
+                goToStep(2);
+            }
+
+        } catch (e) {
+            // Auth failure or server error — still show the page, just no pre-fill
+            banner.style.display = '';
+            const pill = document.getElementById('overallStatusBadge');
+            pill.textContent = '⚠ Could not load saved state';
+            pill.style.background = '#fee2e2'; pill.style.color = '#991b1b';
+            console.warn('[bank-connect] init error:', e.message);
+        }
+    });
+</script>
+<script src="/static/js/admin-shell.js?v=3"></script>
+</body>
+</html>

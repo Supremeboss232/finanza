@@ -67,19 +67,22 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
 
-    # Token priority: Bearer > Cookie
-    token = bearer_token or cookie_token
+    # Token priority: valid Bearer > valid Cookie
+    email = None
+    token = None
 
-    if token is None:
-        logging.warning("Authentication failed: No token provided.")
-        raise credentials_exception
+    if bearer_token and bearer_token not in ("null", "undefined", ""):
+        email = auth_utils.decode_access_token(bearer_token)
+        if email:
+            token = bearer_token
 
-    logging.debug(f"Decoding token: {token}")
+    if not email and cookie_token and cookie_token not in ("null", "undefined", ""):
+        email = auth_utils.decode_access_token(cookie_token)
+        if email:
+            token = cookie_token
 
-    email = auth_utils.decode_access_token(token)
-
-    if email is None:
-        logging.warning("Authentication failed: Invalid or expired token.")
+    if not token or not email:
+        logging.warning("Authentication failed: Invalid, expired, or missing token.")
         raise credentials_exception
 
     # Check if token has been blacklisted (user logged out)

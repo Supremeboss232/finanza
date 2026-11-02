@@ -5,53 +5,12 @@ This automated audit scans all user and admin templates for broken CDNs, mismatc
 ## ⚠️ Broken CDN Path Summary (nested /static/)
 These links fail to load on user machines, breaking icons and Javascript interactions:
 
-### 📄 [cards.html](file:///c:/Users/Aweh/Downloads/supreme/financial-services-website-template/private\user\cards.html)
-- `❌ https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/static/css/all.min.css`
-- `❌ https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/static/js/bootstrap.bundle.min.js`
-### 📄 [contact.html](file:///c:/Users/Aweh/Downloads/supreme/financial-services-website-template/private\user\contact.html)
-- `❌ https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/static/css/all.min.css`
-### 📄 [deposits.html](file:///c:/Users/Aweh/Downloads/supreme/financial-services-website-template/private\user\deposits.html)
-- `❌ https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/static/css/all.min.css`
-- `❌ https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/static/js/bootstrap.bundle.min.js`
-### 📄 [investments.html](file:///c:/Users/Aweh/Downloads/supreme/financial-services-website-template/private\user\investments.html)
-- `❌ https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/static/css/all.min.css`
-- `❌ https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/static/js/bootstrap.bundle.min.js`
-### 📄 [kyc.html](file:///c:/Users/Aweh/Downloads/supreme/financial-services-website-template/private\user\kyc.html)
-- `❌ https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/static/css/all.min.css`
-### 📄 [kyc_form.html](file:///c:/Users/Aweh/Downloads/supreme/financial-services-website-template/private\user\kyc_form.html)
-- `❌ https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/static/css/all.min.css`
-- `❌ https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/static/js/bootstrap.bundle.min.js`
-### 📄 [kyc_pending.html](file:///c:/Users/Aweh/Downloads/supreme/financial-services-website-template/private\user\kyc_pending.html)
-- `❌ https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/static/css/all.min.css`
-- `❌ https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/static/js/bootstrap.bundle.min.js`
-### 📄 [kyc_rejected.html](file:///c:/Users/Aweh/Downloads/supreme/financial-services-website-template/private\user\kyc_rejected.html)
-- `❌ https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/static/css/all.min.css`
-- `❌ https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/static/js/bootstrap.bundle.min.js`
-### 📄 [kyc_success.html](file:///c:/Users/Aweh/Downloads/supreme/financial-services-website-template/private\user\kyc_success.html)
-- `❌ https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/static/css/all.min.css`
-- `❌ https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/static/js/bootstrap.bundle.min.js`
-### 📄 [loans.html](file:///c:/Users/Aweh/Downloads/supreme/financial-services-website-template/private\user\loans.html)
-- `❌ https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/static/css/all.min.css`
-### 📄 [loans_enhanced.html](file:///c:/Users/Aweh/Downloads/supreme/financial-services-website-template/private\user\loans_enhanced.html)
-- `❌ https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.10.0/static/css/all.min.css`
-- `❌ https://cdn.jsdelivr.net/npm/bootstrap@5.0.0/dist/static/js/bootstrap.bundle.min.js`
+_None found._
 
 ## ❌ API Endpoint Mismatches (404/Silent Failures)
 These client-side `fetch()` requests target routes that do not exist on the FastAPI backend:
 
-### 📄 [admin_profile.html](file:///c:/Users/Aweh/Downloads/supreme/financial-services-website-template/private\admin\admin_profile.html)
-- Calls: `/api/admin/metrics`
-  `fetch('/api/admin/metrics')`
-### 📄 [admin_users.html](file:///c:/Users/Aweh/Downloads/supreme/financial-services-website-template/private\admin\admin_users.html)
-- Calls: `/api/admin/metrics`
-  `fetch('/api/admin/metrics')`
-- Calls: `/api/admin/users/${userId}/balance`
-  `fetch(`/api/admin/users/${userId}/balance`)`
-### 📄 [signup.html](file:///c:/Users/Aweh/Downloads/supreme/financial-services-website-template/static\signup.html)
-- Calls: `/api/v1/auth/check-email`
-  `fetch(`/api/v1/auth/check-email?email=${encodeURIComponent(email)}`)`
-- Calls: `/api/v1/config`
-  `fetch('/api/v1/config')`
+_None found._
 
 ## 🖼️ Broken Image Assets / Empty Placeholders
 Image files referencing blank, missing, or temporary source paths:
@@ -61,8 +20,7 @@ _None found._
 ## ⚡ Script Syntax Errors
 HTML-inlined JavaScript compiler or runtime errors:
 
-### 📄 [dashboard.html](file:///c:/Users/Aweh/Downloads/supreme/financial-services-website-template/private\user\dashboard.html)
-- Unmatched closing parenthesis in onclick handler: ['onclick="location.reload())"']
+_None found._
 
 ## 🔒 XSS Vulnerability Gaps (Raw innerHTML injection)
 These lines assign unescaped/unsanitized dynamic values directly to `.innerHTML`, allowing XSS:
@@ -1334,33 +1292,123 @@ These lines assign unescaped/unsanitized dynamic values directly to `.innerHTML`
                         SecurityManager.maskPII(ret.account_number, 'account') : 
                         escapeHtml(ret.account_number);`
 ### 📄 [admin_activity_dashboard.html](file:///c:/Users/Aweh/Downloads/supreme/financial-services-website-template/private\admin\admin_activity_dashboard.html)
-- Expression: `logs.slice(0, 25).map(log => `
-                <tr>
-                    <td>${log.admin_email || log.admin_id || 'System'}</td>
-                    <td><strong>${log.action || 'unknown'}</strong></td>
-                    <td>${log.affected_user_id || 'N/A'}</td>
-                    <td>${log.details || '—'}</td>
-                    <td>${new Date(log.created_at).toLocaleString()}</td>
-                </tr>
-            `).join('')`
-  Line: `.innerHTML = logs.slice(0, 25).map(log => `
-                <tr>
-                    <td>${log.admin_email || log.admin_id || 'System'}</td>
-                    <td><strong>${log.action || 'unknown'}</strong></td>
-                    <td>${log.affected_user_id || 'N/A'}</td>
-                    <td>${log.details || '—'}</td>
-                    <td>${new Date(log.created_at).toLocaleString()}</td>
-                </tr>
-            `).join('');`
+- Expression: ``
+                    <td class="font-monospace text-muted">${new Date(log.created_at).toLocaleString()}</td>
+                    <td><span class="fw-bold text-dark">${log.admin_email || 'System'}</span></td>
+                    <td><span class="badge-action ${badgeClass}">${log.action || 'Unknown'}</span></td>
+                    <td>${log.affected_user_id || '<span class="text-muted">—</span>'}</td>
+                    <td>${log.details || 'No additional details.'}</td>
+                ``
+  Line: `.innerHTML = `
+                    <td class="font-monospace text-muted">${new Date(log.created_at).toLocaleString()}</td>
+                    <td><span class="fw-bold text-dark">${log.admin_email || 'System'}</span></td>
+                    <td><span class="badge-action ${badgeClass}">${log.action || 'Unknown'}</span></td>
+                    <td>${log.affected_user_id || '<span class="text-muted">—</span>'}</td>
+                    <td>${log.details || 'No additional details.'}</td>
+                `;`
+- Expression: ``
+                    <td><span class="fw-bold">${admin}</span></td>
+                    <td><span class="badge bg-secondary">${stats.total}</span></td>
+                    <td>${stats.suspensions}</td>
+                    <td>${stats.balance}</td>
+                    <td class="text-muted small">${stats.last ? stats.last.toLocaleString() : '—'}</td>
+                ``
+  Line: `.innerHTML = `
+                    <td><span class="fw-bold">${admin}</span></td>
+                    <td><span class="badge bg-secondary">${stats.total}</span></td>
+                    <td>${stats.suspensions}</td>
+                    <td>${stats.balance}</td>
+                    <td class="text-muted small">${stats.last ? stats.last.toLocaleString() : '—'}</td>
+                `;`
+- Expression: ``
+                    <td><strong>${r.type}</strong></td>
+                    <td>${sevBadge}</td>
+                    <td>${r.details}</td>
+                    <td>${r.count}</td>
+                    <td><button class="btn btn-xs btn-outline-dark" onclick="inspectRisk('${r.type}')">Inspect</button></td>
+                ``
+  Line: `.innerHTML = `
+                    <td><strong>${r.type}</strong></td>
+                    <td>${sevBadge}</td>
+                    <td>${r.details}</td>
+                    <td>${r.count}</td>
+                    <td><button class="btn btn-xs btn-outline-dark" onclick="inspectRisk('${r.type}')">Inspect</button></td>
+                `;`
 ### 📄 [admin_advanced_search.html](file:///c:/Users/Aweh/Downloads/supreme/financial-services-website-template/private\admin\admin_advanced_search.html)
-- Expression: ``<div style="color:red`
-  Line: `.innerHTML = `<div style="color:red;`
-- Expression: `pageResults.map(user => {
-                const kycClass = (user.kyc_status || 'pending').toLowerCase().replace('_', '-')`
-  Line: `.innerHTML = pageResults.map(user => {
-                const kycClass = (user.kyc_status || 'pending').toLowerCase().replace('_', '-');`
-- Expression: `chips.map(chip => `<div class="chip">${chip}</div>`).join('')`
-  Line: `.innerHTML = chips.map(chip => `<div class="chip">${chip}</div>`).join('');`
+- Expression: ``<tr><td colspan="9" class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-2"></span> Searching database...</td></tr>``
+  Line: `.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-2"></span> Searching database...</td></tr>`;`
+- Expression: ``<tr><td colspan="9" class="text-center py-4 text-danger"><i class="fas fa-exclamation-circle me-1"></i> Failed to run query. Check console logs.</td></tr>``
+  Line: `.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-danger"><i class="fas fa-exclamation-circle me-1"></i> Failed to run query. Check console logs.</td></tr>`;`
+- Expression: ``<tr><td colspan="9" class="text-center py-4 text-muted">No matching user profiles found.</td></tr>``
+  Line: `.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-muted">No matching user profiles found.</td></tr>`;`
+- Expression: ``
+                    <td>
+                        <div class="fw-bold text-dark">${u.full_name || 'N/A'}</div>
+                        <div class="text-muted small font-monospace">${u.email}</div>
+                    </td>
+                    <td class="font-monospace">${u.account_number || '—'}</td>
+                    <td>${kycBadge}</td>
+                    <td>${statusBadge}</td>
+                    <td class="text-uppercase">${u.region || '—'}</td>
+                    <td class="fw-bold">$${parseFloat(u.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                    <td>${mfaIndicator}</td>
+                    <td>${new Date(u.created_at).toLocaleDateString()}</td>
+                    <td class="text-end">
+                        <a href="/user/admin/users?user_id=${u.id}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-user-cog"></i> View Profile
+                        </a>
+                    </td>
+                ``
+  Line: `.innerHTML = `
+                    <td>
+                        <div class="fw-bold text-dark">${u.full_name || 'N/A'}</div>
+                        <div class="text-muted small font-monospace">${u.email}</div>
+                    </td>
+                    <td class="font-monospace">${u.account_number || '—'}</td>
+                    <td>${kycBadge}</td>
+                    <td>${statusBadge}</td>
+                    <td class="text-uppercase">${u.region || '—'}</td>
+                    <td class="fw-bold">$${parseFloat(u.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                    <td>${mfaIndicator}</td>
+                    <td>${new Date(u.created_at).toLocaleDateString()}</td>
+                    <td class="text-end">
+                        <a href="/user/admin/users?user_id=${u.id}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-user-cog"></i> View Profile
+                        </a>
+                    </td>
+                `;`
+- Expression: ``<button class="page-link" onclick="changePage(${currentPage - 1})">Prev</button>``
+  Line: `.innerHTML = `<button class="page-link" onclick="changePage(${currentPage - 1})">Prev</button>`;`
+- Expression: ``<button class="page-link" onclick="changePage(${i})">${i}</button>``
+  Line: `.innerHTML = `<button class="page-link" onclick="changePage(${i})">${i}</button>`;`
+- Expression: ``<button class="page-link" onclick="changePage(${currentPage + 1})">Next</button>``
+  Line: `.innerHTML = `<button class="page-link" onclick="changePage(${currentPage + 1})">Next</button>`;`
+- Expression: ``${key}: ${val}``
+  Line: `.innerHTML = `${key}: ${val}`;`
+### 📄 [admin_bank_connect.html](file:///c:/Users/Aweh/Downloads/supreme/financial-services-website-template/private\admin\admin_bank_connect.html)
+- Expression: ``<i class="${icons[type]}" style="color:${colors[type]}"></i><span>${msg}</span>``
+  Line: `.innerHTML = `<i class="${icons[type]}" style="color:${colors[type]}"></i><span>${msg}</span>`;`
+- Expression: ``<span class="spinner"></span>${text || 'Saving…'}``
+  Line: `.innerHTML = `<span class="spinner"></span>${text || 'Saving…'}`;`
+- Expression: ``
+            <div class="ping-idle" style="color:#9ca3af`
+  Line: `.innerHTML = `
+            <div class="ping-idle" style="color:#9ca3af;`
+- Expression: ``
+                <div class="ping-result">
+                    <div class="ping-ms ${data.reachable ? q : 'error'}">${data.reachable ? data.latency_ms + '<small style="font-size:1.2rem`
+  Line: `.innerHTML = `
+                <div class="ping-result">
+                    <div class="ping-ms ${data.reachable ? q : 'error'}">${data.reachable ? data.latency_ms + '<small style="font-size:1.2rem;`
+- Expression: ``<div class="ping-result"><div class="ping-ms error">✗</div><div class="ping-label" style="color:#9ca3af`
+  Line: `.innerHTML = `<div class="ping-result"><div class="ping-ms error">✗</div><div class="ping-label" style="color:#9ca3af;`
+- Expression: `pingHistory.map(p => `
+            <span style="background:${p.ok ? '#f0fdf4' : '#fef2f2'}`
+  Line: `.innerHTML = pingHistory.map(p => `
+            <span style="background:${p.ok ? '#f0fdf4' : '#fef2f2'};`
+- Expression: ``<i class="fas fa-fingerprint me-1"></i> SHA-256 Fingerprint: ${btoa(data.public_key_pem || '').slice(0, 47)}…``
+  Line: `.innerHTML =
+                `<i class="fas fa-fingerprint me-1"></i> SHA-256 Fingerprint: ${btoa(data.public_key_pem || '').slice(0, 47)}…`;`
 ### 📄 [admin_bill_pay.html](file:///c:/Users/Aweh/Downloads/supreme/financial-services-website-template/private\admin\admin_bill_pay.html)
 - Expression: ``
                 <i class="fas ${icons[type]}"></i>
@@ -1379,7 +1427,10 @@ These lines assign unescaped/unsanitized dynamic values directly to `.innerHTML`
                     <td><span class="badge bg-info">${securityManager.escapeHtml(b.frequency || '')}</span></td>
                     <td>${new Date(b.due_date).toLocaleDateString()}</td>
                     <td><span class="status-badge status-${b.status || 'scheduled'}">${securityManager.escapeHtml(b.status || '')}</span></td>
-                    <td><button class="btn btn-sm btn-primary" onclick="editBill('${b.id}')">Edit</button></td>
+                    <td>
+                        <button class="btn btn-sm btn-primary me-1" onclick="editBill('${b.id}')">Edit</button>
+                        <button class="btn btn-sm btn-danger" onclick="cancelBill('${b.id}', '${securityManager.escapeHtml(b.payee_name || '')}', ${b.amount}, '${b.due_date}')">Cancel</button>
+                    </td>
                 </tr>
             `).join('')`
   Line: `.innerHTML = bills.map(b => `
@@ -1391,7 +1442,10 @@ These lines assign unescaped/unsanitized dynamic values directly to `.innerHTML`
                     <td><span class="badge bg-info">${securityManager.escapeHtml(b.frequency || '')}</span></td>
                     <td>${new Date(b.due_date).toLocaleDateString()}</td>
                     <td><span class="status-badge status-${b.status || 'scheduled'}">${securityManager.escapeHtml(b.status || '')}</span></td>
-                    <td><button class="btn btn-sm btn-primary" onclick="editBill('${b.id}')">Edit</button></td>
+                    <td>
+                        <button class="btn btn-sm btn-primary me-1" onclick="editBill('${b.id}')">Edit</button>
+                        <button class="btn btn-sm btn-danger" onclick="cancelBill('${b.id}', '${securityManager.escapeHtml(b.payee_name || '')}', ${b.amount}, '${b.due_date}')">Cancel</button>
+                    </td>
                 </tr>
             `).join('');`
 - Expression: `(data.data || []).map(p => `
@@ -1402,7 +1456,7 @@ These lines assign unescaped/unsanitized dynamic values directly to `.innerHTML`
                             <td><span class="masked-text">${securityManager.maskPII(p.routing_number || '', false)}</span></td>
                             <td>${securityManager.escapeHtml(p.category || '')}</td>
                             <td>${p.active_users || 0}</td>
-                            <td><span class="badge bg-success">Active</span></td>
+                            <td><span class="badge ${p.status === 'active' ? 'bg-success' : p.status === 'inactive' ? 'bg-danger' : 'bg-secondary'}">${securityManager.escapeHtml(p.status ? p.status.toUpperCase() : 'PENDING')}</span></td>
                             <td><button class="btn btn-sm btn-warning" onclick="editPayee('${p.id}')">Edit</button></td>
                         </tr>
                     `).join('') || '<tr><td colspan="8" class="text-center text-muted">No payees found</td></tr>'`
@@ -1414,34 +1468,44 @@ These lines assign unescaped/unsanitized dynamic values directly to `.innerHTML`
                             <td><span class="masked-text">${securityManager.maskPII(p.routing_number || '', false)}</span></td>
                             <td>${securityManager.escapeHtml(p.category || '')}</td>
                             <td>${p.active_users || 0}</td>
-                            <td><span class="badge bg-success">Active</span></td>
+                            <td><span class="badge ${p.status === 'active' ? 'bg-success' : p.status === 'inactive' ? 'bg-danger' : 'bg-secondary'}">${securityManager.escapeHtml(p.status ? p.status.toUpperCase() : 'PENDING')}</span></td>
                             <td><button class="btn btn-sm btn-warning" onclick="editPayee('${p.id}')">Edit</button></td>
                         </tr>
                     `).join('') || '<tr><td colspan="8" class="text-center text-muted">No payees found</td></tr>';`
-- Expression: `(data.data || []).map(p => `
-                        <tr>
-                            <td>#${securityManager.escapeHtml(p.id || '')}</td>
-                            <td>${securityManager.escapeHtml(p.user_email || '')}</td>
-                            <td>${securityManager.escapeHtml(p.payee_name || '')}</td>
-                            <td>$${(p.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                            <td>${new Date(p.sent_date).toLocaleDateString()}</td>
-                            <td>${p.delivered_date ? new Date(p.delivered_date).toLocaleDateString() : '-'}</td>
-                            <td><span class="status-badge status-${p.status || 'scheduled'}">${securityManager.escapeHtml(p.status || '')}</span></td>
-                            <td><button class="btn btn-sm btn-primary" onclick="viewPayment('${p.id}')">View</button></td>
-                        </tr>
-                    `).join('') || '<tr><td colspan="8" class="text-center text-muted">No payment history</td></tr>'`
-  Line: `.innerHTML = (data.data || []).map(p => `
-                        <tr>
-                            <td>#${securityManager.escapeHtml(p.id || '')}</td>
-                            <td>${securityManager.escapeHtml(p.user_email || '')}</td>
-                            <td>${securityManager.escapeHtml(p.payee_name || '')}</td>
-                            <td>$${(p.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                            <td>${new Date(p.sent_date).toLocaleDateString()}</td>
-                            <td>${p.delivered_date ? new Date(p.delivered_date).toLocaleDateString() : '-'}</td>
-                            <td><span class="status-badge status-${p.status || 'scheduled'}">${securityManager.escapeHtml(p.status || '')}</span></td>
-                            <td><button class="btn btn-sm btn-primary" onclick="viewPayment('${p.id}')">View</button></td>
-                        </tr>
-                    `).join('') || '<tr><td colspan="8" class="text-center text-muted">No payment history</td></tr>';`
+- Expression: `paginatedPayments.map(p => `
+                <tr>
+                    <td>#${securityManager.escapeHtml(p.id || '')}</td>
+                    <td>${securityManager.escapeHtml(p.user_email || '')}</td>
+                    <td>${securityManager.escapeHtml(p.payee_name || '')}</td>
+                    <td>$${(p.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td>${new Date(p.sent_date).toLocaleDateString()}</td>
+                    <td>${p.delivered_date ? new Date(p.delivered_date).toLocaleDateString() : '-'}</td>
+                    <td><span class="status-badge status-${p.status || 'scheduled'}">${securityManager.escapeHtml(p.status || '')}</span></td>
+                    <td><button class="btn btn-sm btn-primary" onclick="viewPayment('${p.id}')">View</button></td>
+                </tr>
+            `).join('')`
+  Line: `.innerHTML = paginatedPayments.map(p => `
+                <tr>
+                    <td>#${securityManager.escapeHtml(p.id || '')}</td>
+                    <td>${securityManager.escapeHtml(p.user_email || '')}</td>
+                    <td>${securityManager.escapeHtml(p.payee_name || '')}</td>
+                    <td>$${(p.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td>${new Date(p.sent_date).toLocaleDateString()}</td>
+                    <td>${p.delivered_date ? new Date(p.delivered_date).toLocaleDateString() : '-'}</td>
+                    <td><span class="status-badge status-${p.status || 'scheduled'}">${securityManager.escapeHtml(p.status || '')}</span></td>
+                    <td><button class="btn btn-sm btn-primary" onclick="viewPayment('${p.id}')">View</button></td>
+                </tr>
+            `).join('');`
+- Expression: ``Are you sure you want to cancel the scheduled payment of <strong>$${formattedAmount}</strong> to <strong>${securityManager.escapeHtml(payeeName)}</strong> due on <strong>${formattedDate}</strong>?``
+  Line: `.innerHTML = `Are you sure you want to cancel the scheduled payment of <strong>$${formattedAmount}</strong> to <strong>${securityManager.escapeHtml(payeeName)}</strong> due on <strong>${formattedDate}</strong>?`;`
+- Expression: `'<option value="">Select user...</option>' + 
+                        users.map(u => `<option value="${u.id}">${securityManager.escapeHtml(u.email)} (${securityManager.escapeHtml(u.first_name || '')} ${securityManager.escapeHtml(u.last_name || '')})</option>`).join('')`
+  Line: `.innerHTML = '<option value="">Select user...</option>' + 
+                        users.map(u => `<option value="${u.id}">${securityManager.escapeHtml(u.email)} (${securityManager.escapeHtml(u.first_name || '')} ${securityManager.escapeHtml(u.last_name || '')})</option>`).join('');`
+- Expression: `'<option value="">Select payee...</option>' + 
+                        payees.map(p => `<option value="${p.id}">${securityManager.escapeHtml(p.payee_name)}</option>`).join('')`
+  Line: `.innerHTML = '<option value="">Select payee...</option>' + 
+                        payees.map(p => `<option value="${p.id}">${securityManager.escapeHtml(p.payee_name)}</option>`).join('');`
 ### 📄 [admin_blockchain.html](file:///c:/Users/Aweh/Downloads/supreme/financial-services-website-template/private\admin\admin_blockchain.html)
 - Expression: ``
                 <strong>${type.charAt(0).toUpperCase() + type.slice(1)}:</strong> ${escapeHtml(message)}
@@ -1455,6 +1519,9 @@ These lines assign unescaped/unsanitized dynamic values directly to `.innerHTML`
                     const threshold = CONFIG.confirmationThresholds[settlement.chain] || 12`
   Line: `.innerHTML = data.data.map(settlement => {
                     const threshold = CONFIG.confirmationThresholds[settlement.chain] || 12;`
+### 📄 [admin_bulk_operations.html](file:///c:/Users/Aweh/Downloads/supreme/financial-services-website-template/private\admin\admin_bulk_operations.html)
+- Expression: ``<i class="fas fa-info-circle me-2"></i>${message}``
+  Line: `.innerHTML = `<i class="fas fa-info-circle me-2"></i>${message}`;`
 ### 📄 [admin_currency_exchange.html](file:///c:/Users/Aweh/Downloads/supreme/financial-services-website-template/private\admin\admin_currency_exchange.html)
 - Expression: ``
                 <i class="fas ${icons[type]}"></i>
@@ -1477,16 +1544,30 @@ These lines assign unescaped/unsanitized dynamic values directly to `.innerHTML`
                             <span class="text-white">${adminUserInfo.email}</span>
                             <small class="text-muted ms-2">(${adminUserInfo.admin_role})</small>
                         `;`
-- Expression: ``
-                <div class="text-muted">
-                    <small>No recent activity logged</small>
-                </div>
-            ``
-  Line: `.innerHTML = `
-                <div class="text-muted">
-                    <small>No recent activity logged</small>
-                </div>
-            `;`
+- Expression: ``<div class="text-muted"><small>No recent activity logged</small></div>``
+  Line: `.innerHTML = `<div class="text-muted"><small>No recent activity logged</small></div>`;`
+- Expression: `logs.map(entry => `
+                    <div class="d-flex align-items-start mb-2 pb-2 border-bottom">
+                        <span class="badge bg-secondary me-2 text-nowrap">${new Date(entry.timestamp || entry.created_at).toLocaleTimeString()}</span>
+                        <div>
+                            <strong class="small">${entry.action || entry.action_type || 'Action'}</strong>
+                            <span class="text-muted small ms-1">${entry.details || ''}</span>
+                            ${entry.user || entry.admin_email ? `<br><small class="text-muted">${entry.user || entry.admin_email}</small>` : ''}
+                        </div>
+                    </div>
+                `).join('')`
+  Line: `.innerHTML = logs.map(entry => `
+                    <div class="d-flex align-items-start mb-2 pb-2 border-bottom">
+                        <span class="badge bg-secondary me-2 text-nowrap">${new Date(entry.timestamp || entry.created_at).toLocaleTimeString()}</span>
+                        <div>
+                            <strong class="small">${entry.action || entry.action_type || 'Action'}</strong>
+                            <span class="text-muted small ms-1">${entry.details || ''}</span>
+                            ${entry.user || entry.admin_email ? `<br><small class="text-muted">${entry.user || entry.admin_email}</small>` : ''}
+                        </div>
+                    </div>
+                `).join('');`
+- Expression: ``<div class="text-muted"><small>No recent activity logged</small></div>``
+  Line: `.innerHTML = `<div class="text-muted"><small>No recent activity logged</small></div>`;`
 ### 📄 [admin_fraud_detection.html](file:///c:/Users/Aweh/Downloads/supreme/financial-services-website-template/private\admin\admin_fraud_detection.html)
 - Expression: ``
                 <span style="color: ${config.color}`
@@ -1842,145 +1923,175 @@ These lines assign unescaped/unsanitized dynamic values directly to `.innerHTML`
                         </a>
                     `).join('');`
 ### 📄 [admin_kyc.html](file:///c:/Users/Aweh/Downloads/supreme/financial-services-website-template/private\admin\admin_kyc.html)
-- Expression: `kycList.map(kyc => `
-                <div class="kyc-card status-${kyc.status}">
-                    <div class="row">
-                        <div class="col-md-8">
-                            <h6>${kyc.user?.full_name || 'Unknown'}</h6>
-                            <p class="mb-1"><strong>Email:</strong> ${kyc.user?.email || 'N/A'}</p>
-                            <p class="mb-1"><strong>Document Type:</strong> ${kyc.document_type}</p>
-                            <p class="mb-1"><strong>Document Number:</strong> ${kyc.document_number}</p>
-                            <p class="mb-1"><small class="text-muted">Submitted: ${new Date(kyc.submitted_at).toLocaleDateString()}</small></p>
-                        </div>
-                        <div class="col-md-4 text-end">
-                            <p><span class="status-badge badge-${kyc.status}">${kyc.status.toUpperCase()}</span></p>
-                            <button class="btn btn-sm btn-primary mb-2" onclick="viewKYCDetails(${kyc.id})">
-                                <i class="fas fa-eye"></i> Review
-                            </button>
-                            ${kyc.status === 'pending' ? `
-                                <button class="btn btn-sm btn-success mb-2" onclick="approveKYCQuick(${kyc.id})">
-                                    <i class="fas fa-check"></i> Approve
-                                </button>
-                                <button class="btn btn-sm btn-danger" onclick="rejectKYCQuick(${kyc.id})">
-                                    <i class="fas fa-times"></i> Reject
-                                </button>
-                            ` : ''}
-                        </div>
-                    </div>
-                </div>
-            `).join('')`
-  Line: `.innerHTML = kycList.map(kyc => `
-                <div class="kyc-card status-${kyc.status}">
-                    <div class="row">
-                        <div class="col-md-8">
-                            <h6>${kyc.user?.full_name || 'Unknown'}</h6>
-                            <p class="mb-1"><strong>Email:</strong> ${kyc.user?.email || 'N/A'}</p>
-                            <p class="mb-1"><strong>Document Type:</strong> ${kyc.document_type}</p>
-                            <p class="mb-1"><strong>Document Number:</strong> ${kyc.document_number}</p>
-                            <p class="mb-1"><small class="text-muted">Submitted: ${new Date(kyc.submitted_at).toLocaleDateString()}</small></p>
-                        </div>
-                        <div class="col-md-4 text-end">
-                            <p><span class="status-badge badge-${kyc.status}">${kyc.status.toUpperCase()}</span></p>
-                            <button class="btn btn-sm btn-primary mb-2" onclick="viewKYCDetails(${kyc.id})">
-                                <i class="fas fa-eye"></i> Review
-                            </button>
-                            ${kyc.status === 'pending' ? `
-                                <button class="btn btn-sm btn-success mb-2" onclick="approveKYCQuick(${kyc.id})">
-                                    <i class="fas fa-check"></i> Approve
-                                </button>
-                                <button class="btn btn-sm btn-danger" onclick="rejectKYCQuick(${kyc.id})">
-                                    <i class="fas fa-times"></i> Reject
-                                </button>
-                            ` : ''}
-                        </div>
-                    </div>
-                </div>
-            `).join('');`
+- Expression: ``<tr><td colspan="10" class="text-center py-4 text-muted">No submissions matched active filters.</td></tr>``
+  Line: `.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-muted">No submissions matched active filters.</td></tr>`;`
 - Expression: ``
-                    <div class="alert alert-info" role="alert">
-                        <i class="fas fa-info-circle"></i> 
-                        <strong>User Status:</strong> ${kyc.user ? 'User profile linked' : 'Unidentified user (no user profile found)'}
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <p><strong>Full Name:</strong> ${userName}</p>
-                            <p><strong>Email:</strong> ${userEmail}</p>
-                            <p><strong>Phone:</strong> ${userPhone}</p>
-                            <p><strong>Address:</strong> ${userAddress}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <p><strong>Document Type:</strong> ${kyc.document_type || 'Not specified'}</p>
-                            <p><strong>Document Path:</strong> ${kyc.document_file_path || 'No document uploaded'}</p>
-                            <p><strong>Status:</strong> <span class="status-badge badge-${kyc.status}">${kyc.status.toUpperCase()}</span></p>
-                            <p><strong>Submitted:</strong> ${formatDate(kyc.submitted_at)}</p>
-                        </div>
-                    </div>
-                    ${documentPreview ? `<hr><h6>Document Preview</h6>${documentPreview}<hr>` : '<p class="text-muted">No document preview available</p><hr>'}
-                    <h6>Review Comments</h6>
-                    <textarea id="reviewComments" class="form-control" rows="4" placeholder="Enter your review comments..."></textarea>
+                    <td><input type="checkbox" class="row-checkbox" data-id="${k.id}" onclick="updateSelected()"></td>
+                    <td>
+                        <div class="fw-bold">${k.user?.full_name || 'N/A'}</div>
+                        <div class="text-muted small">${k.user?.email || 'N/A'}</div>
+                    </td>
+                    <td>
+                        <span class="text-uppercase small font-bold">${k.document_type}</span>
+                        <div class="text-muted small">${k.document_number || 'N/A'}</div>
+                    </td>
+                    <td>${new Date(k.submitted_at).toLocaleDateString()}</td>
+                    <td>${pendingStr}</td>
+                    <td>${slaBadge}</td>
+                    <td>${riskBadge}</td>
+                    <td>${assignee}</td>
+                    <td><span class="badge-status badge-${k.status}">${k.status}</span></td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-primary" onclick="openReviewModal(${k.id})">
+                            <i class="fas fa-eye me-1"></i> Review
+                        </button>
+                    </td>
                 ``
   Line: `.innerHTML = `
-                    <div class="alert alert-info" role="alert">
-                        <i class="fas fa-info-circle"></i> 
-                        <strong>User Status:</strong> ${kyc.user ? 'User profile linked' : 'Unidentified user (no user profile found)'}
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <p><strong>Full Name:</strong> ${userName}</p>
-                            <p><strong>Email:</strong> ${userEmail}</p>
-                            <p><strong>Phone:</strong> ${userPhone}</p>
-                            <p><strong>Address:</strong> ${userAddress}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <p><strong>Document Type:</strong> ${kyc.document_type || 'Not specified'}</p>
-                            <p><strong>Document Path:</strong> ${kyc.document_file_path || 'No document uploaded'}</p>
-                            <p><strong>Status:</strong> <span class="status-badge badge-${kyc.status}">${kyc.status.toUpperCase()}</span></p>
-                            <p><strong>Submitted:</strong> ${formatDate(kyc.submitted_at)}</p>
-                        </div>
-                    </div>
-                    ${documentPreview ? `<hr><h6>Document Preview</h6>${documentPreview}<hr>` : '<p class="text-muted">No document preview available</p><hr>'}
-                    <h6>Review Comments</h6>
-                    <textarea id="reviewComments" class="form-control" rows="4" placeholder="Enter your review comments..."></textarea>
+                    <td><input type="checkbox" class="row-checkbox" data-id="${k.id}" onclick="updateSelected()"></td>
+                    <td>
+                        <div class="fw-bold">${k.user?.full_name || 'N/A'}</div>
+                        <div class="text-muted small">${k.user?.email || 'N/A'}</div>
+                    </td>
+                    <td>
+                        <span class="text-uppercase small font-bold">${k.document_type}</span>
+                        <div class="text-muted small">${k.document_number || 'N/A'}</div>
+                    </td>
+                    <td>${new Date(k.submitted_at).toLocaleDateString()}</td>
+                    <td>${pendingStr}</td>
+                    <td>${slaBadge}</td>
+                    <td>${riskBadge}</td>
+                    <td>${assignee}</td>
+                    <td><span class="badge-status badge-${k.status}">${k.status}</span></td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-primary" onclick="openReviewModal(${k.id})">
+                            <i class="fas fa-eye me-1"></i> Review
+                        </button>
+                    </td>
                 `;`
-### 📄 [admin_lending.html](file:///c:/Users/Aweh/Downloads/supreme/financial-services-website-template/private\admin\admin_lending.html)
 - Expression: ``
-                <i class="fas ${icons[type]}"></i>
-                <span>${securityManager.escapeHtml(message)}</span>
+                <p>Are you sure you want to approve the <strong>${selectedIds.size}</strong> selected submissions?</p>
+                <div class="alert alert-warning small">This bypassing dual manual checklist verification for all items. Proceed with caution.</div>
             ``
   Line: `.innerHTML = `
-                <i class="fas ${icons[type]}"></i>
-                <span>${securityManager.escapeHtml(message)}</span>
+                <p>Are you sure you want to approve the <strong>${selectedIds.size}</strong> selected submissions?</p>
+                <div class="alert alert-warning small">This bypassing dual manual checklist verification for all items. Proceed with caution.</div>
             `;`
-- Expression: `data.data.map(schedule => {
-                    const statusBadgeClass = `status-${(schedule.status || 'pending').toLowerCase()}``
-  Line: `.innerHTML = data.data.map(schedule => {
-                    const statusBadgeClass = `status-${(schedule.status || 'pending').toLowerCase()}`;`
-- Expression: `data.data.map(mod => `
+- Expression: ``
+                <p>Are you sure you want to reject the <strong>${selectedIds.size}</strong> selected submissions?</p>
+                <label class="form-label font-bold small">Please select a standard bulk rejection reason</label>
+                <select id="bulkRejectionReason" class="form-select mb-3">
+                    <option value="POOR_IMAGE_QUALITY">POOR_IMAGE_QUALITY - Blurry document</option>
+                    <option value="NAME_MISMATCH">NAME_MISMATCH - Profile name doesn't match ID</option>
+                    <option value="EXPIRED_DOCUMENT">EXPIRED_DOCUMENT - ID is expired</option>
+                </select>
+            ``
+  Line: `.innerHTML = `
+                <p>Are you sure you want to reject the <strong>${selectedIds.size}</strong> selected submissions?</p>
+                <label class="form-label font-bold small">Please select a standard bulk rejection reason</label>
+                <select id="bulkRejectionReason" class="form-select mb-3">
+                    <option value="POOR_IMAGE_QUALITY">POOR_IMAGE_QUALITY - Blurry document</option>
+                    <option value="NAME_MISMATCH">NAME_MISMATCH - Profile name doesn't match ID</option>
+                    <option value="EXPIRED_DOCUMENT">EXPIRED_DOCUMENT - ID is expired</option>
+                </select>
+            `;`
+### 📄 [admin_lending.html](file:///c:/Users/Aweh/Downloads/supreme/financial-services-website-template/private\admin\admin_lending.html)
+- Expression: ``<tr><td colspan="8" class="text-center py-3 text-muted">No pending loan applications.</td></tr>``
+  Line: `.innerHTML = `<tr><td colspan="8" class="text-center py-3 text-muted">No pending loan applications.</td></tr>`;`
+- Expression: ``
+                    <td><strong>${a.id}</strong></td>
+                    <td class="font-monospace">${a.owner_id || a.user_id}</td>
+                    <td>$${(a.amount || 0).toLocaleString()}</td>
+                    <td>${a.term_months} Months</td>
+                    <td>${a.purpose || 'Personal Loan'}</td>
+                    <td>${a.created_at ? new Date(a.created_at).toLocaleDateString() : 'N/A'}</td>
+                    <td><span class="status-badge status-pending">${a.status}</span></td>
+                    <td class="text-end">
+                        <button class="btn btn-xs btn-success me-1" onclick="openApproveModal(${a.id})"><i class="fas fa-check"></i> Approve</button>
+                        <button class="btn btn-xs btn-danger me-1" onclick="openRejectModal(${a.id})"><i class="fas fa-times"></i> Reject</button>
+                    </td>
+                ``
+  Line: `.innerHTML = `
+                    <td><strong>${a.id}</strong></td>
+                    <td class="font-monospace">${a.owner_id || a.user_id}</td>
+                    <td>$${(a.amount || 0).toLocaleString()}</td>
+                    <td>${a.term_months} Months</td>
+                    <td>${a.purpose || 'Personal Loan'}</td>
+                    <td>${a.created_at ? new Date(a.created_at).toLocaleDateString() : 'N/A'}</td>
+                    <td><span class="status-badge status-pending">${a.status}</span></td>
+                    <td class="text-end">
+                        <button class="btn btn-xs btn-success me-1" onclick="openApproveModal(${a.id})"><i class="fas fa-check"></i> Approve</button>
+                        <button class="btn btn-xs btn-danger me-1" onclick="openRejectModal(${a.id})"><i class="fas fa-times"></i> Reject</button>
+                    </td>
+                `;`
+- Expression: ``<tr><td colspan="9" class="text-center py-3 text-muted">No loans matches filters.</td></tr>``
+  Line: `.innerHTML = `<tr><td colspan="9" class="text-center py-3 text-muted">No loans matches filters.</td></tr>`;`
+- Expression: ``
+                    <td><strong>${l.id}</strong></td>
+                    <td class="font-monospace">${l.owner_id || '—'}</td>
+                    <td>$${parseFloat(l.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                    <td>${parseFloat(l.interest_rate || 0).toFixed(2)}%</td>
+                    <td>${l.term_months} months</td>
+                    <td class="fw-bold">$${parseFloat(l.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                    <td><span class="status-badge ${statusClass}">${l.status}</span></td>
+                    <td>${l.next_payment_date || 'N/A'}</td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-info" onclick="viewLoanModifications(${l.id})">
+                            <i class="fas fa-history"></i> History
+                        </button>
+                        ${l.status === 'approved' ? `
+                            <button class="btn btn-sm btn-success" onclick="activateLoan(${l.id})">
+                                <i class="fas fa-coins"></i> Disburse
+                            </button>
+                        ` : ''}
+                    </td>
+                ``
+  Line: `.innerHTML = `
+                    <td><strong>${l.id}</strong></td>
+                    <td class="font-monospace">${l.owner_id || '—'}</td>
+                    <td>$${parseFloat(l.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                    <td>${parseFloat(l.interest_rate || 0).toFixed(2)}%</td>
+                    <td>${l.term_months} months</td>
+                    <td class="fw-bold">$${parseFloat(l.balance || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                    <td><span class="status-badge ${statusClass}">${l.status}</span></td>
+                    <td>${l.next_payment_date || 'N/A'}</td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-info" onclick="viewLoanModifications(${l.id})">
+                            <i class="fas fa-history"></i> History
+                        </button>
+                        ${l.status === 'approved' ? `
+                            <button class="btn btn-sm btn-success" onclick="activateLoan(${l.id})">
+                                <i class="fas fa-coins"></i> Disburse
+                            </button>
+                        ` : ''}
+                    </td>
+                `;`
+- Expression: ``<tr><td colspan="6" class="text-center py-3 text-muted"><span class="spinner-border spinner-border-sm me-2"></span> Loading...</td></tr>``
+  Line: `.innerHTML = `<tr><td colspan="6" class="text-center py-3 text-muted"><span class="spinner-border spinner-border-sm me-2"></span> Loading...</td></tr>`;`
+- Expression: ``<tr><td colspan="6" class="text-center py-3 text-muted">No modification logs for this loan.</td></tr>``
+  Line: `.innerHTML = `<tr><td colspan="6" class="text-center py-3 text-muted">No modification logs for this loan.</td></tr>`;`
+- Expression: `items.map(item => `
                     <tr>
-                        <td>${securityManager.escapeHtml(mod.id || '')}</td>
-                        <td>${securityManager.escapeHtml(mod.loan_id || '')}</td>
-                        <td>${securityManager.escapeHtml(mod.type || '')}</td>
-                        <td><span class="masked-text">${securityManager.maskPII(mod.modified_by || 'N/A', false)}</span></td>
-                        <td>${mod.modified_date || 'N/A'}</td>
-                        <td><code>${securityManager.escapeHtml(mod.old_value || '')}</code></td>
-                        <td><code>${securityManager.escapeHtml(mod.new_value || '')}</code></td>
+                        <td>${item.id}</td>
+                        <td><span class="badge bg-secondary">${item.modification_type}</span></td>
+                        <td>${item.requested_by || 'Admin'}</td>
+                        <td>${item.effective_date ? new Date(item.effective_date).toLocaleDateString() : 'N/A'}</td>
+                        <td>${item.reason || 'N/A'}</td>
+                        <td><span class="badge bg-success">Approved</span></td>
                     </tr>
                 `).join('')`
-  Line: `.innerHTML = data.data.map(mod => `
+  Line: `.innerHTML = items.map(item => `
                     <tr>
-                        <td>${securityManager.escapeHtml(mod.id || '')}</td>
-                        <td>${securityManager.escapeHtml(mod.loan_id || '')}</td>
-                        <td>${securityManager.escapeHtml(mod.type || '')}</td>
-                        <td><span class="masked-text">${securityManager.maskPII(mod.modified_by || 'N/A', false)}</span></td>
-                        <td>${mod.modified_date || 'N/A'}</td>
-                        <td><code>${securityManager.escapeHtml(mod.old_value || '')}</code></td>
-                        <td><code>${securityManager.escapeHtml(mod.new_value || '')}</code></td>
+                        <td>${item.id}</td>
+                        <td><span class="badge bg-secondary">${item.modification_type}</span></td>
+                        <td>${item.requested_by || 'Admin'}</td>
+                        <td>${item.effective_date ? new Date(item.effective_date).toLocaleDateString() : 'N/A'}</td>
+                        <td>${item.reason || 'N/A'}</td>
+                        <td><span class="badge bg-success">Approved</span></td>
                     </tr>
                 `).join('');`
-- Expression: `data.data.map(payment => {
-                    const borrowerDisplay = securityManager.maskPII(payment.borrower_name || 'N/A', false)`
-  Line: `.innerHTML = data.data.map(payment => {
-                    const borrowerDisplay = securityManager.maskPII(payment.borrower_name || 'N/A', false);`
+- Expression: ``<tr><td colspan="6" class="text-center py-3 text-danger">Failed to load modifications.</td></tr>``
+  Line: `.innerHTML = `<tr><td colspan="6" class="text-center py-3 text-danger">Failed to load modifications.</td></tr>`;`
 ### 📄 [admin_lending_compliance.html](file:///c:/Users/Aweh/Downloads/supreme/financial-services-website-template/private\admin\admin_lending_compliance.html)
 - Expression: ``
                 <i class="fas ${icons[type]}"></i>
@@ -2806,83 +2917,54 @@ These lines assign unescaped/unsanitized dynamic values directly to `.innerHTML`
                     <h6><strong>Users (${d.results.users?.length || 0})</strong></h6>
                     ${(d.results.users || []).map(u => 
                         `<div class="search-result-item" onclick="openUserDetailModal(${u.id})" style="cursor: pointer;`
+### 📄 [admin_vendor_hub.html](file:///c:/Users/Aweh/Downloads/supreme/financial-services-website-template/private\admin\admin_vendor_hub.html)
+- Expression: ``<i class="fas fa-user-circle me-1"></i>${u.email||'Admin'}``
+  Line: `.innerHTML=`<i class="fas fa-user-circle me-1"></i>${u.email||'Admin'}`;`
+- Expression: ``<i class="fas fa-check-circle me-1"></i>Live \u2014 ${data.frontend_url} (${data.latency_ms}ms)``
+  Line: `.innerHTML=`<i class="fas fa-check-circle me-1"></i>Live \u2014 ${data.frontend_url} (${data.latency_ms}ms)`;`
+- Expression: ``<span class="text-danger"><i class="fas fa-times-circle me-1"></i>${data.error||'Cannot reach app URL'}</span>``
+  Line: `.innerHTML=`<span class="text-danger"><i class="fas fa-times-circle me-1"></i>${data.error||'Cannot reach app URL'}</span>`;`
+- Expression: ``<i class="fas fa-check me-1"></i>OK (${data.latency_ms}ms)``
+  Line: `.innerHTML=`<i class="fas fa-check me-1"></i>OK (${data.latency_ms}ms)`;`
 ### 📄 [admin_webhooks.html](file:///c:/Users/Aweh/Downloads/supreme/financial-services-website-template/private\admin\admin_webhooks.html)
+- Expression: ``<tr><td colspan="6" class="text-center py-3 text-muted">No webhook configuration registered.</td></tr>``
+  Line: `.innerHTML = `<tr><td colspan="6" class="text-center py-3 text-muted">No webhook configuration registered.</td></tr>`;`
 - Expression: ``
-                <i class="fas ${icons[type]}"></i>
-                <span>${securityManager.escapeHtml(message)}</span>
-            ``
+                    <td><strong>${w.id}</strong></td>
+                    <td class="font-monospace">${w.url}</td>
+                    <td><span class="badge bg-secondary">Production</span></td>
+                    <td>${events}</td>
+                    <td>${statusBadge}</td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-dark me-1" onclick="openDetailsModal(${w.id}, '${w.secret_key || ''}')" title="Security & Test Console">
+                            <i class="fas fa-lock"></i> Controls
+                        </button>
+                        <button class="btn btn-sm btn-outline-warning me-1" onclick="openEditModal(${w.id})" title="Edit Webhook">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteWebhook(${w.id})" title="Delete Webhook">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </td>
+                ``
   Line: `.innerHTML = `
-                <i class="fas ${icons[type]}"></i>
-                <span>${securityManager.escapeHtml(message)}</span>
-            `;`
-- Expression: `ips.map(ip => `<div>${ip}</div>`).join('')`
-  Line: `.innerHTML = ips.map(ip => `<div>${ip}</div>`).join('');`
-- Expression: `Object.entries(EVENT_TYPES).map(([key, label]) => `
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" value="${key}" id="event_${key}">
-                    <label class="form-check-label" for="event_${key}">${label}</label>
-                </div>
-            `).join('')`
-  Line: `.innerHTML = Object.entries(EVENT_TYPES).map(([key, label]) => `
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" value="${key}" id="event_${key}">
-                    <label class="form-check-label" for="event_${key}">${label}</label>
-                </div>
-            `).join('');`
-- Expression: `data.data.map(delivery => `
-                <tr>
-                    <td><code>${delivery.id.substring(0, 8)}</code></td>
-                    <td>${delivery.user_email}</td>
-                    <td><small><code>${delivery.webhook_url.substring(0, 35)}...</code></small></td>
-                    <td>${delivery.event_type}</td>
-                    <td><span class="badge bg-danger">${delivery.http_status || 'N/A'}</span></td>
-                    <td>${delivery.attempt_count}/${delivery.max_attempts}</td>
-                    <td><span class="retry-status">Retrying in ${delivery.next_retry_seconds || 0}s (${delivery.backoff_strategy})</span></td>
-                    <td><small>${delivery.last_error.substring(0, 40)}...</small></td>
-                    <td><small>${new Date(delivery.timestamp).toLocaleString()}</small></td>
-                    <td><button class="btn btn-sm btn-success" onclick="retryDelivery('${delivery.id}')"><i class="fas fa-redo"></i></button></td>
-                </tr>
-            `).join('')`
-  Line: `.innerHTML = data.data.map(delivery => `
-                <tr>
-                    <td><code>${delivery.id.substring(0, 8)}</code></td>
-                    <td>${delivery.user_email}</td>
-                    <td><small><code>${delivery.webhook_url.substring(0, 35)}...</code></small></td>
-                    <td>${delivery.event_type}</td>
-                    <td><span class="badge bg-danger">${delivery.http_status || 'N/A'}</span></td>
-                    <td>${delivery.attempt_count}/${delivery.max_attempts}</td>
-                    <td><span class="retry-status">Retrying in ${delivery.next_retry_seconds || 0}s (${delivery.backoff_strategy})</span></td>
-                    <td><small>${delivery.last_error.substring(0, 40)}...</small></td>
-                    <td><small>${new Date(delivery.timestamp).toLocaleString()}</small></td>
-                    <td><button class="btn btn-sm btn-success" onclick="retryDelivery('${delivery.id}')"><i class="fas fa-redo"></i></button></td>
-                </tr>
-            `).join('');`
-- Expression: `data.data.map(log => `
-                <tr>
-                    <td><code>${log.id.substring(0, 8)}</code></td>
-                    <td>${log.user_email}</td>
-                    <td><small><code>${log.webhook_url.substring(0, 35)}...</code></small></td>
-                    <td>${log.event_type}</td>
-                    <td><span class="badge bg-${log.status === 'success' ? 'success' : 'danger'}">${log.status}</span></td>
-                    <td>${log.http_status || 'N/A'}</td>
-                    <td>${log.response_time_ms}ms</td>
-                    <td>${new Date(log.timestamp).toLocaleString()}</td>
-                    <td><button class="btn btn-sm btn-primary" onclick="viewWebhookDetails('${log.webhook_id}')">View Webhook</button></td>
-                </tr>
-            `).join('')`
-  Line: `.innerHTML = data.data.map(log => `
-                <tr>
-                    <td><code>${log.id.substring(0, 8)}</code></td>
-                    <td>${log.user_email}</td>
-                    <td><small><code>${log.webhook_url.substring(0, 35)}...</code></small></td>
-                    <td>${log.event_type}</td>
-                    <td><span class="badge bg-${log.status === 'success' ? 'success' : 'danger'}">${log.status}</span></td>
-                    <td>${log.http_status || 'N/A'}</td>
-                    <td>${log.response_time_ms}ms</td>
-                    <td>${new Date(log.timestamp).toLocaleString()}</td>
-                    <td><button class="btn btn-sm btn-primary" onclick="viewWebhookDetails('${log.webhook_id}')">View Webhook</button></td>
-                </tr>
-            `).join('');`
+                    <td><strong>${w.id}</strong></td>
+                    <td class="font-monospace">${w.url}</td>
+                    <td><span class="badge bg-secondary">Production</span></td>
+                    <td>${events}</td>
+                    <td>${statusBadge}</td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-outline-dark me-1" onclick="openDetailsModal(${w.id}, '${w.secret_key || ''}')" title="Security & Test Console">
+                            <i class="fas fa-lock"></i> Controls
+                        </button>
+                        <button class="btn btn-sm btn-outline-warning me-1" onclick="openEditModal(${w.id})" title="Edit Webhook">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteWebhook(${w.id})" title="Delete Webhook">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </td>
+                `;`
 ### 📄 [mfa_setup.html](file:///c:/Users/Aweh/Downloads/supreme/financial-services-website-template/private\admin\mfa_setup.html)
 - Expression: `codes.map(code => 
                 `<div class="backup-code" onclick="copyToClipboard('${code}')" title="Click to copy">
@@ -2989,12 +3071,3 @@ These lines assign unescaped/unsanitized dynamic values directly to `.innerHTML`
                 `<div class="alert alert-${type} alert-dismissible fade show" role="alert" style="animation: slideDown 0.3s ease-out`
   Line: `.innerHTML = [
                 `<div class="alert alert-${type} alert-dismissible fade show" role="alert" style="animation: slideDown 0.3s ease-out;`
-### 📄 [users.html](file:///c:/Users/Aweh/Downloads/supreme/financial-services-website-template/static\admin\users.html)
-- Expression: ``<td>${u.id}</td><td>${u.email}</td><td>${u.full_name ?? ''}</td><td>${u.is_active}</td><td>${u.is_admin}</td><td>
-                <button class="btn btn-sm btn-primary" onclick="setAdmin(${u.id}, ${!u.is_admin})">Toggle Admin</button>
-                <button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id})">Delete</button>
-            </td>``
-  Line: `.innerHTML = `<td>${u.id}</td><td>${u.email}</td><td>${u.full_name ?? ''}</td><td>${u.is_active}</td><td>${u.is_admin}</td><td>
-                <button class="btn btn-sm btn-primary" onclick="setAdmin(${u.id}, ${!u.is_admin})">Toggle Admin</button>
-                <button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id})">Delete</button>
-            </td>`;`

@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta name="description" content="Finanza Financial Services - Admin Webhooks portal and banking management.">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Webhook Subscriptions - Finanza Admin</title>
-    <link href="/static/css/style.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -29,6 +29,8 @@
         
         .chart-container { position: relative; height: 250px; }
     </style>
+    <link href="/static/css/admin-portal.css" rel="stylesheet">
+    <script src="/static/js/admin-guard.js?v=3"></script>
 </head>
 <body>
     <!-- Navbar -->
@@ -299,11 +301,21 @@
             }
         }
 
-        function updateStats() {
+        async function updateStats() {
             document.getElementById('totalWebhooks').textContent = webhooksList.length;
             document.getElementById('activeWebhooks').textContent = webhooksList.filter(w => w.is_active || w.active).length;
-            document.getElementById('failedDeliveries').textContent = '2.4%'; // Mock aggregate health indicator
-            document.getElementById('avgResponseTime').textContent = '145ms';
+            try {
+                const res = await fetch('/api/v1/webhooks/metrics');
+                if (res.ok) {
+                    const m = await res.json();
+                    const failRate = m.failure_rate_24h !== undefined ? m.failure_rate_24h : Math.max(0, 100 - (m.success_rate_24h || 100));
+                    document.getElementById('failedDeliveries').textContent = `${Number(failRate).toFixed(1)}%`;
+                    document.getElementById('avgResponseTime').textContent = `${m.avg_response_time_ms || 0}ms`;
+                    return;
+                }
+            } catch (_) {}
+            document.getElementById('failedDeliveries').textContent = '0.0%';
+            document.getElementById('avgResponseTime').textContent = '0ms';
         }
 
         function renderWebhooksTable() {
@@ -367,7 +379,7 @@
                         'Authorization': 'Bearer ' + getAuthToken(),
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ url, events, is_active: active })
+                    body: JSON.stringify({ name: 'Webhook Endpoint', url, events, active, is_active: active })
                 });
                 
                 if (!response.ok) throw new Error('Registration failed');
@@ -523,5 +535,6 @@
         // Init
         window.addEventListener('load', loadWebhooks);
     </script>
+    <script src="/static/js/admin-shell.js?v=3"></script>
 </body>
 </html>

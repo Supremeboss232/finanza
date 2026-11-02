@@ -119,7 +119,7 @@ async def manual_balance_adjustment(
 
         # Get system account for the transfer FROM
         system_account_result = await db_session.execute(
-            select(DBAccount).where(DBAccount.account_number == "SYSTEM_RESERVE")
+            select(DBAccount).where(DBAccount.account_number.in_(["SYS-RESERVE-0001", "SYSTEM_RESERVE"]))
         )
         system_account = system_account_result.scalar_one_or_none()
         if not system_account:
@@ -290,9 +290,22 @@ async def get_kyc_documents(
         kyc = kyc_result.scalars().first()
         if not kyc:
             return {
-                "success": False,
+                "success": True,
                 "message": "No KYC submission found",
-                "user_id": user_id
+                "user_id": user_id,
+                "kyc_submission_id": None,
+                "status": "not_submitted",
+                "created_at": None,
+                "documents": {
+                    "id_front": None,
+                    "id_back": None,
+                    "proof_of_address": None,
+                    "selfie": None,
+                },
+                "user_info": {
+                    "document_type": "N/A",
+                    "document_number": "N/A",
+                }
             }
 
         # Return document URLs and metadata

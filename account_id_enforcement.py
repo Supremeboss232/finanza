@@ -2,13 +2,13 @@
 Account ID Enforcement Module
 
 Enforces the core principle:
-- Account ID → unique, immutable
-- User ID → owner (FK)
+- Account ID -> unique, immutable
+- User ID -> owner (FK)
 - All user accounts (except admin) must be bound to a specific user
 
 This module validates that:
 1. Every transaction targets an account owned by the user
-2. Every operation validates user_id → account_id relationship
+2. Every operation validates user_id -> account_id relationship
 3. Admin accounts are exempt from user binding enforcement
 """
 
@@ -20,7 +20,7 @@ from models import User as DBUser, Account as DBAccount, Transaction as DBTransa
 from balance_service_ledger import BalanceServiceLedger
 
 class AccountIDEnforcement:
-    """Validates and enforces Account ID → User ID relationships"""
+    """Validates and enforces Account ID -> User ID relationships"""
     
     @staticmethod
     async def validate_account_ownership(

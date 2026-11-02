@@ -284,6 +284,79 @@ class WebhooksService:
             "last_7_days_success_rate": success_rate,
         }
 
+    @staticmethod
+    def list_webhooks(
+        db: Session,
+        user_id: int,
+        active_only: bool = False,
+        event_type: Optional[str] = None,
+    ) -> List[Webhook]:
+        """List all webhooks belonging to a user, with optional filters."""
+        query = db.query(Webhook).filter(Webhook.user_id == user_id)
+
+        if active_only:
+            query = query.filter(Webhook.active == True)
+
+        if event_type:
+            # events column is a JSON string like '["transaction.created", "payment.completed"]'
+            query = query.filter(Webhook.events.contains(event_type))
+
+        return query.order_by(Webhook.created_at.desc()).all()
+
+    @staticmethod
+    def get_webhook_statistics(db: Session, webhook_id: int) -> Dict:
+        """Return delivery statistics for a single webhook."""
+        total = db.query(func.count(WebhookDelivery.id)).filter(
+            WebhookDelivery.webhook_id == webhook_id
+        ).scalar() or 0
+
+        successful = db.query(func.count(WebhookDelivery.id)).filter(
+            WebhookDelivery.webhook_id == webhook_id,
+            WebhookDelivery.status == "success",
+        ).scalar() or 0
+
+        failed = db.query(func.count(WebhookDelivery.id)).filter(
+            WebhookDelivery.webhook_id == webhook_id,
+            WebhookDelivery.status == "failed",
+        ).scalar() or 0
+
+        pending = db.query(func.count(WebhookDelivery.id)).filter(
+            WebhookDelivery.webhook_id == webhook_id,
+            WebhookDelivery.status == "pending",
+        ).scalar() or 0
+
+        success_rate = (successful / total * 100) if total > 0 else 0.0
+
+        return {
+            "webhook_id": webhook_id,
+            "total_deliveries": total,
+            "successful": successful,
+            "failed": failed,
+            "pending": pending,
+            "success_rate": round(success_rate, 2),
+        }
+
+    @staticmethod
+    def queue_webhook_delivery(
+        db: Session,
+        webhook_id: int,
+        event_type: str,
+        payload: Dict,
+    ) -> WebhookDelivery:
+        """Queue a new webhook delivery record."""
+        import json as _json
+
+        delivery = WebhookDelivery(
+            webhook_id=webhook_id,
+            event_type=event_type,
+            payload=_json.dumps(payload),
+            status="pending",
+            attempt_count=0,
+        )
+        db.add(delivery)
+        db.flush()
+        return delivery
+
 
 class MobileDepositsService:
     """Service for managing mobile deposits."""

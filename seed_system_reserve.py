@@ -78,7 +78,7 @@ async def seed_system_reserve():
             )
             reserve_account = result.scalars().first()
             
-            SEED_BALANCE = 10_000_000.0  # $10M
+            SEED_BALANCE = 0.0  # Operator must set real balance manually — never seed with invented money
             
             if reserve_account:
                 print(f"[OK] System Reserve Account already exists:")

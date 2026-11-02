@@ -64,6 +64,10 @@ class User(Base):
     user_settings = relationship("UserSettings", uselist=False, back_populates="user")
     projects = relationship("Project", back_populates="owner")
     mobile_deposits = relationship("MobileDeposit", foreign_keys="MobileDeposit.user_id", back_populates="user")
+    # Priority-3 model back-references (ScheduledTransfer, Webhook, FlaggedTransaction)
+    scheduled_transfers = relationship("ScheduledTransfer", foreign_keys="[ScheduledTransfer.user_id]", back_populates="user")
+    webhooks = relationship("Webhook", foreign_keys="[Webhook.user_id]", back_populates="user")
+    flagged_transactions = relationship("FlaggedTransaction", foreign_keys="[FlaggedTransaction.user_id]", back_populates="user")
 
     @property
     def balance(self):
@@ -547,6 +551,8 @@ class FlaggedTransaction(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), nullable=True)
 
+    user = relationship("User", foreign_keys=[user_id], back_populates="flagged_transactions")
+
 class FundTransfer(Base):
     __tablename__ = "fund_transfers"
     id = Column(Integer, primary_key=True, index=True)
@@ -586,25 +592,51 @@ class MobileDeposit(Base):
     reviewer = relationship("User", foreign_keys=[reviewer_id])
     account = relationship("Account", foreign_keys=[account_id])
 
-class SanctionsScreening(Base):
-    __tablename__ = "sanctions_screenings"
-    id = Column(Integer, primary_key=True, index=True)
 
-class ScheduledTransfer(Base):
-    __tablename__ = "scheduled_transfers"
-    id = Column(Integer, primary_key=True, index=True)
+# ScheduledTransfer, ScheduledTransferExecution, SanctionsScreening are fully
+# defined in models_priority_3.py on the shared Base. Import lazily to avoid
+# 'multiple classes found' mapper registration errors.
+def _import_priority3_models():
+    from models_priority_3 import (  # noqa: F401
+        ScheduledTransfer, ScheduledTransferExecution,
+        CountryRiskAssessment, SanctionsScreening,
+    )
 
-class ScheduledTransferExecution(Base):
-    __tablename__ = "scheduled_transfer_executions"
-    id = Column(Integer, primary_key=True, index=True)
 
 class Webhook(Base):
     __tablename__ = "webhooks"
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    name = Column(String(255), nullable=False)
+    url = Column(String(2048), nullable=False)
+    events = Column(Text, nullable=False, default="[]")  # JSON array of event types
+    active = Column(Boolean, default=True, nullable=False)
+    secret_key = Column(String(255), nullable=True)  # HMAC signing secret
+    retry_count = Column(Integer, default=3)
+    timeout_seconds = Column(Integer, default=30)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    user = relationship("User")
+    deliveries = relationship("WebhookDelivery", back_populates="webhook", cascade="all, delete-orphan")
+
 
 class WebhookDelivery(Base):
     __tablename__ = "webhook_deliveries"
     id = Column(Integer, primary_key=True, index=True)
+    webhook_id = Column(Integer, ForeignKey("webhooks.id"), nullable=False, index=True)
+    event_type = Column(String(255), nullable=False)
+    payload = Column(Text, nullable=True)  # JSON payload
+    status = Column(String(50), default="pending")  # pending, success, failed
+    http_status = Column(Integer, nullable=True)
+    error_message = Column(Text, nullable=True)
+    attempt_count = Column(Integer, default=0)
+    last_attempt = Column(DateTime(timezone=True), nullable=True)
+    next_retry = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    webhook = relationship("Webhook", back_populates="deliveries")
 
 
 # ===== CREDIT & ACCOUNT MANAGEMENT MODELS =====
@@ -1494,3 +1526,9 @@ class CheckOCRData(Base):
 
 
 OCRResult = CheckOCRData
+
+# Ensure all priority_3 models are registered on Base
+try:
+    import models_priority_3  # noqa: F401
+except Exception:
+    pass

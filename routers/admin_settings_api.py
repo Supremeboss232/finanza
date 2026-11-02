@@ -447,7 +447,7 @@ async def get_public_config(db_session: SessionDep):
         )
 
 
-@config_router.get("/allow-signups")
+@config_router.api_route("/allow-signups", methods=["GET", "POST"])
 async def get_signup_status(db_session: SessionDep):
     """Check if new signups are allowed."""
     allow_signups = await AdminSettingsService.get_setting(
@@ -456,7 +456,7 @@ async def get_signup_status(db_session: SessionDep):
     return {"allow_signups": allow_signups}
 
 
-@config_router.get("/maintenance-mode")
+@config_router.api_route("/maintenance-mode", methods=["GET", "POST"])
 async def get_maintenance_status(db_session: SessionDep):
     """Check maintenance mode status."""
     enabled = await AdminSettingsService.get_setting(

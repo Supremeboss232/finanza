@@ -1,0 +1,36 @@
+{
+  "institution": {
+    "legal_name": "Finanza Financial Services Ltd",
+    "bic": "FNZAGB2LXXX",
+    "country_code": "US",
+    "clearing_houses": [
+      "SWIFT",
+      "ACH",
+      "FEDNOW",
+      "CHIPS",
+      "SEPA",
+      "RTP"
+    ],
+    "swift_member": true,
+    "updated_at": "2026-10-31T12:53:09Z"
+  },
+  "webhook": {
+    "endpoint_url": "http://localhost:8000/webhooks/payments/ach",
+    "bearer_token": "fnza_live_630bc05ca8e64f18902ba40ff86164bf9cf660994e8eb21a",
+    "events": [
+      "payment.received",
+      "payment.sent",
+      "settlement.complete",
+      "wire.inbound",
+      "ach.batch.settled",
+      "fednow.instant.settled"
+    ],
+    "timeout_seconds": 10,
+    "retry_attempts": 3,
+    "updated_at": "2026-10-31T12:53:09Z"
+  },
+  "keys": {
+    "private_pem": "-----BEGIN RSA PRIVATE KEY-----\n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\n-----END RSA PRIVATE KEY-----\n",
+    "public_pem": "-----BEGIN PUBLIC KEY-----\nMIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAwO6hR3Y8olCWcIMcHYbU\nozN3z+97cCzQQDAcbr0EPyB1t3g+zfXBWvT+nyUZJ5OQTg7g7eR9VfIMAapazrTE\n6OfWbKc3BAMb4sgGieBzRbEITx+6o04Q584hoycaen4rgNmLuF3r7KCauB/qaqVC\nq/UDGI3D3O/KG6Lzl4EoaBg+vwcbbJsTMN1XzW0PV4pNuHflpGUEorIkAD0iFmjJ\nPZLHGjBQXsFr8SbuDPbHsKRpFmBhBxPmrIuMrIWz41hAlVyDDkJCV9d4krIPMiXU\nlh1UIka43RRMN8X4lQj39XJyZDsSRFILDEUSOP7cOeGLLVrz9RXlYTYlc1YvQmJe\nRkGi7AbolNmK3Z3HlZ4RlQq2+b0CsKFxwpxOWHfTAgR8GJfHr0TdooIhQOGz1buM\nWT70KAFXCnlsRoLMfd9XxjFy7SVE+r8aj4xOxtB4+CR5Ulf0lMMgjI8rtsXLESXt\nvW+641l/QblIq89YugMXMpmuiCMkc1fda0SWYsrUnxTHmmKHypJWbcY7YehQtK4j\nVKApzTdi+QOkoAA9DWUovI1p594Ffdaq8vu0lnn0S74ZnK8DnmB4JiADNlIRZrBh\nwKnKXKxtaporY2EDPYnSHgr5Ec55RYWl5fvfjZSwtHklDQasPmT8UUEbuKm0Jjvl\n6S2DCHma33RbXS2+XP0B/PMCAwEAAQ==\n-----END PUBLIC KEY-----\n"
+  }
+}

@@ -5,162 +5,113 @@ from sqlalchemy import select
 from typing import Annotated
 import uuid
 import json
+from decimal import Decimal
 
 from deps import CurrentUserDep, SessionDep
 from schemas import Deposit as PydanticDeposit, DepositCreate, TransactionCreate
 from crud import get_user_deposits, create_user_deposit, get_deposit, create_user_transaction
 from transaction_validator import TransactionValidator
-from transaction_gate_ledger import TransactionGate
 from models import Account as DBAccount, User as DBUser, Transaction as DBTransaction
-from balance_service_ledger import BalanceServiceLedger
-from ledger_service import LedgerService
 from ws_manager import manager
-from decimal import Decimal
 
-deposits_router = APIRouter(prefix="/deposits", tags=["deposits"])
+deposits_router = APIRouter(prefix="/api/v1/deposits", tags=["deposits"])
+
 
 @deposits_router.post("/", response_model=PydanticDeposit, status_code=status.HTTP_201_CREATED)
 async def create_deposit_for_current_user(
     deposit: DepositCreate,
     current_user: CurrentUserDep,
-    db_session: SessionDep
+    db_session: SessionDep,
 ):
     """
-    Create a deposit for the current user.
-    
-    [FIX] CRITICAL FIX: Creates a Transaction record (not just Deposit)
-    This ensures the balance system can see the deposit.
-    
-    RULE 1: No account, no money → User must have account
-    RULE 2: No KYC approval → Transaction blocked, doesn't affect balance
-    RULE 3: Balance derived → From ledger entries, not stored
-    
-    Flow:
-    1. Validate user, amount, account
-    2. Create Transaction record (source of truth for balance)
-    3. Create ledger entries (double-entry accounting)
-    4. Mark transaction completed (if KYC approved)
-    5. Sync account.balance from ledger
-    6. Return deposit data
+    Create a Term / Savings Deposit for the current user by locking funds from their
+    existing Account balance (never minting unbacked funds).
     """
     try:
-        # Validate the deposit request
         is_valid, reason = await TransactionValidator.validate_deposit(
             db=db_session,
             user_id=current_user.id,
             amount=deposit.amount,
-            account_id=getattr(deposit, 'account_id', None)
+            account_id=getattr(deposit, "account_id", None),
         )
-        
         if not is_valid:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=reason
-            )
-        
-        # Get user's primary account (must exist due to validation)
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=reason)
+
         account_result = await db_session.execute(
-            select(DBAccount).where(DBAccount.owner_id == current_user.id).limit(1)
+            select(DBAccount).where(DBAccount.owner_id == current_user.id).order_by(DBAccount.id.asc()).limit(1)
         )
         account = account_result.scalar_one_or_none()
-        
         if not account:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User has no active bank account")
+
+        amount = float(deposit.amount)
+        available = float(account.balance or 0)
+        if available < amount:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="User has no account"
+                detail=f"Insufficient account balance (${available:,.2f} available) to lock ${amount:,.2f} into a term deposit.",
             )
-        
-        # Get user for KYC status
-        user_result = await db_session.execute(
-            select(DBUser).where(DBUser.id == current_user.id)
-        )
-        user = user_result.scalar_one_or_none()
-        
-        # [FIX] CRITICAL: Create Transaction record (not just Deposit)
-        # This is what the balance system queries!
-        amount = float(deposit.amount)
-        reference_number = str(uuid.uuid4())
-        
-        # Determine status based on KYC
-        status_to_set = "completed" if user.kyc_status == "approved" else "blocked"
-        
+
+        # Deduct from available account balance to fund term deposit
+        account.balance = Decimal(str(round(available - amount, 2)))
+        db_session.add(account)
+
+        reference_number = f"DEPL-{uuid.uuid4().hex[:10].upper()}"
         transaction = DBTransaction(
-            user_id=current_user.id,  # [OK] REQUIRED: Track who made it
-            account_id=account.id,    # [OK] REQUIRED: Track where it goes
-            transaction_type="deposit",  # [OK] REQUIRED: What type
-            amount=amount,            # [OK] REQUIRED: How much
-            status=status_to_set,     # [OK] REQUIRED: Is it valid?
-            direction="credit",       # [OK] Money coming in
-            description=f"User deposit",
-            reference_number=reference_number,  # [OK] REQUIRED: Audit trail
-            kyc_status_at_time=user.kyc_status  # Snapshot for compliance
+            user_id=current_user.id,
+            account_id=account.id,
+            transaction_type="deposit_lock",
+            amount=Decimal(str(round(amount, 2))),
+            status="completed",
+            direction="debit",
+            description="Term / Savings Deposit Lock",
+            reference_number=reference_number,
+            kyc_status_at_time=current_user.kyc_status,
         )
         db_session.add(transaction)
-        await db_session.flush()
-        
-        # If deposit is completing, create ledger entries
-        if status_to_set == "completed":
-            # Create double-entry ledger entries
-            debit_entry, credit_entry = await LedgerService.create_admin_funding(
-                db=db_session,
-                transaction=transaction,
-                to_user_id=current_user.id,
-                amount=Decimal(str(amount)),
-                description=f"User deposit",
-                reference_number=reference_number
-            )
-            
-            # Account balance is calculated from ledger entries (read-only)
-            # No need to manually update account.balance column
-            db_session.add(account)
-        
-        # Create Deposit record for UI reference (historical record)
+
         db_deposit = await create_user_deposit(db=db_session, deposit=deposit, user_id=current_user.id)
-        
-        # Commit everything atomically
         await db_session.commit()
         await db_session.refresh(transaction)
-        
-        # Broadcast real-time notification
+
         try:
-            balance = await BalanceServiceLedger.get_user_balance(db_session, current_user.id) if status_to_set == "completed" else 0
             await manager.broadcast(json.dumps({
                 "event": "deposit:created",
                 "user_id": current_user.id,
                 "amount": amount,
-                "new_balance": balance,
-                "status": status_to_set,
+                "new_balance": float(account.balance or 0),
+                "status": "completed",
                 "reference": reference_number,
-                "timestamp": transaction.created_at.isoformat() if transaction.created_at else None
             }))
         except Exception:
-            pass  # Don't fail the transaction if broadcast fails
-        
+            pass
+
         return db_deposit
-        
     except HTTPException:
         raise
     except Exception as e:
         await db_session.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create deposit: {str(e)}"
+            detail=f"Failed to create deposit: {str(e)}",
         )
+
 
 @deposits_router.get("/", response_model=List[PydanticDeposit])
 async def read_deposits_for_current_user(
     current_user: CurrentUserDep,
     db_session: SessionDep,
     skip: int = 0,
-    limit: int = 100
+    limit: int = 100,
 ):
     return await get_user_deposits(db=db_session, user_id=current_user.id, skip=skip, limit=limit)
+
 
 @deposits_router.get("/{deposit_id}", response_model=PydanticDeposit)
 async def read_deposit_by_id(
     deposit_id: int,
     current_user: CurrentUserDep,
-    db_session: SessionDep
+    db_session: SessionDep,
 ):
     db_deposit = await get_deposit(db_session, deposit_id)
     if db_deposit is None:

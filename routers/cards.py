@@ -6,7 +6,7 @@ from decimal import Decimal
 from deps import CurrentUserDep, SessionDep
 from card_processing_service import CardProcessingService
 
-router = APIRouter(prefix="/cards", tags=["cards"])
+router = APIRouter(prefix="/api/v1/cards", tags=["cards"])
 
 
 @router.post("/request")

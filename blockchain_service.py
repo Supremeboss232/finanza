@@ -181,13 +181,14 @@ class BlockchainIntegration:
     @staticmethod
     def _generate_wallet_address(chain: str) -> str:
         """Generate wallet address for chain"""
-        import random
-        import string
-        
-        if chain == BlockchainChainType.BITCOIN:
-            return "1" + "".join(random.choices(string.ascii_letters + string.digits, k=33))
-        else:  # Ethereum format
-            return "0x" + "".join(random.choices(string.hexdigits[:-6], k=40))
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=501,
+            detail=(
+                "Blockchain wallet creation requires a licensed custodial provider "
+                "(e.g., Fireblocks, BitGo). Integration pending."
+            )
+        )
 
     @staticmethod
     def _generate_private_key() -> str:

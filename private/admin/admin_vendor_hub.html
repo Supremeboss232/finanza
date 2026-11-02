@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="description" content="Finanza Financial Services - Admin Vendor Hub portal and banking management.">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finanza — Vendor Integration Hub</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        :root { --primary:#667eea; --primary-dark:#764ba2; }
+        body { background:#f0f2f8; font-family:'Segoe UI',sans-serif; }
+        .admin-nav { background: linear-gradient(135deg,#667eea 0%,#764ba2 100%); }
+        .page-header { background:linear-gradient(135deg,#667eea,#764ba2); color:white; padding:32px; border-radius:14px; margin-bottom:28px; position:relative; overflow:hidden; }
+        .page-header h1 { font-size:1.9rem; font-weight:700; margin:0 0 6px; }
+        .page-header p { margin:0; opacity:0.85; }
+        .mode-toggle-bar { background:white; border-radius:12px; padding:14px 24px; display:flex; align-items:center; margin-bottom:24px; box-shadow:0 2px 12px rgba(0,0,0,.07); font-weight:600; flex-wrap:wrap; gap:8px; }
+        .mode-toggle-bar .form-check-input:checked { background-color:#667eea; border-color:#667eea; }
+        .deployment-card { background:white; border-radius:14px; padding:26px; box-shadow:0 4px 20px rgba(0,0,0,.08); border-top:4px solid #667eea; margin-bottom:28px; }
+        .vendor-card { background:white; border-radius:14px; padding:24px; box-shadow:0 4px 20px rgba(0,0,0,.08); border-left:5px solid #dee2e6; margin-bottom:24px; transition:all .3s; }
+        .vendor-card:hover { box-shadow:0 8px 32px rgba(0,0,0,.12); transform:translateY(-2px); }
+        .vendor-card.connected { border-left-color:#198754; }
+        .vendor-card.partial { border-left-color:#ffc107; }
+        .vendor-card-header { display:flex; align-items:center; gap:16px; margin-bottom:20px; }
+        .vendor-icon { width:52px; height:52px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; }
+        .vi-green  { background:#e8f5e9; color:#2e7d32; }
+        .vi-blue   { background:#e3f2fd; color:#1565c0; }
+        .vi-purple { background:#f3e5f5; color:#6a1b9a; }
+        .vi-red    { background:#ffebee; color:#c62828; }
+        .vi-orange { background:#fff3e0; color:#e65100; }
+        .vi-yellow { background:#fffde7; color:#f57f17; }
+        .vi-teal   { background:#e0f2f1; color:#00695c; }
+        .vi-indigo { background:#e8eaf6; color:#283593; }
+        .vendor-name { font-size:1.1rem; font-weight:700; color:#222; margin:0; }
+        .vendor-desc { font-size:.8rem; color:#777; margin:2px 0 0; }
+        .provider-pills { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:18px; }
+        .provider-pill { padding:5px 14px; border-radius:20px; font-size:.82rem; border:2px solid #dee2e6; background:white; cursor:pointer; transition:all .2s; font-weight:500; color:#555; }
+        .provider-pill:hover { border-color:#667eea; color:#667eea; }
+        .provider-pill.active { background:#667eea; color:white; border-color:#667eea; }
+        .provider-pill.custom-pill { border-style:dashed; border-color:#764ba2; color:#764ba2; }
+        .provider-pill.custom-pill.active { background:linear-gradient(135deg,#667eea,#764ba2); color:white; border-style:solid; }
+        .cred-group { margin-bottom:14px; }
+        .cred-group label { font-size:.82rem; font-weight:600; color:#555; margin-bottom:4px; display:block; }
+        .cred-input-wrap { position:relative; }
+        .cred-input-wrap input, .cred-input-wrap select { border-radius:8px; border:1.5px solid #e0e0e0; padding:9px 44px 9px 12px; font-size:.88rem; width:100%; transition:border .2s; font-family:'Courier New',monospace; background:#fafafa; }
+        .cred-input-wrap input:focus, .cred-input-wrap select:focus { border-color:#667eea; outline:none; background:white; }
+        .reveal-btn { position:absolute; right:10px; top:50%; transform:translateY(-50%); background:none; border:none; color:#999; cursor:pointer; padding:4px; }
+        .reveal-btn:hover { color:#667eea; }
+        .webhook-box { background:#f8f9fa; border:1px solid #e9ecef; border-radius:8px; padding:10px 14px; margin-top:16px; }
+        .webhook-box label { font-size:.78rem; font-weight:600; color:#777; margin-bottom:6px; display:block; }
+        .webhook-url-row { display:flex; gap:8px; align-items:center; }
+        .webhook-url-row input { flex:1; font-family:'Courier New',monospace; font-size:.8rem; background:white; border:1px solid #dee2e6; border-radius:6px; padding:7px 10px; color:#444; }
+        .btn-save-vendor { width:100%; margin-top:18px; padding:10px; background:linear-gradient(135deg,#667eea,#764ba2); border:none; color:white; border-radius:8px; font-weight:600; font-size:.9rem; cursor:pointer; transition:all .2s; }
+        .btn-save-vendor:hover { opacity:.9; transform:translateY(-1px); }
+        .btn-test { padding:5px 14px; font-size:.82rem; border-radius:6px; border:1.5px solid #667eea; background:white; color:#667eea; cursor:pointer; transition:all .2s; white-space:nowrap; }
+        .btn-test:hover { background:#667eea; color:white; }
+        .legal-note { font-size:.78rem; border-radius:8px; padding:8px 12px; margin-top:12px; }
+        .last-tested { font-size:.75rem; color:#999; margin-top:8px; min-height:18px; }
+        .section-title { font-size:.75rem; text-transform:uppercase; letter-spacing:1px; color:#999; font-weight:700; margin-bottom:12px; }
+        .advanced-field { display:none; }
+        #toastContainer { position:fixed; top:76px; right:20px; z-index:9999; min-width:300px; }
+        .toast-item { color:white; padding:13px 20px; border-radius:10px; margin-top:8px; box-shadow:0 4px 16px rgba(0,0,0,.2); animation:slideIn .3s ease; font-size:.9rem; }
+        @keyframes slideIn { from{opacity:0;transform:translateX(30px)} to{opacity:1;transform:translateX(0)} }
+        .webhook-ref-table th { background:#f8f9fa; font-size:.82rem; font-weight:600; }
+        .webhook-ref-table td { font-size:.82rem; vertical-align:middle; }
+        .webhook-ref-table code { font-size:.78rem; color:#5c2d91; }
+        .mode-label { font-size:.95rem; color:#444; }
+        .mode-label.active { color:#667eea; font-weight:700; }
+        .custom-slots-banner { background:linear-gradient(135deg,#1e1b4b 0%,#312e81 100%); color:white; border-radius:14px; padding:24px 28px; margin:8px 0 24px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; box-shadow:0 6px 24px rgba(49,46,129,.22); }
+        .btn-add-slot { background:linear-gradient(135deg,#10b981,#059669); color:white; border:none; padding:10px 20px; border-radius:10px; font-weight:600; font-size:.92rem; cursor:pointer; box-shadow:0 4px 14px rgba(16,185,129,.35); transition:all .2s; }
+        .btn-add-slot:hover { transform:translateY(-1px); opacity:.95; color:white; }
+    </style>
+    <link href="/static/css/admin-portal.css" rel="stylesheet">
+    <script src="/static/js/admin-guard.js?v=3"></script>
+</head>
+<body>
+
+<nav class="admin-nav navbar navbar-expand-lg navbar-dark sticky-top">
+    <div class="container-fluid px-4">
+        <a class="navbar-brand fw-bold" href="/user/admin/dashboard"><i class="fas fa-chart-line me-2"></i>Finanza Admin</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navAdmin"><span class="navbar-toggler-icon"></span></button>
+        <div class="collapse navbar-collapse" id="navAdmin">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item"><a class="nav-link" href="/user/admin/dashboard">Dashboard</a></li>
+                <li class="nav-item"><a class="nav-link" href="/user/admin/users">Users</a></li>
+                <li class="nav-item"><a class="nav-link" href="/user/admin/kyc">KYC</a></li>
+                <li class="nav-item"><a class="nav-link" href="/user/admin/transactions">Transactions</a></li>
+                <li class="nav-item"><a class="nav-link active fw-bold" href="/user/admin/vendor_hub"><i class="fas fa-plug me-1"></i>Vendor Hub</a></li>
+                <li class="nav-item"><a class="nav-link" href="/user/admin/bank-connect"><i class="fas fa-network-wired me-1"></i>Bank Connect</a></li>
+            </ul>
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item"><span id="adminEmail" class="nav-link text-white-50" style="font-size:.85rem"><i class="fas fa-user-circle me-1"></i>Admin</span></li>
+                <li class="nav-item"><a class="nav-link" href="/logout"><i class="fas fa-sign-out-alt me-1"></i>Logout</a></li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<div id="toastContainer"></div>
+
+<div class="container-fluid px-4 py-4">
+
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+            <div>
+                <h1><i class="fas fa-plug me-3"></i>Vendor Integration Hub</h1>
+                <p>Configure global & regional payment gateways, banking rails, and custom vendor slots. Changes take effect immediately — no server restart required.</p>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-light fw-bold btn-sm px-3 py-2" onclick="openCustomSlotModal()"><i class="fas fa-plus-circle text-primary me-1"></i>Add Custom Gateway / Vendor</button>
+                <span id="deploymentPill" class="badge bg-light text-dark fs-6"><i class="fas fa-spinner fa-spin me-1"></i>Checking...</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- DEPLOYMENT BANNER -->
+    <div class="deployment-card">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0"><i class="fas fa-server me-2 text-primary"></i>Deployment Settings</h5>
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#webhookRefSection"><i class="fas fa-link me-1"></i>View All Webhook URLs</button>
+        </div>
+        <div class="row g-3 align-items-end">
+            <div class="col-md-5">
+                <label class="form-label small fw-bold text-muted">Your App URL (FRONTEND_URL)</label>
+                <input type="url" id="inputFrontendUrl" class="form-control" placeholder="https://finanzabank.com">
+            </div>
+            <div class="col-md-5">
+                <label class="form-label small fw-bold text-muted">Redis URL <span class="badge bg-secondary ms-1" id="redisStatus">Not set</span></label>
+                <input type="text" id="inputRedisUrl" class="form-control" placeholder="redis://localhost:6379">
+            </div>
+            <div class="col-md-2">
+                <button id="btnSaveDeploy" class="btn btn-primary w-100" onclick="saveDeployment()"><i class="fas fa-save me-1"></i>Save & Verify</button>
+            </div>
+        </div>
+        <div id="deployCheckResult" class="mt-2 small"></div>
+        <div class="collapse mt-4" id="webhookRefSection">
+            <hr>
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <p class="mb-0 fw-bold small"><i class="fas fa-list me-1"></i>All Webhook URLs — give these to your vendors</p>
+                <button class="btn btn-sm btn-outline-secondary" onclick="copyAllWebhooks()"><i class="fas fa-copy me-1"></i>Copy All as JSON</button>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm table-hover webhook-ref-table">
+                    <thead><tr><th>Vendor / Category</th><th>Webhook URL</th><th>Signature Header</th><th></th></tr></thead>
+                    <tbody id="webhookTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODE TOGGLE -->
+    <div class="mode-toggle-bar">
+        <i class="fas fa-magic me-2 text-primary"></i>
+        <span class="mode-label active" id="labelEasy">Easy Mode</span>
+        <div class="form-check form-switch mx-3 mb-0">
+            <input class="form-check-input" type="checkbox" id="modeToggle" style="transform:scale(1.4);cursor:pointer">
+        </div>
+        <span class="mode-label" id="labelAdvanced">Advanced Mode</span>
+        <span class="ms-3 text-muted small" id="modeHint">Showing essential fields only</span>
+        <button class="btn btn-sm btn-outline-primary ms-auto" onclick="openCustomSlotModal()"><i class="fas fa-plus me-1"></i>New Custom Gateway Slot</button>
+    </div>
+
+    <div class="row g-0">
+
+        <!-- CARD 1: FX RATES -->
+        <div class="col-xl-6 pe-xl-3">
+        <div class="vendor-card" id="card-fx_rates">
+            <div class="vendor-card-header">
+                <div class="vendor-icon vi-green"><i class="fas fa-dollar-sign"></i></div>
+                <div class="flex-grow-1"><p class="vendor-name">Live FX Rates</p><p class="vendor-desc">Real-time currency exchange rates</p></div>
+                <span class="badge bg-secondary me-2" id="status-fx_rates">Checking...</span>
+                <button class="btn-test" onclick="testVendor('fx_rates',this)"><i class="fas fa-plug me-1"></i>Test</button>
+            </div>
+            <div class="section-title">Provider</div>
+            <div class="provider-pills">
+                <button class="provider-pill active" onclick="selectProvider('fx_rates','fixer_io',this)">Fixer.io &#11088;</button>
+                <button class="provider-pill" onclick="selectProvider('fx_rates','currencycloud',this)">Currencycloud</button>
+                <button class="provider-pill" onclick="selectProvider('fx_rates','wise',this)">Wise</button>
+                <button class="provider-pill" onclick="selectProvider('fx_rates','airwallex',this)">Airwallex</button>
+            </div>
+            <div class="section-title">Credentials</div>
+            <div data-provider="fixer_io">
+                <div class="cred-group"><label>API Key</label>
+                    <div class="cred-input-wrap"><input type="password" id="inp-FIXER_IO_API_KEY" data-env-key="FIXER_IO_API_KEY" placeholder="Fixer.io API key — fixer.io ($14/month)"><button class="reveal-btn" onclick="togglePwd('inp-FIXER_IO_API_KEY',this)"><i class="fas fa-eye"></i></button></div>
+                </div>
+            </div>
+            <div data-provider="currencycloud" style="display:none">
+                <div class="cred-group"><label>Login ID</label><div class="cred-input-wrap"><input type="text" id="inp-CURRENCYCLOUD_LOGIN_ID" data-env-key="CURRENCYCLOUD_LOGIN_ID" placeholder="your@email.com"></div></div>
+                <div class="cred-group"><label>API Key</label><div class="cred-input-wrap"><input type="password" id="inp-CURRENCYCLOUD_API_KEY" data-env-key="CURRENCYCLOUD_API_KEY" placeholder="API key"><button class="reveal-btn" onclick="togglePwd('inp-CURRENCYCLOUD_API_KEY',this)"><i class="fas fa-eye"></i></button></div></div>
+            </div>
+            <div data-provider="wise" style="display:none">
+                <div class="cred-group"><label>API Token</label><div class="cred-input-wrap"><input type="password" id="inp-WISE_API_TOKEN" data-env-key="WISE_API_TOKEN" placeholder="Wise Business API token"><button class="reveal-btn" onclick="togglePwd('inp-WISE_API_TOKEN',this)"><i class="fas fa-eye"></i></button></div></div>
+            </div>
+            <div data-provider="airwallex" style="display:none">
+                <div class="cred-group"><label>Client ID</label><div class="cred-input-wrap"><input type="text" id="inp-AIRWALLEX_CLIENT_ID" data-env-key="AIRWALLEX_CLIENT_ID" placeholder="Airwallex Client ID"></div></div>
+                <div class="cred-group"><label>API Key</label><div class="cred-input-wrap"><input type="password" id="inp-AIRWALLEX_API_KEY" data-env-key="AIRWALLEX_API_KEY" placeholder="API key"><button class="reveal-btn" onclick="togglePwd('inp-AIRWALLEX_API_KEY',this)"><i class="fas fa-eye"></i></button></div></div>
+            </div>
+            <div class="advanced-field cred-group"><label>Webhook Secret</label><div class="cred-input-wrap"><input type="password" id="inp-FX_PROVIDER_WEBHOOK_SECRET" data-env-key="FX_PROVIDER_WEBHOOK_SECRET" placeholder="Signing secret from vendor"><button class="reveal-btn" onclick="togglePwd('inp-FX_PROVIDER_WEBHOOK_SECRET',this)"><i class="fas fa-eye"></i></button></div></div>
+            <div class="webhook-box"><label><i class="fas fa-link me-1"></i>Webhook URL — paste into vendor dashboard</label><div class="webhook-url-row"><input type="text" id="wh-fx_rates" readonly><button class="btn btn-sm btn-outline-secondary" onclick="copyWebhook('fx_rates')"><i class="fas fa-copy"></i></button></div></div>
+            <div class="last-tested" id="lasttested-fx_rates"></div>
+            <div class="alert alert-success legal-note py-2 mb-0 mt-3"><i class="fas fa-info-circle me-1"></i>Live ECB & ExchangeRate-API feeds active automatically. Add Fixer/Wise keys for commercial SLA.</div>
+            <button class="btn-save-vendor" onclick="saveVendorConfig('fx_rates')"><i class="fas fa-save me-2"></i>Save Credentials</button>
+        </div>
+        </div>
+
+        <!-- CARD 2: CARD ISSUANCE -->
+        <div class="col-xl-6 ps-xl-3">
+        <div class="vendor-card" id="card-card_issuance">
+            <div class="vendor-card-header">
+                <div class="vendor-icon vi-blue"><i class="fas fa-credit-card"></i></div>
+                <div class="flex-grow-1"><p class="vendor-name">Card Issuance</p><p class="vendor-desc">Issue virtual & physical debit/credit cards</p></div>
+                <span class="badge bg-secondary me-2" id="status-card_issuance">Checking...</span>
+                <button class="btn-test" onclick="testVendor('card_issuance',this)"><i class="fas fa-plug me-1"></i>Test</button>
+            </div>
+            <div class="section-title">Provider</div>
+            <div class="provider-pills">
+                <button class="provider-pill active" onclick="selectProvider('card_issuance','marqeta',this)">Marqeta &#11088;</button>
+                <button class="provider-pill" onclick="selectProvider('card_issuance','galileo',this)">Galileo</button>
+                <button class="provider-pill" onclick="selectProvider('card_issuance','visadps',this)">Visa DPS</button>
+            </div>
+            <div class="section-title">Credentials</div>
+            <div class="cred-group"><label>Application Token / API Key</label><div class="cred-input-wrap"><input type="password" id="inp-MARQETA_APPLICATION_TOKEN" data-env-key="MARQETA_APPLICATION_TOKEN" placeholder="Marqeta application_token"><button class="reveal-btn" onclick="togglePwd('inp-MARQETA_APPLICATION_TOKEN',this)"><i class="fas fa-eye"></i></button></div></div>
+            <div class="cred-group"><label>Webhook Secret</label><div class="cred-input-wrap"><input type="password" id="inp-CARD_ISSUER_WEBHOOK_SECRET" data-env-key="CARD_ISSUER_WEBHOOK_SECRET" placeholder="Signing secret from vendor"><button class="reveal-btn" onclick="togglePwd('inp-CARD_ISSUER_WEBHOOK_SECRET',this)"><i class="fas fa-eye"></i></button></div></div>
+            <div class="advanced-field">
+                <div class="cred-group"><label>Admin Access Token</label><div class="cred-input-wrap"><input type="password" id="inp-MARQETA_ADMIN_ACCESS_TOKEN" data-env-key="MARQETA_ADMIN_ACCESS_TOKEN" placeholder="admin_access_token"><button class="reveal-btn" onclick="togglePwd('inp-MARQETA_ADMIN_ACCESS_TOKEN',this)"><i class="fas fa-eye"></i></button></div></div>
+                <div class="cred-group"><label>Base URL</label><div class="cred-input-wrap"><input type="text" id="inp-MARQETA_BASE_URL" data-env-key="MARQETA_BASE_URL" placeholder="https://sandbox-api.marqeta.com/v3"></div></div>
+            </div>
+            <div class="webhook-box"><label><i class="fas fa-link me-1"></i>Webhook URL</label><div class="webhook-url-row"><input type="text" id="wh-card_issuance" readonly><button class="btn btn-sm btn-outline-secondary" onclick="copyWebhook('card_issuance')"><i class="fas fa-copy"></i></button></div></div>
+            <div class="last-tested" id="lasttested-card_issuance"></div>
+            <div class="alert alert-warning legal-note py-2 mb-0 mt-3"><i class="fas fa-exclamation-triangle me-1"></i>Requires vendor application & approval. Contact <strong>marqeta.com/contact</strong></div>
+            <button class="btn-save-vendor" onclick="saveVendorConfig('card_issuance')"><i class="fas fa-save me-2"></i>Save Credentials</button>
+        </div>
+        </div>
+
+        <!-- CARD 3: ACH/WIRE -->
+        <div class="col-xl-6 pe-xl-3">
+        <div class="vendor-card" id="card-ach_wire">
+            <div class="vendor-card-header">
+                <div class="vendor-icon vi-purple"><i class="fas fa-university"></i></div>
+                <div class="flex-grow-1"><p class="vendor-name">ACH / Wire Payment Rails</p><p class="vendor-desc">Send & receive ACH, wire, RTP transfers</p></div>
+                <span class="badge bg-secondary me-2" id="status-ach_wire">Checking...</span>
+                <button class="btn-test" onclick="testVendor('ach_wire',this)"><i class="fas fa-plug me-1"></i>Test</button>
+            </div>
+            <div class="section-title">Provider</div>
+            <div class="provider-pills">
+                <button class="provider-pill active" onclick="selectProvider('ach_wire','column',this)">Column Bank &#11088;</button>
+                <button class="provider-pill" onclick="selectProvider('ach_wire','dwolla',this)">Dwolla</button>
+                <button class="provider-pill" onclick="selectProvider('ach_wire','evolve',this)">Evolve Bank</button>
+            </div>
+            <div class="section-title">Credentials</div>
+            <div data-provider="column"><div class="cred-group"><label>API Key</label><div class="cred-input-wrap"><input type="password" id="inp-COLUMN_API_KEY" data-env-key="COLUMN_API_KEY" placeholder="Column Bank API key — column.com"><button class="reveal-btn" onclick="togglePwd('inp-COLUMN_API_KEY',this)"><i class="fas fa-eye"></i></button></div></div></div>
+            <div data-provider="dwolla" style="display:none">
+                <div class="cred-group"><label>App Key</label><div class="cred-input-wrap"><input type="password" id="inp-DWOLLA_APP_KEY" data-env-key="DWOLLA_APP_KEY" placeholder="Dwolla App Key"><button class="reveal-btn" onclick="togglePwd('inp-DWOLLA_APP_KEY',this)"><i class="fas fa-eye"></i></button></div></div>
+                <div class="cred-group"><label>App Secret</label><div class="cred-input-wrap"><input type="password" id="inp-DWOLLA_APP_SECRET" data-env-key="DWOLLA_APP_SECRET" placeholder="Dwolla App Secret"><button class="reveal-btn" onclick="togglePwd('inp-DWOLLA_APP_SECRET',this)"><i class="fas fa-eye"></i></button></div></div>
+            </div>
+            <div data-provider="evolve" style="display:none"><div class="alert alert-info py-2 mb-0" style="font-size:.82rem;border-radius:8px">Contact Evolve Bank at <strong>evolvebankandtrust.com</strong> for API access.</div></div>
+            <div class="cred-group"><label>Webhook Secret</label><div class="cred-input-wrap"><input type="password" id="inp-ACH_WEBHOOK_SECRET" data-env-key="ACH_WEBHOOK_SECRET" placeholder="Signing secret"><button class="reveal-btn" onclick="togglePwd('inp-ACH_WEBHOOK_SECRET',this)"><i class="fas fa-eye"></i></button></div></div>
+            <div class="advanced-field cred-group"><label>Base URL</label><div class="cred-input-wrap"><input type="text" id="inp-COLUMN_BASE_URL" data-env-key="COLUMN_BASE_URL" placeholder="https://sandbox.column.com"></div></div>
+            <div class="webhook-box"><label><i class="fas fa-link me-1"></i>Webhook URL</label><div class="webhook-url-row"><input type="text" id="wh-ach_wire" readonly><button class="btn btn-sm btn-outline-secondary" onclick="copyWebhook('ach_wire')"><i class="fas fa-copy"></i></button></div></div>
+            <div class="last-tested" id="lasttested-ach_wire"></div>
+            <div class="alert alert-warning legal-note py-2 mb-0 mt-3"><i class="fas fa-balance-scale me-1"></i><strong>Legal:</strong> FinCEN MSB Registration required before approval. See Phase B guide.</div>
+            <button class="btn-save-vendor" onclick="saveVendorConfig('ach_wire')"><i class="fas fa-save me-2"></i>Save Credentials</button>
+        </div>
+        </div>
+
+        <!-- CARD 4: OFAC/AML -->
+        <div class="col-xl-6 ps-xl-3">
+        <div class="vendor-card partial" id="card-ofac_aml">
+            <div class="vendor-card-header">
+                <div class="vendor-icon vi-red"><i class="fas fa-shield-alt"></i></div>
+                <div class="flex-grow-1"><p class="vendor-name">OFAC / AML Screening</p><p class="vendor-desc">Sanctions, PEP & adverse media checks</p></div>
+                <span class="badge bg-warning text-dark me-2" id="status-ofac_aml">Free Tier Active</span>
+                <button class="btn-test" onclick="testVendor('ofac_aml',this)"><i class="fas fa-plug me-1"></i>Test</button>
+            </div>
+            <div class="section-title">Provider</div>
+            <div class="provider-pills">
+                <button class="provider-pill active" onclick="selectProvider('ofac_aml','ofac_sdn',this)">US Treasury SDN &#10003; Free</button>
+                <button class="provider-pill" onclick="selectProvider('ofac_aml','comply_advantage',this)">Comply Advantage</button>
+                <button class="provider-pill" onclick="selectProvider('ofac_aml','refinitiv',this)">Refinitiv</button>
+            </div>
+            <div class="section-title">Credentials</div>
+            <div data-provider="ofac_sdn"><div class="alert alert-success py-2 mb-0" style="font-size:.82rem;border-radius:8px"><i class="fas fa-check-circle me-1"></i>US Treasury OFAC SDN API is <strong>always active — no key needed</strong>. Full SDN list screening is live.</div></div>
+            <div data-provider="comply_advantage" style="display:none">
+                <div class="cred-group"><label>API Key</label><div class="cred-input-wrap"><input type="password" id="inp-COMPLY_ADVANTAGE_API_KEY" data-env-key="COMPLY_ADVANTAGE_API_KEY" placeholder="Comply Advantage API key"><button class="reveal-btn" onclick="togglePwd('inp-COMPLY_ADVANTAGE_API_KEY',this)"><i class="fas fa-eye"></i></button></div></div>
+                <div class="cred-group"><label>Webhook Secret</label><div class="cred-input-wrap"><input type="password" id="inp-OFAC_WEBHOOK_SECRET" data-env-key="OFAC_WEBHOOK_SECRET" placeholder="Signing secret"><button class="reveal-btn" onclick="togglePwd('inp-OFAC_WEBHOOK_SECRET',this)"><i class="fas fa-eye"></i></button></div></div>
+            </div>
+            <div data-provider="refinitiv" style="display:none"><div class="cred-group"><label>API Key</label><div class="cred-input-wrap"><input type="password" id="inp-REFINITIV_API_KEY" data-env-key="REFINITIV_API_KEY" placeholder="Refinitiv World-Check API key"><button class="reveal-btn" onclick="togglePwd('inp-REFINITIV_API_KEY',this)"><i class="fas fa-eye"></i></button></div></div></div>
+            <div class="webhook-box"><label><i class="fas fa-link me-1"></i>Webhook URL</label><div class="webhook-url-row"><input type="text" id="wh-ofac_aml" readonly><button class="btn btn-sm btn-outline-secondary" onclick="copyWebhook('ofac_aml')"><i class="fas fa-copy"></i></button></div></div>
+            <div class="last-tested" id="lasttested-ofac_aml"></div>
+            <button class="btn-save-vendor" onclick="saveVendorConfig('ofac_aml')"><i class="fas fa-save me-2"></i>Save Credentials</button>
+        </div>
+        </div>
+
+        <!-- CARD 5: CREDIT BUREAU -->
+        <div class="col-xl-6 pe-xl-3">
+        <div class="vendor-card" id="card-credit_bureau">
+            <div class="vendor-card-header">
+                <div class="vendor-icon vi-orange"><i class="fas fa-chart-bar"></i></div>
+                <div class="flex-grow-1"><p class="vendor-name">Credit Bureau</p><p class="vendor-desc">Pull credit reports & scores for loan decisioning</p></div>
+                <span class="badge bg-secondary me-2" id="status-credit_bureau">Checking...</span>
+                <button class="btn-test" onclick="testVendor('credit_bureau',this)"><i class="fas fa-plug me-1"></i>Test</button>
+            </div>
+            <div class="section-title">Provider</div>
+            <div class="provider-pills">
+                <button class="provider-pill active" onclick="selectProvider('credit_bureau','equifax',this)">Equifax</button>
+                <button class="provider-pill" onclick="selectProvider('credit_bureau','experian',this)">Experian</button>
+                <button class="provider-pill" onclick="selectProvider('credit_bureau','transunion',this)">TransUnion</button>
+            </div>
+            <div class="section-title">Credentials</div>
+            <div data-provider="equifax"><div class="cred-group"><label>API Key</label><div class="cred-input-wrap"><input type="password" id="inp-EQUIFAX_API_KEY" data-env-key="EQUIFAX_API_KEY" placeholder="Equifax API key"><button class="reveal-btn" onclick="togglePwd('inp-EQUIFAX_API_KEY',this)"><i class="fas fa-eye"></i></button></div></div></div>
+            <div data-provider="experian" style="display:none">
+                <div class="cred-group"><label>Client ID</label><div class="cred-input-wrap"><input type="text" id="inp-EXPERIAN_CLIENT_ID" data-env-key="EXPERIAN_CLIENT_ID" placeholder="Experian Client ID"></div></div>
+                <div class="cred-group"><label>Client Secret</label><div class="cred-input-wrap"><input type="password" id="inp-EXPERIAN_CLIENT_SECRET" data-env-key="EXPERIAN_CLIENT_SECRET" placeholder="Client Secret"><button class="reveal-btn" onclick="togglePwd('inp-EXPERIAN_CLIENT_SECRET',this)"><i class="fas fa-eye"></i></button></div></div>
+            </div>
+            <div data-provider="transunion" style="display:none"><div class="cred-group"><label>API Key</label><div class="cred-input-wrap"><input type="password" id="inp-TRANSUNION_API_KEY" data-env-key="TRANSUNION_API_KEY" placeholder="TransUnion API key"><button class="reveal-btn" onclick="togglePwd('inp-TRANSUNION_API_KEY',this)"><i class="fas fa-eye"></i></button></div></div></div>
+            <div class="cred-group"><label>Webhook Secret</label><div class="cred-input-wrap"><input type="password" id="inp-CREDIT_BUREAU_WEBHOOK_SECRET" data-env-key="CREDIT_BUREAU_WEBHOOK_SECRET" placeholder="Signing secret"><button class="reveal-btn" onclick="togglePwd('inp-CREDIT_BUREAU_WEBHOOK_SECRET',this)"><i class="fas fa-eye"></i></button></div></div>
+            <div class="webhook-box"><label><i class="fas fa-link me-1"></i>Webhook URL</label><div class="webhook-url-row"><input type="text" id="wh-credit_bureau" readonly><button class="btn btn-sm btn-outline-secondary" onclick="copyWebhook('credit_bureau')"><i class="fas fa-copy"></i></button></div></div>
+            <div class="last-tested" id="lasttested-credit_bureau"></div>
+            <div class="alert alert-danger legal-note py-2 mb-0 mt-3"><i class="fas fa-exclamation-circle me-1"></i>&#128680; <strong>FCRA Compliance Certification</strong> required before credit bureau grants API access.</div>
+            <button class="btn-save-vendor" onclick="saveVendorConfig('credit_bureau')"><i class="fas fa-save me-2"></i>Save Credentials</button>
+        </div>
+        </div>
+
+        <!-- CARD 6: CRYPTO -->
+        <div class="col-xl-6 ps-xl-3">
+        <div class="vendor-card" id="card-crypto">
+            <div class="vendor-card-header">
+                <div class="vendor-icon vi-yellow"><i class="fas fa-coins"></i></div>
+                <div class="flex-grow-1"><p class="vendor-name">Crypto / Blockchain</p><p class="vendor-desc">Institutional crypto custody & wallets</p></div>
+                <span class="badge bg-secondary me-2" id="status-crypto">Checking...</span>
+                <button class="btn-test" onclick="testVendor('crypto',this)"><i class="fas fa-plug me-1"></i>Test</button>
+            </div>
+            <div class="section-title">Provider</div>
+            <div class="provider-pills">
+                <button class="provider-pill active" onclick="selectProvider('crypto','fireblocks',this)">Fireblocks &#11088;</button>
+                <button class="provider-pill" onclick="selectProvider('crypto','bitgo',this)">BitGo</button>
+                <button class="provider-pill" onclick="selectProvider('crypto','zerohash',this)">Zero Hash</button>
+            </div>
+            <div class="section-title">Credentials</div>
+            <div data-provider="fireblocks"><div class="cred-group"><label>API Key</label><div class="cred-input-wrap"><input type="password" id="inp-FIREBLOCKS_API_KEY" data-env-key="FIREBLOCKS_API_KEY" placeholder="Fireblocks API key"><button class="reveal-btn" onclick="togglePwd('inp-FIREBLOCKS_API_KEY',this)"><i class="fas fa-eye"></i></button></div></div></div>
+            <div data-provider="bitgo" style="display:none"><div class="cred-group"><label>Access Token</label><div class="cred-input-wrap"><input type="password" id="inp-BITGO_ACCESS_TOKEN" data-env-key="BITGO_ACCESS_TOKEN" placeholder="BitGo access token"><button class="reveal-btn" onclick="togglePwd('inp-BITGO_ACCESS_TOKEN',this)"><i class="fas fa-eye"></i></button></div></div></div>
+            <div data-provider="zerohash" style="display:none"><div class="cred-group"><label>API Key</label><div class="cred-input-wrap"><input type="password" id="inp-ZEROHASH_API_KEY" data-env-key="ZEROHASH_API_KEY" placeholder="Zero Hash API key"><button class="reveal-btn" onclick="togglePwd('inp-ZEROHASH_API_KEY',this)"><i class="fas fa-eye"></i></button></div></div></div>
+            <div class="cred-group"><label>Webhook Secret</label><div class="cred-input-wrap"><input type="password" id="inp-CRYPTO_WEBHOOK_SECRET" data-env-key="CRYPTO_WEBHOOK_SECRET" placeholder="Signing secret"><button class="reveal-btn" onclick="togglePwd('inp-CRYPTO_WEBHOOK_SECRET',this)"><i class="fas fa-eye"></i></button></div></div>
+            <div class="advanced-field cred-group"><label>RSA Private Key Path (Fireblocks)</label><div class="cred-input-wrap"><input type="text" id="inp-FIREBLOCKS_API_SECRET_PATH" data-env-key="FIREBLOCKS_API_SECRET_PATH" placeholder="./fireblocks_secret.key"></div></div>
+            <div class="webhook-box"><label><i class="fas fa-link me-1"></i>Webhook URL</label><div class="webhook-url-row"><input type="text" id="wh-crypto" readonly><button class="btn btn-sm btn-outline-secondary" onclick="copyWebhook('crypto')"><i class="fas fa-copy"></i></button></div></div>
+            <div class="last-tested" id="lasttested-crypto"></div>
+            <div class="alert alert-warning legal-note py-2 mb-0 mt-3"><i class="fas fa-info-circle me-1"></i>Fireblocks RSA-4096 key provisioned at <strong>./fireblocks_secret.key</strong>.</div>
+            <button class="btn-save-vendor" onclick="saveVendorConfig('crypto')"><i class="fas fa-save me-2"></i>Save Credentials</button>
+        </div>
+        </div>
+
+        <!-- CARD 7: PAYMENT GATEWAY (EXPANDED WITH 10 PROVIDERS + MANUAL CUSTOM CONFIG) -->
+        <div class="col-12">
+        <div class="vendor-card" id="card-payment_gateway">
+            <div class="vendor-card-header flex-wrap">
+                <div class="vendor-icon vi-teal"><i class="fas fa-money-bill-wave"></i></div>
+                <div class="flex-grow-1">
+                    <p class="vendor-name">Payment Gateway (Global, Regional & Manual Custom)</p>
+                    <p class="vendor-desc">Accept card payments, bank checkouts, mobile money, refunds & disputes across 10+ gateways or configure your own</p>
+                </div>
+                <span class="badge bg-secondary me-2" id="status-payment_gateway">Checking...</span>
+                <button class="btn-test me-2" onclick="testVendor('payment_gateway',this)"><i class="fas fa-plug me-1"></i>Test Active Gateways</button>
+                <button class="btn btn-sm btn-outline-success" onclick="openCustomSlotModal('payment_gateway')"><i class="fas fa-plus me-1"></i>Add Separate Gateway Slot</button>
+            </div>
+            <div class="row">
+                <div class="col-lg-7">
+                    <div class="section-title">Select Payment Gateway Provider</div>
+                    <div class="provider-pills">
+                        <button class="provider-pill active" onclick="selectProvider('payment_gateway','stripe',this)">Stripe &#11088;</button>
+                        <button class="provider-pill" onclick="selectProvider('payment_gateway','paystack',this)">Paystack</button>
+                        <button class="provider-pill" onclick="selectProvider('payment_gateway','flutterwave',this)">Flutterwave</button>
+                        <button class="provider-pill" onclick="selectProvider('payment_gateway','adyen',this)">Adyen</button>
+                        <button class="provider-pill" onclick="selectProvider('payment_gateway','paypal',this)">PayPal / Braintree</button>
+                        <button class="provider-pill" onclick="selectProvider('payment_gateway','square',this)">Square</button>
+                        <button class="provider-pill" onclick="selectProvider('payment_gateway','checkout',this)">Checkout.com</button>
+                        <button class="provider-pill" onclick="selectProvider('payment_gateway','authnet',this)">Authorize.Net</button>
+                        <button class="provider-pill" onclick="selectProvider('payment_gateway','razorpay',this)">Razorpay</button>
+                        <button class="provider-pill" onclick="selectProvider('payment_gateway','monnify',this)">Monnify / Interswitch</button>
+                        <button class="provider-pill custom-pill" onclick="selectProvider('payment_gateway','custom_gateway',this)"><i class="fas fa-sliders-h me-1"></i>Custom Gateway (Manual Config)</button>
+                    </div>
+
+                    <div class="section-title">Credentials (<span id="pgProviderLabel">Stripe</span>)</div>
+
+                    <!-- 1. STRIPE -->
+                    <div data-provider="stripe">
+                        <div class="cred-group"><label>Stripe Secret Key</label><div class="cred-input-wrap"><input type="password" id="inp-STRIPE_SECRET_KEY" data-env-key="STRIPE_SECRET_KEY" placeholder="key_live_... or key_test_..."><button class="reveal-btn" onclick="togglePwd('inp-STRIPE_SECRET_KEY',this)"><i class="fas fa-eye"></i></button></div></div>
+                        <div class="cred-group"><label>Stripe Webhook Signing Secret</label><div class="cred-input-wrap"><input type="password" id="inp-STRIPE_WEBHOOK_SECRET" data-env-key="STRIPE_WEBHOOK_SECRET" placeholder="sec_wh_..."><button class="reveal-btn" onclick="togglePwd('inp-STRIPE_WEBHOOK_SECRET',this)"><i class="fas fa-eye"></i></button></div></div>
+                        <div class="advanced-field cred-group"><label>Stripe Publishable Key</label><div class="cred-input-wrap"><input type="text" id="inp-STRIPE_PUBLISHABLE_KEY" data-env-key="STRIPE_PUBLISHABLE_KEY" placeholder="pk_live_..."></div></div>
+                    </div>
+
+                    <!-- 2. PAYSTACK -->
+                    <div data-provider="paystack" style="display:none">
+                        <div class="cred-group"><label>Paystack Secret Key</label><div class="cred-input-wrap"><input type="password" id="inp-PAYSTACK_SECRET_KEY" data-env-key="PAYSTACK_SECRET_KEY" placeholder="key_live_..."><button class="reveal-btn" onclick="togglePwd('inp-PAYSTACK_SECRET_KEY',this)"><i class="fas fa-eye"></i></button></div></div>
+                        <div class="cred-group"><label>Paystack Webhook Secret</label><div class="cred-input-wrap"><input type="password" id="inp-PAYSTACK_WEBHOOK_SECRET" data-env-key="PAYSTACK_WEBHOOK_SECRET" placeholder="Paystack webhook secret"><button class="reveal-btn" onclick="togglePwd('inp-PAYSTACK_WEBHOOK_SECRET',this)"><i class="fas fa-eye"></i></button></div></div>
+                        <div class="advanced-field cred-group"><label>Paystack Public Key</label><div class="cred-input-wrap"><input type="text" id="inp-PAYSTACK_PUBLIC_KEY" data-env-key="PAYSTACK_PUBLIC_KEY" placeholder="pk_live_..."></div></div>
+                    </div>
+
+                    <!-- 3. FLUTTERWAVE -->
+                    <div data-provider="flutterwave" style="display:none">
+                        <div class="cred-group"><label>Flutterwave Secret Key</label><div class="cred-input-wrap"><input type="password" id="inp-FLUTTERWAVE_SECRET_KEY" data-env-key="FLUTTERWAVE_SECRET_KEY" placeholder="FLWSECK-live-..."><button class="reveal-btn" onclick="togglePwd('inp-FLUTTERWAVE_SECRET_KEY',this)"><i class="fas fa-eye"></i></button></div></div>
+                        <div class="cred-group"><label>Webhook Secret Hash (verif-hash)</label><div class="cred-input-wrap"><input type="password" id="inp-FLUTTERWAVE_WEBHOOK_SECRET" data-env-key="FLUTTERWAVE_WEBHOOK_SECRET" placeholder="Flutterwave verif-hash secret"><button class="reveal-btn" onclick="togglePwd('inp-FLUTTERWAVE_WEBHOOK_SECRET',this)"><i class="fas fa-eye"></i></button></div></div>
+                        <div class="advanced-field">
+                            <div class="cred-group"><label>Flutterwave Public Key</label><div class="cred-input-wrap"><input type="text" id="inp-FLUTTERWAVE_PUBLIC_KEY" data-env-key="FLUTTERWAVE_PUBLIC_KEY" placeholder="FLWPUBK-live-..."></div></div>
+                            <div class="cred-group"><label>Encryption Key</label><div class="cred-input-wrap"><input type="password" id="inp-FLUTTERWAVE_ENCRYPTION_KEY" data-env-key="FLUTTERWAVE_ENCRYPTION_KEY" placeholder="FLWSECK_encryption_key"><button class="reveal-btn" onclick="togglePwd('inp-FLUTTERWAVE_ENCRYPTION_KEY',this)"><i class="fas fa-eye"></i></button></div></div>
+                        </div>
+                    </div>
+
+                    <!-- 4. ADYEN -->
+                    <div data-provider="adyen" style="display:none">
+                        <div class="cred-group"><label>Adyen API Key</label><div class="cred-input-wrap"><input type="password" id="inp-ADYEN_API_KEY" data-env-key="ADYEN_API_KEY" placeholder="AQEyhmfx..."><button class="reveal-btn" onclick="togglePwd('inp-ADYEN_API_KEY',this)"><i class="fas fa-eye"></i></button></div></div>
+                        <div class="cred-group"><label>Merchant Account Name</label><div class="cred-input-wrap"><input type="text" id="inp-ADYEN_MERCHANT_ACCOUNT" data-env-key="ADYEN_MERCHANT_ACCOUNT" placeholder="FinanzaBankECOM"></div></div>
+                        <div class="cred-group"><label>Webhook HMAC Key (Hex)</label><div class="cred-input-wrap"><input type="password" id="inp-ADYEN_HMAC_KEY" data-env-key="ADYEN_HMAC_KEY" placeholder="Adyen standard webhook HMAC key"><button class="reveal-btn" onclick="togglePwd('inp-ADYEN_HMAC_KEY',this)"><i class="fas fa-eye"></i></button></div></div>
+                        <div class="advanced-field">
+                            <div class="cred-group"><label>Client Key</label><div class="cred-input-wrap"><input type="text" id="inp-ADYEN_CLIENT_KEY" data-env-key="ADYEN_CLIENT_KEY" placeholder="live_..."></div></div>
+                            <div class="cred-group"><label>Live Endpoint Prefix / Base URL</label><div class="cred-input-wrap"><input type="text" id="inp-ADYEN_BASE_URL" data-env-key="ADYEN_BASE_URL" placeholder="https://checkout-test.adyen.com/v71"></div></div>
+                        </div>
+                    </div>
+
+                    <!-- 5. PAYPAL / BRAINTREE -->
+                    <div data-provider="paypal" style="display:none">
+                        <div class="cred-group"><label>PayPal Client ID</label><div class="cred-input-wrap"><input type="text" id="inp-PAYPAL_CLIENT_ID" data-env-key="PAYPAL_CLIENT_ID" placeholder="PayPal REST API Client ID"></div></div>
+                        <div class="cred-group"><label>PayPal Client Secret</label><div class="cred-input-wrap"><input type="password" id="inp-PAYPAL_CLIENT_SECRET" data-env-key="PAYPAL_CLIENT_SECRET" placeholder="PayPal REST API Secret"><button class="reveal-btn" onclick="togglePwd('inp-PAYPAL_CLIENT_SECRET',this)"><i class="fas fa-eye"></i></button></div></div>
+                        <div class="cred-group"><label>PayPal Webhook ID / Signing Secret</label><div class="cred-input-wrap"><input type="password" id="inp-PAYPAL_WEBHOOK_ID" data-env-key="PAYPAL_WEBHOOK_ID" placeholder="Webhook ID from developer.paypal.com"><button class="reveal-btn" onclick="togglePwd('inp-PAYPAL_WEBHOOK_ID',this)"><i class="fas fa-eye"></i></button></div></div>
+                        <div class="advanced-field cred-group"><label>PayPal Base URL</label><div class="cred-input-wrap"><input type="text" id="inp-PAYPAL_BASE_URL" data-env-key="PAYPAL_BASE_URL" placeholder="https://api-m.paypal.com"></div></div>
+                    </div>
+
+                    <!-- 6. SQUARE -->
+                    <div data-provider="square" style="display:none">
+                        <div class="cred-group"><label>Square Access Token</label><div class="cred-input-wrap"><input type="password" id="inp-SQUARE_ACCESS_TOKEN" data-env-key="SQUARE_ACCESS_TOKEN" placeholder="EAAAl..."><button class="reveal-btn" onclick="togglePwd('inp-SQUARE_ACCESS_TOKEN',this)"><i class="fas fa-eye"></i></button></div></div>
+                        <div class="cred-group"><label>Webhook Signature Key</label><div class="cred-input-wrap"><input type="password" id="inp-SQUARE_WEBHOOK_SIGNATURE_KEY" data-env-key="SQUARE_WEBHOOK_SIGNATURE_KEY" placeholder="Square webhook signature key"><button class="reveal-btn" onclick="togglePwd('inp-SQUARE_WEBHOOK_SIGNATURE_KEY',this)"><i class="fas fa-eye"></i></button></div></div>
+                        <div class="advanced-field">
+                            <div class="cred-group"><label>Application ID</label><div class="cred-input-wrap"><input type="text" id="inp-SQUARE_APPLICATION_ID" data-env-key="SQUARE_APPLICATION_ID" placeholder="sq0idp-..."></div></div>
+                            <div class="cred-group"><label>Location ID</label><div class="cred-input-wrap"><input type="text" id="inp-SQUARE_LOCATION_ID" data-env-key="SQUARE_LOCATION_ID" placeholder="L..."></div></div>
+                        </div>
+                    </div>
+
+                    <!-- 7. CHECKOUT.COM -->
+                    <div data-provider="checkout" style="display:none">
+                        <div class="cred-group"><label>Checkout.com Secret Key</label><div class="cred-input-wrap"><input type="password" id="inp-CHECKOUT_SECRET_KEY" data-env-key="CHECKOUT_SECRET_KEY" placeholder="sk_..."><button class="reveal-btn" onclick="togglePwd('inp-CHECKOUT_SECRET_KEY',this)"><i class="fas fa-eye"></i></button></div></div>
+                        <div class="cred-group"><label>Webhook Signature Key (Cko-Signature)</label><div class="cred-input-wrap"><input type="password" id="inp-CHECKOUT_WEBHOOK_SECRET" data-env-key="CHECKOUT_WEBHOOK_SECRET" placeholder="Checkout.com webhook secret"><button class="reveal-btn" onclick="togglePwd('inp-CHECKOUT_WEBHOOK_SECRET',this)"><i class="fas fa-eye"></i></button></div></div>
+                        <div class="advanced-field">
+                            <div class="cred-group"><label>Public Key</label><div class="cred-input-wrap"><input type="text" id="inp-CHECKOUT_PUBLIC_KEY" data-env-key="CHECKOUT_PUBLIC_KEY" placeholder="pk_..."></div></div>
+                            <div class="cred-group"><label>Processing Channel ID</label><div class="cred-input-wrap"><input type="text" id="inp-CHECKOUT_PROCESSING_CHANNEL_ID" data-env-key="CHECKOUT_PROCESSING_CHANNEL_ID" placeholder="pc_..."></div></div>
+                        </div>
+                    </div>
+
+                    <!-- 8. AUTHORIZE.NET -->
+                    <div data-provider="authnet" style="display:none">
+                        <div class="cred-group"><label>API Login ID</label><div class="cred-input-wrap"><input type="text" id="inp-AUTHNET_API_LOGIN_ID" data-env-key="AUTHNET_API_LOGIN_ID" placeholder="Authorize.Net API Login ID"></div></div>
+                        <div class="cred-group"><label>Transaction Key</label><div class="cred-input-wrap"><input type="password" id="inp-AUTHNET_TRANSACTION_KEY" data-env-key="AUTHNET_TRANSACTION_KEY" placeholder="Authorize.Net Transaction Key"><button class="reveal-btn" onclick="togglePwd('inp-AUTHNET_TRANSACTION_KEY',this)"><i class="fas fa-eye"></i></button></div></div>
+                        <div class="cred-group"><label>Signature Key (SHA-512 Webhook Key)</label><div class="cred-input-wrap"><input type="password" id="inp-AUTHNET_SIGNATURE_KEY" data-env-key="AUTHNET_SIGNATURE_KEY" placeholder="Authorize.Net Signature Key"><button class="reveal-btn" onclick="togglePwd('inp-AUTHNET_SIGNATURE_KEY',this)"><i class="fas fa-eye"></i></button></div></div>
+                    </div>
+
+                    <!-- 9. RAZORPAY -->
+                    <div data-provider="razorpay" style="display:none">
+                        <div class="cred-group"><label>Razorpay Key ID</label><div class="cred-input-wrap"><input type="text" id="inp-RAZORPAY_KEY_ID" data-env-key="RAZORPAY_KEY_ID" placeholder="rzp_live_..."></div></div>
+                        <div class="cred-group"><label>Razorpay Key Secret</label><div class="cred-input-wrap"><input type="password" id="inp-RAZORPAY_KEY_SECRET" data-env-key="RAZORPAY_KEY_SECRET" placeholder="Razorpay Key Secret"><button class="reveal-btn" onclick="togglePwd('inp-RAZORPAY_KEY_SECRET',this)"><i class="fas fa-eye"></i></button></div></div>
+                        <div class="cred-group"><label>Webhook Secret</label><div class="cred-input-wrap"><input type="password" id="inp-RAZORPAY_WEBHOOK_SECRET" data-env-key="RAZORPAY_WEBHOOK_SECRET" placeholder="Razorpay webhook secret"><button class="reveal-btn" onclick="togglePwd('inp-RAZORPAY_WEBHOOK_SECRET',this)"><i class="fas fa-eye"></i></button></div></div>
+                    </div>
+
+                    <!-- 10. MONNIFY / INTERSWITCH -->
+                    <div data-provider="monnify" style="display:none">
+                        <div class="cred-group"><label>Monnify API Key</label><div class="cred-input-wrap"><input type="text" id="inp-MONNIFY_API_KEY" data-env-key="MONNIFY_API_KEY" placeholder="MK_PROD_..."></div></div>
+                        <div class="cred-group"><label>Monnify Secret Key</label><div class="cred-input-wrap"><input type="password" id="inp-MONNIFY_SECRET_KEY" data-env-key="MONNIFY_SECRET_KEY" placeholder="Monnify Secret Key"><button class="reveal-btn" onclick="togglePwd('inp-MONNIFY_SECRET_KEY',this)"><i class="fas fa-eye"></i></button></div></div>
+                        <div class="cred-group"><label>Contract Code</label><div class="cred-input-wrap"><input type="text" id="inp-MONNIFY_CONTRACT_CODE" data-env-key="MONNIFY_CONTRACT_CODE" placeholder="10-digit Monnify Contract Code"></div></div>
+                        <div class="advanced-field cred-group"><label>Webhook Secret</label><div class="cred-input-wrap"><input type="password" id="inp-MONNIFY_WEBHOOK_SECRET" data-env-key="MONNIFY_WEBHOOK_SECRET" placeholder="Webhook signing secret"><button class="reveal-btn" onclick="togglePwd('inp-MONNIFY_WEBHOOK_SECRET',this)"><i class="fas fa-eye"></i></button></div></div>
+                    </div>
+
+                    <!-- 11. INLINE CUSTOM GATEWAY (MANUAL CONFIG) -->
+                    <div data-provider="custom_gateway" style="display:none">
+                        <div class="alert alert-primary py-2 mb-3" style="font-size:.82rem;border-radius:8px">
+                            <i class="fas fa-tools me-1"></i><strong>Manual Gateway Configuration:</strong> Enter any payment gateway's REST API details below, or use the <strong>"Add Separate Gateway Slot"</strong> button to add multiple custom gateways side-by-side.
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <div class="cred-group"><label>Gateway / Provider Name</label><div class="cred-input-wrap"><input type="text" id="inp-CUSTOM_GATEWAY_NAME" data-env-key="CUSTOM_GATEWAY_NAME" placeholder="e.g. Korapay, Mollie, Worldpay, DPO"></div></div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="cred-group"><label>Base API URL</label><div class="cred-input-wrap"><input type="url" id="inp-CUSTOM_GATEWAY_BASE_URL" data-env-key="CUSTOM_GATEWAY_BASE_URL" placeholder="https://api.yourgateway.com/v1"></div></div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="cred-group"><label>Secret Key / API Token</label><div class="cred-input-wrap"><input type="password" id="inp-CUSTOM_GATEWAY_SECRET_KEY" data-env-key="CUSTOM_GATEWAY_SECRET_KEY" placeholder="key_live_... or Bearer token"><button class="reveal-btn" onclick="togglePwd('inp-CUSTOM_GATEWAY_SECRET_KEY',this)"><i class="fas fa-eye"></i></button></div></div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="cred-group"><label>Public Key / Merchant ID</label><div class="cred-input-wrap"><input type="text" id="inp-CUSTOM_GATEWAY_PUBLIC_KEY" data-env-key="CUSTOM_GATEWAY_PUBLIC_KEY" placeholder="pk_live_... or Merchant ID"></div></div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="cred-group"><label>Webhook Signature Header</label><div class="cred-input-wrap"><input type="text" id="inp-CUSTOM_GATEWAY_WEBHOOK_HEADER" data-env-key="CUSTOM_GATEWAY_WEBHOOK_HEADER" placeholder="X-Webhook-Signature"></div></div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="cred-group"><label>Webhook Signing Secret</label><div class="cred-input-wrap"><input type="password" id="inp-CUSTOM_GATEWAY_WEBHOOK_SECRET" data-env-key="CUSTOM_GATEWAY_WEBHOOK_SECRET" placeholder="sec_wh_..."><button class="reveal-btn" onclick="togglePwd('inp-CUSTOM_GATEWAY_WEBHOOK_SECRET',this)"><i class="fas fa-eye"></i></button></div></div>
+                            </div>
+                        </div>
+                        <div class="advanced-field row g-2 mt-1">
+                            <div class="col-md-6">
+                                <div class="cred-group"><label>Auth Scheme (Bearer / API-Key / Basic)</label><div class="cred-input-wrap"><input type="text" id="inp-CUSTOM_GATEWAY_AUTH_TYPE" data-env-key="CUSTOM_GATEWAY_AUTH_TYPE" placeholder="Bearer"></div></div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="cred-group"><label>Ping / Health Path</label><div class="cred-input-wrap"><input type="text" id="inp-CUSTOM_GATEWAY_PING_PATH" data-env-key="CUSTOM_GATEWAY_PING_PATH" placeholder="/health or /balances"></div></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-5">
+                    <div class="section-title mt-lg-0 mt-3">Live Webhook Endpoint (<span id="pgWebhookHeaderBadge" class="badge bg-light text-dark border">Stripe-Signature</span>)</div>
+                    <div class="webhook-box">
+                        <label id="pgWebhookHint"><i class="fas fa-link me-1"></i>Paste into your payment gateway's webhook settings</label>
+                        <div class="webhook-url-row">
+                            <input type="text" id="wh-payment_gateway" readonly>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="copyWebhook('payment_gateway')"><i class="fas fa-copy"></i></button>
+                        </div>
+                    </div>
+                    <div class="last-tested mt-2" id="lasttested-payment_gateway"></div>
+                    <div class="alert alert-success legal-note py-2 mb-0 mt-3" id="pgProviderNote">
+                        <i class="fas fa-check-circle me-1"></i><strong>Multi-Gateway Routing Active:</strong> Configure one or multiple payment gateways above, or add unlimited custom gateway slots below.
+                    </div>
+                </div>
+            </div>
+            <button class="btn-save-vendor" onclick="saveVendorConfig('payment_gateway')"><i class="fas fa-save me-2"></i>Save Payment Gateway Credentials</button>
+        </div>
+        </div>
+
+    </div><!-- /row -->
+
+    <!-- ==================== CUSTOM PAYMENT GATEWAYS & VENDOR SLOTS SECTION ==================== -->
+    <div class="custom-slots-banner">
+        <div>
+            <h4 class="mb-1 fw-bold"><i class="fas fa-cubes me-2"></i>Custom Payment Gateways & Manual Vendor Slots</h4>
+            <p class="mb-0 text-white-50 small">Add any payment gateway, regional processor, mobile money rail, or banking API of your choice with custom endpoints, headers, and live HMAC webhook verification.</p>
+        </div>
+        <button class="btn-add-slot" onclick="openCustomSlotModal('payment_gateway')"><i class="fas fa-plus-circle me-2"></i>Add Custom Gateway / Vendor Slot</button>
+    </div>
+
+    <div class="row g-3" id="customSlotsContainer">
+        <!-- Dynamically populated custom gateway / vendor cards -->
+    </div>
+
+</div><!-- /container -->
+
+<!-- ==================== ADD / EDIT CUSTOM SLOT MODAL ==================== -->
+<div class="modal fade" id="customSlotModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content" style="border-radius:14px;overflow:hidden">
+            <div class="modal-header text-white" style="background:linear-gradient(135deg,#667eea,#764ba2)">
+                <h5 class="modal-title fw-bold" id="customSlotModalTitle"><i class="fas fa-plus-circle me-2"></i>Configure Custom Payment Gateway / Vendor Slot</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="slotInputId">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Provider / Gateway Name *</label>
+                        <input type="text" id="slotName" class="form-control" placeholder="e.g. Korapay, Mollie, Worldpay, DPO, OPay">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold">Category *</label>
+                        <select id="slotCategory" class="form-select">
+                            <option value="payment_gateway">Payment Gateway</option>
+                            <option value="ach_wire">ACH / Wire / Transfers</option>
+                            <option value="card_issuance">Card Issuance</option>
+                            <option value="fx_rates">FX / Currency Exchange</option>
+                            <option value="crypto">Crypto / Blockchain</option>
+                            <option value="ofac_aml">KYC / OFAC / AML</option>
+                            <option value="credit_bureau">Credit Bureau</option>
+                            <option value="custom">Custom Banking API</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-bold">Environment</label>
+                        <select id="slotEnvironment" class="form-select">
+                            <option value="live">Live / Production</option>
+                            <option value="sandbox">Sandbox / Test</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-8">
+                        <label class="form-label small fw-bold">Base API URL</label>
+                        <input type="url" id="slotBaseUrl" class="form-control font-monospace" placeholder="https://api.gateway.com/v1">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">Health / Ping Path (Optional)</label>
+                        <input type="text" id="slotPingPath" class="form-control font-monospace" placeholder="/balances or /ping">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Authentication Method</label>
+                        <select id="slotAuthType" class="form-select">
+                            <option value="Bearer">Bearer Token (Authorization: Bearer ...)</option>
+                            <option value="API_Key">Custom API Key Header</option>
+                            <option value="Basic">HTTP Basic Auth (Public/Merchant ID : Secret)</option>
+                            <option value="HMAC">HMAC Signed Requests</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Auth Header Name</label>
+                        <input type="text" id="slotAuthHeader" class="form-control font-monospace" value="Authorization" placeholder="Authorization or X-API-Key">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Secret Key / API Token *</label>
+                        <input type="password" id="slotSecretKey" class="form-control font-monospace" placeholder="key_live_... or secret token">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Public Key / Merchant ID / Contract Code</label>
+                        <input type="text" id="slotPublicKey" class="form-control font-monospace" placeholder="pk_live_... or Merchant ID">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Webhook Signature Header</label>
+                        <input type="text" id="slotWebhookHeader" class="form-control font-monospace" value="X-Webhook-Signature" placeholder="e.g. X-Webhook-Signature">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Webhook Signing Secret (Auto-generated if blank)</label>
+                        <input type="password" id="slotWebhookSecret" class="form-control font-monospace" placeholder="sec_wh_... (leave blank to auto-generate)">
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label small fw-bold">Extra Custom Headers (Optional JSON)</label>
+                        <input type="text" id="slotExtraHeaders" class="form-control font-monospace" placeholder='{"X-Merchant-Region": "US", "X-Api-Version": "2026-01"}'>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary fw-bold px-4" id="btnSaveCustomSlot" onclick="saveCustomSlot()"><i class="fas fa-save me-2"></i>Save & Activate Slot</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ERROR MODAL -->
+<div class="modal fade" id="errorModal" tabindex="-1">
+    <div class="modal-dialog"><div class="modal-content">
+        <div class="modal-header bg-danger text-white"><h5 class="modal-title"><i class="fas fa-times-circle me-2"></i>Connection Notice</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body" id="errorModalBody"></div>
+        <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button></div>
+    </div></div>
+</div>
+
+<script>
+const getToken = () => localStorage.getItem('token') || localStorage.getItem('access_token') || '';
+const authH = () => { const t = getToken(); const h = {'Content-Type':'application/json'}; if (t && t !== 'null' && t !== 'undefined') h['Authorization'] = `Bearer ${t}`; return h; };
+let baseUrl = '';
+let customSlotsCache = [];
+let selectedProviders = {fx_rates:'fixer_io',card_issuance:'marqeta',ach_wire:'column',ofac_aml:'ofac_sdn',credit_bureau:'equifax',crypto:'fireblocks',payment_gateway:'stripe'};
+
+const PG_PROVIDER_META = {
+    stripe:         {label:'Stripe', path:'/webhooks/payment/stripe', header:'Stripe-Signature'},
+    paystack:       {label:'Paystack', path:'/webhooks/payment/paystack', header:'X-Paystack-Signature'},
+    flutterwave:    {label:'Flutterwave', path:'/webhooks/payment/flutterwave', header:'verif-hash'},
+    adyen:          {label:'Adyen', path:'/webhooks/payment/adyen', header:'HmacSignature'},
+    paypal:         {label:'PayPal / Braintree', path:'/webhooks/payment/paypal', header:'PAYPAL-TRANSMISSION-SIG'},
+    square:         {label:'Square', path:'/webhooks/payment/square', header:'x-square-hmacsha256-signature'},
+    checkout:       {label:'Checkout.com', path:'/webhooks/payment/checkout', header:'Cko-Signature'},
+    authnet:        {label:'Authorize.Net', path:'/webhooks/payment/authnet', header:'X-ANET-Signature'},
+    razorpay:       {label:'Razorpay', path:'/webhooks/payment/razorpay', header:'X-Razorpay-Signature'},
+    monnify:        {label:'Monnify / Interswitch', path:'/webhooks/payment/monnify', header:'monnify-signature'},
+    custom_gateway: {label:'Custom Gateway (Manual)', path:'/webhooks/payment/custom_gateway', header:'X-Webhook-Signature'},
+};
+
+const WEBHOOK_PATHS = {fx_rates:'/webhooks/fx/events',card_issuance:'/webhooks/cards/events',ach_wire:'/webhooks/payments/ach',ofac_aml:'/webhooks/compliance/ofac',credit_bureau:'/webhooks/credit/bureau',crypto:'/webhooks/crypto/events',payment_gateway:'/webhooks/payment/stripe'};
+const WEBHOOK_TABLE_DATA = [
+    {vendor:'Stripe',cat:'payment_gateway',path:'/webhooks/payment/stripe',header:'Stripe-Signature'},
+    {vendor:'Paystack',cat:'payment_gateway',path:'/webhooks/payment/paystack',header:'X-Paystack-Signature'},
+    {vendor:'Flutterwave',cat:'payment_gateway',path:'/webhooks/payment/flutterwave',header:'verif-hash'},
+    {vendor:'Adyen',cat:'payment_gateway',path:'/webhooks/payment/adyen',header:'HmacSignature'},
+    {vendor:'PayPal / Braintree',cat:'payment_gateway',path:'/webhooks/payment/paypal',header:'PAYPAL-TRANSMISSION-SIG'},
+    {vendor:'Square',cat:'payment_gateway',path:'/webhooks/payment/square',header:'x-square-hmacsha256-signature'},
+    {vendor:'Checkout.com',cat:'payment_gateway',path:'/webhooks/payment/checkout',header:'Cko-Signature'},
+    {vendor:'Authorize.Net',cat:'payment_gateway',path:'/webhooks/payment/authnet',header:'X-ANET-Signature'},
+    {vendor:'Razorpay',cat:'payment_gateway',path:'/webhooks/payment/razorpay',header:'X-Razorpay-Signature'},
+    {vendor:'Monnify / Interswitch',cat:'payment_gateway',path:'/webhooks/payment/monnify',header:'monnify-signature'},
+    {vendor:'Custom Gateway (Manual)',cat:'payment_gateway',path:'/webhooks/payment/custom_gateway',header:'X-Webhook-Signature'},
+    {vendor:'Marqeta / Card',cat:'card_issuance',path:'/webhooks/cards/events',header:'X-Webhook-Signature'},
+    {vendor:'Column / ACH',cat:'ach_wire',path:'/webhooks/payments/ach',header:'X-Webhook-Signature'},
+    {vendor:'Comply Advantage',cat:'ofac_aml',path:'/webhooks/compliance/ofac',header:'X-Webhook-Signature'},
+    {vendor:'Credit Bureau',cat:'credit_bureau',path:'/webhooks/credit/bureau',header:'X-Webhook-Signature'},
+    {vendor:'Fireblocks / Crypto',cat:'crypto',path:'/webhooks/crypto/events',header:'X-Fireblocks-Signature'},
+    {vendor:'FX Provider',cat:'fx_rates',path:'/webhooks/fx/events',header:'X-Webhook-Signature'},
+    {vendor:'KYC Provider',cat:'kyc',path:'/webhooks/kyc/approval',header:'X-Webhook-Signature'},
+];
+
+async function init() {
+    try {
+        const r = await fetch('/api/v1/admin/integrations',{headers:authH()});
+        const data = await r.json();
+        baseUrl = data.webhook_base_url||'';
+        if(data.deployment?.frontend_url) document.getElementById('inputFrontendUrl').value=data.deployment.frontend_url;
+        if(data.deployment?.redis_configured){const rs=document.getElementById('redisStatus');rs.textContent='Configured ✓';rs.className='badge bg-success ms-1';}
+        updateBadge('fx_rates',data.vendors?.fx_rates?.configured);
+        updateBadge('card_issuance',data.vendors?.card_issuance?.configured);
+        updateBadge('ach_wire',data.vendors?.ach_wire?.configured);
+        updateBadge('credit_bureau',data.vendors?.credit_bureau?.configured);
+        updateBadge('crypto',data.vendors?.crypto?.configured);
+        updateBadge('payment_gateway',data.vendors?.payment_gateway?.configured);
+        const ofac=document.getElementById('status-ofac_aml');
+        if(data.vendors?.ofac_aml?.paid_configured){ofac.className='badge bg-success me-2';ofac.textContent='\u25cf Connected';const oc=document.getElementById('card-ofac_aml');if(oc){oc.classList.remove('partial','error');oc.classList.add('connected');}}
+        else{ofac.className='badge bg-warning text-dark me-2';ofac.textContent='\u25cf Free Tier Active';}
+
+        if(data.vendors?.payment_gateway?.custom_gateway_info){
+            const cgi = data.vendors.payment_gateway.custom_gateway_info;
+            if(cgi.name) document.getElementById('inp-CUSTOM_GATEWAY_NAME').value = cgi.name;
+            if(cgi.base_url) document.getElementById('inp-CUSTOM_GATEWAY_BASE_URL').value = cgi.base_url;
+            if(cgi.webhook_header) document.getElementById('inp-CUSTOM_GATEWAY_WEBHOOK_HEADER').value = cgi.webhook_header;
+        }
+
+        await loadCustomSlots();
+        updateAllWebhookUrls();
+        buildWebhookTable();
+    }catch(e){showToast('Could not load integration status','#dc3545');}
+    await checkDeployment();
+    try{const r2=await fetch('/api/v1/users/me',{headers:authH()});if(r2.ok){const u=await r2.json();document.getElementById('adminEmail').innerHTML=`<i class="fas fa-user-circle me-1"></i>${u.email||'Admin'}`;}}catch(e){}
+}
+
+function updateBadge(cat,configured){
+    const el=document.getElementById('status-'+cat);
+    const card=document.getElementById('card-'+cat);
+    if(!el)return;
+    if(configured){el.className='badge bg-success me-2';el.textContent='\u25cf Connected';if(card){card.classList.remove('partial','error');card.classList.add('connected');}}
+    else{el.className='badge bg-secondary me-2';el.textContent='\u25cb Not Configured';}
+}
+
+function updateAllWebhookUrls(){
+    const b=baseUrl||'http://localhost:8000';
+    Object.entries(WEBHOOK_PATHS).forEach(([cat,path])=>{const el=document.getElementById('wh-'+cat);if(el)el.value=b+path;});
+    const pgMeta = PG_PROVIDER_META[selectedProviders.payment_gateway] || PG_PROVIDER_META.stripe;
+    const whPg = document.getElementById('wh-payment_gateway');
+    if(whPg) whPg.value = b + pgMeta.path;
+}
+
+function buildWebhookTable(){
+    const b=baseUrl||'http://localhost:8000';
+    const tbody=document.getElementById('webhookTableBody');
+    if(!tbody)return;
+    const allRows = [...WEBHOOK_TABLE_DATA];
+    customSlotsCache.forEach(s=>{
+        allRows.push({vendor:`${s.name} (Custom Slot)`, cat:s.category, path:s.webhook_path, header:s.webhook_header||'X-Webhook-Signature'});
+    });
+    tbody.innerHTML=allRows.map(row=>{const url=b+row.path;return`<tr><td><strong>${row.vendor}</strong></td><td><code>${url}</code></td><td><code class="text-muted">${row.header}</code></td><td><button class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="navigator.clipboard.writeText('${url}').then(()=>showToast('Copied!','#198754'))"><i class="fas fa-copy"></i></button></td></tr>`;}).join('');
+}
+
+async function checkDeployment(){
+    const pill=document.getElementById('deploymentPill');
+    try{
+        const r=await fetch('/api/v1/admin/integrations/deployment-status',{headers:authH()});
+        const data=await r.json();
+        if(data.domain_reachable){pill.className='badge bg-success fs-6';pill.innerHTML=`<i class="fas fa-check-circle me-1"></i>Live \u2014 ${data.frontend_url} (${data.latency_ms}ms)`;}
+        else if(data.domain_configured){pill.className='badge bg-warning text-dark fs-6';pill.innerHTML='<i class="fas fa-exclamation-triangle me-1"></i>Domain set but not reachable';document.getElementById('deployCheckResult').innerHTML=`<span class="text-danger"><i class="fas fa-times-circle me-1"></i>${data.error||'Cannot reach app URL'}</span>`;}
+        else{pill.className='badge bg-danger fs-6';pill.innerHTML='<i class="fas fa-times-circle me-1"></i>Not Deployed';}
+    }catch(e){pill.className='badge bg-secondary fs-6';pill.innerHTML='<i class="fas fa-question-circle me-1"></i>Unknown';}
+}
+
+async function saveDeployment(){
+    const frontendUrl=document.getElementById('inputFrontendUrl').value.trim();
+    const redisUrl=document.getElementById('inputRedisUrl').value.trim();
+    const creds={};
+    if(frontendUrl){creds.FRONTEND_URL=frontendUrl;creds.API_URL=frontendUrl;}
+    if(redisUrl)creds.REDIS_URL=redisUrl;
+    if(!Object.keys(creds).length){showToast('Enter at least one URL to save.','#ffc107');return;}
+    const btn=document.getElementById('btnSaveDeploy');
+    btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
+    try{
+        const r=await fetch('/api/v1/admin/integrations/config',{method:'POST',headers:authH(),body:JSON.stringify({vendor_category:'deployment',provider:'system',credentials:creds})});
+        const data=await r.json();
+        if(data.success){showToast(`\u2713 ${data.count} setting(s) saved.`,'#198754');baseUrl=frontendUrl;updateAllWebhookUrls();buildWebhookTable();await checkDeployment();}
+        else{showToast('Error: '+JSON.stringify(data),'#dc3545');}
+    }catch(e){showToast('Request failed: '+e.message,'#dc3545');}
+    finally{btn.disabled=false;btn.innerHTML='<i class="fas fa-save me-1"></i>Save & Verify';}
+}
+
+function selectProvider(category,provider,clickedBtn){
+    selectedProviders[category]=provider;
+    const card=document.getElementById('card-'+category);
+    card.querySelectorAll('.provider-pill').forEach(b=>{b.classList.remove('active');});
+    clickedBtn.classList.add('active');
+    card.querySelectorAll('[data-provider]').forEach(el=>{el.style.display=(el.dataset.provider===provider)?'':'none';});
+    if(category==='payment_gateway'){
+        const meta = PG_PROVIDER_META[provider] || PG_PROVIDER_META.stripe;
+        const wh=document.getElementById('wh-payment_gateway');
+        if(wh) wh.value=(baseUrl||'http://localhost:8000')+meta.path;
+        const lbl=document.getElementById('pgProviderLabel');
+        if(lbl) lbl.textContent=meta.label;
+        const hdr=document.getElementById('pgWebhookHeaderBadge');
+        if(hdr) hdr.textContent=meta.header;
+    }
+}
+
+async function saveVendorConfig(category){
+    const card=document.getElementById('card-'+category);
+    const inputs=card.querySelectorAll('input[data-env-key]');
+    const credentials={};
+    inputs.forEach(inp=>{const val=inp.value.trim();if(val)credentials[inp.dataset.envKey]=val;});
+    if(!Object.keys(credentials).length){showToast('Enter at least one credential.','#ffc107');return;}
+    const btn=card.querySelector('.btn-save-vendor');
+    btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+    try{
+        const r=await fetch('/api/v1/admin/integrations/config',{method:'POST',headers:authH(),body:JSON.stringify({vendor_category:category,provider:selectedProviders[category]||'',credentials})});
+        const data=await r.json();
+        if(data.success){
+            showToast(`\u2713 ${data.count} credential(s) saved and live immediately.`,'#198754');
+            inputs.forEach(inp=>{if(inp.type==='password')inp.value='';});
+            await init();
+        }
+        else{showToast('Error: '+JSON.stringify(data.detail||data),'#dc3545');}
+    }catch(e){showToast('Request failed: '+e.message,'#dc3545');}
+    finally{btn.disabled=false;btn.innerHTML='<i class="fas fa-save me-2"></i>Save Credentials';}
+}
+
+async function testVendor(category,btn){
+    btn.disabled=true;btn.innerHTML='<i class="fas fa-spinner fa-spin me-1"></i>Testing...';
+    try{
+        const r=await fetch(`/api/v1/admin/integrations/${category}/test`,{method:'POST',headers:authH(),body:JSON.stringify({provider:selectedProviders[category]||''})});
+        const data=await r.json();
+        const lastEl=document.getElementById('lasttested-'+category);
+        if(lastEl)lastEl.textContent='Last tested: '+new Date().toLocaleTimeString();
+        if(data.success){btn.innerHTML=`<i class="fas fa-check me-1"></i>OK (${data.latency_ms}ms)`;btn.style.cssText='border-color:#198754;color:#198754;background:white;padding:5px 14px;font-size:.82rem;border-radius:6px;border-width:1.5px;cursor:pointer';showToast('\u2713 '+(data.message||'Connected successfully'),'#198754');}
+        else{btn.innerHTML='<i class="fas fa-times me-1"></i>Failed';btn.style.cssText='border-color:#dc3545;color:#dc3545;background:white;padding:5px 14px;font-size:.82rem;border-radius:6px;border-width:1.5px;cursor:pointer';showErrorModal(data.message||data.error||'Connection failed');}
+    }catch(e){btn.innerHTML='<i class="fas fa-times me-1"></i>Error';showErrorModal(e.message);}
+    setTimeout(()=>{btn.disabled=false;btn.innerHTML='<i class="fas fa-plug me-1"></i>Test';btn.style.cssText='';btn.className='btn-test';},7000);
+}
+
+/* ==================== CUSTOM SLOTS LOGIC ==================== */
+async function loadCustomSlots(){
+    try{
+        const r = await fetch('/api/v1/admin/integrations/custom-slots',{headers:authH()});
+        const data = await r.json();
+        customSlotsCache = data.slots || [];
+        renderCustomSlots();
+    }catch(e){console.error('Failed to load custom slots',e);}
+}
+
+function renderCustomSlots(){
+    const container = document.getElementById('customSlotsContainer');
+    if(!container) return;
+    if(!customSlotsCache.length){
+        container.innerHTML = `
+        <div class="col-12">
+            <div class="vendor-card text-center py-4" style="border-left:5px solid #667eea">
+                <i class="fas fa-plug fa-2x text-primary mb-2"></i>
+                <h6 class="fw-bold mb-1">No Custom Gateway or Vendor Slots Added Yet</h6>
+                <p class="text-muted small mb-3">Click <strong>"Add Custom Gateway / Vendor Slot"</strong> to manually integrate any payment gateway, local processor, or banking API into Finanza.</p>
+                <button class="btn btn-sm btn-primary px-3" onclick="openCustomSlotModal('payment_gateway')"><i class="fas fa-plus me-1"></i>Create First Custom Gateway Slot</button>
+            </div>
+        </div>`;
+        return;
+    }
+
+    container.innerHTML = customSlotsCache.map(s => `
+        <div class="col-xl-6">
+            <div class="vendor-card connected" id="slot-card-${s.slot_id}">
+                <div class="vendor-card-header">
+                    <div class="vendor-icon vi-indigo"><i class="fas fa-network-wired"></i></div>
+                    <div class="flex-grow-1">
+                        <p class="vendor-name">${s.name} <span class="badge bg-light text-dark border ms-1" style="font-size:.7rem">${s.category}</span> <span class="badge ${s.environment==='live'?'bg-success':'bg-warning text-dark'} ms-1" style="font-size:.7rem">${s.environment.toUpperCase()}</span></p>
+                        <p class="vendor-desc font-monospace">${s.base_url || 'Webhook-only / Local integration'}</p>
+                    </div>
+                    <button class="btn-test me-1" onclick="testCustomSlot('${s.slot_id}', this)"><i class="fas fa-plug me-1"></i>Test</button>
+                    <button class="btn btn-sm btn-outline-secondary me-1" onclick="editCustomSlot('${s.slot_id}')" title="Edit Slot"><i class="fas fa-edit"></i></button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteCustomSlot('${s.slot_id}')" title="Delete Slot"><i class="fas fa-trash"></i></button>
+                </div>
+                <div class="row g-2 small mb-2">
+                    <div class="col-md-4"><span class="text-muted">Auth Method:</span> <strong>${s.auth_type}</strong> (<code>${s.auth_header_name}</code>)</div>
+                    <div class="col-md-4"><span class="text-muted">Secret Key:</span> <code>${s.secret_key_masked || 'Not set'}</code></div>
+                    <div class="col-md-4"><span class="text-muted">Public / Merchant ID:</span> <code>${s.public_key || s.merchant_id || '—'}</code></div>
+                </div>
+                <div class="webhook-box">
+                    <label><i class="fas fa-link me-1"></i>Dedicated Live Webhook URL (Header: <code>${s.webhook_header}</code> | Secret: <code>${s.webhook_secret_masked}</code>)</label>
+                    <div class="webhook-url-row">
+                        <input type="text" id="wh-slot-${s.slot_id}" readonly value="${s.webhook_url}">
+                        <button class="btn btn-sm btn-outline-secondary" onclick="navigator.clipboard.writeText('${s.webhook_url}').then(()=>showToast('Custom Webhook URL copied!','#198754'))"><i class="fas fa-copy"></i></button>
+                    </div>
+                </div>
+                <div class="last-tested mt-2" id="lasttested-slot-${s.slot_id}">${s.last_tested ? 'Last tested: ' + new Date(s.last_tested).toLocaleString() : ''}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function openCustomSlotModal(defaultCategory='payment_gateway'){
+    document.getElementById('customSlotModalTitle').innerHTML = '<i class="fas fa-plus-circle me-2"></i>Add Custom Payment Gateway / Vendor Slot';
+    document.getElementById('slotInputId').value = '';
+    document.getElementById('slotName').value = '';
+    document.getElementById('slotCategory').value = defaultCategory;
+    document.getElementById('slotEnvironment').value = 'live';
+    document.getElementById('slotBaseUrl').value = '';
+    document.getElementById('slotPingPath').value = '';
+    document.getElementById('slotAuthType').value = 'Bearer';
+    document.getElementById('slotAuthHeader').value = 'Authorization';
+    document.getElementById('slotSecretKey').value = '';
+    document.getElementById('slotPublicKey').value = '';
+    document.getElementById('slotWebhookHeader').value = 'X-Webhook-Signature';
+    document.getElementById('slotWebhookSecret').value = '';
+    document.getElementById('slotExtraHeaders').value = '';
+    new bootstrap.Modal(document.getElementById('customSlotModal')).show();
+}
+
+function editCustomSlot(slotId){
+    const s = customSlotsCache.find(x => x.slot_id === slotId);
+    if(!s) return;
+    document.getElementById('customSlotModalTitle').innerHTML = `<i class="fas fa-edit me-2"></i>Edit Custom Slot — ${s.name}`;
+    document.getElementById('slotInputId').value = s.slot_id;
+    document.getElementById('slotName').value = s.name || '';
+    document.getElementById('slotCategory').value = s.category || 'payment_gateway';
+    document.getElementById('slotEnvironment').value = s.environment || 'live';
+    document.getElementById('slotBaseUrl').value = s.base_url || '';
+    document.getElementById('slotPingPath').value = s.ping_endpoint || '';
+    document.getElementById('slotAuthType').value = s.auth_type || 'Bearer';
+    document.getElementById('slotAuthHeader').value = s.auth_header_name || 'Authorization';
+    document.getElementById('slotSecretKey').value = '';
+    document.getElementById('slotSecretKey').placeholder = s.has_secret_key ? 'Leave blank to keep existing secret (' + s.secret_key_masked + ')' : 'key_live_...';
+    document.getElementById('slotPublicKey').value = s.public_key || s.merchant_id || '';
+    document.getElementById('slotWebhookHeader').value = s.webhook_header || 'X-Webhook-Signature';
+    document.getElementById('slotWebhookSecret').value = '';
+    document.getElementById('slotWebhookSecret').placeholder = s.has_webhook_secret ? 'Leave blank to keep existing (' + s.webhook_secret_masked + ')' : 'sec_wh_...';
+    document.getElementById('slotExtraHeaders').value = s.extra_headers && Object.keys(s.extra_headers).length ? JSON.stringify(s.extra_headers) : '';
+    new bootstrap.Modal(document.getElementById('customSlotModal')).show();
+}
+
+async function saveCustomSlot(){
+    const name = document.getElementById('slotName').value.trim();
+    if(!name){showToast('Provider / Gateway Name is required.','#dc3545');return;}
+    const payload = {
+        slot_id: document.getElementById('slotInputId').value.trim() || undefined,
+        name,
+        category: document.getElementById('slotCategory').value,
+        environment: document.getElementById('slotEnvironment').value,
+        base_url: document.getElementById('slotBaseUrl').value.trim(),
+        ping_endpoint: document.getElementById('slotPingPath').value.trim(),
+        auth_type: document.getElementById('slotAuthType').value,
+        auth_header_name: document.getElementById('slotAuthHeader').value.trim() || 'Authorization',
+        secret_key: document.getElementById('slotSecretKey').value.trim(),
+        public_key: document.getElementById('slotPublicKey').value.trim(),
+        webhook_header: document.getElementById('slotWebhookHeader').value.trim() || 'X-Webhook-Signature',
+        webhook_secret: document.getElementById('slotWebhookSecret').value.trim(),
+        extra_headers: document.getElementById('slotExtraHeaders').value.trim(),
+    };
+    const btn = document.getElementById('btnSaveCustomSlot');
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+    try{
+        const r = await fetch('/api/v1/admin/integrations/custom-slots',{method:'POST',headers:authH(),body:JSON.stringify(payload)});
+        const data = await r.json();
+        if(data.success){
+            showToast(`\u2713 ${data.message}`,'#198754');
+            bootstrap.Modal.getInstance(document.getElementById('customSlotModal'))?.hide();
+            await init();
+        }else{
+            showToast('Error: '+(data.detail||JSON.stringify(data)),'#dc3545');
+        }
+    }catch(e){showToast('Failed: '+e.message,'#dc3545');}
+    finally{btn.disabled=false;btn.innerHTML='<i class="fas fa-save me-2"></i>Save & Activate Slot';}
+}
+
+async function testCustomSlot(slotId, btn){
+    btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Testing...';
+    try{
+        const r = await fetch(`/api/v1/admin/integrations/custom-slots/${slotId}/test`,{method:'POST',headers:authH()});
+        const data = await r.json();
+        const lastEl = document.getElementById('lasttested-slot-'+slotId);
+        if(lastEl) lastEl.textContent = 'Last tested: ' + new Date().toLocaleTimeString();
+        if(data.success){
+            btn.innerHTML = `<i class="fas fa-check me-1"></i>OK (${data.latency_ms}ms)`;
+            btn.style.cssText = 'border-color:#198754;color:#198754;background:white;padding:5px 14px;font-size:.82rem;border-radius:6px;border-width:1.5px';
+            showToast('\u2713 ' + data.message, '#198754');
+        }else{
+            btn.innerHTML = '<i class="fas fa-times me-1"></i>Failed';
+            showErrorModal(data.message || 'Custom slot test failed');
+        }
+    }catch(e){showErrorModal(e.message);}
+    setTimeout(()=>{btn.disabled=false;btn.innerHTML='<i class="fas fa-plug me-1"></i>Test';btn.style.cssText='';btn.className='btn-test me-1';},6000);
+}
+
+async function deleteCustomSlot(slotId){
+    if(!confirm(`Remove custom integration slot "${slotId}"?`)) return;
+    try{
+        const r = await fetch(`/api/v1/admin/integrations/custom-slots/${slotId}`,{method:'DELETE',headers:authH()});
+        const data = await r.json();
+        if(data.success){showToast(`Slot "${slotId}" removed.`,'#198754');await init();}
+    }catch(e){showToast('Delete failed: '+e.message,'#dc3545');}
+}
+
+function togglePwd(inputId,iconEl){
+    const inp=document.getElementById(inputId);
+    if(!inp)return;
+    inp.type=inp.type==='password'?'text':'password';
+    iconEl.querySelector('i').className=inp.type==='password'?'fas fa-eye':'fas fa-eye-slash';
+}
+
+function copyWebhook(category){
+    const el=document.getElementById('wh-'+category);
+    if(el)navigator.clipboard.writeText(el.value).then(()=>showToast('Webhook URL copied!','#198754'));
+}
+
+function copyAllWebhooks(){
+    const b=baseUrl||'http://localhost:8000';
+    const obj={};
+    WEBHOOK_TABLE_DATA.forEach(row=>{obj[row.vendor]=b+row.path;});
+    customSlotsCache.forEach(s=>{obj[s.name]=s.webhook_url;});
+    navigator.clipboard.writeText(JSON.stringify(obj,null,2)).then(()=>showToast('All webhook URLs copied as JSON!','#198754'));
+}
+
+function showToast(msg,color){
+    const container=document.getElementById('toastContainer');
+    const id='toast-'+Date.now();
+    container.insertAdjacentHTML('beforeend',`<div id="${id}" class="toast-item" style="background:${color||'#198754'}">${msg}</div>`);
+    setTimeout(()=>document.getElementById(id)?.remove(),4500);
+}
+
+function showErrorModal(message){
+    document.getElementById('errorModalBody').textContent=message;
+    new bootstrap.Modal(document.getElementById('errorModal')).show();
+}
+
+document.getElementById('modeToggle').addEventListener('change',function(){
+    const adv=this.checked;
+    document.querySelectorAll('.advanced-field').forEach(el=>el.style.display=adv?'':'none');
+    document.getElementById('labelEasy').classList.toggle('active',!adv);
+    document.getElementById('labelAdvanced').classList.toggle('active',adv);
+    document.getElementById('modeHint').textContent=adv?'Showing all fields including sandbox URLs & secondary keys':'Showing essential fields only';
+});
+
+document.addEventListener('DOMContentLoaded',init);
+</script>
+    <script src="/static/js/admin-shell.js?v=3"></script>
+</body>
+</html>

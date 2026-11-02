@@ -6,7 +6,7 @@ from decimal import Decimal
 from deps import CurrentUserDep, SessionDep
 from investment_management_service import InvestmentManagementService
 
-router = APIRouter(prefix="/investments", tags=["investments"])
+router = APIRouter(prefix="/api/v1/investments", tags=["investments"])
 
 
 @router.post("/create")

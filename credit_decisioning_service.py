@@ -112,8 +112,18 @@ class CreditDecisionService:
             
             total_monthly_debt += new_monthly_payment
             
-            # Assume gross monthly income (would come from income verification in real system)
-            gross_monthly_income = 5000  # TODO: Pull from verified income
+            # Pull verified income from user profile if available
+            user = db.query(User).filter(User.id == user_id).first()
+            gross_monthly_income = (
+                getattr(user, 'verified_monthly_income', None)
+                or getattr(user, 'monthly_income', None)
+            )
+            if not gross_monthly_income:
+                from fastapi import HTTPException
+                raise HTTPException(
+                    status_code=422,
+                    detail="Income information required for DTI calculation. Please update your financial profile."
+                )
             
             if gross_monthly_income <= 0:
                 return 0.50  # Max ratio if no income
@@ -296,38 +306,29 @@ class CreditBureauService:
     @staticmethod
     async def calculate_credit_score(db: Session, user_id: int) -> int:
         """
-        Calculate credit score based on real transaction and account history
-        In production, would call actual third-party bureau APIs
+        Calculate a deterministic credit score (300-850) from the user's real
+        verified account balances, KYC status, loan repayment history, and delinquencies.
         """
-        try:
-            user = db.query(User).filter(User.id == user_id).first()
-            if not user:
-                return 650  # Default score
-            
-            # Score based on account age, payment history
-            base_score = 650
-            
-            # Adjust for existing loans
-            existing_loans = db.query(Loan).filter(Loan.user_id == user_id).all()
-            if existing_loans:
-                base_score += len(existing_loans) * 10  # +10 per loan
-            
-            # Adjust for delinquencies
-            delinquencies = db.query(Delinquency).filter(
-                Delinquency.loan_id.in_(
-                    db.query(Loan.id).filter(Loan.user_id == user_id)
-                )
-            ).all()
-            
-            for del_record in delinquencies:
-                if del_record.days_past_due > 0:
-                    base_score -= (del_record.days_past_due // 30) * 50
-            
-            # Cap at reasonable range (300-850)
-            return max(300, min(850, base_score))
-        except Exception as e:
-            log.error(f"Error calculating credit score: {str(e)}")
-            return 650
+        from models import Account
+        user = db.query(User).filter(User.id == user_id).first()
+        score = 680  # Base score for active account holder
+        if user and getattr(user, "kyc_status", None) == "approved":
+            score += 35
+        accounts = db.query(Account).filter(Account.owner_id == user_id).all()
+        total_balance = sum(float(a.balance or 0) for a in accounts)
+        if total_balance >= 50000:
+            score += 65
+        elif total_balance >= 10000:
+            score += 45
+        elif total_balance >= 1000:
+            score += 20
+        delinquencies = db.query(Delinquency).join(Loan, Delinquency.loan_id == Loan.id).filter(
+            Loan.user_id == user_id,
+            Delinquency.days_past_due > 0,
+        ).all()
+        for d in delinquencies:
+            score -= min(120, int(d.days_past_due or 0))
+        return max(300, min(850, score))
 
 
 class AmortizationService:

@@ -3,7 +3,7 @@ from pydantic import BaseModel
 
 from services.loan_origination_service import LoanOriginationService
 
-router = APIRouter(prefix="/loan-origination", tags=["loan-origination"])
+router = APIRouter(prefix="/api/v1/loan-origination", tags=["loan-origination"])
 
 
 class LoanQuoteRequest(BaseModel):

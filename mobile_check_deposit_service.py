@@ -199,41 +199,25 @@ class CheckProcessingService:
         """
         try:
             from models import CheckOCRData, CheckImage
-            
+
             # Get check images
             images = db.query(CheckImage).filter(
                 CheckImage.deposit_id == deposit_id
             ).all()
-            
+
             if len(images) < 2:
                 return {"success": False, "error": "Both check images required"}
-            
-            # Simulate OCR extraction
-            ocr_data = CheckOCRData(
-                deposit_id=deposit_id,
-                routing_number="021000021",  # Simulated
-                account_number="1234567890",  # Simulated
-                check_number="1001",  # Simulated
-                amount=None,  # Would be extracted from image
-                date_field=None,  # Would be extracted
-                payee=None,  # Would be extracted
-                extracted_at=datetime.utcnow(),
-                confidence_score=0.95
-            )
-            
-            db.add(ocr_data)
-            db.commit()
-            db.refresh(ocr_data)
-            
-            log.info(f"Check OCR completed: {ocr_data.id}")
-            
+
+            # OCR provider not configured — mark check for manual review
+            log.warning(f"OCR not configured for deposit {deposit_id} — flagging for manual review")
             return {
-                "success": True,
-                "ocr_data_id": ocr_data.id,
-                "routing_number": ocr_data.routing_number,
-                "account_number": ocr_data.account_number,
-                "check_number": ocr_data.check_number,
-                "confidence_score": ocr_data.confidence_score
+                "success": False,
+                "status": "requires_manual_review",
+                "reason": "Automated check OCR is not yet configured. A bank operator will manually process this deposit.",
+                "routing_number": None,
+                "account_number": None,
+                "check_number": None,
+                "amount": None,
             }
         except Exception as e:
             db.rollback()

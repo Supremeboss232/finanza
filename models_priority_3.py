@@ -36,7 +36,6 @@ class ScheduledTransfer(Base):
     executions = relationship("ScheduledTransferExecution", back_populates="scheduled_transfer", cascade="all, delete-orphan")
     
     __table_args__ = (
-        Index('ix_scheduled_transfers_user_id', 'user_id'),
         Index('ix_scheduled_transfers_status', 'status'),
     )
 
@@ -59,7 +58,6 @@ class ScheduledTransferExecution(Base):
     transaction = relationship("Transaction", foreign_keys=[transaction_id])
     
     __table_args__ = (
-        Index('ix_scheduled_transfer_executions_scheduled_transfer_id', 'scheduled_transfer_id'),
         Index('ix_scheduled_transfer_executions_status', 'status'),
     )
 
@@ -84,9 +82,7 @@ class CountryRiskAssessment(Base):
     transaction_limit = Column(Numeric(15, 2), nullable=True)
     last_updated = Column(DateTime, default=datetime.utcnow, nullable=False)
     
-    __table_args__ = (
-        Index('ix_country_risk_country_code', 'country_code'),
-    )
+    # country_code index already created by Column(..., index=True)
 
 
 class SanctionsScreening(Base):
@@ -103,7 +99,4 @@ class SanctionsScreening(Base):
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     
-    __table_args__ = (
-        Index('ix_sanctions_screening_name', 'name'),
-        Index('ix_sanctions_screening_screening_date', 'screening_date'),
-    )
+    # name and screening_date indices already created by Column(..., index=True)

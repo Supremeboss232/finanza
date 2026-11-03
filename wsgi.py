@@ -1,8 +1,9 @@
 import os
 import sys
 
-# Add application directory to sys.path
+# Add application directory to sys.path and ensure current working directory is project root
 app_dir = os.path.dirname(os.path.abspath(__file__))
+os.chdir(app_dir)
 if app_dir not in sys.path:
     sys.path.insert(0, app_dir)
 

@@ -1,0 +1,22 @@
+# Koyeb App Specification
+# Docs: https://www.koyeb.com/docs/reference/app-specification
+name: finanza
+services:
+  - name: finanza-api
+    type: web
+    git:
+      repository: github.com/Supremeboss232/finanza
+      branch: master
+    ports:
+      - port: 8000
+        path: /
+    routes:
+      - path: /
+        port: 8000
+    health_checks:
+      - http:
+          path: /health
+          port: 8000
+    instance_type: nano
+    regions:
+      - fra

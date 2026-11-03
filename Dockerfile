@@ -61,12 +61,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # Start the application with production settings
-# - workers: 2 per core (adjust based on instance size)
-# - timeout-keep-alive: 65s (above typical ALB 60s idle timeout)
-CMD ["uvicorn", "main:app", \
-     "--host", "0.0.0.0", \
-     "--port", "8000", \
-     "--workers", "2", \
-     "--timeout-keep-alive", "65", \
-     "--access-log", \
-     "--no-use-colors"]
+# Uses $PORT if provided by host (e.g. Koyeb/Render), defaults to 8000
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1 --timeout-keep-alive 65 --access-log --no-use-colors"]

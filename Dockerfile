@@ -41,20 +41,21 @@ COPY --from=builder /install /usr/local
 
 WORKDIR /app
 
-# Create non-root user for security
-RUN groupadd -r finanza && useradd -r -g finanza -s /bin/false finanza
+# Create user with UID 1000 (standard for Hugging Face Spaces & security)
+RUN useradd -m -u 1000 user
 
 # Copy application source code
 COPY . .
 
 # Create uploads directory (writable by app user)
-RUN mkdir -p uploads && chown -R finanza:finanza /app
+RUN mkdir -p uploads && chown -R 1000:1000 /app
 
 # Drop to non-root user
-USER finanza
+USER user
 
-# Expose application port
+# Expose application port (8000 standard, 7860 for Hugging Face)
 EXPOSE 8000
+EXPOSE 7860
 
 # Health check — calls the public /health endpoint
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \

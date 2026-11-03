@@ -240,9 +240,16 @@ class Settings(BaseSettings):
     @model_validator(mode='after')
     def normalize_database_urls(self) -> 'Settings':
         import os
-        if os.environ.get("USE_LOCAL_DB") == "true" or getattr(self, "USE_LOCAL_DB", "false") == "true":
-            self.DATABASE_URL = "sqlite+aiosqlite:///finanza.db"
-            self.ALEMBIC_DATABASE_URL = "sqlite:///finanza.db"
+        is_pa = bool(
+            os.environ.get("PYTHONANYWHERE_DOMAIN") or 
+            os.environ.get("PYTHONANYWHERE_SITE") or 
+            "/home/" in os.environ.get("HOME", "")
+        )
+        if is_pa or os.environ.get("USE_LOCAL_DB") == "true" or getattr(self, "USE_LOCAL_DB", "false") == "true":
+            self.USE_LOCAL_DB = "true"
+            db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "finanza.db")
+            self.DATABASE_URL = f"sqlite+aiosqlite:///{db_path}"
+            self.ALEMBIC_DATABASE_URL = f"sqlite:///{db_path}"
             return self
 
         # Multi-Database Resolution Order:

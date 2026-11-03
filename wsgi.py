@@ -7,6 +7,7 @@ if app_dir not in sys.path:
     sys.path.insert(0, app_dir)
 
 # Set defaults if not provided in environment
+os.environ["USE_LOCAL_DB"] = "true"
 if not os.environ.get("DATABASE_URL"):
     os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{os.path.join(app_dir, 'finanza.db')}"
 

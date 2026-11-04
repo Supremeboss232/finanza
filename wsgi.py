@@ -9,6 +9,7 @@ if app_dir not in sys.path:
 
 # Set defaults if not provided in environment
 os.environ["USE_LOCAL_DB"] = "true"
+os.environ["DISABLE_BACKGROUND_SCHEDULER"] = "true"
 if not os.environ.get("DATABASE_URL"):
     os.environ["DATABASE_URL"] = f"sqlite+aiosqlite:///{os.path.join(app_dir, 'finanza.db')}"
 

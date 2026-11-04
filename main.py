@@ -881,10 +881,20 @@ async def startup_event():
             )
             print("[OK] Scheduled Bill Payments & Recurring Transfers worker registered (every 5m)")
 
-            # Start scheduler
-            scheduler.start()
-            atexit.register(cleanup_scheduler)
-            print("[OK] Scheduler started with all background tasks")
+            # Start scheduler (only in standalone ASGI servers, NOT inside WSGI worker threads)
+            import os
+            is_wsgi_env = bool(
+                os.environ.get("PYTHONANYWHERE_DOMAIN") or 
+                os.environ.get("PYTHONANYWHERE_SITE") or 
+                os.environ.get("DISABLE_BACKGROUND_SCHEDULER") == "true" or
+                "/home/" in os.environ.get("HOME", "")
+            )
+            if not is_wsgi_env:
+                scheduler.start()
+                atexit.register(cleanup_scheduler)
+                print("[OK] Scheduler started with all background tasks")
+            else:
+                print("[OK] Background scheduler bypassed in WSGI environment to prevent request deadlocks")
         except Exception as scheduler_error:
             log.warning(f"[WARN] Background services failed to start: {scheduler_error}")
             log.warning("       Token cleanup and realtime services may not be available")

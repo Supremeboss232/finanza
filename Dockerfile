@@ -41,26 +41,32 @@ COPY --from=builder /install /usr/local
 
 WORKDIR /app
 
-# Create user with UID 1000 (standard for Hugging Face Spaces & security)
-RUN useradd -m -u 1000 user
+# Create non-root user for security
+RUN groupadd -r finanza && useradd -r -g finanza -s /bin/false finanza
 
 # Copy application source code
 COPY . .
 
 # Create uploads directory (writable by app user)
-RUN mkdir -p uploads && chown -R 1000:1000 /app
+RUN mkdir -p uploads && chown -R finanza:finanza /app
 
 # Drop to non-root user
-USER user
+USER finanza
 
-# Expose application port (8000 standard, 7860 for Hugging Face)
+# Expose application port
 EXPOSE 8000
-EXPOSE 7860
 
 # Health check — calls the public /health endpoint
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
 # Start the application with production settings
-# Uses $PORT if provided by host (e.g. Koyeb/Render), defaults to 8000
-CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1 --timeout-keep-alive 65 --access-log --no-use-colors"]
+# - workers: 2 per core (adjust based on instance size)
+# - timeout-keep-alive: 65s (above typical ALB 60s idle timeout)
+CMD ["uvicorn", "main:app", \
+     "--host", "0.0.0.0", \
+     "--port", "8000", \
+     "--workers", "2", \
+     "--timeout-keep-alive", "65", \
+     "--access-log", \
+     "--no-use-colors"]

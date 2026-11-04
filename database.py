@@ -7,7 +7,7 @@ from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import declarative_base
-from sqlalchemy.pool import AsyncAdaptedQueuePool, NullPool
+from sqlalchemy.pool import AsyncAdaptedQueuePool
 from config import settings # Assuming config.py defines DATABASE_URL
 
 # Prefer explicit Supabase DB URL when provided; fallback to configured DATABASE_URL
@@ -83,25 +83,18 @@ elif "sqlite" in SQLALCHEMY_DATABASE_URL:
         "check_same_thread": False
     }
 
-# Use NullPool for SQLite to avoid connection deadlocks in multi-threaded/WSGI environments
-if "sqlite" in SQLALCHEMY_DATABASE_URL:
-    engine = create_async_engine(
-        SQLALCHEMY_DATABASE_URL,
-        echo=False,
-        poolclass=NullPool,
-        connect_args=connect_args
-    )
-else:
-    engine = create_async_engine(
-        SQLALCHEMY_DATABASE_URL, 
-        echo=False,
-        poolclass=AsyncAdaptedQueuePool,
-        pool_size=5,
-        max_overflow=10,
-        pool_pre_ping=True,  # Test connections before using them
-        pool_recycle=3600,   # Recycle connections after 1 hour
-        connect_args=connect_args
-    )
+# Use connection pooling for better stability
+# AsyncAdaptedQueuePool: Manages async connections with a pool (better than NullPool for async)
+engine = create_async_engine(
+    SQLALCHEMY_DATABASE_URL, 
+    echo=False,
+    poolclass=AsyncAdaptedQueuePool,
+    pool_size=5,
+    max_overflow=10,
+    pool_pre_ping=True,  # Test connections before using them
+    pool_recycle=3600,   # Recycle connections after 1 hour
+    connect_args=connect_args
+)
 
 SessionLocal = async_sessionmaker(
     bind=engine,

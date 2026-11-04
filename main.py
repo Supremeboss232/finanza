@@ -162,23 +162,84 @@ async def create_db_and_tables():
 
 async def auto_migrate_columns():
     """
-    Idempotently adds any missing columns to existing tables.
+    Idempotently adds any missing columns to existing tables across PostgreSQL and SQLite.
     Handles the case where a table was created from an old stub model
     and metadata.create_all() will not add new columns to existing tables.
     Safe to call on every startup.
     """
     MIGRATIONS = {
+        "users": [
+            ("full_name",           "VARCHAR(255)"),
+            ("account_number",      "VARCHAR(100)"),
+            ("account_type",        "VARCHAR(50) DEFAULT 'Checking'"),
+            ("is_active",           "BOOLEAN DEFAULT TRUE"),
+            ("is_verified",         "BOOLEAN DEFAULT FALSE"),
+            ("is_admin",            "BOOLEAN DEFAULT FALSE"),
+            ("admin_role",          "VARCHAR(50) DEFAULT 'STANDARD'"),
+            ("kyc_status",          "VARCHAR(50) DEFAULT 'not_started'"),
+            ("address",             "VARCHAR(255)"),
+            ("region",              "VARCHAR(100)"),
+            ("routing_number",      "VARCHAR(100)"),
+            ("mfa_secret",          "VARCHAR(255)"),
+            ("mfa_enabled",         "BOOLEAN DEFAULT FALSE"),
+            ("mfa_backup_codes",    "TEXT"),
+            ("mfa_enabled_at",      "TIMESTAMP WITH TIME ZONE"),
+            ("is_suspended",        "BOOLEAN DEFAULT FALSE"),
+            ("is_frozen",           "BOOLEAN DEFAULT FALSE"),
+            ("custom_permissions",  "TEXT"),
+            ("created_at",          "TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP"),
+            ("updated_at",          "TIMESTAMP WITH TIME ZONE"),
+        ],
+        "accounts": [
+            ("account_number",      "VARCHAR(100)"),
+            ("account_type",        "VARCHAR(50) DEFAULT 'savings'"),
+            ("balance",             "NUMERIC(15, 2) DEFAULT 0.0"),
+            ("currency",            "VARCHAR(10) DEFAULT 'USD'"),
+            ("owner_id",            "INTEGER"),
+            ("region_id",           "INTEGER"),
+            ("status",              "VARCHAR(50) DEFAULT 'active'"),
+            ("kyc_level",           "VARCHAR(50) DEFAULT 'basic'"),
+            ("is_admin_account",    "BOOLEAN DEFAULT FALSE"),
+            ("is_system_account",   "BOOLEAN DEFAULT FALSE"),
+            ("created_at",          "TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP"),
+            ("updated_at",          "TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP"),
+        ],
+        "transactions": [
+            ("user_id",             "INTEGER"),
+            ("account_id",          "INTEGER"),
+            ("recipient_user_id",   "INTEGER"),
+            ("amount",              "NUMERIC(15, 2) DEFAULT 0.0"),
+            ("transaction_type",    "VARCHAR(50) DEFAULT 'transfer'"),
+            ("direction",           "VARCHAR(20)"),
+            ("status",              "VARCHAR(50) DEFAULT 'pending'"),
+            ("description",         "VARCHAR(255)"),
+            ("reference_number",    "VARCHAR(100)"),
+            ("kyc_status_at_time",  "VARCHAR(50)"),
+            ("created_at",          "TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP"),
+            ("updated_at",          "TIMESTAMP WITH TIME ZONE"),
+        ],
+        "kyc_info": [
+            ("email",               "VARCHAR(255)"),
+            ("document_type",       "VARCHAR(100)"),
+            ("document_number",     "VARCHAR(100)"),
+            ("status",              "VARCHAR(50) DEFAULT 'pending'"),
+            ("submitted_at",        "TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP"),
+            ("approved_at",         "TIMESTAMP WITH TIME ZONE"),
+            ("id_front_uploaded",   "BOOLEAN DEFAULT FALSE"),
+            ("id_back_uploaded",    "BOOLEAN DEFAULT FALSE"),
+            ("proof_of_address_uploaded", "BOOLEAN DEFAULT FALSE"),
+        ],
         "webhooks": [
             ("user_id",         "INTEGER NOT NULL DEFAULT 0"),
             ("name",            "VARCHAR(255) NOT NULL DEFAULT ''"),
             ("url",             "VARCHAR(2048) NOT NULL DEFAULT ''"),
             ("events",          "TEXT NOT NULL DEFAULT '[]'"),
-            ("active",          "BOOLEAN NOT NULL DEFAULT 1"),
+            ("active",          "BOOLEAN NOT NULL DEFAULT TRUE"),
             ("secret_key",      "VARCHAR(255)"),
             ("retry_count",     "INTEGER DEFAULT 3"),
             ("timeout_seconds", "INTEGER DEFAULT 30"),
-            ("created_at",      "DATETIME DEFAULT CURRENT_TIMESTAMP"),
-            ("updated_at",      "DATETIME"),
+            ("created_at",      "TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP"),
+            ("updated_at",      "TIMESTAMP WITH TIME ZONE"),
         ],
         "webhook_deliveries": [
             ("webhook_id",    "INTEGER NOT NULL DEFAULT 0"),
@@ -188,27 +249,37 @@ async def auto_migrate_columns():
             ("http_status",   "INTEGER"),
             ("error_message", "TEXT"),
             ("attempt_count", "INTEGER DEFAULT 0"),
-            ("last_attempt",  "DATETIME"),
-            ("next_retry",    "DATETIME"),
-            ("created_at",    "DATETIME DEFAULT CURRENT_TIMESTAMP"),
-            ("updated_at",    "DATETIME"),
+            ("last_attempt",  "TIMESTAMP WITH TIME ZONE"),
+            ("next_retry",    "TIMESTAMP WITH TIME ZONE"),
+            ("created_at",    "TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP"),
+            ("updated_at",    "TIMESTAMP WITH TIME ZONE"),
         ],
     }
     try:
+        is_postgres = "postgresql" in str(engine.url)
         async with engine.begin() as conn:
             for table, columns in MIGRATIONS.items():
-                try:
-                    result = await conn.execute(text(f"PRAGMA table_info({table})"))
-                    existing = {row[1] for row in result.fetchall()}
-                except Exception:
-                    continue
-                for col, col_def in columns:
-                    if col not in existing:
+                if is_postgres:
+                    for col, col_def in columns:
                         try:
-                            await conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {col_def}"))
-                            print(f"  [MIGRATE] Added {table}.{col}")
+                            await conn.execute(text(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {col} {col_def}"))
+                            print(f"  [MIGRATE] Ensured {table}.{col}")
                         except Exception as e:
                             print(f"  [MIGRATE] Skip {table}.{col}: {e}")
+                else:
+                    try:
+                        result = await conn.execute(text(f"PRAGMA table_info({table})"))
+                        existing = {row[1] for row in result.fetchall()}
+                    except Exception:
+                        continue
+                    for col, col_def in columns:
+                        if col not in existing:
+                            try:
+                                sqlite_def = col_def.replace("TIMESTAMP WITH TIME ZONE", "DATETIME").replace("DEFAULT TRUE", "DEFAULT 1").replace("DEFAULT FALSE", "DEFAULT 0")
+                                await conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col} {sqlite_def}"))
+                                print(f"  [MIGRATE] Added {table}.{col}")
+                            except Exception as e:
+                                print(f"  [MIGRATE] Skip {table}.{col}: {e}")
     except Exception as e:
         print(f"  [MIGRATE] Non-fatal: {e}")
 
@@ -712,6 +783,7 @@ async def ensure_db_tables(request: Request, call_next):
     if not db_tables_created and request.url.path.startswith(("/api", "/auth", "/user")):
         try:
             await create_db_and_tables()
+            await auto_migrate_columns()
         except Exception as e:
             print(f"Error initializing database tables: {e}")
             # Continue anyway, endpoint will handle database errors

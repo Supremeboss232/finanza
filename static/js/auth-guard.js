@@ -122,7 +122,7 @@
     /**
      * Fetch with timeout
      */
-    async function fetchWithTimeout(url, options = {}, timeout = 5000) {
+    async function fetchWithTimeout(url, options = {}, timeout = 30000) {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), timeout);
         
@@ -172,7 +172,7 @@
                         'Authorization': `Bearer ${getToken()}`
                     }
                 },
-                5000
+                30000
             );
             
             if (response.status === 401) {
@@ -213,7 +213,7 @@
                         'Content-Type': 'application/json'
                     }
                 },
-                5000
+                30000
             );
             
             if (response.ok) {
@@ -419,7 +419,7 @@
                                 'Authorization': `Bearer ${token}`
                             }
                         },
-                        5000
+                        30000
                     );
                 }
             } catch (error) {

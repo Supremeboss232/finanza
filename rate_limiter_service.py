@@ -52,7 +52,8 @@ class RateLimiter:
           }
         """
         async with self.lock:
-            key = (identifier_type, identifier, endpoint)
+            safe_id = str(identifier) if not isinstance(identifier, (str, int)) else str(identifier)
+            key = (str(identifier_type), safe_id, str(endpoint))
             now = datetime.utcnow()
             
             # Clean old requests (older than 1 hour)

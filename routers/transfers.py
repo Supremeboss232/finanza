@@ -11,7 +11,7 @@ import json
 
 from deps import get_current_user, SessionDep, CurrentUserDep
 from database import SessionLocal
-from models import User as DBUser, Transaction as DBTransaction, Account as DBAccount
+from models import User as DBUser, Transaction as DBTransaction, Account as DBAccount, Notification as DBNotification
 from schemas import TransactionCreate, User
 from pydantic import BaseModel
 import crud
@@ -186,6 +186,28 @@ async def create_transfer(
         await db_session.commit()
         await db_session.refresh(sender_transaction)
         await db_session.refresh(recipient_transaction)
+        
+        # Record real persistent banking notifications in the database
+        try:
+            sender_title = "Transfer Sent" if status_to_set == "completed" else "Transfer Pending"
+            db_session.add(DBNotification(
+                user_id=current_user.id,
+                title=sender_title,
+                message=f"Outgoing transfer of ${amount:,.2f} to user #{recipient_id} ({status_to_set}). Reference: {reference_number}",
+                notification_type="transaction",
+                is_read=False
+            ))
+            recipient_title = "Funds Received" if status_to_set == "completed" else "Incoming Transfer Pending"
+            db_session.add(DBNotification(
+                user_id=recipient_id,
+                title=recipient_title,
+                message=f"Incoming transfer of ${amount:,.2f} from {current_user.full_name or current_user.email} ({status_to_set}). Reference: {reference_number}",
+                notification_type="transaction",
+                is_read=False
+            ))
+            await db_session.commit()
+        except Exception:
+            pass
         
         # Broadcast notifications to both users
         try:

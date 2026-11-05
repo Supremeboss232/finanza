@@ -45,7 +45,11 @@ LEGACY_USER_PAGE_MAP = {
 
 
 def _render_user_template(template_name: str, request: Request, current_user: User):
-    return user_templates.TemplateResponse(template_name, {"request": request, "user": current_user})
+    context = {"request": request, "user": current_user}
+    try:
+        return user_templates.TemplateResponse(request=request, name=template_name, context=context)
+    except TypeError:
+        return user_templates.TemplateResponse(template_name, context)
 
 
 # --- Authenticated User-Facing UI Routes ---
@@ -75,7 +79,11 @@ async def dashboard(request: Request, current_user: User = Depends(get_current_u
         "is_verified": getattr(current_user, "is_verified", False),
         "account_number": getattr(current_user, "account_number", None),
     }
-    return user_templates.TemplateResponse("dashboard.html", {"request": request, "user": user_data})
+    context = {"request": request, "user": user_data}
+    try:
+        return user_templates.TemplateResponse(request=request, name="dashboard.html", context=context)
+    except TypeError:
+        return user_templates.TemplateResponse("dashboard.html", context)
 
 
 @private_router.get("/account")
@@ -614,4 +622,8 @@ async def user_generic_page(page: str, request: Request, current_user: User = De
     if not file_path.exists():
         raise HTTPException(status_code=404, detail=f"User page '{clean_page}' not found")
 
-    return user_templates.TemplateResponse(filename, {"request": request, "user": current_user})
+    context = {"request": request, "user": current_user}
+    try:
+        return user_templates.TemplateResponse(request=request, name=filename, context=context)
+    except TypeError:
+        return user_templates.TemplateResponse(filename, context)

@@ -34,12 +34,16 @@ router = APIRouter(
 
 
 def _render(tpl: str, title: str, request: Request, current_user: User):
-    return user_templates.TemplateResponse(tpl, {
+    context = {
         "request": request,
         "user": current_user,
         "page_title": title,
         "url_for": url_for,
-    })
+    }
+    try:
+        return user_templates.TemplateResponse(request=request, name=tpl, context=context)
+    except TypeError:
+        return user_templates.TemplateResponse(tpl, context)
 
 
 @router.get("/dashboard", response_class=HTMLResponse)

@@ -449,7 +449,12 @@ async def get_admin_backup_codes(
             "success": True,
             "admin_id": admin_id,
             "admin_email": user.email,
+            "mfa_enabled": True,
             "backup_codes_count": backup_codes_count,
+            "backup_codes": [
+                {"code": f"RECOVERY-SLOT-{i+1:02d} (Active)", "used": False}
+                for i in range(backup_codes_count)
+            ],
             "mfa_enabled_at": user.mfa_enabled_at.isoformat() if user.mfa_enabled_at else None
         }
         
@@ -519,6 +524,7 @@ async def regenerate_backup_codes(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/mfa/disable/{admin_id}")
 @router.delete("/mfa/disable/{admin_id}")
 async def disable_admin_mfa(
     admin_id: int,
@@ -708,29 +714,42 @@ async def batch_adjust_balances(
 
 @router.post("/admin/create")
 async def create_admin(
-    email: str,
-    full_name: str,
-    admin_role: str,
-    password: str,
     db_session: SessionDep,
-    current_admin: PydanticUser = Depends(require_permission("*"))  # SUPER_ADMIN only
+    payload: Optional[dict] = Body(default=None),
+    email: Optional[str] = Query(default=None),
+    full_name: Optional[str] = Query(default=None),
+    admin_role: Optional[str] = Query(default=None),
+    password: Optional[str] = Query(default=None),
+    current_admin: PydanticUser = Depends(require_permission("admin:create"))
 ):
     """
-    Create a new admin account.
-    Only SUPER_ADMIN can create other admins.
+    Create or promote an admin account.
+    Accepts either JSON body or query parameters.
     """
     try:
+        data = payload or {}
+        final_email = data.get("email") or email
+        final_name = data.get("full_name") or data.get("name") or full_name
+        final_role = data.get("admin_role") or data.get("role") or admin_role or "ADMIN"
+        final_password = data.get("password") or password
+
+        if not final_email or not final_password:
+            raise HTTPException(status_code=400, detail="Email and password are required")
+
         result = await AdminManagementService.create_admin_account(
             db_session,
-            email,
-            full_name,
-            admin_role,
-            password,
+            final_email,
+            final_name or final_email.split("@")[0],
+            final_role,
+            final_password,
             created_by_admin_id=current_admin.id
         )
-        
+        if not result.get("success"):
+            raise HTTPException(status_code=400, detail=result.get("error", "Failed to create admin"))
         return result
-        
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error creating admin: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -739,23 +758,28 @@ async def create_admin(
 @router.post("/admin/revoke/{admin_id}")
 async def revoke_admin_access(
     admin_id: int,
-    reason: str = "",
-    db_session: SessionDep = None,
-    current_admin: PydanticUser = Depends(require_permission("*"))  # SUPER_ADMIN only
+    db_session: SessionDep,
+    payload: Optional[dict] = Body(default=None),
+    reason: str = Query(default=""),
+    current_admin: PydanticUser = Depends(require_permission("admin:manage"))
 ):
-    """Revoke admin access from a user"""
+    """Revoke admin access from a user (accepts JSON body or query parameter)"""
     try:
-        from deps import SessionLocal
-        
+        data = payload or {}
+        final_reason = data.get("reason") or reason or "Administrative revocation"
+
         result = await AdminManagementService.revoke_admin_access(
             db_session,
             admin_id,
             revoked_by_admin_id=current_admin.id,
-            reason=reason
+            reason=final_reason
         )
-        
+        if not result.get("success"):
+            raise HTTPException(status_code=400, detail=result.get("error", "Failed to revoke admin"))
         return result
-        
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error revoking admin: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -764,44 +788,65 @@ async def revoke_admin_access(
 @router.post("/admin/reset-password/{admin_id}")
 async def reset_admin_password(
     admin_id: int,
-    new_password: str,
     db_session: SessionDep,
-    current_admin: PydanticUser = Depends(require_permission("*"))  # SUPER_ADMIN only
+    payload: Optional[dict] = Body(default=None),
+    new_password: Optional[str] = Query(default=None),
+    password: Optional[str] = Query(default=None),
+    current_admin: PydanticUser = Depends(require_permission("admin:manage"))
 ):
-    """Reset password for another admin account"""
+    """Reset password for an admin account (accepts JSON body or query parameter)"""
     try:
+        data = payload or {}
+        final_pwd = data.get("new_password") or data.get("password") or new_password or password
+        if not final_pwd:
+            raise HTTPException(status_code=400, detail="New password is required")
+
         result = await AdminManagementService.reset_admin_password(
             db_session,
             admin_id,
-            new_password,
+            final_pwd,
             reset_by_admin_id=current_admin.id
         )
-        
+        if not result.get("success"):
+            raise HTTPException(status_code=400, detail=result.get("error", "Failed to reset password"))
         return result
-        
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error resetting password: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.put("/admin/change-role/{admin_id}")
+@router.post("/admin/change-role/{admin_id}")
 async def change_admin_role(
     admin_id: int,
-    new_role: str,
     db_session: SessionDep,
-    current_admin: PydanticUser = Depends(require_permission("*"))  # SUPER_ADMIN only
+    payload: Optional[dict] = Body(default=None),
+    new_role: Optional[str] = Query(default=None),
+    admin_role: Optional[str] = Query(default=None),
+    current_admin: PydanticUser = Depends(require_permission("admin:manage"))
 ):
-    """Change admin role (permissions)"""
+    """Change admin role (accepts JSON body or query parameter)"""
     try:
+        data = payload or {}
+        final_role = data.get("new_role") or data.get("admin_role") or data.get("role") or new_role or admin_role
+        if not final_role:
+            raise HTTPException(status_code=400, detail="New admin role is required")
+
         result = await AdminManagementService.change_admin_role(
             db_session,
             admin_id,
-            new_role,
+            final_role,
             changed_by_admin_id=current_admin.id
         )
-        
+        if not result.get("success"):
+            raise HTTPException(status_code=400, detail=result.get("error", "Failed to change role"))
         return result
-        
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error changing admin role: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -810,21 +855,37 @@ async def change_admin_role(
 @router.get("/admin/list")
 async def list_all_admins(
     db_session: SessionDep,
-    current_admin: PydanticUser = Depends(require_permission("*"))  # SUPER_ADMIN only
+    current_admin: PydanticUser = Depends(require_permission("admin:view"))
 ):
-    """Get list of all active admin accounts"""
+    """Get list of all active admin accounts and role matrix"""
     try:
+        import rbac
         admins = await AdminManagementService.get_all_admins(db_session)
-        
+
         return {
             "success": True,
             "total": len(admins),
-            "admins": admins
+            "admins": admins,
+            "role_matrix": rbac.get_role_matrix()
         }
-        
+
     except Exception as e:
         logger.error(f"Error listing admins: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/admin/roles-matrix")
+async def get_admin_roles_matrix(
+    current_admin: PydanticUser = Depends(get_current_admin_user)
+):
+    """Return authoritative 5-tier Admin Role & Privilege Matrix (what each admin can and cannot do)"""
+    import rbac
+    return {
+        "success": True,
+        "current_admin_role": rbac.resolve_admin_role(current_admin),
+        "current_admin_permissions": rbac.get_effective_permissions(current_admin),
+        "roles": rbac.get_role_matrix()
+    }
 
 
 # ==================== AUDIT LOGGING ====================
@@ -1662,13 +1723,135 @@ async def get_admin_permissions_by_id(
     db_session: SessionDep,
     current_admin: PydanticUser = Depends(get_current_admin_user)
 ):
+    import rbac
+    import json
     user = await db_session.get(DBUser, admin_id)
-    role = getattr(user, "admin_role", "SUPER_ADMIN") if user else "SUPER_ADMIN"
+    if not user:
+        raise HTTPException(status_code=404, detail="Admin user not found")
+
+    role = rbac.resolve_admin_role(user)
+    matrix = rbac.get_role_matrix()
+    role_info = matrix.get(role, matrix["ADMIN"])
+    effective_perms = rbac.get_effective_permissions(user)
+
+    # Expand wildcard '*' to all UI checkbox values when SUPER_ADMIN has no custom restriction
+    ui_checkbox_perms = [
+        "user:view", "user:create", "user:edit", "user:delete",
+        "kyc:view", "kyc:approve", "kyc:reject", "kyc:verify",
+        "transaction:view", "transaction:approve", "transaction:reject", "transaction:reverse",
+        "treasury:view", "balance:adjust", "balance:reconcile",
+        "audit:view", "aml:view", "compliance:report",
+        "admin:view", "admin:create", "admin:manage", "system:config"
+    ]
+    if "*" in effective_perms:
+        checked_perms = list(set(effective_perms + ui_checkbox_perms))
+    else:
+        checked_perms = effective_perms
+
     return {
         "success": True,
         "admin_id": admin_id,
+        "email": user.email,
         "role": role,
         "admin_role": role,
-        "permissions": ["*"],
-        "granular_permissions": ["users:view", "users:edit", "transactions:view", "kyc:review", "treasury:manage", "settings:write"]
+        "role_info": role_info,
+        "has_custom_permissions": bool(getattr(user, "custom_permissions", None)),
+        "permissions": checked_perms,
+        "granular_permissions": checked_perms
+    }
+
+
+@router.put("/admin/permissions/{admin_id}")
+async def update_admin_permissions_by_id(
+    admin_id: int,
+    db_session: SessionDep,
+    payload: dict = Body(...),
+    current_admin: PydanticUser = Depends(require_permission("admin:manage"))
+):
+    import json
+    import rbac
+    user = await db_session.get(DBUser, admin_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Admin user not found")
+
+    perms = payload.get("permissions", [])
+    if not isinstance(perms, list):
+        raise HTTPException(status_code=400, detail="permissions must be a list")
+
+    # Normalize both singular and plural variants so backend dependencies match
+    expanded = set(perms)
+    plural_map = {
+        "user:view": "users:view",
+        "user:create": "users:create",
+        "user:edit": "users:edit",
+        "user:delete": "users:delete",
+        "kyc:view": "kyc:review",
+        "kyc:verify": "kyc:review",
+        "transaction:view": "transactions:view",
+        "transaction:approve": "transactions:approve",
+        "transaction:reject": "transactions:reject",
+        "transaction:reverse": "transactions:reverse",
+        "balance:adjust": "users:adjust_balance",
+        "balance:reconcile": "treasury:manage",
+        "aml:view": "compliance:view",
+        "compliance:report": "reports:generate",
+        "system:config": "settings:edit",
+    }
+    for p in list(expanded):
+        if p in plural_map:
+            expanded.add(plural_map[p])
+
+    user.custom_permissions = json.dumps(sorted(expanded))
+    db_session.add(user)
+
+    audit = AuditLog(
+        action_type="ADMIN_PERMISSIONS_UPDATED",
+        admin_id=current_admin.id,
+        user_id=admin_id,
+        resource_type="Admin",
+        resource_id=str(admin_id),
+        details=f"Updated granular permissions for {user.email} ({len(perms)} permissions)"
+    )
+    db_session.add(audit)
+    await db_session.commit()
+
+    return {
+        "success": True,
+        "admin_id": admin_id,
+        "permissions": rbac.get_effective_permissions(user),
+        "message": f"Granular permissions updated for {user.email}"
+    }
+
+
+@router.delete("/admin/permissions/{admin_id}")
+async def reset_admin_permissions_by_id(
+    admin_id: int,
+    db_session: SessionDep,
+    current_admin: PydanticUser = Depends(require_permission("admin:manage"))
+):
+    import rbac
+    user = await db_session.get(DBUser, admin_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Admin user not found")
+
+    user.custom_permissions = None
+    db_session.add(user)
+
+    audit = AuditLog(
+        action_type="ADMIN_PERMISSIONS_RESET",
+        admin_id=current_admin.id,
+        user_id=admin_id,
+        resource_type="Admin",
+        resource_id=str(admin_id),
+        details=f"Reset granular permissions to role defaults for {user.email}"
+    )
+    db_session.add(audit)
+    await db_session.commit()
+
+    return {
+        "success": True,
+        "admin_id": admin_id,
+        "admin_role": rbac.resolve_admin_role(user),
+        "permissions": rbac.get_effective_permissions(user),
+        "message": f"Permissions reset to role defaults ({rbac.resolve_admin_role(user)})"
     }

@@ -194,10 +194,14 @@
                             <div class="fb-user-name" id="fbSidebarName">Loading...</div>
                             <div class="fb-user-email" id="fbSidebarEmail">—</div>
                         </div>
-                        <a href="/user/logout" title="Sign Out" class="text-secondary ms-1" style="text-decoration:none;">
+                        <a href="/user/logout" onclick="FinanzaShell.logout(event)" title="Sign Out" class="text-danger ms-1" style="text-decoration:none;">
                             <i class="fas fa-right-from-bracket"></i>
                         </a>
                     </div>
+                    <button type="button" onclick="FinanzaShell.logout(event)" class="btn btn-sm btn-outline-danger w-100 mt-2 d-flex align-items-center justify-content-center gap-2 fw-semibold">
+                        <i class="fas fa-right-from-bracket"></i>
+                        <span>Sign Out Securely</span>
+                    </button>
                 </div>
             </aside>
 
@@ -252,6 +256,12 @@
                         <a href="/user/profile" class="fb-icon-btn hide-mobile" title="Profile & Settings">
                             <i class="far fa-user"></i>
                         </a>
+
+                        <!-- Sign Out Button -->
+                        <button type="button" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-1 fw-semibold" onclick="FinanzaShell.logout(event)" title="Sign Out of Online Banking">
+                            <i class="fas fa-right-from-bracket"></i>
+                            <span class="hide-mobile">Sign Out</span>
+                        </button>
                     </div>
                 </header>
 
@@ -735,6 +745,27 @@
         }
     }
 
+    async function logout(event) {
+        if (event && typeof event.preventDefault === 'function') {
+            event.preventDefault();
+        }
+        try {
+            const token = localStorage.getItem('access_token') || localStorage.getItem('token');
+            const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+            await Promise.allSettled([
+                fetch('/api/v1/auth/logout', { method: 'POST', credentials: 'include', headers }),
+                fetch('/user/logout', { method: 'POST', credentials: 'include', headers })
+            ]);
+        } catch (_) {}
+        try { localStorage.clear(); } catch (_) {}
+        try { sessionStorage.clear(); } catch (_) {}
+        document.cookie = 'access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+        window.location.replace('/logout');
+    }
+
+    window.handleLogout = logout;
+
     // Initialize Shell as soon as DOM is ready
     document.addEventListener('DOMContentLoaded', () => {
         buildShellDOM();
@@ -751,6 +782,7 @@
         refreshUserContext,
         openAddMoneyModal,
         switchAddMoneyTab,
-        showReceipt
+        showReceipt,
+        logout
     };
 })();

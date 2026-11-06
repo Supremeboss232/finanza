@@ -23,46 +23,66 @@
                     <span class="fb-badge fb-badge-info">256-Bit Encrypted Compliance Vault</span>
                 </div>
                 <div class="fb-card-body">
+                    <div id="kycApprovedLockNotice" class="alert alert-success d-none align-items-center justify-content-between mb-3">
+                        <div>
+                            <i class="fas fa-shield-check me-2"></i>
+                            <strong>Your identity is verified.</strong> No further action is required unless you wish to update an expired document.
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-success" onclick="unlockKycForm()">Update ID</button>
+                    </div>
+
                     <form id="kycSubmitForm" enctype="multipart/form-data">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Legal Full Name (As on ID)</label>
-                                <input type="text" class="form-control" name="full_name" id="kycFullName" required>
+                        <fieldset id="kycFormFieldset">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Legal Full Name (As on ID) <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" name="full_name" id="kycFullName" placeholder="Enter full legal name" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Date of Birth <span class="text-danger">*</span></label>
+                                    <input type="date" class="form-control" name="date_of_birth" id="kycDob" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Primary Document Type <span class="text-danger">*</span></label>
+                                    <select class="form-select" name="document_type" id="kycDocType" required>
+                                        <option value="passport">International Passport</option>
+                                        <option value="drivers_license">Driver's License</option>
+                                        <option value="national_id">National Identity Card</option>
+                                        <option value="residence_permit">Residence Permit / Green Card</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Document / Passport Number <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control font-mono" name="document_number" id="kycDocNumber" placeholder="e.g. A12345678" required>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Residential Street Address <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" name="address" id="kycAddress" placeholder="Full street address, city, state/province, postal code, country" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Upload Government ID (Front) <span class="text-danger">*</span></label>
+                                    <input type="file" class="form-control" name="document_front" id="kycDocFront" accept="image/*,.pdf" required>
+                                    <div class="form-text small">JPG, PNG, WEBP, or PDF (Max 10MB)</div>
+                                    <div id="frontPreviewWrap" class="mt-2 d-none">
+                                        <img id="frontPreviewImg" src="" alt="Front ID Preview" class="img-thumbnail" style="max-height:110px;">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Upload Proof of Address / ID Back</label>
+                                    <input type="file" class="form-control" name="document_back" id="kycDocBack" accept="image/*,.pdf">
+                                    <div class="form-text small">Back of ID, Utility Bill, or Bank Statement</div>
+                                    <div id="backPreviewWrap" class="mt-2 d-none">
+                                        <img id="backPreviewImg" src="" alt="Back ID Preview" class="img-thumbnail" style="max-height:110px;">
+                                    </div>
+                                </div>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Date of Birth</label>
-                                <input type="date" class="form-control" name="date_of_birth" id="kycDob" required>
+                            <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+                                <span class="small text-muted"><i class="fas fa-lock me-1 text-primary"></i>Reviewed by Finanza CIP/AML Compliance</span>
+                                <button type="submit" class="btn btn-primary px-4" id="kycSubmitBtn">
+                                    <i class="fas fa-cloud-arrow-up me-2"></i> Submit for Compliance Verification
+                                </button>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Primary Document Type</label>
-                                <select class="form-select" name="document_type" id="kycDocType" required>
-                                    <option value="passport">International Passport</option>
-                                    <option value="drivers_license">Driver's License</option>
-                                    <option value="national_id">National Identity Card</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Document / Passport Number</label>
-                                <input type="text" class="form-control font-mono" name="document_number" id="kycDocNumber" placeholder="A12345678" required>
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label">Residential Street Address</label>
-                                <input type="text" class="form-control" name="address" id="kycAddress" placeholder="Full street address, city, state, postal code" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Upload Government ID (Front)</label>
-                                <input type="file" class="form-control" name="document_front" id="kycDocFront" accept="image/*,.pdf" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Upload Proof of Address / ID Back</label>
-                                <input type="file" class="form-control" name="document_back" id="kycDocBack" accept="image/*,.pdf">
-                            </div>
-                        </div>
-                        <div class="d-flex justify-content-end mt-4">
-                            <button type="submit" class="btn btn-primary px-4" id="kycSubmitBtn">
-                                <i class="fas fa-cloud-arrow-up me-2"></i> Submit for Compliance Verification
-                            </button>
-                        </div>
+                        </fieldset>
                     </form>
                 </div>
             </div>
@@ -80,7 +100,7 @@
                         <span class="fw-bold text-success">$250,000 / day</span>
                     </div>
                     <div class="d-flex justify-content-between py-2 border-bottom">
-                        <span class="text-muted">International SWIFT Wire</span>
+                        <span class="text-muted">International SWIFT & Payrail FX</span>
                         <span class="fw-bold text-success">Enabled Worldwide</span>
                     </div>
                     <div class="d-flex justify-content-between py-2 border-bottom">
@@ -95,20 +115,24 @@
             </div>
 
             <div class="fb-card">
-                <div class="fb-card-header">
-                    <h3 class="fb-card-title"><i class="fas fa-clock-rotate-left text-primary"></i> Verification History</h3>
+                <div class="fb-card-header d-flex justify-content-between align-items-center">
+                    <h3 class="fb-card-title mb-0"><i class="fas fa-clock-rotate-left text-primary"></i> Verification History</h3>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="loadKycCenter()" title="Refresh Status">
+                        <i class="fas fa-rotate"></i>
+                    </button>
                 </div>
                 <div class="table-responsive">
                     <table class="fb-table">
                         <thead>
                             <tr>
                                 <th>Document</th>
+                                <th>Number</th>
                                 <th>Submitted</th>
                                 <th>Status</th>
                             </tr>
                         </thead>
                         <tbody id="kycHistoryBody">
-                            <tr><td colspan="3" class="text-center py-4 text-muted">Loading submissions...</td></tr>
+                            <tr><td colspan="4" class="text-center py-4 text-muted">Loading submissions...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -120,6 +144,33 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="/static/js/user-shell.js"></script>
 <script>
+function unlockKycForm() {
+    const fs = document.getElementById('kycFormFieldset');
+    if (fs) fs.disabled = false;
+    const notice = document.getElementById('kycApprovedLockNotice');
+    if (notice) notice.classList.add('d-none');
+}
+
+function bindImagePreview(inputId, wrapId, imgId) {
+    const inp = document.getElementById(inputId);
+    if (!inp) return;
+    inp.addEventListener('change', () => {
+        const file = inp.files && inp.files[0];
+        const wrap = document.getElementById(wrapId);
+        const img = document.getElementById(imgId);
+        if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                img.src = ev.target.result;
+                wrap.classList.remove('d-none');
+            };
+            reader.readAsDataURL(file);
+        } else {
+            wrap.classList.add('d-none');
+        }
+    });
+}
+
 async function loadKycCenter() {
     try {
         const [profRes, subRes] = await Promise.allSettled([
@@ -132,9 +183,27 @@ async function loadKycCenter() {
         if (profile.full_name) document.getElementById('kycFullName').value = profile.full_name;
         if (profile.address) document.getElementById('kycAddress').value = profile.address;
         if (profile.date_of_birth) document.getElementById('kycDob').value = String(profile.date_of_birth).slice(0, 10);
+        if (profile.id_type) {
+            const sel = document.getElementById('kycDocType');
+            const norm = String(profile.id_type).toLowerCase().replace(/\s+/g, '_');
+            if ([...sel.options].some(o => o.value === norm)) sel.value = norm;
+        }
+        if (profile.id_number) {
+            document.getElementById('kycDocNumber').value = profile.id_number;
+        } else if (subs.length && subs[0].document_number) {
+            document.getElementById('kycDocNumber').value = subs[0].document_number;
+        }
 
-        const kstatus = (profile.kyc_status || (profile.is_verified ? 'approved' : (subs.length ? subs[0].status : 'unverified'))).toLowerCase();
+        const latestSub = subs.length ? subs[0] : null;
+        const kstatus = String(
+            (latestSub && latestSub.status) ||
+            profile.kyc_status ||
+            (profile.is_verified ? 'approved' : 'unverified')
+        ).toLowerCase();
+
         const banner = document.getElementById('kycLiveBanner');
+        const fs = document.getElementById('kycFormFieldset');
+        const lockNotice = document.getElementById('kycApprovedLockNotice');
 
         if (kstatus === 'approved' || kstatus === 'verified' || profile.is_verified) {
             banner.innerHTML = `
@@ -144,10 +213,31 @@ async function loadKycCenter() {
                     </span>
                     <div>
                         <h4 class="h6 fw-bold mb-1 text-success">Identity Verified — Tier 2 Institutional Access Active</h4>
-                        <p class="small text-muted mb-0">Your identity and residential documentation have been verified by Finanza Compliance.</p>
+                        <p class="small text-muted mb-0">Your identity and residential documentation have been verified and approved by Finanza Compliance.</p>
                     </div>
                 </div>
             `;
+            if (fs) fs.disabled = true;
+            if (lockNotice) {
+                lockNotice.classList.remove('d-none');
+                lockNotice.classList.add('d-flex');
+            }
+        } else if (kstatus === 'rejected') {
+            const rejReason = (latestSub && latestSub.rejection_reason) || profile.kyc_rejection_reason || 'Please upload clear, unexpired government identification.';
+            banner.innerHTML = `
+                <div class="fb-card p-4 border-start border-4 border-danger d-flex align-items-center gap-3">
+                    <span class="fb-kpi-icon" style="background:#fee2e2;color:#dc2626;">
+                        <i class="fas fa-triangle-exclamation fs-4"></i>
+                    </span>
+                    <div>
+                        <h4 class="h6 fw-bold mb-1 text-danger">KYC Verification Requires Re-Submission</h4>
+                        <p class="small text-muted mb-1">Compliance Reviewer Note: <strong class="text-dark">${rejReason}</strong></p>
+                        <p class="small text-muted mb-0">Please review your details and upload a clear document below to re-submit.</p>
+                    </div>
+                </div>
+            `;
+            if (fs) fs.disabled = false;
+            if (lockNotice) lockNotice.classList.add('d-none');
         } else if (kstatus === 'pending' || kstatus === 'submitted') {
             banner.innerHTML = `
                 <div class="fb-card p-4 border-start border-4 border-warning d-flex align-items-center gap-3">
@@ -156,10 +246,12 @@ async function loadKycCenter() {
                     </span>
                     <div>
                         <h4 class="h6 fw-bold mb-1 text-warning">Verification Under Compliance Review</h4>
-                        <p class="small text-muted mb-0">Your documents are currently in the compliance queue. Standard SLA review time is under 24 hours.</p>
+                        <p class="small text-muted mb-0">Your documents are in the Finanza Compliance review queue. Standard SLA review time is under 24 hours. You may re-upload below if you need to replace a file.</p>
                     </div>
                 </div>
             `;
+            if (fs) fs.disabled = false;
+            if (lockNotice) lockNotice.classList.add('d-none');
         } else {
             banner.innerHTML = `
                 <div class="fb-card p-4 border-start border-4 border-primary d-flex align-items-center gap-3">
@@ -172,20 +264,26 @@ async function loadKycCenter() {
                     </div>
                 </div>
             `;
+            if (fs) fs.disabled = false;
+            if (lockNotice) lockNotice.classList.add('d-none');
         }
 
         const tbody = document.getElementById('kycHistoryBody');
         if (!subs.length) {
-            tbody.innerHTML = `<tr><td colspan="3" class="text-center py-4 text-muted small">No KYC documents submitted yet.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-muted small">No KYC documents submitted yet.</td></tr>`;
         } else {
             tbody.innerHTML = subs.map(s => {
                 const st = (s.status || 'pending').toLowerCase();
                 const badge = st === 'approved' ? 'fb-badge-success' : (st === 'rejected' ? 'fb-badge-danger' : 'fb-badge-warning');
+                const docLink = s.document_front_url
+                    ? `<a href="${s.document_front_url}" target="_blank" class="small text-primary text-decoration-none ms-1" title="View Uploaded Document"><i class="fas fa-external-link-alt"></i></a>`
+                    : '';
                 return `
                     <tr>
-                        <td class="text-capitalize fw-semibold">${String(s.document_type || 'ID').replace(/_/g, ' ')}</td>
+                        <td class="text-capitalize fw-semibold">${String(s.document_type || 'ID').replace(/_/g, ' ')} ${docLink}</td>
+                        <td class="font-mono small">${s.document_number || '—'}</td>
                         <td class="small">${FinanzaShell.fmtDate(s.submitted_at)}</td>
-                        <td><span class="fb-badge ${badge}">${st}</span></td>
+                        <td><span class="fb-badge ${badge}">${st.toUpperCase()}</span></td>
                     </tr>
                 `;
             }).join('');
@@ -203,7 +301,7 @@ document.getElementById('kycSubmitForm').addEventListener('submit', async (e) =>
     btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Encrypting & Uploading...';
     try {
         const fd = new FormData(e.target);
-        await FinanzaShell.api('/kyc/submit', {
+        await FinanzaShell.api('/api/user/kyc/submit', {
             method: 'POST',
             body: fd
         });
@@ -211,14 +309,18 @@ document.getElementById('kycSubmitForm').addEventListener('submit', async (e) =>
         await FinanzaShell.refreshUserContext();
         await loadKycCenter();
     } catch (err) {
-        FinanzaShell.toast(err.message, 'error');
+        FinanzaShell.toast(err.message || 'Failed to submit KYC verification', 'error');
     } finally {
         btn.disabled = false;
         btn.innerHTML = orig;
     }
 });
 
-document.addEventListener('DOMContentLoaded', loadKycCenter);
+document.addEventListener('DOMContentLoaded', () => {
+    bindImagePreview('kycDocFront', 'frontPreviewWrap', 'frontPreviewImg');
+    bindImagePreview('kycDocBack', 'backPreviewWrap', 'backPreviewImg');
+    loadKycCenter();
+});
 </script>
 </body>
 </html>

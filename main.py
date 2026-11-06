@@ -4,7 +4,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi import Request, Depends, status, WebSocket, WebSocketDisconnect, Body
-from sqlalchemy import text, select
+from sqlalchemy import text, select, func
+from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import timezone, timedelta
+from fastapi import HTTPException
 import logging
 from datetime import datetime
 from typing import List, Optional, Dict, Any
@@ -1271,6 +1274,7 @@ except Exception as e:
 # ── Health Check Endpoint (public, no auth required) ──────────────────────────
 # Used by Docker HEALTHCHECK, nginx upstream checks, and load balancers
 @app.get("/health", tags=["System"])
+@app.post("/health", tags=["System"])
 async def health_check():
     """Public health check endpoint. Returns DB connectivity and app status."""
     try:
@@ -1341,6 +1345,17 @@ async def get_admin_transactions(
         return {"success": False, "error": str(e)}, 500
 
 
+@app.post("/kyc/submit")
+async def legacy_kyc_submit_alias(
+    request: Request,
+    db: SessionDep,
+    current_user: User = Depends(get_current_user),
+):
+    """Legacy root KYC submit alias delegating to unified KYC submission handler."""
+    from routers.api_users import handle_unified_kyc_submission
+    return await handle_unified_kyc_submission(request=request, db_session=db, current_user=current_user)
+
+
 @app.get("/api/admin/kyc")
 async def get_admin_kyc(
     db: SessionDep,
@@ -1351,6 +1366,39 @@ async def get_admin_kyc(
 ):
     """Get KYC submissions for admin dashboard with complete document information"""
     try:
+        # Auto-backfill any KYCInfo records OR pending Users that don't yet have a KYCSubmission row
+        info_rows = (await db.execute(select(models.KYCInfo))).scalars().all()
+        existing_sub_uids = set((await db.execute(select(models.KYCSubmission.user_id))).scalars().all())
+        backfilled = False
+        for kinfo in info_rows:
+            if kinfo.user_id not in existing_sub_uids and (kinfo.document_type or kinfo.id_front_path or kinfo.status == "pending"):
+                u_obj = await db.get(models.User, kinfo.user_id)
+                db.add(models.KYCSubmission(
+                    user_id=kinfo.user_id,
+                    document_type=kinfo.document_type or "national_id",
+                    document_file_path=kinfo.id_front_path or "/img/logo.png",
+                    status=(u_obj.kyc_status if u_obj and u_obj.kyc_status in ("pending", "approved", "rejected") else "pending"),
+                    submitted_at=kinfo.submitted_at or datetime.utcnow(),
+                ))
+                existing_sub_uids.add(kinfo.user_id)
+                backfilled = True
+
+        pending_users = (await db.execute(select(models.User).where(models.User.kyc_status == "pending"))).scalars().all()
+        for pu in pending_users:
+            if pu.id not in existing_sub_uids:
+                db.add(models.KYCSubmission(
+                    user_id=pu.id,
+                    document_type="passport",
+                    document_file_path="/img/logo.png",
+                    status="pending",
+                    submitted_at=pu.created_at or datetime.utcnow(),
+                ))
+                existing_sub_uids.add(pu.id)
+                backfilled = True
+
+        if backfilled:
+            await db.commit()
+
         result = await db.execute(
             select(models.KYCSubmission)
             .offset(skip)
@@ -2273,21 +2321,103 @@ async def execute_bulk_admin_operation(
 
 
 # --- Admin Loan Management Endpoints ---
+def _calculate_monthly_payment(principal: float, annual_rate_pct: float, term_months: int) -> float:
+    """Standard amortization PMT calculation."""
+    p = float(principal or 0.0)
+    n = max(int(term_months or 12), 1)
+    r = (float(annual_rate_pct or 0.0) / 100.0) / 12.0
+    if p <= 0:
+        return 0.0
+    if r <= 0:
+        return round(p / n, 2)
+    pmt = p * (r * ((1 + r) ** n)) / (((1 + r) ** n) - 1)
+    return round(pmt, 2)
+
+
+async def _ensure_loan_schedule(db: AsyncSession, loan: models.Loan) -> None:
+    """Generate monthly LoanPaymentSchedule rows if none exist for the loan."""
+    existing = await db.execute(
+        select(func.count(models.LoanPaymentSchedule.id)).filter(models.LoanPaymentSchedule.loan_id == loan.id)
+    )
+    if (existing.scalar() or 0) > 0:
+        return
+
+    principal = float(loan.amount or 0.0)
+    term_m = max(int(loan.term_months or 12), 1)
+    rate_pct = float(loan.interest_rate or 5.5)
+    monthly_rate = (rate_pct / 100.0) / 12.0
+    pmt = float(loan.monthly_payment or 0.0) or _calculate_monthly_payment(principal, rate_pct, term_m)
+    balance = principal
+    base_date = loan.approved_at or datetime.now(timezone.utc)
+
+    for m in range(1, term_m + 1):
+        due_date = base_date + timedelta(days=30 * m)
+        interest_part = round(balance * monthly_rate, 2) if monthly_rate > 0 else 0.0
+        principal_part = round(pmt - interest_part, 2)
+        if m == term_m or principal_part > balance:
+            principal_part = round(balance, 2)
+            sched_amt = round(principal_part + interest_part, 2)
+        else:
+            sched_amt = pmt
+        balance = max(0.0, round(balance - principal_part, 2))
+        db.add(models.LoanPaymentSchedule(
+            loan_id=loan.id,
+            scheduled_date=due_date,
+            scheduled_amount=sched_amt,
+            principal_amount=max(0.0, principal_part),
+            interest_amount=max(0.0, interest_part),
+            payment_status="pending",
+            paid_amount=0.0,
+        ))
+
+
+async def _serialize_loan_with_user(db: AsyncSession, loan: models.Loan) -> dict:
+    user_res = await db.execute(select(models.User).filter(models.User.id == loan.user_id))
+    u = user_res.scalar_one_or_none()
+    term_m = int(loan.term_months or 12)
+    amt = float(loan.amount or 0.0)
+    rate = float(loan.interest_rate or 5.5)
+    pmt = float(loan.monthly_payment or 0.0) or _calculate_monthly_payment(amt, rate, term_m)
+    rem = float(loan.remaining_balance) if loan.remaining_balance is not None else amt
+    return {
+        "id": loan.id,
+        "user_id": loan.user_id,
+        "owner_id": loan.user_id,
+        "borrower_name": (u.full_name or u.email) if u else f"Borrower #{loan.user_id}",
+        "borrower_email": u.email if u else "",
+        "loan_type": loan.loan_type or "personal",
+        "amount": amt,
+        "remaining_balance": rem,
+        "balance": rem,
+        "monthly_payment": pmt,
+        "paid_amount": float(loan.paid_amount or 0.0),
+        "interest_rate": rate,
+        "term_months": term_m,
+        "duration_months": term_m,
+        "purpose": loan.purpose or "Personal / General",
+        "status": loan.status or "pending",
+        "approved_at": loan.approved_at.isoformat() if loan.approved_at else None,
+        "created_at": loan.created_at.isoformat() if loan.created_at else None,
+    }
+
+
 @app.get("/api/admin/data/loans/pending")
 async def fetch_admin_pending_loans(db: SessionDep, current_admin: User = Depends(get_current_admin_user), skip: int = 0, limit: int = 100):
-    """Fetch pending loan applications for admin review"""
+    """Fetch pending and approved (awaiting activation) loan applications for admin review"""
     try:
         result = await db.execute(
             select(models.Loan)
-            .filter(models.Loan.status == "pending")
+            .filter(models.Loan.status.in_(["pending", "approved"]))
+            .order_by(models.Loan.created_at.desc())
             .offset(skip)
             .limit(limit)
         )
         loans = result.scalars().all()
-        return {"success": True, "data": loans}
+        serialized = [await _serialize_loan_with_user(db, l) for l in loans]
+        return {"success": True, "data": serialized, "total": len(serialized)}
     except Exception as e:
         log.error(f"Error fetching pending loans: {e}")
-        return {"success": False, "error": str(e)}, 500
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/admin/loans/{loan_id}/approve")
@@ -2295,35 +2425,68 @@ async def approve_loan_application(
     loan_id: int,
     db: SessionDep,
     current_admin: User = Depends(get_current_admin_user),
+    payload: Optional[dict] = Body(default=None),
     interest_rate: float = 0.0,
     monthly_payment: float = 0.0
 ):
-    """Approve a pending loan application and set terms"""
+    """Approve a pending loan application, generate amortization schedule, and set terms"""
     try:
         result = await db.execute(select(models.Loan).filter(models.Loan.id == loan_id))
         loan = result.scalar_one_or_none()
-        
+
         if not loan:
-            return {"success": False, "error": "Loan not found"}, 404
-        
-        if loan.status != "pending":
-            return {"success": False, "error": f"Loan status is {loan.status}, not pending"}, 400
-        
-        # Update loan with approval details
+            raise HTTPException(status_code=404, detail="Loan not found")
+
+        if loan.status not in ("pending", "under_review"):
+            raise HTTPException(status_code=400, detail=f"Loan status is {loan.status}, cannot approve")
+
+        prev_status = loan.status
+        if payload and isinstance(payload, dict):
+            interest_rate = float(payload.get("interest_rate", interest_rate) or interest_rate or loan.interest_rate or 5.5)
+            monthly_payment = float(payload.get("monthly_payment", monthly_payment) or monthly_payment or 0.0)
+
+        term_m = max(int(loan.term_months or 12), 1)
+        final_rate = float(interest_rate or loan.interest_rate or 5.5)
+        final_pmt = float(monthly_payment) if monthly_payment > 0 else _calculate_monthly_payment(float(loan.amount or 0), final_rate, term_m)
+
         loan.status = "approved"
-        loan.interest_rate = interest_rate
-        loan.monthly_payment = monthly_payment or (loan.amount / loan.term_months)
-        loan.approved_at = datetime.utcnow()
-        
+        loan.interest_rate = final_rate
+        loan.term_months = term_m
+        loan.monthly_payment = final_pmt
+        if loan.remaining_balance is None or float(loan.remaining_balance or 0) <= 0:
+            loan.remaining_balance = loan.amount
+        loan.approved_at = datetime.now(timezone.utc)
+
         db.add(loan)
+        await _ensure_loan_schedule(db, loan)
+
+        db.add(models.LoanHistory(
+            loan_id=loan.id,
+            change_type="approved",
+            amount=loan.amount,
+            previous_status=prev_status,
+            new_status="approved",
+            notes=f"Approved by admin {current_admin.email} at {final_rate}% APR (${final_pmt:,.2f}/mo)",
+        ))
+        if loan.user_id:
+            db.add(models.Notification(
+                user_id=loan.user_id,
+                title="Loan Application Approved",
+                message=f"Your loan #{loan.id} for ${float(loan.amount or 0):,.2f} has been approved at {final_rate}% APR (${final_pmt:,.2f}/mo).",
+                notification_type="loan",
+                is_read=False,
+            ))
+
         await db.commit()
         await db.refresh(loan)
-        
-        return {"success": True, "data": loan}
+
+        return {"success": True, "data": await _serialize_loan_with_user(db, loan)}
+    except HTTPException:
+        raise
     except Exception as e:
         await db.rollback()
         log.error(f"Error approving loan: {e}")
-        return {"success": False, "error": str(e)}, 500
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/admin/loans/{loan_id}/reject")
@@ -2331,32 +2494,55 @@ async def reject_loan_application(
     loan_id: int,
     db: SessionDep,
     current_admin: User = Depends(get_current_admin_user),
+    payload: Optional[dict] = Body(default=None),
     reason: str = ""
 ):
     """Reject a pending loan application"""
     try:
         result = await db.execute(select(models.Loan).filter(models.Loan.id == loan_id))
         loan = result.scalar_one_or_none()
-        
+
         if not loan:
-            return {"success": False, "error": "Loan not found"}, 404
-        
-        if loan.status != "pending":
-            return {"success": False, "error": f"Loan status is {loan.status}, not pending"}, 400
-        
-        # Update loan status to rejected
+            raise HTTPException(status_code=404, detail="Loan not found")
+
+        if loan.status not in ("pending", "under_review", "approved"):
+            raise HTTPException(status_code=400, detail=f"Loan status is {loan.status}, cannot reject")
+
+        prev_status = loan.status
+        if payload and isinstance(payload, dict):
+            reason = payload.get("reason") or payload.get("rejection_reason") or reason
+
         loan.status = "rejected"
         loan.purpose = f"{loan.purpose or 'Loan application'} - Rejected: {reason}" if reason else loan.purpose
-        
+
         db.add(loan)
+        db.add(models.LoanHistory(
+            loan_id=loan.id,
+            change_type="rejected",
+            amount=loan.amount,
+            previous_status=prev_status,
+            new_status="rejected",
+            notes=f"Rejected by admin {current_admin.email}: {reason or 'Declined during underwriting'}",
+        ))
+        if loan.user_id:
+            db.add(models.Notification(
+                user_id=loan.user_id,
+                title="Loan Application Decision",
+                message=f"Your loan application #{loan.id} was not approved. Reason: {reason or 'Underwriting policy criteria'}.",
+                notification_type="loan",
+                is_read=False,
+            ))
+
         await db.commit()
         await db.refresh(loan)
-        
-        return {"success": True, "data": loan}
+
+        return {"success": True, "data": await _serialize_loan_with_user(db, loan)}
+    except HTTPException:
+        raise
     except Exception as e:
         await db.rollback()
         log.error(f"Error rejecting loan: {e}")
-        return {"success": False, "error": str(e)}, 500
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/admin/loans/{loan_id}/activate")
@@ -2365,28 +2551,89 @@ async def activate_approved_loan(
     db: SessionDep,
     current_admin: User = Depends(get_current_admin_user)
 ):
-    """Activate an approved loan (disburse funds to user)"""
+    """Activate an approved loan and disburse principal to the borrower's primary account"""
     try:
         result = await db.execute(select(models.Loan).filter(models.Loan.id == loan_id))
         loan = result.scalar_one_or_none()
-        
+
         if not loan:
-            return {"success": False, "error": "Loan not found"}, 404
-        
-        if loan.status != "approved":
-            return {"success": False, "error": f"Loan must be approved first, current status: {loan.status}"}, 400
-        
-        # Update loan to active status
+            raise HTTPException(status_code=404, detail="Loan not found")
+
+        if loan.status not in ("approved", "pending"):
+            raise HTTPException(status_code=400, detail=f"Loan must be approved or pending first, current status: {loan.status}")
+
+        prev_status = loan.status
         loan.status = "active"
+        if not loan.approved_at:
+            loan.approved_at = datetime.now(timezone.utc)
+        if loan.remaining_balance is None or float(loan.remaining_balance or 0) <= 0:
+            loan.remaining_balance = loan.amount
+        if not loan.monthly_payment or float(loan.monthly_payment or 0) <= 0:
+            loan.monthly_payment = _calculate_monthly_payment(
+                float(loan.amount or 0),
+                float(loan.interest_rate or 5.5),
+                int(loan.term_months or 12),
+            )
+
         db.add(loan)
+        await _ensure_loan_schedule(db, loan)
+
+        disbursed_account_number = None
+        if loan.user_id and float(loan.amount or 0) > 0:
+            acct_res = await db.execute(
+                select(models.Account)
+                .filter(models.Account.owner_id == loan.user_id)
+                .order_by(models.Account.id.asc())
+            )
+            acct = acct_res.scalars().first()
+            if acct:
+                acct.balance = float(acct.balance or 0.0) + float(loan.amount or 0.0)
+                disbursed_account_number = acct.account_number
+                db.add(acct)
+
+                tx = models.Transaction(
+                    user_id=loan.user_id,
+                    account_id=acct.id,
+                    amount=float(loan.amount or 0.0),
+                    transaction_type="loan_disbursement",
+                    status="completed",
+                    description=f"Loan #{loan.id} disbursement ({loan.loan_type or 'personal'})",
+                    reference_number=f"LOAN-DISB-{loan.id}-{int(datetime.now(timezone.utc).timestamp())}",
+                )
+                db.add(tx)
+
+            db.add(models.Notification(
+                user_id=loan.user_id,
+                title="Loan Activated & Funds Disbursed",
+                message=f"Your loan #{loan.id} for ${float(loan.amount or 0):,.2f} is now active"
+                        + (f" and disbursed to account {disbursed_account_number}." if disbursed_account_number else "."),
+                notification_type="loan",
+                is_read=False,
+            ))
+
+        db.add(models.LoanHistory(
+            loan_id=loan.id,
+            change_type="activated",
+            amount=loan.amount,
+            previous_status=prev_status,
+            new_status="active",
+            notes=f"Activated & disbursed by admin {current_admin.email}",
+        ))
+
         await db.commit()
         await db.refresh(loan)
-        
-        return {"success": True, "data": loan}
+
+        return {
+            "success": True,
+            "disbursed_to_account": disbursed_account_number,
+            "data": await _serialize_loan_with_user(db, loan),
+        }
+    except HTTPException:
+        raise
     except Exception as e:
         await db.rollback()
         log.error(f"Error activating loan: {e}")
-        return {"success": False, "error": str(e)}, 500
+        raise HTTPException(status_code=500, detail=str(e))
 
 # --- Public Facing HTML Routes ---
 @app.get("/api/config")
@@ -2404,18 +2651,46 @@ async def get_api_config():
     """
     return generate_api_config(settings.ENVIRONMENT, settings.API_URL)
 
+@app.get("/dashboard")
+async def legacy_dashboard_redirect(request: Request, db_session: SessionDep):
+    """Redirect /dashboard to authenticated dashboard or /signin (never serve raw Jinja static/dashboard.html)."""
+    try:
+        token = request.cookies.get("access_token") or request.cookies.get("token")
+        if token:
+            email = auth_utils.decode_access_token(token)
+            if email:
+                result = await db_session.execute(select(User).filter(User.email == email))
+                user = result.scalar_one_or_none()
+                if user:
+                    return RedirectResponse(
+                        url="/user/admin/dashboard" if user.is_admin else "/user/dashboard",
+                        status_code=status.HTTP_302_FOUND
+                    )
+    except Exception:
+        pass
+    return RedirectResponse(url="/signin", status_code=status.HTTP_302_FOUND)
+
+
+@app.get("/dashboard/signup")
+async def legacy_dashboard_signup_redirect():
+    """Redirect legacy /dashboard/signup links on public pages to /signup."""
+    return RedirectResponse(url="/signup", status_code=status.HTTP_302_FOUND)
+
+
 @app.get("/signin")
 async def signin_page(request: Request, db_session: SessionDep):
-    """Signin page - redirects logged-in users back to dashboard (locks them in)."""
-    # Check if user is already logged in
+    """Signin page - respects ?logged_out=1 so logging out never bounces back to dashboard."""
+    if request.query_params.get("logged_out") == "1":
+        resp = FileResponse("static/signin.html")
+        resp.delete_cookie(key="access_token", path="/")
+        resp.delete_cookie(key="token", path="/")
+        return resp
+
     try:
         token = request.cookies.get("access_token")
         if token:
-            # Token exists, verify it's valid
             email = auth_utils.decode_access_token(token)
             if email:
-                # Valid token - user is logged in, redirect to dashboard
-                # Determine if user is admin
                 result = await db_session.execute(select(User).filter(User.email == email))
                 user = result.scalar_one_or_none()
                 if user:
@@ -2424,24 +2699,18 @@ async def signin_page(request: Request, db_session: SessionDep):
                     else:
                         return RedirectResponse(url="/user/dashboard", status_code=status.HTTP_302_FOUND)
     except Exception:
-        # Token invalid, user not logged in - fall through to serve signin page
         pass
-    
-    # User not logged in, serve signin page
+
     return FileResponse("static/signin.html")
 
 @app.get("/signup")
 async def signup_page(request: Request, db_session: SessionDep):
-    """Signup page - redirects logged-in users back to dashboard (locks them in)."""
-    # Check if user is already logged in
+    """Signup page - redirects logged-in users back to dashboard."""
     try:
         token = request.cookies.get("access_token")
         if token:
-            # Token exists, verify it's valid
             email = auth_utils.decode_access_token(token)
             if email:
-                # Valid token - user is logged in, redirect to dashboard
-                # Determine if user is admin
                 result = await db_session.execute(select(User).filter(User.email == email))
                 user = result.scalar_one_or_none()
                 if user:
@@ -2450,69 +2719,29 @@ async def signup_page(request: Request, db_session: SessionDep):
                     else:
                         return RedirectResponse(url="/user/dashboard", status_code=status.HTTP_302_FOUND)
     except Exception:
-        # Token invalid, user not logged in - fall through to serve signup page
         pass
-    
-    # User not logged in, serve signup page
+
     return FileResponse("static/signup.html")
 
 @app.get("/forgot-password")
 async def forgot_password_page(request: Request, db_session: SessionDep):
-    """Forgot password page - redirects logged-in users back to dashboard (locks them in)."""
-    # Check if user is already logged in
-    try:
-        token = request.cookies.get("access_token")
-        if token:
-            # Token exists, verify it's valid
-            email = auth_utils.decode_access_token(token)
-            if email:
-                # Valid token - user is logged in, redirect to dashboard
-                # Determine if user is admin
-                result = await db_session.execute(select(User).filter(User.email == email))
-                user = result.scalar_one_or_none()
-                if user:
-                    if user.is_admin:
-                        return RedirectResponse(url="/user/admin/dashboard", status_code=status.HTTP_302_FOUND)
-                    else:
-                        return RedirectResponse(url="/user/dashboard", status_code=status.HTTP_302_FOUND)
-    except Exception:
-        # Token invalid, user not logged in - fall through to serve forgot password page
-        pass
-    
-    # User not logged in, serve forgot password page
+    """Forgot password page."""
     return FileResponse("static/forgot_password.html")
 
 @app.get("/reset-password")
 async def reset_password_page(request: Request, db_session: SessionDep):
-    """Password reset page - user receives this after clicking email link."""
-    # Check if user is already logged in
-    try:
-        token = request.cookies.get("access_token")
-        if token:
-            # Token exists, verify it's valid
-            email = auth_utils.decode_access_token(token)
-            if email:
-                # Valid token - user is logged in, redirect to dashboard
-                # Determine if user is admin
-                result = await db_session.execute(select(User).filter(User.email == email))
-                user = result.scalar_one_or_none()
-                if user:
-                    if user.is_admin:
-                        return RedirectResponse(url="/user/admin/dashboard", status_code=status.HTTP_302_FOUND)
-                    else:
-                        return RedirectResponse(url="/user/dashboard", status_code=status.HTTP_302_FOUND)
-    except Exception:
-        # Token invalid, user not logged in - fall through to serve reset password page
-        pass
-    
-    # User not logged in, serve reset password page
+    """Password reset page."""
     return FileResponse("static/reset_password.html")
 
 @app.get("/logout")
+@app.post("/logout")
+@app.get("/auth/logout")
+@app.post("/auth/logout")
 async def logout_page(request: Request):
-    """Logs out the user by clearing the access token cookie and redirecting to signin."""
-    response = RedirectResponse(url="/signin", status_code=status.HTTP_303_SEE_OTHER)
+    """Logs out the user by clearing all auth cookies and redirecting to /signin?logged_out=1."""
+    response = RedirectResponse(url="/signin?logged_out=1", status_code=status.HTTP_303_SEE_OTHER)
     response.delete_cookie(key="access_token", path="/")
+    response.delete_cookie(key="token", path="/")
     return response
 
 

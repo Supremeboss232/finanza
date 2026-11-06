@@ -28,6 +28,7 @@
     <link href="/static/css/style.css" rel="stylesheet">
 
     <script src="/static/js/toast-utils.js"></script>
+    <link href="/static/css/public-modern.css" rel="stylesheet">
 </head>
 
 <body>
@@ -718,7 +719,7 @@
             // ==================== DETERMINE REDIRECT DESTINATION ====================
             let redirectUrl = '/user/dashboard';  // Default to user dashboard
             
-            if (adminRole === 'SUPERADMIN' || adminRole === 'ADMIN' || adminRole === 'TREASURY') {
+            if (['SUPER_ADMIN', 'SUPERADMIN', 'ADMIN', 'TREASURY', 'COMPLIANCE', 'SUPPORT'].includes(adminRole)) {
                 debugLog('[SIGNIN] User is ' + adminRole + ' - redirecting to unified admin dashboard');
                 redirectUrl = '/user/admin/dashboard';
             } else if (false) {
@@ -808,9 +809,14 @@
          * Check if user is already logged in
          */
         function checkAndLockIfLoggedIn() {
+            if (window.location.search.includes('logged_out=1')) {
+                localStorage.clear();
+                sessionStorage.clear();
+                return;
+            }
             const token = localStorage.getItem('token');
             
-            if (token) {
+            if (token && token !== 'cookie-session') {
                 // Check if token is expired
                 if (isTokenExpired(token)) {
                     debugLog('Token expired - clearing session');
@@ -823,9 +829,8 @@
                 // User has valid token, redirect to appropriate dashboard
                 const adminRole = localStorage.getItem('admin_role') || 'USER';
                 
-                if (adminRole === 'SUPERADMIN' || adminRole === 'ADMIN' || adminRole === 'TREASURY') {
-                    window.location.href = '/user/admin/dashboard';
-                } else if (adminRole === 'ADMIN' || adminRole === 'TREASURY') {
+                const isAdminFlag = localStorage.getItem('is_admin') === 'true';
+                if (isAdminFlag || ['SUPER_ADMIN', 'SUPERADMIN', 'ADMIN', 'TREASURY', 'COMPLIANCE', 'SUPPORT'].includes(adminRole)) {
                     window.location.href = '/user/admin/dashboard';
                 } else {
                     window.location.href = '/user/dashboard';
@@ -1187,6 +1192,7 @@
             }
         });
     </script>
+    <script src="/static/js/public-shell.js"></script>
 </body>
 
 </html>

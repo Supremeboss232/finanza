@@ -585,7 +585,12 @@
             </li>
             <li class="nav-item">
                 <a class="nav-link" data-bs-toggle="tab" href="#permissionsTab" role="tab">
-                    <i class="fas fa-lock"></i> Permissions
+                    <i class="fas fa-lock"></i> Granular Permissions
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#roleMatrixTab" role="tab">
+                    <i class="fas fa-shield-alt"></i> Role Privileges Matrix (Can & Cannot Do)
                 </a>
             </li>
         </ul>
@@ -838,6 +843,25 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Role Privileges Matrix Tab -->
+            <div id="roleMatrixTab" class="tab-pane fade" role="tabpanel">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-shield-alt me-2"></i>All 5 Admin Roles — What Each Role Can & Cannot Do</span>
+                        <span class="badge bg-light text-dark">RBAC v2 Enforced</span>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-4">
+                            Every administrator account in Finanza is assigned one of the 5 institutional roles below.
+                            Role privileges are enforced both in the UI and at the API level via <code>rbac.py</code>.
+                        </p>
+                        <div id="roleMatrixContainer" style="display:grid;grid-template-columns:1fr;gap:20px;">
+                            <p class="loading"><i class="fas fa-spinner fa-spin"></i> Loading role matrix...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1020,30 +1044,50 @@
                 const adminList = document.getElementById('adminList');
                 
                 if (data.admins.length > 0) {
-                    adminList.innerHTML = data.admins.map(admin => `
-                        <div class="admin-item">
+                    if (data.role_matrix) {
+                        window.__finanzaRoleMatrix = data.role_matrix;
+                        renderRoleMatrixTab(data.role_matrix);
+                    }
+                    adminList.innerHTML = data.admins.map(admin => {
+                        const rKey = (admin.admin_role || 'ADMIN').toUpperCase();
+                        const rInfo = (window.FinanzaAdminRBAC && window.FinanzaAdminRBAC.getRoleInfo(rKey)) || {};
+                        const canSummary = (admin.can_do || rInfo.can_do || []).slice(0, 2).join(' • ');
+                        const cannotSummary = (admin.cannot_do || rInfo.cannot_do || []).slice(0, 1).join(' • ');
+                        return `
+                        <div class="admin-item" style="align-items:flex-start;">
                             <div class="admin-info">
-                                <div class="admin-email">${admin.email}</div>
-                                <div class="admin-role">
-                                    <span class="role-badge role-${(admin.admin_role || 'standard').toLowerCase()}">
-                                        ${(admin.admin_role || 'STANDARD').toUpperCase()}
-                                    </span>
-                                    <small>Created: ${new Date(admin.created_at).toLocaleDateString()}</small>
+                                <div class="admin-email">
+                                    ${admin.full_name ? `<strong>${admin.full_name}</strong> <span class="text-muted">(${admin.email})</span>` : admin.email}
                                 </div>
+                                <div class="admin-role" style="margin-top:6px;">
+                                    <span class="role-badge role-${rKey.toLowerCase()}">
+                                        ${rKey}
+                                    </span>
+                                    <strong style="color:#334155;">${admin.role_title || rInfo.title || rKey}</strong>
+                                    ${admin.has_custom_permissions ? '<span class="badge bg-info text-dark ms-2">Custom Overrides</span>' : ''}
+                                    <small class="ms-2 text-muted">Created: ${admin.created_at ? new Date(admin.created_at).toLocaleDateString() : 'N/A'}</small>
+                                </div>
+                                <div style="margin-top:10px;font-size:0.84rem;color:#166534;background:#f0fdf4;padding:6px 10px;border-radius:6px;border-left:3px solid #22c55e;">
+                                    <strong>Can Do:</strong> ${canSummary || 'Full access'}
+                                </div>
+                                ${cannotSummary ? `
+                                <div style="margin-top:5px;font-size:0.82rem;color:#991b1b;background:#fef2f2;padding:5px 10px;border-radius:6px;border-left:3px solid #ef4444;">
+                                    <strong>Cannot Do:</strong> ${cannotSummary}
+                                </div>` : ''}
                             </div>
                             <div class="admin-actions">
                                 <button class="btn btn-primary btn-sm" onclick="openResetPassword('${admin.id}', '${admin.email}')">
                                     <i class="fas fa-key"></i> Reset PWD
                                 </button>
                                 <button class="btn btn-warning btn-sm" onclick="openChangeRole('${admin.id}', '${admin.email}')">
-                                    <i class="fas fa-user-cog"></i> Role
+                                    <i class="fas fa-user-cog"></i> Change Role
                                 </button>
                                 <button class="btn btn-danger btn-sm" onclick="openRevoke('${admin.id}', '${admin.email}')">
                                     <i class="fas fa-ban"></i> Revoke
                                 </button>
                             </div>
                         </div>
-                    `).join('');
+                    `}).join('');
 
                     document.getElementById('totalAdmins').textContent = data.admins.length;
                     document.getElementById('activeAdmins').textContent = data.admins.filter(a => a.is_active !== false).length;
@@ -1272,13 +1316,15 @@
 
         // Confirm revoke
         async function confirmRevoke() {
+            const reason = document.getElementById('revocationReason')?.value || 'Administrative revocation';
             try {
                 const response = await fetch(`${API_BASE}/admin/revoke/${selectedAdmin}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${getAuthToken()}`
-                    }
+                    },
+                    body: JSON.stringify({ reason })
                 });
 
                 if (response.ok) {
@@ -1392,8 +1438,59 @@
             }
         }
 
+        function renderRoleMatrixTab(matrixData) {
+            const container = document.getElementById('roleMatrixContainer');
+            if (!container) return;
+            const matrix = matrixData || (window.FinanzaAdminRBAC && window.FinanzaAdminRBAC.getRoleMatrix()) || {};
+            const keys = Object.keys(matrix);
+            if (!keys.length) {
+                container.innerHTML = '<p class="empty-state">No role matrix available</p>';
+                return;
+            }
+            container.innerHTML = keys.map(roleKey => {
+                const r = matrix[roleKey];
+                const canItems = (r.can_do || []).map(x => `<li style="margin-bottom:6px;"><i class="fas fa-check-circle text-success me-2"></i>${x}</li>`).join('');
+                const cannotItems = (r.cannot_do || []).map(x => `<li style="margin-bottom:6px;"><i class="fas fa-times-circle text-danger me-2"></i>${x}</li>`).join('');
+                const permsBadges = (r.permissions || []).map(p => `<code style="background:#f1f5f9;color:#334155;padding:2px 7px;border-radius:4px;font-size:0.78rem;margin:2px;display:inline-block;">${p}</code>`).join('');
+                return `
+                    <div style="border:1px solid #e2e8f0;border-radius:10px;padding:20px;background:#fff;">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap mb-2">
+                            <div>
+                                <span class="role-badge role-${roleKey.toLowerCase()}">${roleKey}</span>
+                                <strong style="font-size:1.15rem;color:#1e293b;">${r.title || roleKey}</strong>
+                            </div>
+                        </div>
+                        <p class="text-muted mb-3">${r.summary || ''}</p>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px;height:100%;">
+                                    <h6 style="color:#166534;font-weight:700;font-size:0.85rem;text-transform:uppercase;margin-bottom:10px;">
+                                        <i class="fas fa-check-shield me-1"></i> What ${roleKey} CAN Do
+                                    </h6>
+                                    <ul style="list-style:none;padding:0;margin:0;font-size:0.9rem;">${canItems}</ul>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:14px;height:100%;">
+                                    <h6 style="color:#991b1b;font-weight:700;font-size:0.85rem;text-transform:uppercase;margin-bottom:10px;">
+                                        <i class="fas fa-ban me-1"></i> What ${roleKey} CANNOT Do
+                                    </h6>
+                                    <ul style="list-style:none;padding:0;margin:0;font-size:0.9rem;">${cannotItems}</ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-3 pt-2 border-top">
+                            <small class="text-muted fw-bold d-block mb-1">Default Permission Scopes:</small>
+                            <div>${permsBadges}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', () => {
+            renderRoleMatrixTab();
             loadAdmins();
             loadAdminList();
         });

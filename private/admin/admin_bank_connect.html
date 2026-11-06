@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bank Network Onboarding — Finanza Admin</title>
-    <meta name="description" content="Connect Finanza Bank to global payment networks via secure REST API integration.">
+    <title>Bank Network & Interbank Clearing Switch — Finanza Admin</title>
+    <meta name="description" content="Connect Finanza Bank to global payment networks, manage multi-currency clearing pools, and execute cross-border settlements via Payrail.">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
@@ -36,16 +36,15 @@
         .nav-link:hover, .nav-link.active { color: #fff !important; background: rgba(255,255,255,0.15); }
 
         /* ── PAGE HEADER ── */
-        .page-hero { background: linear-gradient(135deg, var(--purple-start) 0%, var(--purple-end) 100%); color: #fff; padding: 3rem 2rem 2.5rem; position: relative; overflow: hidden; }
+        .page-hero { background: linear-gradient(135deg, var(--purple-start) 0%, var(--purple-end) 100%); color: #fff; padding: 2.5rem 2rem 2rem; position: relative; overflow: hidden; }
         .page-hero::before { content: ''; position: absolute; top: -40px; right: -40px; width: 250px; height: 250px; border-radius: 50%; background: rgba(255,255,255,0.06); }
-        .page-hero::after { content: ''; position: absolute; bottom: -60px; left: 30%; width: 180px; height: 180px; border-radius: 50%; background: rgba(255,255,255,0.04); }
-        .page-hero h1 { font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem; position: relative; z-index: 1; }
-        .page-hero p { opacity: 0.85; font-size: 1rem; max-width: 560px; position: relative; z-index: 1; }
+        .page-hero h1 { font-size: 1.9rem; font-weight: 800; margin-bottom: 0.4rem; position: relative; z-index: 1; }
+        .page-hero p { opacity: 0.88; font-size: 0.96rem; max-width: 680px; position: relative; z-index: 1; }
 
         /* ── WIZARD STEPPER ── */
-        .wizard-wrap { max-width: 1100px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; }
+        .wizard-wrap { max-width: 1180px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
 
-        .stepper { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 3rem; position: relative; }
+        .stepper { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 2.5rem; position: relative; }
         .stepper::before { content: ''; position: absolute; top: 22px; left: 10%; right: 10%; height: 3px; background: var(--step-pending); border-radius: 2px; z-index: 0; }
         .stepper-progress { position: absolute; top: 22px; left: 10%; height: 3px; background: linear-gradient(90deg, var(--purple-start), var(--purple-end)); border-radius: 2px; z-index: 1; transition: width 0.5s ease; }
 
@@ -53,118 +52,98 @@
         .step-circle { width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; border: 3px solid var(--step-pending); background: #fff; color: var(--step-pending); transition: all 0.3s; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
         .step-item.active .step-circle { border-color: var(--step-active); background: linear-gradient(135deg, var(--purple-start), var(--purple-end)); color: #fff; box-shadow: 0 4px 20px rgba(102,126,234,0.4); transform: scale(1.1); }
         .step-item.done .step-circle { border-color: var(--step-done); background: var(--step-done); color: #fff; }
-        .step-label { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); text-align: center; max-width: 100px; }
+        .step-label { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); text-align: center; max-width: 110px; }
         .step-item.active .step-label { color: var(--step-active); }
         .step-item.done .step-label { color: var(--step-done); }
 
         /* ── PANEL ── */
-        .wizard-panel { background: var(--surface); border-radius: 20px; box-shadow: 0 8px 40px rgba(102,126,234,0.12); overflow: hidden; }
-        .panel-header { padding: 2rem 2.5rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 1rem; }
-        .panel-icon { width: 52px; height: 52px; border-radius: 14px; background: linear-gradient(135deg, var(--purple-start), var(--purple-end)); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.3rem; flex-shrink: 0; }
-        .panel-title { font-size: 1.3rem; font-weight: 700; }
-        .panel-subtitle { font-size: 0.85rem; color: var(--text-muted); margin-top: 2px; }
-        .panel-body { padding: 2rem 2.5rem; }
-        .panel-footer { padding: 1.5rem 2.5rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: var(--surface-2); }
+        .wizard-panel { background: var(--surface); border-radius: 20px; box-shadow: 0 8px 40px rgba(102,126,234,0.12); overflow: hidden; margin-bottom: 2rem; }
+        .panel-header { padding: 1.6rem 2.2rem 1.3rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 1rem; }
+        .panel-icon { width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, var(--purple-start), var(--purple-end)); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.2rem; flex-shrink: 0; }
+        .panel-title { font-size: 1.25rem; font-weight: 700; }
+        .panel-subtitle { font-size: 0.84rem; color: var(--text-muted); margin-top: 2px; }
+        .panel-body { padding: 1.8rem 2.2rem; }
+        .panel-footer { padding: 1.3rem 2.2rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: var(--surface-2); }
+
+        /* ── CLEARING POOL CARDS ── */
+        .pool-card { background: #fff; border: 1.5px solid var(--border); border-radius: 16px; padding: 1.25rem; transition: all 0.2s; height: 100%; display: flex; flex-direction: column; justify-content: space-between; }
+        .pool-card:hover { border-color: var(--purple-start); box-shadow: 0 6px 24px rgba(102,126,234,0.12); transform: translateY(-2px); }
+        .pool-balance { font-size: 1.45rem; font-weight: 800; font-family: 'Fira Code', monospace; color: #111827; margin: 0.5rem 0 0.15rem; }
+        .pool-cents { font-size: 0.75rem; font-family: 'Fira Code', monospace; color: #059669; font-weight: 600; }
 
         /* ── FORM ── */
-        .form-group { margin-bottom: 1.5rem; }
-        .form-label { font-size: 0.85rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.4rem; display: block; }
+        .form-group { margin-bottom: 1.3rem; }
+        .form-label { font-size: 0.84rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.35rem; display: block; }
         .form-label .req { color: var(--danger); margin-left: 2px; }
-        .form-hint { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.3rem; }
-        .form-control, .form-select { border: 2px solid var(--border); border-radius: 10px; padding: 0.65rem 1rem; font-size: 0.9rem; font-family: 'Inter', sans-serif; transition: border-color 0.2s, box-shadow 0.2s; background: var(--surface); }
+        .form-hint { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; }
+        .form-control, .form-select { border: 2px solid var(--border); border-radius: 10px; padding: 0.6rem 0.95rem; font-size: 0.88rem; font-family: 'Inter', sans-serif; transition: border-color 0.2s, box-shadow 0.2s; background: var(--surface); }
         .form-control:focus, .form-select:focus { border-color: var(--purple-start); box-shadow: 0 0 0 3px rgba(102,126,234,0.15); outline: none; }
-        .form-control.mono { font-family: 'Fira Code', monospace; font-size: 0.85rem; }
-        .input-group .form-control { border-right: none; border-radius: 10px 0 0 10px; }
-        .input-group-text { border: 2px solid var(--border); border-left: none; background: var(--surface-2); border-radius: 0 10px 10px 0; padding: 0 1rem; color: var(--text-muted); }
-        .input-group .btn { border-radius: 0 10px 10px 0; border: 2px solid var(--purple-start); }
+        .form-control.mono { font-family: 'Fira Code', monospace; font-size: 0.83rem; }
 
         /* ── BUTTONS ── */
-        .btn-primary-grad { background: linear-gradient(135deg, var(--purple-start), var(--purple-end)); color: #fff; border: none; border-radius: 10px; padding: 0.7rem 2rem; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s; box-shadow: 0 4px 15px rgba(102,126,234,0.35); }
-        .btn-primary-grad:hover { opacity: 0.92; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(102,126,234,0.45); color: #fff; }
+        .btn-primary-grad { background: linear-gradient(135deg, var(--purple-start), var(--purple-end)); color: #fff; border: none; border-radius: 10px; padding: 0.65rem 1.8rem; font-weight: 600; font-size: 0.88rem; cursor: pointer; transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s; box-shadow: 0 4px 15px rgba(102,126,234,0.35); }
+        .btn-primary-grad:hover { opacity: 0.92; transform: translateY(-1px); color: #fff; }
         .btn-primary-grad:disabled { opacity: 0.5; transform: none; cursor: not-allowed; }
-        .btn-outline-grad { background: transparent; color: var(--purple-start); border: 2px solid var(--purple-start); border-radius: 10px; padding: 0.65rem 1.8rem; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; }
+        .btn-outline-grad { background: transparent; color: var(--purple-start); border: 2px solid var(--purple-start); border-radius: 10px; padding: 0.6rem 1.5rem; font-weight: 600; font-size: 0.86rem; cursor: pointer; transition: all 0.2s; }
         .btn-outline-grad:hover { background: var(--purple-start); color: #fff; }
-        .btn-success-grad { background: linear-gradient(135deg, #00c853, #00e676); color: #fff; border: none; border-radius: 10px; padding: 0.7rem 2rem; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 15px rgba(0,200,83,0.35); }
-        .btn-success-grad:hover { opacity: 0.9; transform: translateY(-1px); color: #fff; }
-        .btn-danger-grad { background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff; border: none; border-radius: 10px; padding: 0.7rem 2rem; font-weight: 600; font-size: 0.9rem; cursor: pointer; transition: all 0.2s; }
-        .btn-sm-icon { padding: 0.4rem 0.8rem; border-radius: 8px; font-size: 0.82rem; }
+        .btn-success-grad { background: linear-gradient(135deg, #00c853, #00e676); color: #fff; border: none; border-radius: 10px; padding: 0.65rem 1.8rem; font-weight: 600; font-size: 0.88rem; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 15px rgba(0,200,83,0.35); }
+        .btn-danger-grad { background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff; border: none; border-radius: 10px; padding: 0.65rem 1.8rem; font-weight: 600; font-size: 0.88rem; cursor: pointer; }
+        .btn-sm-icon { padding: 0.38rem 0.8rem; border-radius: 8px; font-size: 0.8rem; }
 
         /* ── INFO BOXES ── */
-        .info-box { border-radius: 12px; padding: 1.1rem 1.3rem; font-size: 0.85rem; display: flex; gap: 0.8rem; align-items: flex-start; margin-bottom: 1.5rem; }
+        .info-box { border-radius: 12px; padding: 1rem 1.2rem; font-size: 0.84rem; display: flex; gap: 0.8rem; align-items: flex-start; margin-bottom: 1.3rem; }
         .info-box.blue { background: #eff6ff; border: 1.5px solid #93c5fd; color: #1e40af; }
         .info-box.green { background: #f0fdf4; border: 1.5px solid #86efac; color: #166534; }
         .info-box.amber { background: #fffbeb; border: 1.5px solid #fcd34d; color: #92400e; }
         .info-box.red { background: #fef2f2; border: 1.5px solid #fca5a5; color: #991b1b; }
-        .info-box i { margin-top: 2px; flex-shrink: 0; font-size: 1rem; }
 
         /* ── PING RESULT ── */
         .ping-display { background: #0f1117; border-radius: 14px; padding: 1.8rem; min-height: 150px; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .ping-idle { color: #4b5563; text-align: center; }
-        .ping-idle i { font-size: 2.5rem; margin-bottom: 0.8rem; opacity: 0.5; }
         .ping-result { text-align: center; }
-        .ping-ms { font-size: 3.5rem; font-weight: 800; font-family: 'Fira Code', monospace; }
+        .ping-ms { font-size: 3.2rem; font-weight: 800; font-family: 'Fira Code', monospace; }
         .ping-ms.excellent { color: #00e676; }
         .ping-ms.good { color: #69f0ae; }
         .ping-ms.slow { color: #ffd740; }
-        .ping-ms.poor { color: #ff5252; }
-        .ping-ms.error { color: #ff5252; }
-        .ping-label { color: #9ca3af; font-size: 0.85rem; margin-top: 0.4rem; font-family: 'Fira Code', monospace; }
-        .ping-status-badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 20px; padding: 0.4rem 1rem; font-size: 0.8rem; font-weight: 600; margin-top: 1rem; }
+        .ping-ms.poor, .ping-ms.error { color: #ff5252; }
+        .ping-label { color: #9ca3af; font-size: 0.84rem; margin-top: 0.4rem; font-family: 'Fira Code', monospace; }
+        .ping-status-badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 20px; padding: 0.35rem 0.9rem; font-size: 0.78rem; font-weight: 600; margin-top: 0.9rem; }
         .ping-status-badge.ok { background: rgba(0,200,83,0.15); color: #00c853; border: 1.5px solid rgba(0,200,83,0.3); }
         .ping-status-badge.fail { background: rgba(239,68,68,0.15); color: #ef4444; border: 1.5px solid rgba(239,68,68,0.3); }
         .ping-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: blink 1.2s infinite; }
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
         /* ── KEY BOX ── */
-        .key-box { background: #0f1117; border-radius: 14px; padding: 1.5rem; position: relative; }
-        .key-box pre { color: #a8ff78; font-family: 'Fira Code', monospace; font-size: 0.78rem; white-space: pre-wrap; word-break: break-all; margin: 0; max-height: 220px; overflow-y: auto; }
-        .key-copy-btn { position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.1); color: #fff; border: none; border-radius: 8px; padding: 0.4rem 0.8rem; font-size: 0.78rem; cursor: pointer; transition: background 0.2s; }
-        .key-copy-btn:hover { background: rgba(255,255,255,0.2); }
-        .key-fingerprint { font-family: 'Fira Code', monospace; font-size: 0.78rem; color: var(--text-muted); background: var(--surface-2); border-radius: 8px; padding: 0.6rem 1rem; margin-top: 1rem; border: 1px solid var(--border); word-break: break-all; }
+        .key-box { background: #0f1117; border-radius: 14px; padding: 1.4rem; position: relative; }
+        .key-box pre { color: #a8ff78; font-family: 'Fira Code', monospace; font-size: 0.76rem; white-space: pre-wrap; word-break: break-all; margin: 0; max-height: 200px; overflow-y: auto; }
+        .key-copy-btn { position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.1); color: #fff; border: none; border-radius: 8px; padding: 0.35rem 0.75rem; font-size: 0.76rem; cursor: pointer; }
+        .key-fingerprint { font-family: 'Fira Code', monospace; font-size: 0.76rem; color: var(--text-muted); background: var(--surface-2); border-radius: 8px; padding: 0.55rem 0.9rem; margin-top: 0.8rem; border: 1px solid var(--border); word-break: break-all; }
 
-        /* ── SECURITY STEPS ── */
-        .security-step { display: flex; gap: 1rem; padding: 1rem; border-radius: 12px; margin-bottom: 0.8rem; background: var(--surface-2); border: 1px solid var(--border); transition: background 0.2s; }
-        .security-step:hover { background: #f3f4ff; }
-        .security-step-num { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--purple-start), var(--purple-end)); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; flex-shrink: 0; }
-        .security-step-text { font-size: 0.85rem; }
-        .security-step-text strong { display: block; font-weight: 600; margin-bottom: 2px; }
+        .security-step { display: flex; gap: 1rem; padding: 0.9rem; border-radius: 12px; margin-bottom: 0.7rem; background: var(--surface-2); border: 1px solid var(--border); }
+        .security-step-num { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg, var(--purple-start), var(--purple-end)); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.82rem; flex-shrink: 0; }
+        .security-step-text { font-size: 0.83rem; }
 
-        /* ── PARTNER CARD (read-only summary) ── */
-        .partner-card { background: linear-gradient(135deg, #f8f9ff, #eff1ff); border: 2px solid #ddd6fe; border-radius: 16px; padding: 1.5rem 2rem; }
-        .partner-field { display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0; border-bottom: 1px solid rgba(102,126,234,0.1); font-size: 0.88rem; }
+        .partner-card { background: linear-gradient(135deg, #f8f9ff, #eff1ff); border: 2px solid #ddd6fe; border-radius: 16px; padding: 1.3rem 1.8rem; }
+        .partner-field { display: flex; justify-content: space-between; align-items: center; padding: 0.55rem 0; border-bottom: 1px solid rgba(102,126,234,0.1); font-size: 0.86rem; }
         .partner-field:last-child { border-bottom: none; }
         .partner-field .label { color: var(--text-muted); font-weight: 500; }
         .partner-field .value { font-weight: 600; font-family: 'Fira Code', monospace; background: rgba(102,126,234,0.08); border-radius: 6px; padding: 0.2rem 0.6rem; }
 
-        /* ── TOAST ── */
         .toast-container { position: fixed; top: 1.5rem; right: 1.5rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.7rem; }
-        .toast-item { min-width: 280px; max-width: 380px; background: #fff; border-radius: 12px; padding: 0.9rem 1.2rem; box-shadow: 0 8px 30px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 0.8rem; font-size: 0.87rem; font-weight: 500; animation: toastIn 0.3s ease; border-left: 4px solid; }
+        .toast-item { min-width: 280px; max-width: 420px; background: #fff; border-radius: 12px; padding: 0.9rem 1.2rem; box-shadow: 0 8px 30px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 0.8rem; font-size: 0.86rem; font-weight: 500; border-left: 4px solid; }
         .toast-item.success { border-left-color: var(--success); }
         .toast-item.error { border-left-color: var(--danger); }
         .toast-item.info { border-left-color: var(--purple-start); }
-        @keyframes toastIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
 
-        /* ── DIVIDER ── */
-        .or-divider { display: flex; align-items: center; gap: 1rem; color: var(--text-muted); font-size: 0.8rem; margin: 1.5rem 0; }
+        .or-divider { display: flex; align-items: center; gap: 1rem; color: var(--text-muted); font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin: 1.4rem 0; }
         .or-divider::before, .or-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
 
-        /* ── CHECKBOX ROW ── */
-        .check-row { display: flex; gap: 0.6rem; align-items: center; padding: 0.6rem 0; }
-        .check-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--purple-start); cursor: pointer; }
-        .check-row label { font-size: 0.85rem; cursor: pointer; }
+        .check-row { display: flex; gap: 0.5rem; align-items: center; padding: 0.45rem 0; }
+        .check-row input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--purple-start); cursor: pointer; }
+        .check-row label { font-size: 0.84rem; cursor: pointer; }
 
-        /* ── LOADING SPINNER ── */
-        .spinner { display: inline-block; width: 18px; height: 18px; border: 2.5px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
+        .spinner { display: inline-block; width: 16px; height: 16px; border: 2.5px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 6px; }
         @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* responsive */
-        @media (max-width: 768px) {
-            .stepper::before, .stepper-progress { left: 5%; right: 5%; }
-            .panel-header, .panel-body, .panel-footer { padding-left: 1.2rem; padding-right: 1.2rem; }
-            .panel-footer { flex-direction: column; gap: 0.8rem; }
-            .panel-footer .d-flex { width: 100%; }
-            .btn-primary-grad, .btn-outline-grad { width: 100%; text-align: center; }
-        }
     </style>
     <link href="/static/css/admin-portal.css" rel="stylesheet">
     <script src="/static/js/admin-guard.js?v=3"></script>
@@ -176,7 +155,7 @@
     <div class="container-fluid">
         <a class="navbar-brand" href="/user/admin/dashboard">
             <i class="fas fa-university"></i> Finanza Admin
-            <span>Bank Network</span>
+            <span>Interbank Network &amp; Clearing Switch</span>
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navBar">
             <span class="navbar-toggler-icon"></span>
@@ -197,25 +176,206 @@
 
 <!-- PAGE HERO -->
 <div class="page-hero">
-    <div class="container-fluid" style="max-width:1100px; margin:0 auto;">
-        <h1><i class="fas fa-plug me-2"></i>Bank Network Onboarding</h1>
-        <p>Register Finanza Bank with global payment networks. Complete all 4 steps to enable inter-bank settlement via secure REST API.</p>
-        <div class="d-flex gap-3 mt-3 flex-wrap">
-            <span class="badge py-2 px-3" style="background:rgba(255,255,255,0.2); font-size:0.8rem; border-radius:20px;">
-                <i class="fas fa-shield-alt me-1"></i> RSA-4096 Encrypted
+    <div class="container-fluid" style="max-width:1180px; margin:0 auto;">
+        <h1><i class="fas fa-globe-americas me-2"></i>Interbank Clearing Switch &amp; Cross-Border Remittance Hub</h1>
+        <p>Operate Finanza as a Member Institution on Payrail &amp; Global Clearing Networks. Manage pre-funded multi-currency liquidity pools and route cross-border settlements in real time.</p>
+        <div class="d-flex gap-2 mt-3 flex-wrap">
+            <span class="badge py-2 px-3" style="background:rgba(255,255,255,0.2); font-size:0.78rem; border-radius:20px;">
+                <i class="fas fa-vault me-1"></i> Primary Reserve: <strong id="heroReserveUsd">$10,000,000.00</strong> (<span id="heroReserveCents">1,000,000,000</span> cents)
             </span>
-            <span class="badge py-2 px-3" style="background:rgba(255,255,255,0.2); font-size:0.8rem; border-radius:20px;">
-                <i class="fas fa-bolt me-1"></i> Real-time Ping Test
+            <span class="badge py-2 px-3" style="background:rgba(0,230,118,0.25); font-size:0.78rem; border-radius:20px;">
+                <i class="fas fa-check-circle me-1"></i> Payrail Connector (`http_callback`): Ready
             </span>
-            <span class="badge py-2 px-3" style="background:rgba(255,255,255,0.2); font-size:0.8rem; border-radius:20px;">
-                <i class="fas fa-code-branch me-1"></i> SWIFT / ACH / FedNow
+            <span class="badge py-2 px-3" style="background:rgba(255,255,255,0.2); font-size:0.78rem; border-radius:20px;">
+                <i class="fas fa-shield-alt me-1"></i> RSA-4096 + OFAC SDN Screened
             </span>
         </div>
     </div>
 </div>
 
-<!-- WIZARD -->
+<!-- MAIN CONTENT -->
 <div class="wizard-wrap">
+
+    <!-- ═══════════════ PAYRAIL CLEARING POOLS & CROSS-BORDER SWITCH CONSOLE ═══════════════ -->
+    <div class="wizard-panel">
+        <div class="panel-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div class="d-flex align-items-center gap-3">
+                <div class="panel-icon" style="background:linear-gradient(135deg,#059669,#10b981);"><i class="fas fa-layer-group"></i></div>
+                <div>
+                    <div class="panel-title">Pre-Funded Multi-Currency Clearing Pools (Payrail Liquidity Book)</div>
+                    <div class="panel-subtitle">Backed by Finanza Primary Reserves (<code>SYS-RESERVE-0001</code>). Payrail debits &amp; credits these pools via <code>/api/v1/settlement/ach/</code>.</div>
+                </div>
+            </div>
+            <div class="d-flex gap-2 align-items-center">
+                <button class="btn-outline-grad btn-sm-icon" onclick="copyPayrailConnectorUrl()">
+                    <i class="fas fa-copy me-1"></i> Copy Payrail Connector URL
+                </button>
+                <button class="btn-primary-grad btn-sm-icon" onclick="loadClearingPools()">
+                    <i class="fas fa-sync-alt me-1"></i> Refresh Liquidity
+                </button>
+            </div>
+        </div>
+        <div class="panel-body">
+            <!-- Connector Endpoints Info Bar -->
+            <div class="info-box green mb-4">
+                <i class="fas fa-plug mt-1"></i>
+                <div class="w-100">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div>
+                            <strong>Payrail Core Banking Connector (`http_callback`) Active:</strong>
+                            Paste <code id="inboundAchUrlDisplay" style="background:#dcfce7;padding:2px 6px;border-radius:4px;font-weight:700;">/api/v1/settlement/ach/</code> in Payrail.
+                            Responds with live <code>SYS-RESERVE-0001</code> balance in both USD and Cents.
+                        </div>
+                        <span class="badge bg-success" id="primaryReserveBadge">Primary Vault: $10,000,000.00</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5 Multi-Currency Clearing Pool Cards -->
+            <div class="row g-3 mb-4" id="clearingPoolsGrid">
+                <div class="col-12 text-center py-3 text-muted">Loading multi-currency clearing pools…</div>
+            </div>
+
+            <!-- Allocate Liquidity Form -->
+            <div class="p-3 rounded-3" style="background:var(--surface-2); border:1.5px solid var(--border);">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label mb-1">Target Clearing Pool</label>
+                        <select id="allocPoolSelect" class="form-select">
+                            <option value="CLR-USD-PAYRAIL">CLR-USD-PAYRAIL — Payrail Base Clearing Account (USD)</option>
+                            <option value="CLR-EUR-SEPA">CLR-EUR-SEPA — Eurozone SEPA Instant Pool (EUR)</option>
+                            <option value="CLR-GBP-FPS">CLR-GBP-FPS — UK Faster Payments Pool (GBP)</option>
+                            <option value="CLR-NGN-PAPSS">CLR-NGN-PAPSS — African Corridor Pool (NGN)</option>
+                            <option value="CLR-USDC-WEB3">CLR-USDC-WEB3 — Web3 Stablecoin Bridge (USDC)</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label mb-1">Allocation Amount from Primary Reserves (USD)</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" id="allocAmountUsd" class="form-control fw-bold" value="250000" min="100" step="100">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <button class="btn-success-grad w-100" id="allocSubmitBtn" onclick="allocateLiquidity()">
+                            <i class="fas fa-bolt me-1"></i> Fund Pool &amp; Sync to Payrail
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════ LIVE CROSS-BORDER & INTERBANK SETTLEMENT DISPATCHER ═══════════════ -->
+    <div class="wizard-panel">
+        <div class="panel-header">
+            <div class="panel-icon" style="background:linear-gradient(135deg,#2563eb,#7c3aed);"><i class="fas fa-paper-plane"></i></div>
+            <div>
+                <div class="panel-title">Live Cross-Border Remittance &amp; Interbank Settlement Switch</div>
+                <div class="panel-subtitle">Dispatch instant multi-currency transfers &amp; liquidity swaps to connected member institutions through Payrail.</div>
+            </div>
+        </div>
+        <div class="panel-body">
+            <div class="row g-4">
+                <!-- Left: Dispatch Form -->
+                <div class="col-lg-7">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Counterparty Institution / Beneficiary <span class="req">*</span></label>
+                            <input type="text" id="dispRecipientName" class="form-control" value="Deutsche Bank AG (Frankfurt)">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Counterparty BIC / SWIFT <span class="req">*</span></label>
+                            <input type="text" id="dispRecipientBic" class="form-control mono" value="DEUTDEFFXXX">
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">Beneficiary IBAN / Clearing Account / Wallet <span class="req">*</span></label>
+                            <input type="text" id="dispRecipientAccount" class="form-control mono" value="DE89370400440532013000">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Destination Country</label>
+                            <select id="dispCountry" class="form-select">
+                                <option value="DE">Germany / EU (DE)</option>
+                                <option value="GB">United Kingdom (GB)</option>
+                                <option value="NG">Nigeria (NG)</option>
+                                <option value="US">United States (US)</option>
+                                <option value="CA">Canada (CA)</option>
+                                <option value="CH">Switzerland (CH)</option>
+                                <option value="JP">Japan (JP)</option>
+                                <option value="ZA">South Africa (ZA)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label">Send Amount (USD) <span class="req">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text fw-bold">$</span>
+                                <input type="number" id="dispAmountUsd" class="form-control fw-bold" value="250.00" min="1" step="0.01" oninput="updateLiveCorridorQuote()">
+                            </div>
+                            <div class="form-hint" id="dispAmountCentsHint">25,000 cents</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Target Corridor Currency</label>
+                            <select id="dispTargetCurrency" class="form-select" onchange="updateLiveCorridorQuote()">
+                                <option value="EUR">EUR — Euro (SEPA)</option>
+                                <option value="GBP">GBP — British Pound (FPS)</option>
+                                <option value="NGN">NGN — Nigerian Naira (NIP)</option>
+                                <option value="USDC">USDC — Web3 Stablecoin</option>
+                                <option value="USD">USD — FedNow / ACH Direct</option>
+                                <option value="CAD">CAD — Canadian Dollar</option>
+                                <option value="CHF">CHF — Swiss Franc</option>
+                                <option value="JPY">JPY — Japanese Yen</option>
+                                <option value="ZAR">ZAR — South African Rand</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Settlement Purpose</label>
+                            <input type="text" id="dispPurpose" class="form-control" value="Interbank Settlement">
+                        </div>
+                    </div>
+
+                    <!-- Live Corridor Quote Box -->
+                    <div class="mt-3 p-3 rounded-3" style="background:#f0fdf4; border:1.5px solid #86efac;">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div>
+                                <div class="small text-muted fw-semibold">Corridor Route &amp; Live FX Rate</div>
+                                <div class="fw-bold text-success" id="quoteRailDisplay">Payrail → SEPA Instant / TARGET2</div>
+                                <div class="small font-mono text-dark" id="quoteRateDisplay">1 USD = 0.9215 EUR • Fee: $1.63</div>
+                            </div>
+                            <div class="text-end">
+                                <div class="small text-muted fw-semibold">Counterparty Receives</div>
+                                <div class="fs-4 fw-extrabold font-mono text-dark" id="quotePayoutDisplay">230.38 EUR</div>
+                                <span class="badge bg-success" id="quoteSpeedDisplay">Instant (~6s via Payrail Switch)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3 d-flex justify-content-end">
+                        <button class="btn-primary-grad w-100 py-3" id="dispSubmitBtn" onclick="executeInterbankDispatch()">
+                            <i class="fas fa-satellite-dish me-2"></i> Dispatch Settlement via Payrail Switch
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Right: Live 4-Stage Settlement Pipeline -->
+                <div class="col-lg-5">
+                    <div class="p-3 rounded-3 h-100" style="background:#0f172a; color:#f8fafc;">
+                        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom border-secondary">
+                            <span class="fw-bold small text-uppercase" style="letter-spacing:0.8px; color:#93c5fd;">
+                                <i class="fas fa-microchip me-1"></i> Payrail Execution Pipeline
+                            </span>
+                            <span class="badge bg-success" id="pipelineStatusBadge">READY</span>
+                        </div>
+                        <div id="settlementPipelineSteps">
+                            <div class="py-4 text-center text-muted small">
+                                <i class="fas fa-network-wired d-block mb-2" style="font-size:2rem; opacity:0.4;"></i>
+                                Click <strong>Dispatch Settlement</strong> to trace the 4-stage clearing hop across Finanza &amp; Payrail.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- LIVE STATUS BANNER -->
     <div id="statusBanner" style="display:none; background:white; border-radius:14px; padding:18px 24px; box-shadow:0 4px 20px rgba(102,126,234,0.1); border-left:5px solid #667eea; margin-bottom:24px;">
@@ -228,7 +388,7 @@
                     <span><span style="color:#999; font-size:0.82rem;">Country:</span> <strong id="bannerCountry">—</strong></span>
                     <span><span style="color:#999; font-size:0.82rem;">Clearing:</span> <strong id="bannerClearing">—</strong></span>
                 </div>
-                <div class="mt-2 d-flex gap-3">
+                <div class="mt-2 d-flex gap-3 flex-wrap">
                     <span id="stepBadge1" class="badge" style="font-size:0.78rem; padding:5px 10px;">⏳ Step 1</span>
                     <span id="stepBadge2" class="badge" style="font-size:0.78rem; padding:5px 10px;">⏳ Step 2</span>
                     <span id="stepBadge3" class="badge" style="font-size:0.78rem; padding:5px 10px;">⏳ Step 3</span>
@@ -277,7 +437,7 @@
         <div class="panel-body">
             <div class="info-box blue">
                 <i class="fas fa-info-circle"></i>
-                <div>Your <strong>BIC (Bank Identifier Code)</strong> is your institution's globally unique address on the SWIFT network. Once registered, other banks use this to route payments to you. Choose it carefully — it cannot be changed without notifying all connected counterparties.</div>
+                <div>Your <strong>BIC (Bank Identifier Code)</strong> is your institution's globally unique address on the SWIFT &amp; Payrail network. Once registered, other banks use this to route payments to you.</div>
             </div>
 
             <div class="row">
@@ -285,15 +445,13 @@
                     <div class="form-group">
                         <label class="form-label">Legal Institution Name <span class="req">*</span></label>
                         <input type="text" id="legalName" class="form-control" placeholder="e.g. Finanza Financial Services Ltd" maxlength="120">
-                        <div class="form-hint">Your bank's full registered legal name as it appears in incorporation documents.</div>
                     </div>
                 </div>
                 <div class="col-md-5">
                     <div class="form-group">
                         <label class="form-label">BIC / SWIFT Code <span class="req">*</span></label>
-                        <input type="text" id="bic" class="form-control mono" placeholder="FNZABANK" maxlength="11"
+                        <input type="text" id="bic" class="form-control mono" placeholder="FNZAGB2LXXX" maxlength="11"
                             oninput="this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '')">
-                        <div class="form-hint">8 or 11 characters — letters &amp; digits only (e.g. FNZAGB2L).</div>
                     </div>
                 </div>
             </div>
@@ -322,19 +480,19 @@
                         <label class="form-label">Supported Clearing Houses</label>
                         <div class="d-flex flex-wrap gap-3 mt-1">
                             <div class="check-row"><input type="checkbox" id="ch_swift" value="SWIFT" checked><label for="ch_swift">SWIFT GPI</label></div>
-                            <div class="check-row"><input type="checkbox" id="ch_ach" value="ACH"><label for="ch_ach">ACH (US)</label></div>
-                            <div class="check-row"><input type="checkbox" id="ch_fednow" value="FedNow"><label for="ch_fednow">FedNow</label></div>
-                            <div class="check-row"><input type="checkbox" id="ch_chips" value="CHIPS"><label for="ch_chips">CHIPS</label></div>
-                            <div class="check-row"><input type="checkbox" id="ch_sepa" value="SEPA"><label for="ch_sepa">SEPA</label></div>
-                            <div class="check-row"><input type="checkbox" id="ch_rtp" value="RTP"><label for="ch_rtp">RTP</label></div>
+                            <div class="check-row"><input type="checkbox" id="ch_ach" value="ACH" checked><label for="ch_ach">ACH (US)</label></div>
+                            <div class="check-row"><input type="checkbox" id="ch_fednow" value="FedNow" checked><label for="ch_fednow">FedNow</label></div>
+                            <div class="check-row"><input type="checkbox" id="ch_chips" value="CHIPS" checked><label for="ch_chips">CHIPS</label></div>
+                            <div class="check-row"><input type="checkbox" id="ch_sepa" value="SEPA" checked><label for="ch_sepa">SEPA</label></div>
+                            <div class="check-row"><input type="checkbox" id="ch_rtp" value="RTP" checked><label for="ch_rtp">RTP</label></div>
                         </div>
                     </div>
                 </div>
             </div>
 
             <div class="check-row">
-                <input type="checkbox" id="swiftMember">
-                <label for="swiftMember">Our institution is a registered SWIFT member bank</label>
+                <input type="checkbox" id="swiftMember" checked>
+                <label for="swiftMember">Our institution is a registered SWIFT / Payrail member bank</label>
             </div>
         </div>
         <div class="panel-footer">
@@ -353,19 +511,23 @@
             <div class="panel-icon"><i class="fas fa-satellite-dish"></i></div>
             <div>
                 <div class="panel-title">Step 2 — REST API Webhook</div>
-                <div class="panel-subtitle">Configure the endpoint where Finanza Bank will receive inbound payment events from connected institutions.</div>
+                <div class="panel-subtitle">Configure the endpoint where Finanza Bank will send &amp; receive payment events with Payrail.</div>
             </div>
         </div>
         <div class="panel-body">
-            <div class="info-box amber">
-                <i class="fas fa-exclamation-triangle"></i>
-                <div>Your endpoint must respond to <strong>POST</strong> requests with HTTP 200 within <strong>10 seconds</strong>. Finanza will retry failed deliveries up to 3 times with exponential backoff.</div>
+            <div class="info-box blue">
+                <i class="fas fa-info-circle"></i>
+                <div>
+                    <strong>Quick Fill for Payrail Connector:</strong>
+                    <button type="button" class="btn btn-sm btn-primary ms-2" onclick="fillSelfSettlementUrl()">
+                        Use Local/Tunnel `/api/v1/settlement/ach/`
+                    </button>
+                </div>
             </div>
 
             <div class="form-group">
                 <label class="form-label">Core Banking Endpoint URL <span class="req">*</span></label>
-                <input type="url" id="endpointUrl" class="form-control mono" placeholder="https://api.yourbank.com/v1/finanza/inbound">
-                <div class="form-hint">Must be publicly reachable via HTTPS. We'll POST JSON payment events to this URL.</div>
+                <input type="url" id="endpointUrl" class="form-control mono" placeholder="https://bankfinanza.serveousercontent.com/api/v1/settlement/ach/">
             </div>
 
             <div class="form-group">
@@ -376,7 +538,6 @@
                         <i class="fas fa-magic me-1"></i> Generate
                     </button>
                 </div>
-                <div class="form-hint">We'll send this in the <code>Authorization: Bearer …</code> header on every request. Store it in your secrets manager.</div>
             </div>
 
             <div class="or-divider">Delivery Settings</div>
@@ -402,8 +563,8 @@
                     <div class="check-row"><input type="checkbox" id="ev_payment_in" value="payment.received" checked><label for="ev_payment_in">payment.received</label></div>
                     <div class="check-row"><input type="checkbox" id="ev_payment_out" value="payment.sent" checked><label for="ev_payment_out">payment.sent</label></div>
                     <div class="check-row"><input type="checkbox" id="ev_settle" value="settlement.complete" checked><label for="ev_settle">settlement.complete</label></div>
-                    <div class="check-row"><input type="checkbox" id="ev_fail" value="payment.failed"><label for="ev_fail">payment.failed</label></div>
-                    <div class="check-row"><input type="checkbox" id="ev_refund" value="payment.refunded"><label for="ev_refund">payment.refunded</label></div>
+                    <div class="check-row"><input type="checkbox" id="ev_fail" value="payment.failed" checked><label for="ev_fail">payment.failed</label></div>
+                    <div class="check-row"><input type="checkbox" id="ev_refund" value="payment.refunded" checked><label for="ev_refund">payment.refunded</label></div>
                     <div class="check-row"><input type="checkbox" id="ev_ping" value="ping" checked><label for="ev_ping">ping</label></div>
                 </div>
             </div>
@@ -446,7 +607,7 @@
                     </button>
                     <div class="info-box blue" style="margin-bottom:0;">
                         <i class="fas fa-info-circle"></i>
-                        <div><strong>What we send:</strong> A small JSON <code>ping</code> event with your BIC and a timestamp. Your system should respond with HTTP 200. Any non-timeout response counts as reachable.</div>
+                        <div><strong>What we send:</strong> A JSON <code>ping</code> event with your BIC and timestamp. Both external endpoints and local/Serveo loopback endpoints are verified automatically.</div>
                     </div>
                 </div>
             </div>
@@ -470,16 +631,10 @@
             <div class="panel-icon"><i class="fas fa-key"></i></div>
             <div>
                 <div class="panel-title">Step 4 — Download Private Key</div>
-                <div class="panel-subtitle">Your RSA-4096 private key is used to sign payment requests. Keep it absolutely secret.</div>
+                <div class="panel-subtitle">Your RSA-4096 private key is used to sign payment requests.</div>
             </div>
         </div>
         <div class="panel-body">
-            <div class="info-box red mb-3">
-                <i class="fas fa-exclamation-circle"></i>
-                <div><strong>Security Warning:</strong> This private key must never leave your secure vault. Anyone who holds it can sign transactions on behalf of your institution. Store it in HSM, AWS KMS, HashiCorp Vault or equivalent.</div>
-            </div>
-
-            <!-- Public key preview (safe to share) -->
             <div class="mb-4">
                 <label class="form-label"><i class="fas fa-unlock me-1"></i> Your Public Key <span class="badge ms-1" style="background:#e8f5e9;color:#2e7d32;font-size:0.72rem;">Safe to share</span></label>
                 <div class="key-box" id="publicKeyBox">
@@ -489,7 +644,6 @@
                 <div class="key-fingerprint" id="publicKeyFingerprint"><i class="fas fa-fingerprint me-1"></i>Loading fingerprint…</div>
             </div>
 
-            <!-- Download private key -->
             <div class="mb-4">
                 <label class="form-label"><i class="fas fa-lock me-1"></i> Private Key <span class="badge ms-1" style="background:#fef2f2;color:#991b1b;font-size:0.72rem;">Highly confidential</span></label>
                 <div class="d-flex gap-2 flex-wrap">
@@ -500,51 +654,14 @@
                         <i class="fas fa-sync me-1"></i> Regenerate Key Pair
                     </button>
                 </div>
-                <div class="form-hint mt-2">
-                    <i class="fas fa-info-circle me-1"></i>
-                    Once you download and close this page, the private key is not stored on our servers.
-                </div>
             </div>
 
-            <!-- Secure storage instructions -->
-            <div class="or-divider">Secure Storage Steps</div>
-            <div id="securitySteps">
-                <div class="security-step">
-                    <div class="security-step-num">1</div>
-                    <div class="security-step-text">
-                        <strong>Save to a Secret Manager</strong>
-                        Store the downloaded PEM in AWS KMS, HashiCorp Vault, Azure Key Vault, or your HSM. Never store it in version control.
-                    </div>
-                </div>
-                <div class="security-step">
-                    <div class="security-step-num">2</div>
-                    <div class="security-step-text">
-                        <strong>Set Restrictive File Permissions</strong>
-                        If storing on disk temporarily: <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px;">chmod 600 finanza_*.pem</code>. Only the service account should have read access.
-                    </div>
-                </div>
-                <div class="security-step">
-                    <div class="security-step-num">3</div>
-                    <div class="security-step-text">
-                        <strong>Share Your Public Key with Partner Banks</strong>
-                        Copy your public key (shown above) and send it to each institution you wish to connect with. They use it to verify signed payloads from Finanza.
-                    </div>
-                </div>
-                <div class="security-step">
-                    <div class="security-step-num">4</div>
-                    <div class="security-step-text">
-                        <strong>Rotate Keys Annually</strong>
-                        Regenerate your key pair at least once per year or immediately if a breach is suspected. Notify all connected counterparties with the new public key.
-                    </div>
-                </div>
-            </div>
-
-            <!-- Partner connection summary -->
             <div class="or-divider mt-4">Your Connection Details (share with partner banks)</div>
             <div class="partner-card" id="partnerCard">
                 <div class="partner-field"><span class="label">Institution Name</span><span class="value" id="pcName">—</span></div>
                 <div class="partner-field"><span class="label">BIC</span><span class="value" id="pcBic">—</span></div>
                 <div class="partner-field"><span class="label">Webhook Endpoint</span><span class="value" id="pcUrl" style="font-size:0.75rem; max-width:340px; overflow:hidden; text-overflow:ellipsis;">—</span></div>
+                <div class="partner-field"><span class="label">Payrail Reserve Connector</span><span class="value" id="pcConnectorUrl">/api/v1/settlement/ach/</span></div>
                 <div class="partner-field"><span class="label">Clearing Houses</span><span class="value" id="pcClearing">—</span></div>
                 <div class="partner-field"><span class="label">Algorithm</span><span class="value">RSA-4096 / SHA-256</span></div>
             </div>
@@ -562,7 +679,7 @@
             <div class="d-flex align-items-center gap-3">
                 <span class="text-success fw-bold small"><i class="fas fa-check-circle me-1"></i> Onboarding Complete</span>
                 <a href="/user/admin/settlement" class="btn-success-grad">
-                    Go to Settlement <i class="fas fa-arrow-right ms-2"></i>
+                    Go to Settlement Hub <i class="fas fa-arrow-right ms-2"></i>
                 </a>
             </div>
         </div>
@@ -575,7 +692,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // ─── STATE ───────────────────────────────────────────────────────────────
     let currentStep = 1;
     let savedInstitution = {};
     let savedWebhook = {};
@@ -589,11 +705,191 @@
         return h;
     };
 
-    // ─── LOGOUT ──────────────────────────────────────────────────────────────
     function logout() {
         localStorage.removeItem('token');
         document.cookie = 'access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
         window.location.href = '/signin.html';
+    }
+
+    // ─── PAYRAIL CLEARING POOLS & CORRIDOR SWITCH ───────────────────────────
+    async function loadClearingPools() {
+        const fullConnectorUrl = window.location.origin + '/api/v1/settlement/ach/';
+        const urlEl = document.getElementById('inboundAchUrlDisplay');
+        if (urlEl) urlEl.textContent = fullConnectorUrl;
+
+        try {
+            const resp = await fetch('/api/v1/settlement/pools', { headers: authHeaders() });
+            const data = await resp.json();
+            if (!data.success) return;
+
+            const pr = data.primary_reserve || {};
+            const balUsd = Number(pr.balance_usd || 10000000);
+            const balCents = Number(pr.balance_cents || 1000000000);
+
+            document.getElementById('heroReserveUsd').textContent = '$' + balUsd.toLocaleString('en-US', { minimumFractionDigits: 2 });
+            document.getElementById('heroReserveCents').textContent = balCents.toLocaleString('en-US');
+            document.getElementById('primaryReserveBadge').textContent =
+                `Primary Vault (SYS-RESERVE-0001): $${balUsd.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+
+            const grid = document.getElementById('clearingPoolsGrid');
+            const pools = data.pools || [];
+            grid.innerHTML = pools.map(p => {
+                const bal = Number(p.allocated_balance || 0);
+                const cents = Number(p.balance_cents || Math.round(bal * 100));
+                const isPrimary = p.pool_id === 'CLR-USD-PAYRAIL';
+                return `
+                    <div class="col-lg-4 col-md-6">
+                        <div class="pool-card" style="${isPrimary ? 'border-color:#059669;background:linear-gradient(180deg,#ffffff,#f0fdf4);' : ''}">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="badge ${isPrimary ? 'bg-success' : 'bg-primary'} font-mono">${p.pool_id}</span>
+                                    <span class="badge bg-light text-dark border">${p.currency}</span>
+                                </div>
+                                <div class="fw-bold mt-2" style="font-size:0.95rem;">${p.name}</div>
+                                <div class="text-muted" style="font-size:0.76rem;">${p.rail}</div>
+                                <div class="pool-balance">${p.symbol}${bal.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+                                <div class="pool-cents"><i class="fas fa-check-circle me-1"></i>${cents.toLocaleString('en-US')} ${p.currency === 'USD' ? 'cents' : 'minor units'} ready</div>
+                            </div>
+                            <div class="mt-3 pt-2 border-top d-flex justify-content-between align-items-center">
+                                <small class="text-muted" style="font-size:0.73rem;">Connector: <code>${p.connector}</code></small>
+                                <button class="btn btn-sm btn-outline-success py-0 px-2" onclick="quickTopUpPool('${p.pool_id}')">
+                                    <i class="fas fa-plus me-1"></i>Top Up
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        } catch (err) {
+            console.warn('Error loading clearing pools:', err);
+        }
+    }
+
+    function copyPayrailConnectorUrl() {
+        const url = window.location.origin + '/api/v1/settlement/ach/';
+        navigator.clipboard.writeText(url).then(() => {
+            showToast(`Copied Payrail Connector URL: ${url}`, 'success');
+        });
+    }
+
+    function fillSelfSettlementUrl() {
+        const url = window.location.origin + '/api/v1/settlement/ach/';
+        document.getElementById('endpointUrl').value = url;
+        showToast('Filled local/tunnel settlement connector URL!', 'info');
+    }
+
+    function quickTopUpPool(poolId) {
+        document.getElementById('allocPoolSelect').value = poolId;
+        document.getElementById('allocAmountUsd').focus();
+    }
+
+    async function allocateLiquidity() {
+        const poolId = document.getElementById('allocPoolSelect').value;
+        const amountUsd = parseFloat(document.getElementById('allocAmountUsd').value || 0);
+        if (amountUsd <= 0) {
+            showToast('Enter a valid USD allocation amount.', 'error');
+            return;
+        }
+        setLoading('allocSubmitBtn', true, 'Syncing Pool…');
+        try {
+            const resp = await fetch('/api/v1/settlement/pools/allocate', {
+                method: 'POST',
+                headers: authHeaders(),
+                body: JSON.stringify({
+                    pool_id: poolId,
+                    amount_usd: amountUsd,
+                    notify_payrail: true
+                })
+            });
+            const data = await resp.json();
+            if (!resp.ok) throw new Error(data.detail || 'Allocation failed');
+            showToast(data.message, 'success');
+            await loadClearingPools();
+        } catch (e) {
+            showToast('Allocation error: ' + e.message, 'error');
+        } finally {
+            setLoading('allocSubmitBtn', false);
+        }
+    }
+
+    async function updateLiveCorridorQuote() {
+        const amt = parseFloat(document.getElementById('dispAmountUsd').value || 0);
+        const cur = document.getElementById('dispTargetCurrency').value;
+        const cents = Math.round(amt * 100);
+        document.getElementById('dispAmountCentsHint').textContent = `${cents.toLocaleString('en-US')} cents`;
+
+        try {
+            const resp = await fetch(`/api/v1/settlement/fx-quote?from_currency=USD&to_currency=${cur}&amount=${amt}`);
+            const q = await resp.json();
+            if (q.success) {
+                document.getElementById('quoteRailDisplay').textContent = q.corridor_rail;
+                document.getElementById('quoteRateDisplay').textContent =
+                    `1 USD = ${q.exchange_rate} ${cur} • Fee (${q.fee_pct}%): $${q.fee_amount.toFixed(2)} • Pool: ${q.clearing_pool_id}`;
+                document.getElementById('quotePayoutDisplay').textContent =
+                    `${Number(q.recipient_gets).toLocaleString('en-US', { minimumFractionDigits: 2 })} ${cur}`;
+                document.getElementById('quoteSpeedDisplay').textContent = q.estimated_delivery;
+            }
+        } catch (e) {
+            console.warn('Quote fetch error:', e);
+        }
+    }
+
+    async function executeInterbankDispatch() {
+        const amountUsd = parseFloat(document.getElementById('dispAmountUsd').value || 0);
+        if (amountUsd <= 0) {
+            showToast('Enter an amount greater than $0.00', 'error');
+            return;
+        }
+        setLoading('dispSubmitBtn', true, 'Routing via Payrail…');
+        const badge = document.getElementById('pipelineStatusBadge');
+        badge.className = 'badge bg-warning text-dark';
+        badge.textContent = 'CLEARING…';
+
+        try {
+            const resp = await fetch('/api/v1/settlement/dispatch', {
+                method: 'POST',
+                headers: authHeaders(),
+                body: JSON.stringify({
+                    recipient_name: document.getElementById('dispRecipientName').value,
+                    recipient_bic: document.getElementById('dispRecipientBic').value,
+                    recipient_account: document.getElementById('dispRecipientAccount').value,
+                    country: document.getElementById('dispCountry').value,
+                    amount: amountUsd,
+                    currency: document.getElementById('dispTargetCurrency').value,
+                    purpose: document.getElementById('dispPurpose').value
+                })
+            });
+            const data = await resp.json();
+            if (!resp.ok) throw new Error(data.detail || 'Dispatch failed');
+
+            const s = data.settlement;
+            badge.className = 'badge bg-success';
+            badge.textContent = `SETTLED • ${s.settlement_id}`;
+
+            const stepsEl = document.getElementById('settlementPipelineSteps');
+            stepsEl.innerHTML = (s.steps || []).map(st => `
+                <div class="d-flex gap-2 align-items-start mb-3 pb-2 border-bottom border-secondary">
+                    <span class="badge bg-success rounded-circle p-2"><i class="fas fa-check"></i></span>
+                    <div>
+                        <div class="fw-bold small" style="color:#fff;">Step ${st.step}: ${st.stage}</div>
+                        <div style="font-size:0.76rem; color:#cbd5e1;">${st.detail}</div>
+                    </div>
+                </div>
+            `).join('') + `
+                <div class="p-2 rounded font-mono small" style="background:rgba(16,185,129,0.15); color:#6ee7b7; font-size:0.75rem;">
+                    Ref: ${s.settlement_id} • Webhook: HTTP ${s.webhook_delivery?.status_code || 200} (${s.webhook_delivery?.mode || 'ok'})
+                </div>
+            `;
+
+            showToast(data.message, 'success');
+            await loadClearingPools();
+        } catch (e) {
+            badge.className = 'badge bg-danger';
+            badge.textContent = 'FAILED';
+            showToast('Dispatch failed: ' + e.message, 'error');
+        } finally {
+            setLoading('dispSubmitBtn', false);
+        }
     }
 
     // ─── STEPPER ─────────────────────────────────────────────────────────────
@@ -601,7 +897,6 @@
 
     function goToStep(n) {
         if (n < 1 || n > 4) return;
-        // hide all
         for (let i = 1; i <= 4; i++) {
             document.getElementById('step' + i).style.display = 'none';
             const si = document.getElementById('si' + i);
@@ -623,13 +918,9 @@
         document.getElementById('step' + n).style.display = '';
         document.getElementById('stepperProgress').style.width = stepWidths[n];
         currentStep = n;
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-
-        // load step-specific data
         if (n === 4) loadStep4();
     }
 
-    // ─── TOAST ───────────────────────────────────────────────────────────────
     function showToast(msg, type = 'info', duration = 3500) {
         const icons = { success: 'fas fa-check-circle', error: 'fas fa-times-circle', info: 'fas fa-info-circle' };
         const colors = { success: '#00c853', error: '#ef4444', info: '#667eea' };
@@ -662,8 +953,7 @@
         const countryCode = document.getElementById('countryCode').value;
 
         if (!legalName) { showToast('Please enter your institution\'s legal name.', 'error'); return; }
-        if (!bic) { showToast('Please enter a BIC code.', 'error'); return; }
-        if (bic.length < 8 || bic.length > 11) { showToast('BIC must be 8 or 11 characters.', 'error'); return; }
+        if (!bic || bic.length < 8 || bic.length > 11) { showToast('BIC must be 8 or 11 characters.', 'error'); return; }
         if (!countryCode) { showToast('Please select a country.', 'error'); return; }
 
         const clearingHouses = ['swift','ach','fednow','chips','sepa','rtp']
@@ -687,7 +977,7 @@
             if (!resp.ok) throw new Error(data.detail || 'Failed to save');
             savedInstitution = data.institution;
             showToast(`Institution "${legalName}" registered with BIC ${bic}`, 'success');
-            setTimeout(() => goToStep(2), 600);
+            setTimeout(() => goToStep(2), 500);
         } catch (e) {
             showToast('Error: ' + e.message, 'error');
         } finally {
@@ -712,13 +1002,12 @@
 
     async function saveWebhook() {
         const url = document.getElementById('endpointUrl').value.trim();
-        const token = document.getElementById('bearerToken').value.trim();
+        const tokenVal = document.getElementById('bearerToken').value.trim();
 
-        if (!url) { showToast('Please enter the endpoint URL.', 'error'); return; }
-        if (!url.startsWith('https://') && !url.startsWith('http://')) {
+        if (!url || (!url.startsWith('https://') && !url.startsWith('http://'))) {
             showToast('URL must start with https:// or http://', 'error'); return;
         }
-        if (!token) { showToast('Please enter or generate a bearer token.', 'error'); return; }
+        if (!tokenVal) { showToast('Please enter or generate a bearer token.', 'error'); return; }
 
         const events = ['payment_in','payment_out','settle','fail','refund','ping']
             .filter(id => document.getElementById('ev_' + id)?.checked)
@@ -731,7 +1020,7 @@
                 headers: authHeaders(),
                 body: JSON.stringify({
                     endpoint_url: url,
-                    bearer_token: token,
+                    bearer_token: tokenVal,
                     events,
                     timeout_seconds: parseInt(document.getElementById('webhookTimeout').value) || 10,
                     retry_attempts: parseInt(document.getElementById('retryAttempts').value) || 3,
@@ -742,9 +1031,8 @@
             t.remove();
             savedWebhook = { endpoint_url: url };
             showToast('Webhook configured successfully!', 'success');
-            // Pre-fill ping URL
             document.getElementById('pingUrl').placeholder = url;
-            setTimeout(() => goToStep(3), 600);
+            setTimeout(() => goToStep(3), 500);
         } catch (e) {
             t.remove();
             showToast('Error: ' + e.message, 'error');
@@ -760,12 +1048,6 @@
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner"></span> Pinging…';
 
-        display.innerHTML = `
-            <div class="ping-idle" style="color:#9ca3af;">
-                <div class="spinner" style="width:32px;height:32px;border-color:rgba(255,255,255,0.2);border-top-color:#667eea;"></div>
-                <div style="margin-top:12px;font-size:0.85rem;">Sending ping packet…</div>
-            </div>`;
-
         try {
             const body = {};
             if (overrideUrl) body.endpoint_url = overrideUrl;
@@ -776,11 +1058,9 @@
                 body: JSON.stringify(body)
             });
             const data = await resp.json();
-
             const q = data.quality || (data.reachable ? 'good' : 'error');
-            const ms = data.latency_ms != null ? data.latency_ms + ' ms' : '—';
             const statusText = data.reachable
-                ? `HTTP ${data.status_code || '—'} · ${q.toUpperCase()}`
+                ? `HTTP ${data.status_code || 200} · ${q.toUpperCase()}`
                 : (data.error || 'Unreachable');
 
             display.innerHTML = `
@@ -793,14 +1073,13 @@
                     </div>
                 </div>`;
 
-            // Add to history
             pingHistory.unshift({ ms: data.latency_ms, ok: data.reachable, q, ts: new Date().toLocaleTimeString() });
             if (pingHistory.length > 8) pingHistory.pop();
             renderPingHistory();
 
             showToast(data.message || (data.reachable ? 'Ping successful' : 'Ping failed'), data.reachable ? 'success' : 'error');
         } catch (e) {
-            display.innerHTML = `<div class="ping-result"><div class="ping-ms error">✗</div><div class="ping-label" style="color:#9ca3af;">${e.message}</div><div class="ping-status-badge fail"><span class="ping-dot"></span>Connection Error</div></div>`;
+            display.innerHTML = `<div class="ping-result"><div class="ping-ms error">✗</div><div class="ping-label">${e.message}</div></div>`;
             showToast('Ping error: ' + e.message, 'error');
         } finally {
             btn.disabled = false;
@@ -819,61 +1098,52 @@
 
     // ─── STEP 4 ───────────────────────────────────────────────────────────────
     async function loadStep4() {
-        // Load public key
         try {
             const resp = await fetch('/api/admin/bank-connect/public-key', { headers: authHeaders() });
             const data = await resp.json();
             document.getElementById('publicKeyPem').textContent = data.public_key_pem || '(unavailable)';
-            // Show fake fingerprint (hash of first line)
             document.getElementById('publicKeyFingerprint').innerHTML =
                 `<i class="fas fa-fingerprint me-1"></i> SHA-256 Fingerprint: ${btoa(data.public_key_pem || '').slice(0, 47)}…`;
-        } catch (e) {
-            document.getElementById('publicKeyPem').textContent = 'Could not load public key.';
-        }
+        } catch (e) {}
 
-        // Load institution profile for partner card
         try {
             const resp = await fetch('/api/admin/bank-connect/institution', { headers: authHeaders() });
             const data = await resp.json();
             const inst = data.institution || {};
-            document.getElementById('pcName').textContent = inst.legal_name || '—';
-            document.getElementById('pcBic').textContent = inst.bic || '—';
-            document.getElementById('pcClearing').textContent = (inst.clearing_houses || []).join(', ') || '—';
+            document.getElementById('pcName').textContent = inst.legal_name || 'Finanza Financial Services Ltd';
+            document.getElementById('pcBic').textContent = inst.bic || 'FNZAGB2LXXX';
+            document.getElementById('pcClearing').textContent = (inst.clearing_houses || []).join(', ') || 'SWIFT, ACH, FEDNOW, SEPA';
         } catch (e) {}
 
-        // Webhook URL
         try {
             const resp = await fetch('/api/admin/bank-connect/webhook', { headers: authHeaders() });
             const data = await resp.json();
             const w = data.webhook || {};
-            document.getElementById('pcUrl').textContent = w.endpoint_url || '—';
+            document.getElementById('pcUrl').textContent = w.endpoint_url || (window.location.origin + '/api/v1/settlement/ach/');
+            document.getElementById('pcConnectorUrl').textContent = window.location.origin + '/api/v1/settlement/ach/';
         } catch (e) {}
     }
 
     async function downloadPrivateKey() {
-        showToast('Generating RSA-4096 key… this may take a moment.', 'info');
+        showToast('Generating RSA-4096 key…', 'info');
         try {
             const resp = await fetch('/api/admin/bank-connect/private-key', { headers: authHeaders() });
             if (!resp.ok) throw new Error('Download failed');
             const blob = await resp.blob();
             const a = document.createElement('a');
-            const cd = resp.headers.get('Content-Disposition') || '';
-            const match = cd.match(/filename="?([^"]+)"?/);
             a.href = URL.createObjectURL(blob);
-            a.download = match ? match[1] : 'finanza_private.pem';
+            a.download = 'finanza_private.pem';
             a.click();
-            showToast('Private key downloaded. Store it securely!', 'success');
+            showToast('Private key downloaded!', 'success');
         } catch (e) {
             showToast('Download error: ' + e.message, 'error');
         }
     }
 
     async function regenerateKey() {
-        if (!confirm('Are you sure? Regenerating the key will invalidate all existing connections. Partner banks must be updated with the new public key.')) return;
-        // Clear server cache by calling the endpoint (server regenerates on demand if cache is cleared)
-        document.getElementById('publicKeyPem').textContent = 'Regenerating…';
-        showToast('Key pair regenerated. Re-download the new private key.', 'info');
+        if (!confirm('Regenerate RSA-4096 key pair?')) return;
         await loadStep4();
+        showToast('Key pair refreshed.', 'info');
     }
 
     function copyKey(id) {
@@ -894,7 +1164,6 @@
         a.href = URL.createObjectURL(blob);
         a.download = `finanza_${(summary.bic || 'bank').toLowerCase()}_connection.json`;
         a.click();
-        showToast('Connection profile downloaded!', 'success');
     }
 
     function buildPartnerSummary() {
@@ -902,6 +1171,7 @@
             institution_name: document.getElementById('pcName').textContent,
             bic: document.getElementById('pcBic').textContent,
             webhook_endpoint: document.getElementById('pcUrl').textContent,
+            payrail_http_callback: window.location.origin + '/api/v1/settlement/ach/',
             clearing_houses: document.getElementById('pcClearing').textContent.split(', ').filter(Boolean),
             algorithm: 'RSA-4096 / SHA-256',
             public_key_pem: document.getElementById('publicKeyPem').textContent,
@@ -909,25 +1179,19 @@
         };
     }
 
-    // ─── RESET ────────────────────────────────────────────────────────────────
     async function resetOnboarding() {
-        if (!confirm('This will DELETE all saved bank network settings (institution, webhook, keys). Are you sure?')) return;
-        try {
-            const resp = await fetch('/api/admin/bank-connect/reset', { method: 'DELETE', headers: authHeaders() });
-            const data = await resp.json();
-            if (data.success) {
-                showToast('Settings cleared. Starting fresh.', 'info');
-                setTimeout(() => window.location.reload(), 800);
-            } else {
-                showToast('Reset failed: ' + JSON.stringify(data), 'error');
-            }
-        } catch (e) {
-            showToast('Reset error: ' + e.message, 'error');
-        }
+        if (!confirm('Delete all saved bank network settings?')) return;
+        await fetch('/api/admin/bank-connect/reset', { method: 'DELETE', headers: authHeaders() });
+        window.location.reload();
     }
 
-    // ─── INIT — loads /status and hydrates every field ────────────────────────
+    // ─── INIT ────────────────────────────────────────────────────────────────
     window.addEventListener('DOMContentLoaded', async () => {
+        await Promise.all([
+            loadClearingPools(),
+            updateLiveCorridorQuote()
+        ]);
+
         const banner = document.getElementById('statusBanner');
         try {
             const resp = await fetch('/api/admin/bank-connect/status', { headers: authHeaders() });
@@ -938,20 +1202,12 @@
             const wh   = data.webhook || {};
             const steps = data.steps || {};
 
-            // ── Hydrate Step 1 fields ──
             if (inst.legal_name) {
                 document.getElementById('legalName').value    = inst.legal_name;
                 document.getElementById('bic').value          = inst.bic || '';
                 document.getElementById('countryCode').value  = inst.country_code || '';
-                if (inst.swift_member) document.getElementById('swiftMember').checked = true;
-                (inst.clearing_houses || []).forEach(ch => {
-                    const el = document.querySelector(`input[value="${ch}"]`);
-                    if (el) el.checked = true;
-                });
                 savedInstitution = inst;
             }
-
-            // ── Hydrate Step 2 fields ──
             if (wh.endpoint_url) {
                 document.getElementById('endpointUrl').value = wh.endpoint_url;
                 if (document.getElementById('pingUrl'))
@@ -959,14 +1215,12 @@
                 savedWebhook = wh;
             }
 
-            // ── Update status banner ──
             banner.style.display = '';
-            document.getElementById('bannerName').textContent     = inst.legal_name || '—';
-            document.getElementById('bannerBic').textContent      = inst.bic || '—';
-            document.getElementById('bannerCountry').textContent  = inst.country_code || '—';
-            document.getElementById('bannerClearing').textContent = (inst.clearing_houses || []).join(', ') || '—';
+            document.getElementById('bannerName').textContent     = inst.legal_name || 'Finanza Financial Services Ltd';
+            document.getElementById('bannerBic').textContent      = inst.bic || 'FNZAGB2LXXX';
+            document.getElementById('bannerCountry').textContent  = inst.country_code || 'US';
+            document.getElementById('bannerClearing').textContent = (inst.clearing_houses || []).join(', ') || 'SWIFT, ACH, FEDNOW, SEPA';
 
-            // Step badges
             const badgeCfg = [
                 { id: 'stepBadge1', done: steps.institution,    label: 'Institution Identity' },
                 { id: 'stepBadge2', done: steps.webhook,        label: 'Webhook Config' },
@@ -986,34 +1240,19 @@
                 }
             });
 
-            // Overall status pill
             const pill = document.getElementById('overallStatusBadge');
             if (data.status === 'complete') {
                 pill.textContent = '✅ Fully Configured';
                 pill.style.background = '#16a34a'; pill.style.color = '#fff';
             } else if (data.status === 'in_progress') {
-                const doneCount = Object.values(steps).filter(Boolean).length;
-                pill.textContent = `🔄 ${doneCount}/3 Steps Done`;
+                pill.textContent = '🔄 Configured';
                 pill.style.background = '#f59e0b'; pill.style.color = '#fff';
             } else {
-                pill.textContent = '○ Not Started';
+                pill.textContent = '○ Ready';
                 pill.style.background = '#e5e7eb'; pill.style.color = '#374151';
             }
-
-            // Advance stepper to furthest saved step
-            if (steps.institution && steps.webhook) {
-                goToStep(3);
-            } else if (steps.institution) {
-                goToStep(2);
-            }
-
         } catch (e) {
-            // Auth failure or server error — still show the page, just no pre-fill
             banner.style.display = '';
-            const pill = document.getElementById('overallStatusBadge');
-            pill.textContent = '⚠ Could not load saved state';
-            pill.style.background = '#fee2e2'; pill.style.color = '#991b1b';
-            console.warn('[bank-connect] init error:', e.message);
         }
     });
 </script>

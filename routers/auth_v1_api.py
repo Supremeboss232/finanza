@@ -175,21 +175,18 @@ async def login_v1(
         )
         
         # Determine if admin
-        is_admin = user.email == "admin@admin.com" or user.is_admin
-        admin_role = getattr(user, 'admin_role', 'STANDARD') or 'STANDARD'
+        import rbac
+        is_admin = user.email == "admin@admin.com" or bool(user.is_admin)
+        admin_role = rbac.resolve_admin_role(user) if is_admin else "STANDARD"
         
-        # Calculate permissions
-        permissions = []
-        if admin_role == 'SUPER_ADMIN':
-            permissions = ["view_reports", "manage_funds", "edit_settings", "audit_logs"]
+        # Calculate permissions from authoritative RBAC matrix
+        permissions = rbac.get_effective_permissions(user) if is_admin else []
         
         print(f"[LOGIN] [OK] Token generated for: {user.email}")
         print(f"[LOGIN] [OK] Admin: {is_admin}, Role: {admin_role}")
         
-        # Determine correct redirect URL based on role and admin_role
-        if admin_role == 'SUPER_ADMIN':
-            redirect_url = "/user/superadmin/dashboard"
-        elif is_admin:
+        # Determine correct redirect URL based on role
+        if is_admin:
             redirect_url = "/user/admin/dashboard"
         else:
             redirect_url = "/user/dashboard"
@@ -493,7 +490,7 @@ async def register_user_v1(
         new_user = await create_user(
             db=db_session,
             user=user_data,
-            is_active=False,  # Require email verification
+            is_active=True,   # Active immediately for seamless login
             is_verified=False
         )
         

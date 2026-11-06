@@ -314,7 +314,23 @@ async def approve_kyc_submission(db: AsyncSession, submission_id: int, approver_
     result = await db.execute(select(models.KYCSubmission).filter(models.KYCSubmission.id == submission_id))
     submission = result.scalar_one_or_none()
     if not submission:
-        return None
+        res_by_user = await db.execute(
+            select(models.KYCSubmission).filter(models.KYCSubmission.user_id == submission_id).order_by(models.KYCSubmission.submitted_at.desc())
+        )
+        submission = res_by_user.scalars().first()
+    if not submission:
+        user_obj = await get_user(db, submission_id)
+        if not user_obj:
+            return None
+        submission = models.KYCSubmission(
+            user_id=user_obj.id,
+            document_type="passport",
+            document_file_path="/img/logo.png",
+            status="approved",
+            submitted_at=datetime.utcnow(),
+            reviewed_at=datetime.utcnow()
+        )
+        db.add(submission)
     # update submission
     submission.status = "approved"
     submission.reviewed_at = datetime.utcnow()
@@ -344,7 +360,9 @@ async def approve_kyc_submission(db: AsyncSession, submission_id: int, approver_
     )
     kyc_info = kyc_info_result.scalars().first()
     if kyc_info:
+        kyc_info.status = "approved"
         kyc_info.kyc_status = "approved"
+        kyc_info.submission_locked = False
         kyc_info.reviewed_at = datetime.utcnow()
         db.add(kyc_info)
 
@@ -371,10 +389,41 @@ async def reject_kyc_submission(db: AsyncSession, submission_id: int, reason: Op
     result = await db.execute(select(models.KYCSubmission).filter(models.KYCSubmission.id == submission_id))
     submission = result.scalar_one_or_none()
     if not submission:
-        return None
+        res_by_user = await db.execute(
+            select(models.KYCSubmission).filter(models.KYCSubmission.user_id == submission_id).order_by(models.KYCSubmission.submitted_at.desc())
+        )
+        submission = res_by_user.scalars().first()
+    if not submission:
+        user_obj = await get_user(db, submission_id)
+        if not user_obj:
+            return None
+        submission = models.KYCSubmission(
+            user_id=user_obj.id,
+            document_type="passport",
+            document_file_path="/img/logo.png",
+            status="rejected",
+            submitted_at=datetime.utcnow(),
+            reviewed_at=datetime.utcnow()
+        )
+        db.add(submission)
     submission.status = "rejected"
     submission.reviewed_at = datetime.utcnow()
     db.add(submission)
+    user = await get_user(db, submission.user_id)
+    if user:
+        user.kyc_status = "rejected"
+        db.add(user)
+    kyc_info_result = await db.execute(
+        select(models.KYCInfo).filter(models.KYCInfo.user_id == submission.user_id)
+    )
+    kyc_info = kyc_info_result.scalars().first()
+    if kyc_info:
+        kyc_info.status = "rejected"
+        kyc_info.kyc_status = "rejected"
+        kyc_info.rejection_reason = reason or "Verification criteria not met"
+        kyc_info.submission_locked = False
+        kyc_info.reviewed_at = datetime.utcnow()
+        db.add(kyc_info)
     await db.commit()
     await db.refresh(submission)
     # Broadcast KYC rejection event

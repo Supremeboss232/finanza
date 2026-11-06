@@ -686,9 +686,13 @@
 
             // Check if user has permission
             hasPermission(permission) {
-                return this.adminInfo && 
-                       (this.adminInfo.is_superadmin || 
-                        this.adminInfo.permissions.includes(permission));
+                if (!this.adminInfo) return false;
+                const perms = Array.isArray(this.adminInfo.permissions) ? this.adminInfo.permissions : [];
+                return Boolean(
+                    this.adminInfo.admin_role === 'SUPER_ADMIN' ||
+                    perms.includes('*') ||
+                    perms.includes(permission)
+                );
             }
 
             // Restrict action to superadmins
@@ -708,17 +712,11 @@
         // ============================================================
 
         const VisibilityRules = {
-            // Show phone numbers only to Treasury+ admins
-            phoneNumber: () => ['TREASURY', 'SUPER_ADMIN'].includes(api.adminInfo?.admin_role),
-            // Show balances only to Treasury+ admins
-            balance: () => ['TREASURY', 'SUPER_ADMIN'].includes(api.adminInfo?.admin_role),
-            // Delete buttons only to Superadmins
-            deleteUser: () => api.adminInfo?.is_superadmin,
-            // KYC approval to KYC roles
-            kycApproval: () => api.adminInfo?.permissions?.includes('kyc:approve'),
-            // Fund transfers to Treasury
-            fundTransfer: () => api.adminInfo?.permissions?.includes('fund:transfer'),
-            // Bulk actions to Admins+
+            phoneNumber: () => ['ADMIN', 'TREASURY', 'COMPLIANCE', 'SUPER_ADMIN'].includes(api.adminInfo?.admin_role),
+            balance: () => ['ADMIN', 'TREASURY', 'SUPER_ADMIN'].includes(api.adminInfo?.admin_role),
+            deleteUser: () => api.adminInfo?.admin_role === 'SUPER_ADMIN' || api.hasPermission('users:delete'),
+            kycApproval: () => api.hasPermission('kyc:approve') || api.hasPermission('kyc:review'),
+            fundTransfer: () => api.hasPermission('users:adjust_balance') || api.hasPermission('balance:adjust') || api.hasPermission('fund:transfer'),
             bulkActions: () => ['ADMIN', 'TREASURY', 'SUPER_ADMIN'].includes(api.adminInfo?.admin_role)
         };
 
@@ -825,8 +823,30 @@
             // Apply role-based visibility
             applyRoleBasedVisibility();
 
+            window.addEventListener('finanza:admin-ready', function(ev) {
+                if (ev.detail) {
+                    api.adminInfo = {
+                        user_id: ev.detail.id || 1,
+                        email: ev.detail.email || 'admin@finanza.com',
+                        admin_role: ev.detail.admin_role || 'SUPER_ADMIN',
+                        is_superadmin: ev.detail.admin_role === 'SUPER_ADMIN',
+                        permissions: ev.detail.permissions || ['*']
+                    };
+                    applyRoleBasedVisibility();
+                }
+            });
+
             // Initial load
-            loadAllData();
+            loadAllData().then(() => {
+                const params = new URLSearchParams(window.location.search);
+                if (params.get('action') === 'create') {
+                    openModal('addUserModal');
+                }
+                const targetUid = params.get('user_id');
+                if (targetUid && typeof viewUserDetails === 'function') {
+                    viewUserDetails(parseInt(targetUid, 10));
+                }
+            });
 
             // Auto-refresh every 30 seconds
             setInterval(loadAllData, 30000);
@@ -1232,7 +1252,7 @@
         }
 
         async function approveKYC() {
-            if (!api.adminInfo?.permissions?.includes('kyc:approve')) {
+            if (!api.hasPermission('kyc:approve') && !api.hasPermission('kyc:review')) {
                 api.showToast('You do not have KYC approval permissions', 'danger');
                 return;
             }
@@ -1258,7 +1278,7 @@
         }
 
         async function rejectKYC() {
-            if (!api.adminInfo?.permissions?.includes('kyc:approve')) {
+            if (!api.hasPermission('kyc:approve') && !api.hasPermission('kyc:review')) {
                 api.showToast('You do not have KYC rejection permissions', 'danger');
                 return;
             }

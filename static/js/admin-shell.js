@@ -1,6 +1,5 @@
 /**
- * Finanza Admin — Unified Purple-Indigo Gradient Top Navbar & 29-Module Switcher
- * Preserves the signature #667eea -> #764ba2 Finanza Admin design across all 29 pages.
+ * Finanza Admin — Unified Purple-Indigo Gradient Top Navbar, Role Privileges Matrix Modal & 29-Module Switcher
  */
 
 window.navigateTo = window.navigateTo || function (url) {
@@ -15,7 +14,7 @@ window.navigateTo = window.navigateTo || function (url) {
                 { label: "Dashboard Hub", href: "/user/admin/dashboard", aliases: ["/user/admin", "/user/admin/", "/user/admin/dashboard", "/user/admin/admin_dashboard_hub"], icon: "fa-th-large" },
                 { label: "System Monitoring", href: "/user/admin/monitoring", aliases: ["/user/admin/monitoring", "/user/admin/overview"], icon: "fa-heartbeat" },
                 { label: "Admin Activity & Risk", href: "/user/admin/activity_dashboard", aliases: ["/user/admin/activity_dashboard"], icon: "fa-user-shield" },
-                { label: "Super-Admin Control", href: "/user/admin/management_panel", aliases: ["/user/admin/management_panel"], icon: "fa-sliders-h" },
+                { label: "Admin & Roles Control", href: "/user/admin/management_panel", aliases: ["/user/admin/management_panel"], icon: "fa-sliders-h" },
                 { label: "Enterprise Reporting", href: "/user/admin/reporting", aliases: ["/user/admin/reporting", "/user/admin/reports"], icon: "fa-chart-bar" }
             ]
         },
@@ -75,6 +74,71 @@ window.navigateTo = window.navigateTo || function (url) {
         return p.replace(/\/+$/, "").replace(/-/g, "_") || "/user/admin/dashboard";
     }
 
+    window.openAdminRolesMatrixModal = function () {
+        let modal = document.getElementById("finanzaAdminRolesModal");
+        const matrix = (window.FinanzaAdminRBAC && window.FinanzaAdminRBAC.getRoleMatrix()) || window.DEFAULT_ROLE_MATRIX || {};
+        const currentRole = (window.FinanzaAdminRBAC && window.FinanzaAdminRBAC.getRole()) || localStorage.getItem("admin_role") || "SUPER_ADMIN";
+
+        if (!modal) {
+            modal = document.createElement("div");
+            modal.id = "finanzaAdminRolesModal";
+            modal.style.cssText = "display:none;position:fixed;inset:0;background:rgba(15,23,42,0.72);z-index:99999;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);";
+            document.body.appendChild(modal);
+        }
+
+        const roleCardsHtml = Object.keys(matrix).map(roleKey => {
+            const r = matrix[roleKey];
+            const isCurrent = roleKey === currentRole;
+            const canList = (r.can_do || []).map(item => `<li style="margin-bottom:6px;color:#1e293b;font-size:0.86rem;"><i class="fas fa-check-circle text-success me-2"></i>${item}</li>`).join("");
+            const cannotList = (r.cannot_do || []).map(item => `<li style="margin-bottom:6px;color:#64748b;font-size:0.85rem;"><i class="fas fa-times-circle text-danger me-2"></i>${item}</li>`).join("");
+
+            return `
+                <div style="border:${isCurrent ? '2px solid #667eea' : '1px solid #e2e8f0'};border-radius:12px;padding:18px;background:${isCurrent ? '#f8faff' : '#ffffff'};box-shadow:0 2px 8px rgba(0,0,0,0.04);">
+                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+                        <div>
+                            <span style="background:${r.badge_color || '#667eea'};color:#fff;padding:4px 12px;border-radius:20px;font-size:0.78rem;font-weight:700;letter-spacing:0.5px;">${roleKey}</span>
+                            <strong style="font-size:1.05rem;color:#0f172a;margin-left:8px;">${r.title || roleKey}</strong>
+                        </div>
+                        ${isCurrent ? '<span style="background:#667eea;color:#fff;padding:3px 10px;border-radius:6px;font-size:0.75rem;font-weight:600;"><i class="fas fa-user-check me-1"></i>Your Active Role</span>' : ''}
+                    </div>
+                    <p style="font-size:0.88rem;color:#475569;margin-bottom:12px;">${r.summary || ''}</p>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;">
+                        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px;">
+                            <div style="font-weight:700;font-size:0.8rem;color:#166534;text-transform:uppercase;margin-bottom:8px;"><i class="fas fa-shield-alt me-1"></i>What ${roleKey} CAN Do</div>
+                            <ul style="list-style:none;padding:0;margin:0;">${canList}</ul>
+                        </div>
+                        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px;">
+                            <div style="font-weight:700;font-size:0.8rem;color:#991b1b;text-transform:uppercase;margin-bottom:8px;"><i class="fas fa-ban me-1"></i>What ${roleKey} CANNOT Do</div>
+                            <ul style="list-style:none;padding:0;margin:0;">${cannotList}</ul>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join("");
+
+        modal.innerHTML = `
+            <div style="background:#fff;border-radius:16px;max-width:980px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,0.3);overflow:hidden;">
+                <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:20px 26px;display:flex;justify-content:space-between;align-items:center;">
+                    <div>
+                        <h4 style="margin:0;font-weight:700;font-size:1.25rem;"><i class="fas fa-user-shield me-2"></i>Finanza Admin Roles & Privileges Matrix</h4>
+                        <small style="opacity:0.9;">Complete breakdown of all 5 Administrator tiers — what each role can and cannot do</small>
+                    </div>
+                    <button type="button" onclick="document.getElementById('finanzaAdminRolesModal').style.display='none'" style="background:rgba(255,255,255,0.2);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:1.2rem;cursor:pointer;">&times;</button>
+                </div>
+                <div style="padding:22px 26px;overflow-y:auto;display:flex;flex-direction:column;gap:16px;">
+                    ${roleCardsHtml}
+                </div>
+                <div style="padding:14px 26px;background:#f8fafc;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;">
+                    <a href="/user/admin/management_panel" class="btn btn-sm btn-primary" style="background:linear-gradient(135deg,#667eea,#764ba2);border:none;color:#fff;padding:8px 16px;border-radius:6px;text-decoration:none;font-weight:600;">
+                        <i class="fas fa-sliders-h me-1"></i> Open Admin Management Panel
+                    </a>
+                    <button type="button" onclick="document.getElementById('finanzaAdminRolesModal').style.display='none'" style="background:#e2e8f0;border:none;color:#1e293b;padding:8px 18px;border-radius:6px;font-weight:600;cursor:pointer;">Close</button>
+                </div>
+            </div>
+        `;
+        modal.style.display = "flex";
+    };
+
     function mountAdminNavbar() {
         if (document.getElementById("finanzaUnifiedAdminNav")) return;
         document.body.classList.add("finanza-admin-shell-ready");
@@ -102,6 +166,7 @@ window.navigateTo = window.navigateTo || function (url) {
         });
 
         const isActive = (paths) => paths.some(p => normalizePath(p) === currentPath) ? "active" : "";
+        const initialRole = localStorage.getItem("admin_role") || "SUPER_ADMIN";
 
         const nav = document.createElement("nav");
         nav.id = "finanzaUnifiedAdminNav";
@@ -130,11 +195,8 @@ window.navigateTo = window.navigateTo || function (url) {
                     <a href="/user/admin/transactions" class="adm-link ${isActive(['/user/admin/transactions'])}">
                         <i class="fas fa-exchange-alt"></i> Transactions
                     </a>
-                    <a href="/user/admin/bank_connect" class="adm-link ${isActive(['/user/admin/bank_connect'])}">
-                        <i class="fas fa-plug"></i> Gateways
-                    </a>
-                    <a href="/user/admin/vendor_hub" class="adm-link ${isActive(['/user/admin/vendor_hub'])}">
-                        <i class="fas fa-cubes"></i> Vendor Hub
+                    <a href="/user/admin/management_panel" class="adm-link ${isActive(['/user/admin/management_panel'])}">
+                        <i class="fas fa-user-shield"></i> Admins & Roles
                     </a>
 
                     <div class="adm-mega-wrap" id="admMegaWrap">
@@ -157,10 +219,13 @@ window.navigateTo = window.navigateTo || function (url) {
                 </div>
 
                 <div class="adm-right-controls">
+                    <button type="button" class="adm-pill-btn" id="admRoleMatrixBtn" onclick="window.openAdminRolesMatrixModal()" title="View Admin Role Privileges (What Each Admin Can & Cannot Do)" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.35);color:#fff;cursor:pointer;">
+                        <i class="fas fa-shield-alt"></i> <span id="admNavRoleBadge">${initialRole}</span>
+                    </button>
                     <a href="/user/dashboard" class="adm-pill-btn" title="Open Client Portal">
                         <i class="fas fa-external-link-alt"></i> Client View
                     </a>
-                    <a href="/logout" class="adm-pill-btn logout" title="Sign Out">
+                    <a href="/logout" data-action="admin-logout" class="adm-pill-btn logout" title="Sign Out">
                         <i class="fas fa-sign-out-alt"></i> Logout
                     </a>
                 </div>
@@ -169,7 +234,13 @@ window.navigateTo = window.navigateTo || function (url) {
 
         document.body.prepend(nav);
 
-        // Toggle All 29 Modules dropdown
+        window.addEventListener("finanza:admin-ready", function (e) {
+            const roleEl = document.getElementById("admNavRoleBadge");
+            if (roleEl && e.detail && e.detail.admin_role) {
+                roleEl.textContent = e.detail.admin_role;
+            }
+        });
+
         const wrap = document.getElementById("admMegaWrap");
         const btn = document.getElementById("admMegaToggleBtn");
         const searchInput = document.getElementById("admMegaSearchInput");
@@ -199,7 +270,6 @@ window.navigateTo = window.navigateTo || function (url) {
             });
         }
 
-        // Populate live KYC pending count
         fetch("/api/admin/metrics", { credentials: "include" })
             .then(r => r.ok ? r.json() : null)
             .then(data => {

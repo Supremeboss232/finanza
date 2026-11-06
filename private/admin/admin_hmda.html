@@ -46,7 +46,7 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item"><a class="nav-link" href="/user/admin/dashboard">Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/user/admin/dashboard">Loans</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/lending">Loans</a></li>
                     <li class="nav-item"><a class="nav-link" href="/user/admin/international_compliance">Compliance</a></li>
                     <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
                 </ul>
@@ -223,7 +223,7 @@
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Applicant Name</label>
-                                <input type="text" class="form-control" required>
+                                <input type="text" id="appName" class="form-control" required>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Co-Applicant</label>
@@ -233,17 +233,17 @@
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Loan Amount</label>
-                                <input type="number" class="form-control" step="0.01" required>
+                                <input type="number" id="appAmount" class="form-control" step="0.01" required>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Application Date</label>
-                                <input type="date" class="form-control" required>
+                                <input type="date" id="appDate" class="form-control" required>
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Property Type</label>
-                                <select class="form-control" required>
+                                <select id="appPropType" class="form-control" required>
                                     <option value="">Select...</option>
                                     <option value="single_family">Single Family</option>
                                     <option value="multi_family">Multi-Family</option>
@@ -252,7 +252,7 @@
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label">Action Type</label>
-                                <select class="form-control" required>
+                                <select id="appPurpose" class="form-control" required>
                                     <option value="">Select...</option>
                                     <option value="origination">Origination</option>
                                     <option value="purchase">Purchase</option>
@@ -271,32 +271,53 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/admin_static/js/auth-helper.js"></script>
     <script>
         const token = localStorage.getItem('token');
+        const authH = () => ({ 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' });
         let decisionsChart = null;
         let demographicsChart = null;
 
-        document.addEventListener('DOMContentLoaded', async function() {
+        function toast(msg, type) {
+            let c = document.getElementById('hmdaToasts');
+            if (!c) {
+                c = document.createElement('div');
+                c.id = 'hmdaToasts';
+                c.style.cssText = 'position:fixed;top:80px;right:20px;z-index:9999';
+                document.body.appendChild(c);
+            }
+            const d = document.createElement('div');
+            d.className = 'alert alert-' + (type || 'success') + ' shadow';
+            d.textContent = msg;
+            c.appendChild(d);
+            setTimeout(() => d.remove(), 4500);
+        }
+        const esc = s => String(s ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+        const money = n => '$' + Number(n || 0).toLocaleString('en-US', {minimumFractionDigits: 2});
+        const fmtDate = d => d ? new Date(d).toLocaleDateString() : 'N/A';
+
+        async function refreshAll() {
             await loadHMDAMetrics();
             await loadApplications();
             await loadApplicants();
             await loadSubmissions();
-            initCharts();
+        }
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            const d = document.getElementById('appDate');
+            if (d) d.value = new Date().toISOString().slice(0, 10);
+            await refreshAll();
         });
 
         async function loadHMDAMetrics() {
             try {
-                const response = await fetch('/api/v1/hmda/metrics', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                const response = await fetch('/api/v1/hmda/metrics', { headers: authH() });
                 if (!response.ok) throw new Error('Failed to load metrics');
                 const data = await response.json();
-                
                 document.getElementById('totalApplications').textContent = data.total_applications || 0;
                 document.getElementById('approvalRate').textContent = (data.approval_rate || 0).toFixed(1) + '%';
                 document.getElementById('underrepresented').textContent = (data.underrepresented_pct || 0).toFixed(1) + '%';
                 document.getElementById('denyRate').textContent = (data.deny_rate || 0).toFixed(1) + '%';
+                renderCharts(data);
             } catch (error) {
                 console.error('Error loading metrics:', error);
             }
@@ -304,25 +325,22 @@
 
         async function loadApplications() {
             try {
-                const response = await fetch('/api/v1/hmda/applications?limit=50', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                const response = await fetch('/api/v1/hmda/applications?limit=100', { headers: authH() });
                 if (!response.ok) throw new Error('Failed to load applications');
                 const apps = await response.json();
-                
                 const tbody = document.getElementById('applicationsTable');
-                tbody.innerHTML = apps.data?.map(app => `
+                tbody.innerHTML = (apps.data && apps.data.length) ? apps.data.map(app => `
                     <tr>
-                        <td><strong>${app.id}</strong></td>
-                        <td>${app.applicant_name}</td>
-                        <td>$${app.loan_amount?.toLocaleString('en-US', {minimumFractionDigits: 2})}</td>
-                        <td>${app.property_type}</td>
-                        <td>${app.action_type}</td>
-                        <td><span class="status-badge status-${app.decision}">${app.decision}</span></td>
-                        <td>${new Date(app.application_date).toLocaleDateString()}</td>
-                        <td><button class="btn btn-sm btn-info">View</button></td>
-                    </tr>
-                `).join('') || '<tr><td colspan="8" class="text-center text-muted">No applications found</td></tr>';
+                        <td><strong>${esc(app.id)}</strong></td>
+                        <td>${esc(app.applicant_name)}</td>
+                        <td>${money(app.loan_amount)}</td>
+                        <td>${esc(app.loan_type)}</td>
+                        <td>${esc(app.loan_purpose)}</td>
+                        <td><span class="status-badge status-${esc(app.action_taken)}">${esc(app.action_taken)}</span></td>
+                        <td>${fmtDate(app.application_date)}</td>
+                        <td><button class="btn btn-sm btn-info" onclick="viewApplication(${app.id})">View</button></td>
+                    </tr>`).join('') : '<tr><td colspan="8" class="text-center text-muted">No applications found</td></tr>';
+                window._apps = apps.data || [];
             } catch (error) {
                 console.error('Error loading applications:', error);
             }
@@ -330,25 +348,22 @@
 
         async function loadApplicants() {
             try {
-                const response = await fetch('/api/v1/hmda/applicants?limit=50', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                const response = await fetch('/api/v1/hmda/applicants?limit=100', { headers: authH() });
                 if (!response.ok) throw new Error('Failed to load applicants');
                 const applicants = await response.json();
-                
                 const tbody = document.getElementById('applicantsTable');
-                tbody.innerHTML = applicants.data?.map(app => `
+                tbody.innerHTML = (applicants.data && applicants.data.length) ? applicants.data.map(a => `
                     <tr>
-                        <td>${app.id}</td>
-                        <td>${app.name}</td>
-                        <td>${app.ethnicity || 'N/A'}</td>
-                        <td>${app.gender || 'N/A'}</td>
-                        <td>$${app.income?.toLocaleString('en-US', {minimumFractionDigits: 0})}</td>
-                        <td>${app.credit_score || 'N/A'}</td>
-                        <td>${app.application_count || 0}</td>
-                        <td><button class="btn btn-sm btn-primary">Details</button></td>
-                    </tr>
-                `).join('') || '<tr><td colspan="8" class="text-center text-muted">No applicants found</td></tr>';
+                        <td>${esc(a.id)}</td>
+                        <td>${esc(a.applicant_name)}</td>
+                        <td>${esc(a.ethnicity || 'N/A')}</td>
+                        <td>${esc(a.gender || 'N/A')}</td>
+                        <td>$${Number(a.income || 0).toLocaleString('en-US', {maximumFractionDigits: 0})}</td>
+                        <td>${esc(a.credit_score || 'N/A')}</td>
+                        <td>${esc(a.race || 'N/A')}</td>
+                        <td><button class="btn btn-sm btn-primary" onclick="viewApplicant(${a.id})">Details</button></td>
+                    </tr>`).join('') : '<tr><td colspan="8" class="text-center text-muted">No applicants found</td></tr>';
+                window._applicants = applicants.data || [];
             } catch (error) {
                 console.error('Error loading applicants:', error);
             }
@@ -356,83 +371,141 @@
 
         async function loadSubmissions() {
             try {
-                const response = await fetch('/api/v1/hmda/submissions?limit=20', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                const response = await fetch('/api/v1/hmda/submissions?limit=20', { headers: authH() });
                 if (!response.ok) throw new Error('Failed to load submissions');
                 const submissions = await response.json();
-                
                 const tbody = document.getElementById('submissionsTable');
-                tbody.innerHTML = submissions.data?.map(sub => `
+                tbody.innerHTML = (submissions.data && submissions.data.length) ? submissions.data.map(s => `
                     <tr>
-                        <td>${sub.id}</td>
-                        <td>${sub.year}</td>
-                        <td>Q${sub.quarter}</td>
-                        <td>${sub.record_count}</td>
-                        <td><span class="status-badge status-${sub.status}">${sub.status}</span></td>
-                        <td>${new Date(sub.submitted_date).toLocaleDateString()}</td>
-                        <td><span class="badge bg-${sub.validation_status === 'passed' ? 'success' : 'warning'}">${sub.validation_status}</span></td>
-                        <td><button class="btn btn-sm btn-primary">View</button></td>
-                    </tr>
-                `).join('') || '<tr><td colspan="8" class="text-center text-muted">No submissions found</td></tr>';
+                        <td>${esc(s.submission_id || s.id)}</td>
+                        <td>${esc(s.submission_year)}</td>
+                        <td>${esc(s.filing_period)}</td>
+                        <td>${esc(s.record_count)}</td>
+                        <td><span class="status-badge status-${esc(s.status)}">${esc(s.status)}</span></td>
+                        <td>${fmtDate(s.submitted_date)}</td>
+                        <td><span class="badge bg-success">${esc(s.confirmation_number || 'validated')}</span></td>
+                        <td><button class="btn btn-sm btn-primary" onclick="exportLAR()">Export</button></td>
+                    </tr>`).join('') : '<tr><td colspan="8" class="text-center text-muted">No submissions found</td></tr>';
             } catch (error) {
                 console.error('Error loading submissions:', error);
             }
         }
 
-        function initCharts() {
-            // Decisions Chart
-            const decisionsCtx = document.getElementById('decisionsChart')?.getContext('2d');
-            if (decisionsCtx) {
-                decisionsChart = new Chart(decisionsCtx, {
+        function renderCharts(m) {
+            const dctx = document.getElementById('decisionsChart')?.getContext('2d');
+            if (dctx && window.Chart) {
+                if (decisionsChart) decisionsChart.destroy();
+                decisionsChart = new Chart(dctx, {
                     type: 'doughnut',
                     data: {
                         labels: ['Approved', 'Denied', 'Withdrawn', 'Pending'],
-                        datasets: [{
-                            data: [72, 15, 8, 5],
-                            backgroundColor: ['#28a745', '#dc3545', '#ffc107', '#17a2b8']
-                        }]
+                        datasets: [{ data: [m.approved || 0, m.denied || 0, m.withdrawn || 0, m.pending || 0],
+                            backgroundColor: ['#28a745', '#dc3545', '#ffc107', '#17a2b8'] }]
                     },
                     options: { responsive: true, maintainAspectRatio: false }
                 });
             }
-
-            // Demographics Chart
-            const demographicsCtx = document.getElementById('demographicsChart')?.getContext('2d');
-            if (demographicsCtx) {
-                demographicsChart = new Chart(demographicsCtx, {
+            const bd = m.demographics_breakdown || {};
+            const mctx = document.getElementById('demographicsChart')?.getContext('2d');
+            if (mctx && window.Chart) {
+                if (demographicsChart) demographicsChart.destroy();
+                const labels = Object.keys(bd);
+                demographicsChart = new Chart(mctx, {
                     type: 'bar',
                     data: {
-                        labels: ['White', 'Black', 'Hispanic', 'Asian', 'Other'],
-                        datasets: [{
-                            label: 'Applicants',
-                            data: [45, 20, 18, 12, 5],
-                            backgroundColor: ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#a8edea']
-                        }]
+                        labels: labels,
+                        datasets: [{ label: 'Applicants', data: labels.map(k => bd[k]),
+                            backgroundColor: ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#a8edea'] }]
                     },
-                    options: { 
-                        responsive: true, 
-                        maintainAspectRatio: false,
-                        indexAxis: 'y'
-                    }
+                    options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y' }
                 });
             }
         }
 
+        function showInfo(title, rows) {
+            let m = document.getElementById('infoModal');
+            if (!m) {
+                m = document.createElement('div');
+                m.id = 'infoModal';
+                m.className = 'modal fade';
+                m.innerHTML = '<div class="modal-dialog"><div class="modal-content"><div class="modal-header"><h5 class="modal-title"></h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"></div></div></div>';
+                document.body.appendChild(m);
+            }
+            m.querySelector('.modal-title').textContent = title;
+            m.querySelector('.modal-body').innerHTML = '<table class="table table-sm">' +
+                Object.entries(rows).map(([k, v]) => `<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join('') + '</table>';
+            new bootstrap.Modal(m).show();
+        }
+        function viewApplication(id) {
+            const a = (window._apps || []).find(x => x.id === id);
+            if (a) showInfo('Application #' + id, {
+                Applicant: a.applicant_name, Amount: money(a.loan_amount), Purpose: a.loan_purpose,
+                Property: a.property_address, Rate: a.interest_rate + '%', Decision: a.action_taken,
+                'Fair lending flagged': a.fair_lending_flagged ? 'Yes' : 'No', Date: fmtDate(a.application_date)
+            });
+        }
+        function viewApplicant(id) {
+            const a = (window._applicants || []).find(x => x.id === id);
+            if (a) showInfo('Applicant #' + id, {
+                Name: a.applicant_name, Type: a.applicant_type, Ethnicity: a.ethnicity, Race: a.race,
+                Sex: a.sex, Age: a.age, Income: money(a.income), 'DTI %': a.dti_ratio, Decision: a.action_taken
+            });
+        }
+
         async function runFairLendingTest() {
-            // Implementation for running fair lending tests
-            alert('Running fair lending test...');
+            try {
+                toast('Running fair lending parity analysis...', 'info');
+                const r = await fetch('/api/v1/hmda/fair-lending/run-test', { method: 'POST', headers: authH(), body: '{}' });
+                const d = await r.json();
+                if (!r.ok) throw new Error(d.detail || 'Test failed');
+                toast(`Fair lending ${d.parity_status}: ${d.applications_analyzed} applications, ${d.flagged_applications} flagged, approval rate ${d.overall_approval_rate}%`,
+                      d.parity_status === 'PASS' ? 'success' : 'warning');
+                await refreshAll();
+            } catch (e) { toast('Fair lending test failed: ' + e.message, 'danger'); }
         }
 
         async function submitHMDAReport() {
-            // Implementation for submitting HMDA report
-            alert('Submitting HMDA report...');
+            try {
+                const r = await fetch('/api/v1/hmda/submissions', { method: 'POST', headers: authH(), body: '{}' });
+                const d = await r.json();
+                if (!r.ok) throw new Error(d.detail || 'Submission failed');
+                toast(`HMDA LAR filed: ${d.record_count} records (${d.confirmation_number})`);
+                await loadSubmissions();
+            } catch (e) { toast('HMDA submission failed: ' + e.message, 'danger'); }
+        }
+
+        async function exportLAR() {
+            try {
+                const r = await fetch('/api/v1/hmda/export-lar', { headers: authH() });
+                const d = await r.json();
+                if (!r.ok) throw new Error(d.detail || 'Export failed');
+                const blob = new Blob([d.lar_content], { type: 'text/plain' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = d.filename || 'hmda_lar.txt';
+                a.click();
+                toast(`Exported ${d.record_count} LAR records`);
+            } catch (e) { toast('Export failed: ' + e.message, 'danger'); }
         }
 
         async function handleNewApplication(event) {
             event.preventDefault();
-            alert('Application registered');
-            bootstrap.Modal.getInstance(document.getElementById('newApplicationModal')).hide();
+            const body = {
+                applicant_name: document.getElementById('appName').value,
+                loan_amount: parseFloat(document.getElementById('appAmount').value),
+                loan_purpose: document.getElementById('appPurpose').value,
+                property_address: document.getElementById('appPropType').value,
+                action_taken: 'pending'
+            };
+            try {
+                const r = await fetch('/api/v1/hmda/applications', { method: 'POST', headers: authH(), body: JSON.stringify(body) });
+                const d = await r.json();
+                if (!r.ok) throw new Error(d.detail || 'Failed');
+                toast('Application #' + d.application_id + ' registered');
+                bootstrap.Modal.getInstance(document.getElementById('newApplicationModal')).hide();
+                document.getElementById('newApplicationForm').reset();
+                await refreshAll();
+            } catch (e) { toast('Could not register application: ' + e.message, 'danger'); }
         }
 
         function openModal(modalId) {

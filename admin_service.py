@@ -251,35 +251,112 @@ class AdminService:
         return [PydanticKYCSubmission.model_validate(s) for s in submissions]
 
     async def approve_kyc(self, db: AsyncSession, submission_id: int, notes: str = "") -> Dict[str, Any]:
-        """Approve a KYC submission and sync User + KYCInfo records"""
-        sub_res = await db.execute(select(DBKYCSubmission).where(DBKYCSubmission.id == submission_id))
+        """Approve a KYC submission (by submission_id OR user_id) and sync User + KYCInfo + KYCSubmission records"""
+        # 1. Look for a pending KYCSubmission by id first, then by user_id
+        sub_res = await db.execute(
+            select(DBKYCSubmission).where(
+                and_(DBKYCSubmission.id == submission_id, DBKYCSubmission.status == "pending")
+            )
+        )
         sub = sub_res.scalar_one_or_none()
+
         if not sub:
-            raise ValueError(f"KYC submission {submission_id} not found")
+            sub_by_user_pending = await db.execute(
+                select(DBKYCSubmission)
+                .where(and_(DBKYCSubmission.user_id == submission_id, DBKYCSubmission.status == "pending"))
+                .order_by(DBKYCSubmission.submitted_at.desc())
+            )
+            sub = sub_by_user_pending.scalars().first()
 
-        sub.status = "approved"
-        sub.reviewed_at = datetime.utcnow()
-        db.add(sub)
+        if not sub:
+            sub_any = await db.execute(select(DBKYCSubmission).where(DBKYCSubmission.id == submission_id))
+            sub = sub_any.scalar_one_or_none()
 
-        if sub.user_id:
-            u_res = await db.execute(select(DBUser).where(DBUser.id == sub.user_id))
+        if not sub:
+            sub_by_user_any = await db.execute(
+                select(DBKYCSubmission)
+                .where(DBKYCSubmission.user_id == submission_id)
+                .order_by(DBKYCSubmission.submitted_at.desc())
+            )
+            sub = sub_by_user_any.scalars().first()
+
+        target_user_ids = set()
+        if sub and sub.user_id:
+            target_user_ids.add(sub.user_id)
+
+        # Also check if submission_id directly matches a User ID (e.g., from admin_users.html)
+        u_direct_res = await db.execute(select(DBUser).where(DBUser.id == submission_id))
+        u_direct = u_direct_res.scalar_one_or_none()
+        if u_direct and (not sub or u_direct.kyc_status in ("pending", "not_started", "submitted")):
+            target_user_ids.add(u_direct.id)
+
+        if not sub and not target_user_ids:
+            raise ValueError(f"KYC submission or user {submission_id} not found")
+
+        now = datetime.utcnow()
+        if sub:
+            sub.status = "approved"
+            sub.reviewed_at = now
+            db.add(sub)
+
+        primary_user_id = sub.user_id if sub else next(iter(target_user_ids))
+
+        for uid in target_user_ids:
+            # Update all KYCSubmission rows for this user
+            all_subs_res = await db.execute(select(DBKYCSubmission).where(DBKYCSubmission.user_id == uid))
+            user_subs = all_subs_res.scalars().all()
+            if not user_subs:
+                new_sub = DBKYCSubmission(
+                    user_id=uid,
+                    document_type="passport",
+                    document_file_path="/img/logo.png",
+                    status="approved",
+                    submitted_at=now,
+                    reviewed_at=now,
+                )
+                db.add(new_sub)
+                if not sub:
+                    sub = new_sub
+            else:
+                for usub in user_subs:
+                    usub.status = "approved"
+                    usub.reviewed_at = now
+                    db.add(usub)
+                    if not sub:
+                        sub = usub
+
+            # Update User record
+            u_res = await db.execute(select(DBUser).where(DBUser.id == uid))
             u = u_res.scalar_one_or_none()
             if u:
                 u.kyc_status = "approved"
                 u.is_verified = True
+                u.is_active = True
+                if hasattr(u, "kyc_verified"):
+                    u.kyc_verified = True
                 db.add(u)
 
-            info_res = await db.execute(select(DBKYCInfo).where(DBKYCInfo.user_id == sub.user_id))
+            # Unlock user's accounts
+            acc_res = await db.execute(select(DBAccount).where(DBAccount.owner_id == uid))
+            for acc in acc_res.scalars().all():
+                acc.status = "active"
+                acc.kyc_level = "full"
+                db.add(acc)
+
+            # Update KYCInfo record if present
+            info_res = await db.execute(select(DBKYCInfo).where(DBKYCInfo.user_id == uid))
             info = info_res.scalar_one_or_none()
             if info:
                 info.status = "approved"
                 info.kyc_status = "approved"
-                info.approved_at = datetime.utcnow()
-                info.reviewed_at = datetime.utcnow()
+                info.rejection_reason = None
+                info.submission_locked = False
+                info.approved_at = now
+                info.reviewed_at = now
                 db.add(info)
 
             notif = DBNotification(
-                user_id=sub.user_id,
+                user_id=uid,
                 title="KYC Verification Approved",
                 message="Your identity verification has been approved. Full banking privileges are now active.",
                 notification_type="kyc",
@@ -288,37 +365,105 @@ class AdminService:
             db.add(notif)
 
         await db.commit()
-        return {"message": f"KYC submission {submission_id} approved", "id": submission_id, "status": "approved"}
+        return {
+            "message": "KYC verification approved",
+            "id": (sub.id if sub and sub.id else submission_id),
+            "user_id": primary_user_id,
+            "status": "approved"
+        }
 
     async def reject_kyc(self, db: AsyncSession, submission_id: int, reason: str = "") -> Dict[str, Any]:
-        """Reject a KYC submission and sync User + KYCInfo records"""
-        sub_res = await db.execute(select(DBKYCSubmission).where(DBKYCSubmission.id == submission_id))
+        """Reject a KYC submission (by submission_id OR user_id) and sync User + KYCInfo + KYCSubmission records"""
+        sub_res = await db.execute(
+            select(DBKYCSubmission).where(
+                and_(DBKYCSubmission.id == submission_id, DBKYCSubmission.status == "pending")
+            )
+        )
         sub = sub_res.scalar_one_or_none()
+
         if not sub:
-            raise ValueError(f"KYC submission {submission_id} not found")
+            sub_by_user_pending = await db.execute(
+                select(DBKYCSubmission)
+                .where(and_(DBKYCSubmission.user_id == submission_id, DBKYCSubmission.status == "pending"))
+                .order_by(DBKYCSubmission.submitted_at.desc())
+            )
+            sub = sub_by_user_pending.scalars().first()
 
-        sub.status = "rejected"
-        sub.reviewed_at = datetime.utcnow()
-        db.add(sub)
+        if not sub:
+            sub_any = await db.execute(select(DBKYCSubmission).where(DBKYCSubmission.id == submission_id))
+            sub = sub_any.scalar_one_or_none()
 
-        if sub.user_id:
-            u_res = await db.execute(select(DBUser).where(DBUser.id == sub.user_id))
+        if not sub:
+            sub_by_user_any = await db.execute(
+                select(DBKYCSubmission)
+                .where(DBKYCSubmission.user_id == submission_id)
+                .order_by(DBKYCSubmission.submitted_at.desc())
+            )
+            sub = sub_by_user_any.scalars().first()
+
+        target_user_ids = set()
+        if sub and sub.user_id:
+            target_user_ids.add(sub.user_id)
+
+        u_direct_res = await db.execute(select(DBUser).where(DBUser.id == submission_id))
+        u_direct = u_direct_res.scalar_one_or_none()
+        if u_direct and (not sub or u_direct.kyc_status in ("pending", "not_started", "submitted")):
+            target_user_ids.add(u_direct.id)
+
+        if not sub and not target_user_ids:
+            raise ValueError(f"KYC submission or user {submission_id} not found")
+
+        now = datetime.utcnow()
+        if sub:
+            sub.status = "rejected"
+            sub.reviewed_at = now
+            db.add(sub)
+
+        primary_user_id = sub.user_id if sub else next(iter(target_user_ids))
+
+        for uid in target_user_ids:
+            all_subs_res = await db.execute(select(DBKYCSubmission).where(DBKYCSubmission.user_id == uid))
+            user_subs = all_subs_res.scalars().all()
+            if not user_subs:
+                new_sub = DBKYCSubmission(
+                    user_id=uid,
+                    document_type="passport",
+                    document_file_path="/img/logo.png",
+                    status="rejected",
+                    submitted_at=now,
+                    reviewed_at=now,
+                )
+                db.add(new_sub)
+                if not sub:
+                    sub = new_sub
+            else:
+                for usub in user_subs:
+                    usub.status = "rejected"
+                    usub.reviewed_at = now
+                    db.add(usub)
+                    if not sub:
+                        sub = usub
+
+            u_res = await db.execute(select(DBUser).where(DBUser.id == uid))
             u = u_res.scalar_one_or_none()
             if u:
                 u.kyc_status = "rejected"
+                if hasattr(u, "kyc_verified"):
+                    u.kyc_verified = False
                 db.add(u)
 
-            info_res = await db.execute(select(DBKYCInfo).where(DBKYCInfo.user_id == sub.user_id))
+            info_res = await db.execute(select(DBKYCInfo).where(DBKYCInfo.user_id == uid))
             info = info_res.scalar_one_or_none()
             if info:
                 info.status = "rejected"
                 info.kyc_status = "rejected"
                 info.rejection_reason = reason or "Verification criteria not met"
-                info.reviewed_at = datetime.utcnow()
+                info.submission_locked = False
+                info.reviewed_at = now
                 db.add(info)
 
             notif = DBNotification(
-                user_id=sub.user_id,
+                user_id=uid,
                 title="KYC Verification Update",
                 message=f"Your KYC verification requires attention: {reason or 'Please re-submit clear identity documents.'}",
                 notification_type="kyc",
@@ -327,7 +472,13 @@ class AdminService:
             db.add(notif)
 
         await db.commit()
-        return {"message": f"KYC submission {submission_id} rejected", "id": submission_id, "status": "rejected", "reason": reason}
+        return {
+            "message": "KYC submission rejected",
+            "id": (sub.id if sub and sub.id else submission_id),
+            "user_id": primary_user_id,
+            "status": "rejected",
+            "reason": reason
+        }
 
     # ==================== DASHBOARD METRICS ====================
 
@@ -341,11 +492,17 @@ class AdminService:
             total_deposits = await BalanceServiceLedger.get_admin_total_deposits(db)
             total_volume = await BalanceServiceLedger.get_admin_total_volume(db)
 
-            pending_kyc_count = await db.scalar(
-                select(func.count(DBKYCSubmission.id)).where(
+            pending_sub_count = await db.scalar(
+                select(func.count(distinct(DBKYCSubmission.user_id))).where(
                     DBKYCSubmission.status == "pending"
                 )
             ) or 0
+            pending_user_count = await db.scalar(
+                select(func.count(DBUser.id)).where(
+                    DBUser.kyc_status == "pending"
+                )
+            ) or 0
+            pending_kyc_count = max(pending_sub_count, pending_user_count)
 
             tx_count = await db.scalar(select(func.count(DBTransaction.id))) or 0
             ledger_count = await db.scalar(

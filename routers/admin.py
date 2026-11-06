@@ -566,62 +566,78 @@ async def list_kyc_info_submissions(db_session: SessionDep, skip: int = 0, limit
 
 @admin_router.get("/kyc/submissions/{submission_id}", response_model=PydanticKYCSubmission)
 async def get_kyc_submission(submission_id: int, db_session: SessionDep):
-    """Get detailed information about a KYC submission."""
+    """Get detailed information about a KYC submission (by submission_id or user_id)."""
     from models import KYCSubmission as DBKYCSubmission
     result = await db_session.execute(
         select(DBKYCSubmission).filter(DBKYCSubmission.id == submission_id)
     )
     submission = result.scalar_one_or_none()
     if not submission:
+        result = await db_session.execute(
+            select(DBKYCSubmission).filter(DBKYCSubmission.user_id == submission_id).order_by(DBKYCSubmission.submitted_at.desc())
+        )
+        submission = result.scalars().first()
+    if not submission:
         raise HTTPException(status_code=404, detail="KYC submission not found")
     return PydanticKYCSubmission.model_validate(submission)
 
 
 @admin_router.post("/kyc/{submission_id}/approve")
-async def admin_approve_kyc(submission_id: int, db_session: SessionDep):
-    submission = await approve_kyc_submission(db_session, submission_id)
-    if not submission:
-        raise HTTPException(status_code=404, detail="KYC submission not found")
-    
-    # ISSUE #2 FIX: Also update the User.kyc_status field
-    user_result = await db_session.execute(
-        select(DBUser).where(DBUser.id == submission.user_id)
-    )
-    user = user_result.scalar_one_or_none()
-    if user:
-        user.kyc_status = "approved"
-        db_session.add(user)
-        await db_session.commit()
-    
-    return {"status": "approved", "id": submission.id}
+async def admin_approve_kyc(
+    submission_id: int,
+    db_session: SessionDep,
+    payload: Optional[dict] = Body(default=None)
+):
+    from admin_service import admin_service
+    try:
+        notes = (payload or {}).get("notes", "") if isinstance(payload, dict) else ""
+        result = await admin_service.approve_kyc(db_session, submission_id, notes=notes)
+        return {
+            "success": True,
+            "status": "approved",
+            "id": result.get("id", submission_id),
+            "user_id": result.get("user_id"),
+            "message": result.get("message", "KYC verification approved"),
+            "data": result
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        log.error(f"Error approving KYC {submission_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @admin_router.post("/kyc/{submission_id}/reject")
-async def admin_reject_kyc(submission_id: int, db_session: SessionDep, reason: Optional[str] = None):
-    # Get the KYC submission to find the user_id
-    result = await db_session.execute(select(KYCSubmission).filter(KYCSubmission.id == submission_id))
-    submission = result.scalar_one_or_none()
-    if not submission:
-        raise HTTPException(status_code=404, detail="KYC submission not found")
-    
-    # Use KYCService to properly reject (which also unlocks the profile)
-    success, message = await KYCService.reject_kyc(
-        db_session=db_session,
-        user_id=submission.user_id,
-        rejection_reason=reason or ""
-    )
-    
-    if not success:
-        raise HTTPException(status_code=400, detail=message)
-    
-    return {
-        "status": "rejected",
-        "id": submission.id,
-        "user_id": submission.user_id,
-        "message": message,
-        "kyc_status": "rejected",
-        "rejection_reason": reason
-    }
+async def admin_reject_kyc(
+    submission_id: int,
+    db_session: SessionDep,
+    reason: Optional[str] = None,
+    payload: Optional[dict] = Body(default=None)
+):
+    from admin_service import admin_service
+    try:
+        body_reason = ""
+        if isinstance(payload, dict):
+            rc = payload.get("reason_code", "")
+            notes = payload.get("notes", "") or payload.get("rejection_reason", "") or payload.get("reason", "")
+            body_reason = f"{rc}: {notes}".strip(": ") if (rc or notes) else ""
+        final_reason = reason or body_reason or "Verification criteria not met"
+        result = await admin_service.reject_kyc(db_session, submission_id, reason=final_reason)
+        return {
+            "success": True,
+            "status": "rejected",
+            "id": result.get("id", submission_id),
+            "user_id": result.get("user_id"),
+            "message": result.get("message", "KYC submission rejected"),
+            "kyc_status": "rejected",
+            "rejection_reason": final_reason,
+            "data": result
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        log.error(f"Error rejecting KYC {submission_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============================================================================

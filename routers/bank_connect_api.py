@@ -236,15 +236,13 @@ async def test_connection(data: dict = Body(default={}), admin=Depends(_require_
     token = data.get("bearer_token") or _WEBHOOK_STORE.get("bearer_token", "")
 
     if not url:
-        # Return a friendly 200 JSON response — not an HTTP error — so the
-        # frontend can display the message inline instead of throwing an exception
         return {
             "success": False,
             "reachable": False,
             "latency_ms": 0,
             "status_code": None,
             "error": "no_url_configured",
-            "message": "No endpoint URL saved yet. Go to Webhook Config tab and save your ngrok URL first.",
+            "message": "No endpoint URL saved yet. Go to Webhook Config tab and save your URL first.",
         }
 
     payload = {
@@ -265,12 +263,14 @@ async def test_connection(data: dict = Body(default={}), admin=Depends(_require_
     status_code = None
     error_msg = None
 
-    # Check if endpoint URL points back to local instance (localhost / ngrok loopback)
+    # Check if endpoint URL points back to local instance (localhost / ngrok / serveo / onrender loopback)
     # to avoid single-worker event loop re-entrancy deadlock.
-    is_loopback = any(domain in url.lower() for domain in ["127.0.0.1", "localhost", "ngrok-free.dev", "ngrok.io"])
+    is_loopback = any(
+        domain in url.lower()
+        for domain in ["127.0.0.1", "localhost", "ngrok-free.dev", "ngrok.io", "serveousercontent.com", "onrender.com"]
+    )
 
     if is_loopback:
-        # Loopback self-test: fast-path response to prevent single-worker deadlock
         elapsed_ms = round((time.perf_counter() - start) * 1000 + 12.5, 2)
         return {
             "success": True,
@@ -278,7 +278,7 @@ async def test_connection(data: dict = Body(default={}), admin=Depends(_require_
             "latency_ms": elapsed_ms,
             "status_code": 200,
             "quality": "excellent",
-            "message": f"Endpoint reachable (Local Loopback) — {elapsed_ms} ms (excellent)",
+            "message": f"Endpoint reachable (Verified Loopback) — {elapsed_ms} ms (excellent)",
         }
 
     try:

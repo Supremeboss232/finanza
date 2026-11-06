@@ -1,6 +1,5 @@
 (function(){
   // USER REALM GUARD: JWT validation + realm-based access control
-  // Step 1: JWT decoder
   function parseJwt(token) {
     try {
       var base64Url = token.split('.')[1];
@@ -13,16 +12,13 @@
       );
       return JSON.parse(jsonPayload);
     } catch(e) {
-      console.error('JWT decode error:', e);
       return null;
     }
   }
 
-  // Helper to get token from localStorage or cookie
   function getToken() {
-    var localToken = localStorage.getItem('token');
-    if (localToken) return localToken;
-    // Try to extract from cookie
+    var localToken = localStorage.getItem('token') || localStorage.getItem('access_token');
+    if (localToken && localToken !== 'null' && localToken !== 'undefined') return localToken;
     var cookies = document.cookie.split(';');
     for (var i = 0; i < cookies.length; i++) {
       var cookie = cookies[i].trim();
@@ -36,103 +32,58 @@
     return null;
   }
 
-  // Step 2: Check authentication
-  var token = getToken();
-  if (!token) {
-    if (!window.location.pathname.startsWith('/signin') && !window.location.pathname.startsWith('/signup')) {
-      window.location.href = '/signin';
+  // Universal Logout Helper
+  function executeCleanLogout(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    if (window.FinanzaShell && typeof window.FinanzaShell.logout === 'function') {
+      window.FinanzaShell.logout(e);
+      return;
     }
-    return;
+    try {
+      fetch('/api/v1/auth/logout', { method: 'POST', credentials: 'include' }).catch(function(){});
+      fetch('/user/logout', { method: 'GET', credentials: 'include' }).catch(function(){});
+    } catch (err) {}
+    localStorage.clear();
+    sessionStorage.clear();
+    document.cookie = 'access_token=; Max-Age=0; path=/';
+    document.cookie = 'token=; Max-Age=0; path=/';
+    window.location.href = '/logout';
   }
 
-  // Step 3: Decode and validate token
-  var decoded = parseJwt(token);
-  if (!decoded) {
-    localStorage.removeItem('token');
-    window.location.href = '/signin';
-    return;
+  window.handleLogout = executeCleanLogout;
+
+  var token = getToken();
+  // Note: HttpOnly cookie may not be visible to document.cookie; only redirect if localStorage has no session hints AND we are not authenticated
+  if (token) {
+    var decoded = parseJwt(token);
+    if (!decoded && token !== 'cookie-session') {
+      localStorage.removeItem('token');
+      localStorage.removeItem('access_token');
+    }
   }
 
   var isAdmin = localStorage.getItem('is_admin') === 'true' || localStorage.getItem('is_admin') === true;
-  
-  console.log('[user-guard.js] Initialized:', { 
-    isAdmin: isAdmin, 
-    is_admin_localStorage: localStorage.getItem('is_admin'),
-    currentPath: window.location.pathname,
-    token: localStorage.getItem('token') ? 'exists' : 'missing'
-  });
-
-  // Step 4: Block regular users from admin realm
   var currentPath = window.location.pathname;
+
   if (!isAdmin && currentPath.includes('/user/admin')) {
-    console.log('[user-guard.js] Non-admin accessing admin path, redirecting...');
     window.location.href = '/user/dashboard';
     return;
   }
-  
-  // Step 4b: Block admins from regular user paths (prevent confusion)
-  if (isAdmin && currentPath === '/user/dashboard') {
-    console.log('[user-guard.js] Admin accessing user dashboard, redirecting to admin dashboard...');
-    window.location.href = '/user/admin/dashboard';
-    return;
-  }
 
-  // Step 5: Validate clicks
-  document.addEventListener('click', function(e){
-    var el = e.target;
-    while(el && el.nodeName !== 'A') el = el.parentElement;
-    if(!el) return;
-    var href = el.getAttribute('href');
-    if(!href) return;
-    if(href.startsWith('#') || href.startsWith('javascript:') || href.startsWith('mailto:') || href.startsWith('tel:')) return;
-    try{
-      var url = new URL(href, window.location.origin);
-    } catch(err){
-      return;
-    }
-    var path = url.pathname || '';
-    // Block cross-realm access
-    if (!isAdmin && path.includes('/user/admin')) {
-      e.preventDefault();
-      e.stopPropagation();
-      alert('Admin access required');
-      return;
-    }
-    var allowed = ['/user','/api','/js','/css','/logout','/static'];
-    var ok = allowed.some(function(p){ return path.startsWith(p); });
-    if(!ok && (url.origin === window.location.origin || href.startsWith('/'))){
-      e.preventDefault();
-      e.stopPropagation();
-      alert('Navigation not allowed');
-    }
-  }, true);
-
-  // ==================================================
-  // UNIVERSAL LOGOUT HANDLER
-  // Securely clears all session state on logout
-  // Applied to ALL pages that link to /logout
-  // ==================================================
+  // Intercept any click on a logout link or button (including nested <i> or <span> tags)
   document.addEventListener('click', function(e) {
-    if (e.target && e.target.getAttribute('href') === '/logout') {
-      e.preventDefault();
-      if (confirm('Are you sure you want to logout?')) {
-        // Clear all client-side storage
-        localStorage.clear();
-        sessionStorage.clear();
-        // Navigate to logout endpoint (server clears cookie)
-        window.location.href = '/logout';
-      }
+    var link = e.target && e.target.closest ? e.target.closest('a[href="/logout"], a[href="/user/logout"], a[href="/auth/logout"], [data-action="logout"]') : null;
+    if (link) {
+      executeCleanLogout(e);
     }
   }, true);
 
-  // Prevent back button from restoring cached authenticated pages
   window.addEventListener('pageshow', function(event) {
-    if (event.persisted) {  // Page restored from back/forward cache
-      // Check both localStorage and cookies for valid token
-      var hasLocalToken = localStorage.getItem('token');
+    if (event.persisted) {
+      var hasLocalToken = localStorage.getItem('token') || localStorage.getItem('access_token') || localStorage.getItem('user_email');
       var hasCookie = document.cookie.includes('access_token=') || document.cookie.includes('token=');
       if (!hasLocalToken && !hasCookie) {
-        window.location.href = '/signin';
+        window.location.href = '/signin?logged_out=1';
       }
     }
   });

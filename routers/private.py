@@ -15,7 +15,6 @@ BASE_PATH = Path(__file__).resolve().parent.parent
 private_router = APIRouter(
     prefix="/user",
     tags=["Private UI"],
-    dependencies=[Depends(get_current_user)],
 )
 
 # --- Template Configuration ---
@@ -285,6 +284,7 @@ LEGACY_ADMIN_PAGE_MAP = {
 }
 
 
+@private_router.get("/superadmin/dashboard", tags=["Admin UI"])
 @private_router.get("/admin", tags=["Admin UI"])
 @private_router.get("/admin/", tags=["Admin UI"])
 @private_router.get("/admin/dashboard", tags=["Admin UI"])
@@ -307,7 +307,11 @@ async def get_admin_user_info(current_user: User = Depends(get_current_admin_use
     if not current_user.is_admin:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin access required")
 
-    admin_role = (getattr(current_user, "admin_role", None) or "STANDARD").upper()
+    import rbac
+    admin_role = rbac.resolve_admin_role(current_user)
+    perms_list = rbac.get_effective_permissions(current_user)
+    role_matrix = rbac.get_role_matrix()
+    role_info = role_matrix.get(admin_role, role_matrix["ADMIN"])
 
     fresh_token = auth_utils.create_access_token({"sub": current_user.email, "is_admin": True, "role": admin_role})
     return {
@@ -318,6 +322,10 @@ async def get_admin_user_info(current_user: User = Depends(get_current_admin_use
         "is_admin": current_user.is_admin,
         "admin_role": admin_role,
         "role": admin_role,
+        "role_title": role_info.get("title", admin_role),
+        "role_info": role_info,
+        "role_matrix": role_matrix,
+        "permissions_list": perms_list,
         "access_token": fresh_token,
         "token": fresh_token,
         "user": {
@@ -326,20 +334,25 @@ async def get_admin_user_info(current_user: User = Depends(get_current_admin_use
             "full_name": current_user.full_name,
             "is_admin": current_user.is_admin,
             "admin_role": admin_role,
+            "role_title": role_info.get("title", admin_role),
+            "permissions": perms_list,
             "kyc_status": current_user.kyc_status,
             "created_at": current_user.created_at.isoformat() if current_user.created_at else None,
         },
         "permissions": {
-            "is_standard_admin": admin_role == "STANDARD",
-            "is_admin": admin_role == "ADMIN",
-            "is_treasury_admin": admin_role == "TREASURY",
+            "is_standard_admin": admin_role == "ADMIN",
+            "is_admin": admin_role in ["ADMIN", "SUPER_ADMIN"],
+            "is_treasury_admin": admin_role in ["TREASURY", "SUPER_ADMIN"],
+            "is_compliance_admin": admin_role in ["COMPLIANCE", "SUPER_ADMIN"],
+            "is_support_admin": admin_role in ["SUPPORT", "SUPER_ADMIN"],
             "is_super_admin": admin_role == "SUPER_ADMIN",
-            "can_manage_users": admin_role in ["ADMIN", "SUPER_ADMIN"],
-            "can_manage_treasury": admin_role in ["TREASURY", "SUPER_ADMIN"],
-            "can_manage_admins": admin_role == "SUPER_ADMIN",
-            "can_access_advanced_search": admin_role in ["ADMIN", "SUPER_ADMIN"],
-            "can_access_bulk_operations": admin_role in ["ADMIN", "SUPER_ADMIN"],
-            "can_access_management_panel": admin_role == "SUPER_ADMIN",
+            "can_manage_users": rbac.has_permission(current_user, "users:edit"),
+            "can_manage_treasury": rbac.has_permission(current_user, "treasury:manage"),
+            "can_manage_admins": rbac.has_permission(current_user, "admin:manage"),
+            "can_access_advanced_search": rbac.has_permission(current_user, "users:view"),
+            "can_access_bulk_operations": rbac.has_permission(current_user, "users:bulk_actions"),
+            "can_access_management_panel": admin_role == "SUPER_ADMIN" or rbac.has_permission(current_user, "admin:manage"),
+            "granted": perms_list,
         },
     }
 
@@ -564,17 +577,18 @@ async def admin_generic_page(page: str, request: Request, current_user: User = D
 
 
 @private_router.get("/logout")
+@private_router.post("/logout")
 async def logout(request: Request):
     import logging
 
-    token = request.cookies.get("access_token")
+    token = request.cookies.get("access_token") or request.cookies.get("token")
     if not token:
         auth_header = request.headers.get("Authorization", "")
         if auth_header.startswith("Bearer "):
             token = auth_header[7:]
 
     db = None
-    if token:
+    if token and token not in ("cookie-session", "null", "undefined"):
         try:
             payload = auth_utils.decode_access_token_full(token)
             if payload:
@@ -599,8 +613,9 @@ async def logout(request: Request):
         except Exception as e:
             logging.error(f"Error adding token to blacklist during logout: {e}")
 
-    response = RedirectResponse(url="/signin", status_code=status.HTTP_303_SEE_OTHER)
+    response = RedirectResponse(url="/signin?logged_out=1", status_code=status.HTTP_303_SEE_OTHER)
     response.delete_cookie(key="access_token", path="/")
+    response.delete_cookie(key="token", path="/")
     return response
 
 

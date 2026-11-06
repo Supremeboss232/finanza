@@ -592,8 +592,8 @@ Dear Customer,<br><br>Your identity verification (KYC) submission has been decli
             document.getElementById('modalAddress').textContent = k.user?.address || '-';
             
             // Document image URLs
-            const frontUrl = k.document_url || '/static/img/placeholder-id.png';
-            const backUrl = k.document_file_path || '/static/img/placeholder-selfie.png';
+            const frontUrl = k.document_front_url || k.document_file_path || k.document_url || '/img/logo.png';
+            const backUrl = k.document_back_url || k.document_file_path || k.document_url || '/img/logo.png';
             
             document.getElementById('frontImage').src = frontUrl;
             document.getElementById('backImage').src = backUrl;

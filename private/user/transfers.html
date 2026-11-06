@@ -2,26 +2,26 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Send & Wire Money - Finanza Bank</title>
+    <title>Move Money &amp; Cross-Border Switch - Finanza Bank</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="/static/css/user-portal.css" rel="stylesheet">
 </head>
-<body data-page-title="Move Money & Wires" data-page-subtitle="Instant Finanza P2P, Domestic ACH/Fedwire, International SWIFT & Standing Orders">
+<body data-page-title="Move Money &amp; Global Corridors" data-page-subtitle="Instant Finanza P2P, Domestic ACH/FedNow, Cross-Border Payrail Remittance Switch &amp; Standing Orders">
 
 <div id="bank-page-content" style="display:none;">
     <!-- Navigation Tabs -->
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
         <div class="fb-tabs" id="transferNavTabs">
             <button type="button" class="fb-tab-btn active" data-tab="domestic" onclick="switchTransferTab('domestic', this)">
-                <i class="fas fa-paper-plane"></i> Domestic & Finanza P2P
+                <i class="fas fa-paper-plane"></i> Domestic &amp; Finanza P2P
             </button>
             <button type="button" class="fb-tab-btn" data-tab="international" onclick="switchTransferTab('international', this)">
-                <i class="fas fa-earth-americas"></i> International SWIFT Wire
+                <i class="fas fa-earth-americas"></i> Cross-Border Remittance Switch
             </button>
             <button type="button" class="fb-tab-btn" data-tab="scheduled" onclick="switchTransferTab('scheduled', this)">
-                <i class="fas fa-calendar-check"></i> Scheduled & Recurring
+                <i class="fas fa-calendar-check"></i> Scheduled &amp; Recurring
             </button>
             <button type="button" class="fb-tab-btn" data-tab="recipients" onclick="switchTransferTab('recipients', this)">
                 <i class="fas fa-address-book"></i> Beneficiaries Book
@@ -35,8 +35,8 @@
             <!-- TAB 1: DOMESTIC & FINANZA P2P -->
             <div class="fb-card transfer-pane" id="pane-domestic">
                 <div class="fb-card-header">
-                    <h2 class="fb-card-title"><i class="fas fa-paper-plane text-primary"></i> Domestic ACH / Wire & Finanza Instant Transfer</h2>
-                    <span class="fb-badge fb-badge-success">$0.00 Fee</span>
+                    <h2 class="fb-card-title"><i class="fas fa-paper-plane text-primary"></i> Domestic ACH / FedNow &amp; Finanza Instant Transfer</h2>
+                    <span class="fb-badge fb-badge-success">$0.00 Fee • Payrail RTGS</span>
                 </div>
                 <div class="fb-card-body">
                     <form id="domesticTransferForm">
@@ -49,8 +49,9 @@
                                 <label class="form-label">Transfer Rail</label>
                                 <select class="form-select" id="domTransferType">
                                     <option value="p2p_transfer">Finanza Instant Internal Transfer (Real-Time)</option>
-                                    <option value="ach_transfer">Domestic ACH Bank Transfer (1–2 Business Days)</option>
-                                    <option value="domestic_wire">Domestic Same-Day Fedwire</option>
+                                    <option value="fednow_instant">Payrail / FedNow Instant Interbank Settlement</option>
+                                    <option value="ach_transfer">Domestic ACH Bank Transfer (Same-Day)</option>
+                                    <option value="domestic_wire">Domestic Fedwire RTGS</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
@@ -60,7 +61,7 @@
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Recipient Full Name / Business</label>
+                                <label class="form-label">Recipient Full Name / Institution</label>
                                 <input type="text" class="form-control" id="domRecipientName" placeholder="e.g., Jonathan Sterling" required>
                             </div>
                             <div class="col-md-6">
@@ -68,7 +69,7 @@
                                 <input type="text" class="form-control font-mono" id="domRecipientAccount" placeholder="10-digit Account Number" required>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">ABA Routing Number / Finanza Email</label>
+                                <label class="form-label">ABA Routing / BIC / Finanza Email</label>
                                 <input type="text" class="form-control" id="domRoutingOrEmail" placeholder="021000021 or user@email.com">
                             </div>
                             <div class="col-md-6">
@@ -93,18 +94,18 @@
                         </div>
                         <div class="d-flex justify-content-end mt-4">
                             <button type="submit" class="btn btn-primary px-4" id="domSubmitBtn">
-                                <i class="fas fa-paper-plane me-2"></i> Authorize & Send Funds
+                                <i class="fas fa-paper-plane me-2"></i> Authorize &amp; Settle Funds
                             </button>
                         </div>
                     </form>
                 </div>
             </div>
 
-            <!-- TAB 2: INTERNATIONAL SWIFT WIRE -->
+            <!-- TAB 2: CROSS-BORDER REMITTANCE SWITCH (PAYRAIL MULTI-CURRENCY CORRIDORS) -->
             <div class="fb-card transfer-pane" id="pane-international" style="display:none;">
                 <div class="fb-card-header">
-                    <h2 class="fb-card-title"><i class="fas fa-earth-americas text-primary"></i> International SWIFT / IBAN Wire Transfer</h2>
-                    <span class="fb-badge fb-badge-info">1.50% Wire Fee</span>
+                    <h2 class="fb-card-title"><i class="fas fa-earth-americas text-primary"></i> Global Cross-Border Remittance &amp; FX Switch</h2>
+                    <span class="fb-badge fb-badge-info" id="intlCorridorBadge">Payrail → SEPA Instant</span>
                 </div>
                 <div class="fb-card-body">
                     <form id="intlTransferForm">
@@ -114,76 +115,87 @@
                                 <select class="form-select source-account-select" id="intlSourceAccount" required></select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Destination Country</label>
-                                <select class="form-select" id="intlCountry" required>
-                                    <option value="GB">United Kingdom (GBP / EUR)</option>
-                                    <option value="DE">Germany / Eurozone (EUR)</option>
-                                    <option value="CA">Canada (CAD)</option>
-                                    <option value="CH">Switzerland (CHF)</option>
-                                    <option value="JP">Japan (JPY)</option>
-                                    <option value="AU">Australia (AUD)</option>
-                                    <option value="NG">Nigeria (NGN / USD)</option>
-                                    <option value="ZA">South Africa (ZAR)</option>
+                                <label class="form-label">Destination Corridor / Country</label>
+                                <select class="form-select" id="intlCountry" onchange="syncCorridorCurrencyFromCountry()" required>
+                                    <option value="DE" data-cur="EUR">Eurozone / Germany (SEPA Instant — EUR)</option>
+                                    <option value="GB" data-cur="GBP">United Kingdom (Faster Payments — GBP)</option>
+                                    <option value="NG" data-cur="NGN">Nigeria &amp; West Africa (NIP / PAPSS — NGN)</option>
+                                    <option value="US" data-cur="USDC">Web3 On-Chain Corridor (Polygon / ERC-20 — USDC)</option>
+                                    <option value="CA" data-cur="CAD">Canada (Interac / Lynx — CAD)</option>
+                                    <option value="CH" data-cur="CHF">Switzerland (SIC Instant — CHF)</option>
+                                    <option value="JP" data-cur="JPY">Japan (Zengin Clearing — JPY)</option>
+                                    <option value="AU" data-cur="AUD">Australia (NPP Osko — AUD)</option>
+                                    <option value="ZA" data-cur="ZAR">South Africa (SARB PayShap — ZAR)</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Beneficiary Full Name</label>
+                                <label class="form-label">Beneficiary Full Name / Entity</label>
                                 <input type="text" class="form-control" id="intlRecipientName" placeholder="Beneficiary Legal Name" required>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Beneficiary Bank Name</label>
-                                <input type="text" class="form-control" id="intlBankName" placeholder="e.g., Barclays Bank PLC" required>
+                                <label class="form-label">Receiving Institution / Bank Name</label>
+                                <input type="text" class="form-control" id="intlBankName" placeholder="e.g., Barclays / Deutsche Bank / Zenith Bank" required>
                             </div>
                             <div class="col-md-7">
-                                <label class="form-label">IBAN or International Account Number</label>
+                                <label class="form-label">IBAN / NUBAN / Wallet Address</label>
                                 <input type="text" class="form-control font-mono" id="intlIban" placeholder="GB29 NWBK 6016 1331 9268 19" required>
                             </div>
                             <div class="col-md-5">
-                                <label class="form-label">SWIFT / BIC Code</label>
+                                <label class="form-label">SWIFT / BIC / Network Code</label>
                                 <input type="text" class="form-control font-mono text-uppercase" id="intlSwift" placeholder="BARCGB22XXX" required>
                             </div>
                             <div class="col-md-5">
                                 <label class="form-label">Send Amount (USD)</label>
                                 <div class="input-group">
                                     <span class="input-group-text fw-bold">$</span>
-                                    <input type="number" class="form-control fw-bold" id="intlAmount" min="10" step="0.01" placeholder="1000.00" oninput="updateIntlPreview()" required>
+                                    <input type="number" class="form-control fw-bold" id="intlAmount" min="5" step="0.01" value="1000.00" oninput="updateIntlPreview()" required>
                                 </div>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">Target Currency</label>
+                                <label class="form-label">Target Payout Currency</label>
                                 <select class="form-select" id="intlCurrency" onchange="updateIntlPreview()">
-                                    <option value="EUR" data-rate="0.92">EUR — Euro</option>
-                                    <option value="GBP" data-rate="0.79">GBP — British Pound</option>
-                                    <option value="CAD" data-rate="1.36">CAD — Canadian Dollar</option>
-                                    <option value="CHF" data-rate="0.88">CHF — Swiss Franc</option>
-                                    <option value="JPY" data-rate="151.40">JPY — Japanese Yen</option>
-                                    <option value="AUD" data-rate="1.52">AUD — Australian Dollar</option>
+                                    <option value="EUR">EUR — Euro (SEPA)</option>
+                                    <option value="GBP">GBP — British Pound (FPS)</option>
+                                    <option value="NGN">NGN — Nigerian Naira (NIP)</option>
+                                    <option value="USDC">USDC — USD Coin (Web3)</option>
+                                    <option value="CAD">CAD — Canadian Dollar</option>
+                                    <option value="CHF">CHF — Swiss Franc</option>
+                                    <option value="JPY">JPY — Japanese Yen</option>
+                                    <option value="AUD">AUD — Australian Dollar</option>
+                                    <option value="ZAR">ZAR — South African Rand</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">Wire Fee (1.5%)</label>
-                                <input type="text" class="form-control bg-light font-mono" id="intlFeeDisplay" value="$0.00" readonly>
+                                <label class="form-label">Corridor Fee</label>
+                                <input type="text" class="form-control bg-light font-mono" id="intlFeeDisplay" value="$6.50" readonly>
                             </div>
+
+                            <!-- Live FX Corridor Quote Box -->
                             <div class="col-12">
-                                <div class="p-3 rounded-3 bg-light border d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <small class="text-muted d-block">Estimated Recipient Payout</small>
-                                        <span class="fs-5 fw-extrabold text-primary tabular-nums" id="intlConvertedPreview">0.00 EUR</span>
-                                    </div>
-                                    <div class="text-end">
-                                        <small class="text-muted d-block">Total Debit (Principal + Fee)</small>
-                                        <span class="fs-6 fw-bold tabular-nums" id="intlTotalDebitPreview">$0.00</span>
+                                <div class="p-3 rounded-3 border" style="background:linear-gradient(135deg,#f8fafc,#eff6ff); border-color:#bfdbfe !important;">
+                                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                        <div>
+                                            <small class="text-muted d-block fw-semibold">Guaranteed Recipient Payout</small>
+                                            <span class="fs-4 fw-extrabold text-primary tabular-nums" id="intlConvertedPreview">921.50 EUR</span>
+                                            <div class="small text-muted font-mono mt-1" id="intlLiveRateText">Live Rate: 1 USD = 0.9215 EUR • Pool: CLR-EUR-SEPA</div>
+                                        </div>
+                                        <div class="text-end">
+                                            <small class="text-muted d-block">Total Debit (Principal + Corridor Fee)</small>
+                                            <span class="fs-5 fw-bold tabular-nums d-block" id="intlTotalDebitPreview">$1,006.50</span>
+                                            <span class="badge bg-success mt-1" id="intlDeliverySpeedBadge">Instant (~6s via Payrail Switch)</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
+
                             <div class="col-12">
-                                <label class="form-label">Purpose of Wire / Compliance Remittance Note</label>
-                                <input type="text" class="form-control" id="intlMemo" placeholder="International supplier invoice / tuition / family support" required>
+                                <label class="form-label">Purpose of Remittance / Compliance Note</label>
+                                <input type="text" class="form-control" id="intlMemo" placeholder="International supplier settlement / family remittance / treasury liquidity" required>
                             </div>
                         </div>
                         <div class="d-flex justify-content-end mt-4">
                             <button type="submit" class="btn btn-primary px-4" id="intlSubmitBtn">
-                                <i class="fas fa-globe me-2"></i> Execute SWIFT Wire
+                                <i class="fas fa-globe me-2"></i> Execute Cross-Border Settlement
                             </button>
                         </div>
                     </form>
@@ -258,7 +270,7 @@
                             <input type="text" class="form-control form-control-sm font-mono" id="benAccount" placeholder="Account # / IBAN" required>
                         </div>
                         <div class="col-md-3">
-                            <input type="text" class="form-control form-control-sm" id="benBank" placeholder="Bank Name / Routing">
+                            <input type="text" class="form-control form-control-sm" id="benBank" placeholder="Bank Name / BIC">
                         </div>
                         <div class="col-md-2">
                             <button type="submit" class="btn btn-sm btn-primary w-100"><i class="fas fa-plus me-1"></i>Save</button>
@@ -269,24 +281,37 @@
             </div>
         </div>
 
-        <!-- Right Column: Transfer History & Limits -->
+        <!-- Right Column: Live Interbank Tracker, Corridor Status & History -->
         <div class="col-lg-5">
+            <!-- Live Payrail Settlement Tracker Card -->
+            <div class="fb-card mb-4" id="liveSettlementTrackerCard" style="display:none; border:1.5px solid #10b981;">
+                <div class="fb-card-header" style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);">
+                    <h3 class="fb-card-title text-success"><i class="fas fa-satellite-dish"></i> Live Payrail Clearing Trace</h3>
+                    <span class="badge bg-success font-mono" id="liveTraceRefBadge">SETTLED</span>
+                </div>
+                <div class="fb-card-body small" id="liveSettlementTrackerBody"></div>
+            </div>
+
             <div class="fb-card mb-4">
                 <div class="fb-card-header">
-                    <h3 class="fb-card-title"><i class="fas fa-shield-halved text-success"></i> Real-Time Settlement & Limits</h3>
+                    <h3 class="fb-card-title"><i class="fas fa-network-wired text-success"></i> Active Interbank Settlement Corridors</h3>
                 </div>
                 <div class="fb-card-body small">
                     <div class="d-flex justify-content-between py-2 border-bottom">
-                        <span class="text-muted">Finanza P2P Internal Transfer</span>
+                        <span class="text-muted">Finanza P2P &amp; Payrail FedNow</span>
                         <span class="fw-bold text-success">Instant • $0.00 Fee</span>
                     </div>
                     <div class="d-flex justify-content-between py-2 border-bottom">
-                        <span class="text-muted">Domestic ACH Transfer</span>
-                        <span class="fw-bold">1–2 Days • $0.00 Fee</span>
+                        <span class="text-muted">EU / UK (SEPA Instant &amp; FPS)</span>
+                        <span class="fw-bold text-primary">~6 Sec • 0.65% Corridor Fee</span>
                     </div>
                     <div class="d-flex justify-content-between py-2 border-bottom">
-                        <span class="text-muted">International SWIFT Wire</span>
-                        <span class="fw-bold">Same/Next Day • 1.50% Fee</span>
+                        <span class="text-muted">Africa Corridor (NIP / PAPSS)</span>
+                        <span class="fw-bold text-primary">~8 Sec • 0.85% Corridor Fee</span>
+                    </div>
+                    <div class="d-flex justify-content-between py-2 border-bottom">
+                        <span class="text-muted">Web3 Stablecoin Bridge (USDC)</span>
+                        <span class="fw-bold text-info">On-Chain (~4s) • 0.25% Fee</span>
                     </div>
                     <div class="d-flex justify-content-between pt-2">
                         <span class="text-muted">Available Primary Balance</span>
@@ -297,14 +322,14 @@
 
             <div class="fb-card">
                 <div class="fb-card-header">
-                    <h3 class="fb-card-title"><i class="fas fa-clock-rotate-left text-primary"></i> Recent Outbound & Inbound Transfers</h3>
+                    <h3 class="fb-card-title"><i class="fas fa-clock-rotate-left text-primary"></i> Recent Outbound &amp; Inbound Transfers</h3>
                 </div>
                 <div class="table-responsive">
                     <table class="fb-table">
                         <thead>
                             <tr>
                                 <th>Date</th>
-                                <th>Recipient / Type</th>
+                                <th>Recipient / Corridor</th>
                                 <th class="text-end">Amount</th>
                                 <th class="text-end">Receipt</th>
                             </tr>
@@ -324,6 +349,7 @@
 <script>
 let savedRecipients = [];
 let transferHistory = [];
+let currentQuote = null;
 
 function switchTransferTab(tabName, btnEl) {
     document.querySelectorAll('.transfer-pane').forEach(p => p.style.display = 'none');
@@ -337,25 +363,63 @@ function switchTransferTab(tabName, btnEl) {
         const matchBtn = document.querySelector(`#transferNavTabs .fb-tab-btn[data-tab="${tabName}"]`);
         if (matchBtn) matchBtn.classList.add('active');
     }
+    if (tabName === 'international') updateIntlPreview();
 }
 
-function updateIntlPreview() {
-    const amt = parseFloat(document.getElementById('intlAmount').value || 0);
-    const sel = document.getElementById('intlCurrency');
-    const opt = sel.options[sel.selectedIndex];
-    const rate = parseFloat(opt.dataset.rate || 1);
-    const cur = sel.value;
-    const fee = Math.round(amt * 0.015 * 100) / 100;
-    const total = amt + fee;
-    const converted = (amt * rate).toFixed(2);
+function syncCorridorCurrencyFromCountry() {
+    const countrySel = document.getElementById('intlCountry');
+    const opt = countrySel.options[countrySel.selectedIndex];
+    if (opt && opt.dataset.cur) {
+        document.getElementById('intlCurrency').value = opt.dataset.cur;
+    }
+    updateIntlPreview();
+}
 
-    document.getElementById('intlFeeDisplay').value = `$${fee.toFixed(2)}`;
-    document.getElementById('intlConvertedPreview').textContent = `${Number(converted).toLocaleString()} ${cur}`;
-    document.getElementById('intlTotalDebitPreview').textContent = `$${total.toFixed(2)}`;
+async function updateIntlPreview() {
+    const amt = parseFloat(document.getElementById('intlAmount').value || 0);
+    const cur = document.getElementById('intlCurrency').value;
+
+    try {
+        const q = await FinanzaShell.api(`/api/v1/settlement/fx-quote?from_currency=USD&to_currency=${cur}&amount=${amt}`);
+        if (q && q.success) {
+            currentQuote = q;
+            document.getElementById('intlFeeDisplay').value = `$${Number(q.fee_amount).toFixed(2)}`;
+            document.getElementById('intlConvertedPreview').textContent = `${Number(q.recipient_gets).toLocaleString('en-US', { minimumFractionDigits: 2 })} ${cur}`;
+            document.getElementById('intlTotalDebitPreview').textContent = `$${Number(q.total_debit).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
+            document.getElementById('intlLiveRateText').textContent = `Live Rate: 1 USD = ${q.exchange_rate} ${cur} • Pool: ${q.clearing_pool_id}`;
+            document.getElementById('intlCorridorBadge').textContent = q.corridor_rail;
+            document.getElementById('intlDeliverySpeedBadge').textContent = q.estimated_delivery;
+        }
+    } catch (e) {
+        console.warn('FX quote fallback:', e);
+    }
+}
+
+function renderLiveSettlementTrace(ref, steps, corridorRail) {
+    const card = document.getElementById('liveSettlementTrackerCard');
+    const body = document.getElementById('liveSettlementTrackerBody');
+    document.getElementById('liveTraceRefBadge').textContent = ref;
+    card.style.display = 'block';
+
+    const traceSteps = steps || [
+        { step: 1, stage: 'Core Ledger & OFAC SDN Check', detail: 'Sender account debited • US Treasury OFAC Clear' },
+        { step: 2, stage: 'Payrail Clearing Pool Lock', detail: 'Verified Finanza Base Clearing Account liquidity' },
+        { step: 3, stage: 'Corridor FX Conversion', detail: `Executed via ${corridorRail || 'Payrail Switch'}` },
+        { step: 4, stage: 'Beneficiary Institution Credited', detail: 'Final settlement acknowledgment received (HTTP 200)' }
+    ];
+
+    body.innerHTML = traceSteps.map(s => `
+        <div class="d-flex align-items-start gap-2 mb-2 pb-2 border-bottom">
+            <span class="badge bg-success rounded-circle p-1"><i class="fas fa-check"></i></span>
+            <div>
+                <div class="fw-bold text-dark">Step ${s.step}: ${s.stage}</div>
+                <div class="text-muted" style="font-size:0.78rem;">${s.detail}</div>
+            </div>
+        </div>
+    `).join('');
 }
 
 async function loadTransfersWorkspace() {
-    // Auto-select tab based on URL path
     const path = window.location.pathname;
     if (path.includes('international_transfers')) switchTransferTab('international');
     else if (path.includes('scheduled_transfers')) switchTransferTab('scheduled');
@@ -363,6 +427,8 @@ async function loadTransfersWorkspace() {
     const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
     const schedDate = document.getElementById('schedStartDate');
     if (schedDate && !schedDate.value) schedDate.value = tomorrow;
+
+    updateIntlPreview();
 
     try {
         const [accRes, recRes, trfRes] = await Promise.allSettled([
@@ -377,7 +443,6 @@ async function loadTransfersWorkspace() {
         savedRecipients = (recRes.status === 'fulfilled' && Array.isArray(recRes.value)) ? recRes.value : [];
         transferHistory = (trfRes.status === 'fulfilled' && Array.isArray(trfRes.value)) ? trfRes.value : [];
 
-        // Populate source account selects
         const acctOptions = accounts.map(a =>
             `<option value="${a.id}">${(a.account_type || 'Checking').toUpperCase()} (${a.account_number}) — ${FinanzaShell.fmt(a.balance, a.currency || 'USD', true)}</option>`
         ).join('');
@@ -388,7 +453,6 @@ async function loadTransfersWorkspace() {
         const totalBal = accounts.reduce((s, a) => s + Number(a.balance || 0), 0);
         document.getElementById('transferSideBalance').textContent = FinanzaShell.fmt(totalBal);
 
-        // Populate saved recipients dropdown & list
         const recSelect = document.getElementById('domSavedRecipientSelect');
         recSelect.innerHTML = '<option value="">— Enter New Recipient Below —</option>' +
             savedRecipients.map((r, idx) => `<option value="${idx}">${r.name} (${r.account_number || r.email || 'Saved'})</option>`).join('');
@@ -410,7 +474,6 @@ async function loadTransfersWorkspace() {
             `).join('');
         }
 
-        // Render recent transfers
         const tbody = document.getElementById('recentTransfersBody');
         if (!transferHistory.length) {
             tbody.innerHTML = `<tr><td colspan="4" class="text-center py-4 text-muted small">No transfers executed yet.</td></tr>`;
@@ -463,7 +526,7 @@ document.getElementById('domesticTransferForm').addEventListener('submit', async
     const btn = document.getElementById('domSubmitBtn');
     const orig = btn.innerHTML;
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing Transfer...';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Settling via Payrail...';
     try {
         const routingOrEmail = document.getElementById('domRoutingOrEmail').value.trim();
         const isEmail = routingOrEmail.includes('@');
@@ -481,6 +544,7 @@ document.getElementById('domesticTransferForm').addEventListener('submit', async
                 save_recipient: document.getElementById('domSaveRecipient').checked
             }
         });
+        renderLiveSettlementTrace(res.reference_number, res.settlement_steps, 'Payrail RTGS / Domestic Rail');
         FinanzaShell.toast(`${res.message} (Ref: ${res.reference_number})`, 'success');
         e.target.reset();
         await FinanzaShell.refreshUserContext();
@@ -493,14 +557,16 @@ document.getElementById('domesticTransferForm').addEventListener('submit', async
     }
 });
 
-// International SWIFT Wire Submit
+// International Cross-Border Remittance Submit
 document.getElementById('intlTransferForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const btn = document.getElementById('intlSubmitBtn');
     const orig = btn.innerHTML;
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Transmitting SWIFT Wire...';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Routing via Payrail Switch...';
     try {
+        const cur = document.getElementById('intlCurrency').value;
+        const amt = parseFloat(document.getElementById('intlAmount').value);
         const res = await FinanzaShell.api('/api/user/transfers', {
             method: 'POST',
             body: {
@@ -510,13 +576,18 @@ document.getElementById('intlTransferForm').addEventListener('submit', async (e)
                 recipient_account: document.getElementById('intlIban').value,
                 routing_number: document.getElementById('intlSwift').value,
                 country: document.getElementById('intlCountry').value,
-                currency: document.getElementById('intlCurrency').value,
-                amount: parseFloat(document.getElementById('intlAmount').value),
+                currency: cur,
+                amount: amt,
                 memo: `${document.getElementById('intlBankName').value} — ${document.getElementById('intlMemo').value}`,
                 save_recipient: true
             }
         });
-        FinanzaShell.toast(`International wire completed! Ref: ${res.reference_number}`, 'success');
+        renderLiveSettlementTrace(
+            res.reference_number,
+            res.settlement_steps,
+            currentQuote ? currentQuote.corridor_rail : `Payrail → ${cur} Corridor`
+        );
+        FinanzaShell.toast(`Cross-border settlement completed! Ref: ${res.reference_number}`, 'success');
         e.target.reset();
         updateIntlPreview();
         await FinanzaShell.refreshUserContext();

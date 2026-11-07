@@ -1447,17 +1447,28 @@
                 container.innerHTML = '<p class="empty-state">No role matrix available</p>';
                 return;
             }
+            const activeRole = (window.FinanzaAdminRBAC && window.FinanzaAdminRBAC.getRole()) || 'SUPER_ADMIN';
+            const actualRole = (window.FinanzaAdminRBAC && window.FinanzaAdminRBAC.getActualRole()) || activeRole;
             container.innerHTML = keys.map(roleKey => {
                 const r = matrix[roleKey];
+                const isCurrent = roleKey === activeRole;
                 const canItems = (r.can_do || []).map(x => `<li style="margin-bottom:6px;"><i class="fas fa-check-circle text-success me-2"></i>${x}</li>`).join('');
                 const cannotItems = (r.cannot_do || []).map(x => `<li style="margin-bottom:6px;"><i class="fas fa-times-circle text-danger me-2"></i>${x}</li>`).join('');
+                const allowedPages = (r.allowed_pages || []).map(p => `<code style="background:#e0e7ff;color:#1e40af;padding:2px 8px;border-radius:6px;font-size:0.78rem;margin:2px;display:inline-block;">${p}</code>`).join('');
+                const restrictedPages = (r.restricted_pages || []).map(p => `<code style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:6px;font-size:0.78rem;margin:2px;display:inline-block;">${p}</code>`).join('') || '<span class="text-success small fw-bold">None (Full 29-Module Access)</span>';
                 const permsBadges = (r.permissions || []).map(p => `<code style="background:#f1f5f9;color:#334155;padding:2px 7px;border-radius:4px;font-size:0.78rem;margin:2px;display:inline-block;">${p}</code>`).join('');
                 return `
-                    <div style="border:1px solid #e2e8f0;border-radius:10px;padding:20px;background:#fff;">
-                        <div class="d-flex justify-content-between align-items-center flex-wrap mb-2">
+                    <div style="border:${isCurrent ? '2px solid #667eea' : '1px solid #e2e8f0'};border-radius:10px;padding:20px;background:${isCurrent ? '#f8faff' : '#fff'};">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap mb-2 gap-2">
                             <div>
                                 <span class="role-badge role-${roleKey.toLowerCase()}">${roleKey}</span>
                                 <strong style="font-size:1.15rem;color:#1e293b;">${r.title || roleKey}</strong>
+                                ${r.default_account ? `<span class="badge bg-light text-secondary border ms-2"><i class="fas fa-envelope me-1"></i>${r.default_account}</span>` : ''}
+                            </div>
+                            <div class="d-flex gap-2 align-items-center">
+                                ${isCurrent ? '<span class="badge bg-primary"><i class="fas fa-user-check me-1"></i>Active Tier</span>' : ''}
+                                ${actualRole === 'SUPER_ADMIN' && !isCurrent ? `<button class="btn btn-sm btn-outline-primary" onclick="window.previewAdminRole && window.previewAdminRole('${roleKey}'); renderRoleMatrixTab();"><i class="fas fa-eye me-1"></i>Preview as ${roleKey}</button>` : ''}
+                                <button class="btn btn-sm btn-primary" onclick="prefillRoleForCreation('${roleKey}')"><i class="fas fa-user-plus me-1"></i>Create ${roleKey}</button>
                             </div>
                         </div>
                         <p class="text-muted mb-3">${r.summary || ''}</p>
@@ -1465,7 +1476,7 @@
                             <div class="col-md-6">
                                 <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:14px;height:100%;">
                                     <h6 style="color:#166534;font-weight:700;font-size:0.85rem;text-transform:uppercase;margin-bottom:10px;">
-                                        <i class="fas fa-check-shield me-1"></i> What ${roleKey} CAN Do
+                                        <i class="fas fa-shield-alt me-1"></i> What ${roleKey} CAN Do
                                     </h6>
                                     <ul style="list-style:none;padding:0;margin:0;font-size:0.9rem;">${canItems}</ul>
                                 </div>
@@ -1479,7 +1490,17 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="mt-3 pt-2 border-top">
+                        <div class="row g-3 mt-2 pt-2 border-top">
+                            <div class="col-md-6">
+                                <small class="text-primary fw-bold d-block mb-1"><i class="fas fa-check-circle me-1"></i>Allowed Admin Modules:</small>
+                                <div>${allowedPages}</div>
+                            </div>
+                            <div class="col-md-6">
+                                <small class="text-danger fw-bold d-block mb-1"><i class="fas fa-lock me-1"></i>Restricted Admin Modules:</small>
+                                <div>${restrictedPages}</div>
+                            </div>
+                        </div>
+                        <div class="mt-2 pt-2 border-top">
                             <small class="text-muted fw-bold d-block mb-1">Default Permission Scopes:</small>
                             <div>${permsBadges}</div>
                         </div>
@@ -1488,11 +1509,30 @@
             }).join('');
         }
 
+        function prefillRoleForCreation(roleKey) {
+            const roleSelect = document.getElementById('createRole');
+            if (roleSelect) roleSelect.value = roleKey;
+            const createTabLink = document.querySelector('a[href="#createAdminTab"]');
+            if (createTabLink && window.bootstrap && bootstrap.Tab) {
+                new bootstrap.Tab(createTabLink).show();
+            } else if (createTabLink) {
+                createTabLink.click();
+            }
+            const emailInput = document.getElementById('createEmail');
+            if (emailInput) emailInput.focus();
+        }
+
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', () => {
             renderRoleMatrixTab();
             loadAdmins();
             loadAdminList();
+            const params = new URLSearchParams(window.location.search);
+            const requestedRole = params.get('role');
+            if (requestedRole) {
+                const roleSelect = document.getElementById('createRole');
+                if (roleSelect) roleSelect.value = requestedRole.toUpperCase();
+            }
         });
     </script>
     <script src="/static/js/admin-shell.js?v=3"></script>

@@ -289,6 +289,18 @@
                             </div>
                             <hr>
                             <div id="kycActionButtons">
+                                <div class="mb-2">
+                                    <label class="form-label small fw-bold text-muted mb-1">Review Notes / Rejection Reason</label>
+                                    <select id="inlineKycReasonSelect" class="form-select form-select-sm mb-1">
+                                        <option value="VERIFIED_OK">Verified — Documents Clear &amp; Authentic</option>
+                                        <option value="POOR_IMAGE_QUALITY">Reject: Blurry or Unreadable Document</option>
+                                        <option value="EXPIRED_DOCUMENT">Reject: Expired Identification Document</option>
+                                        <option value="NAME_MISMATCH">Reject: Name Mismatch with Profile</option>
+                                        <option value="ADDRESS_MISMATCH">Reject: Address Verification Failed</option>
+                                        <option value="INCOMPLETE_SUBMISSION">Reject: Incomplete Document Submission</option>
+                                    </select>
+                                    <input type="text" id="inlineKycCustomNotes" class="form-control form-control-sm" placeholder="Optional compliance notes...">
+                                </div>
                                 <button class="btn btn-success btn-sm w-100 mb-2" onclick="approveKYC()" data-require-role="kycApproval">
                                     <i class="fas fa-check"></i> Approve KYC
                                 </button>
@@ -1257,10 +1269,17 @@
                 return;
             }
 
+            const notesEl = document.getElementById('inlineKycCustomNotes');
+            const notes = notesEl ? notesEl.value.trim() : '';
+
             try {
                 const r = await api.fetch(`/api/admin/kyc/${window.currentKYCUserId}/approve`, {
                     method: 'POST',
-                    body: { approved_by: api.adminInfo.user_id }
+                    body: {
+                        user_id: window.currentKYCUserId,
+                        approved_by: api.adminInfo.user_id,
+                        notes: notes || 'Approved via User Management Control Center'
+                    }
                 });
 
                 if (r.ok) {
@@ -1270,7 +1289,7 @@
                     loadAllData();
                 } else {
                     const error = await r.json();
-                    api.showToast(error.detail || 'Failed to approve KYC', 'danger');
+                    api.showToast(error.detail || error.error || 'Failed to approve KYC', 'danger');
                 }
             } catch (e) {
                 api.showToast('Error: ' + e.message, 'danger');
@@ -1283,14 +1302,20 @@
                 return;
             }
 
-            const reason = prompt('Rejection reason (shown to user):');
-            if (!reason) return;
+            const selEl = document.getElementById('inlineKycReasonSelect');
+            const notesEl = document.getElementById('inlineKycCustomNotes');
+            const selVal = (selEl && selEl.value !== 'VERIFIED_OK') ? selEl.value : 'DOCUMENT_VERIFICATION_FAILED';
+            const customNotes = notesEl ? notesEl.value.trim() : '';
+            const reason = customNotes ? `${selVal}: ${customNotes}` : selVal;
 
             try {
                 const r = await api.fetch(`/api/admin/kyc/${window.currentKYCUserId}/reject`, {
                     method: 'POST',
                     body: { 
+                        user_id: window.currentKYCUserId,
+                        reason_code: selVal,
                         rejection_reason: reason,
+                        notes: customNotes,
                         rejected_by: api.adminInfo.user_id
                     }
                 });

@@ -354,6 +354,8 @@ async def get_admin_user_info(current_user: User = Depends(get_current_admin_use
             "can_access_management_panel": admin_role == "SUPER_ADMIN" or rbac.has_permission(current_user, "admin:manage"),
             "granted": perms_list,
         },
+        "allowed_pages": role_info.get("allowed_pages", ["*"]),
+        "restricted_pages": role_info.get("restricted_pages", []),
     }
 
 

@@ -69,15 +69,86 @@ window.navigateTo = window.navigateTo || function (url) {
         }
     ];
 
+    const MODULE_LABELS = {
+        "/user/admin/dashboard": "Dashboard Hub",
+        "/user/admin/monitoring": "System Monitoring",
+        "/user/admin/activity_dashboard": "Admin Activity & Risk",
+        "/user/admin/management_panel": "Admin & Roles Control",
+        "/user/admin/reporting": "Enterprise Reporting",
+        "/user/admin/users": "User Management",
+        "/user/admin/advanced_search": "Advanced Search",
+        "/user/admin/bulk_operations": "Bulk Operations",
+        "/user/admin/kyc": "KYC Verification",
+        "/user/admin/fund": "Fund & Adjust Balance",
+        "/user/admin/transactions": "Transactions Ledger",
+        "/user/admin/treasury": "Treasury & Portfolio",
+        "/user/admin/currency_exchange": "Currency Exchange (FX)",
+        "/user/admin/settlement": "Settlement & Clearing",
+        "/user/admin/ach_management": "ACH Management",
+        "/user/admin/bill_pay": "Bill Pay Operations",
+        "/user/admin/mobile_deposit": "Mobile Check Deposit",
+        "/user/admin/blockchain": "Blockchain & Crypto",
+        "/user/admin/lending": "Loan Origination",
+        "/user/admin/lending_compliance": "Lending Compliance",
+        "/user/admin/hmda": "HMDA Regulatory LAR",
+        "/user/admin/fraud_detection": "Fraud Detection",
+        "/user/admin/international_compliance": "International & OFAC",
+        "/user/admin/bank_connect": "Bank & Gateways",
+        "/user/admin/vendor_hub": "Vendor Integration Hub",
+        "/user/admin/webhooks": "Webhooks Manager",
+        "/user/admin/mfa_setup": "Admin MFA Security",
+        "/user/admin/profile": "Admin Profile",
+        "/user/admin/settings": "System Settings"
+    };
+
+    const DEFAULT_ROLE_ACCOUNTS = {
+        SUPER_ADMIN: "admin@admin.com",
+        ADMIN: "admin@finanza.com",
+        TREASURY: "treasury@finanza.com",
+        COMPLIANCE: "compliance@finanza.com",
+        SUPPORT: "support@finanza.com"
+    };
+
     function normalizePath(p) {
         if (!p) return "";
         return p.replace(/\/+$/, "").replace(/-/g, "_") || "/user/admin/dashboard";
     }
 
+    function formatPagePills(pages, isRestricted) {
+        if (!pages || !pages.length) {
+            return isRestricted
+                ? '<span style="font-size:0.78rem;color:#16a34a;font-weight:600;"><i class="fas fa-unlock me-1"></i>None — Unrestricted Access to All 29 Modules</span>'
+                : '';
+        }
+        if (pages.includes("*")) {
+            return '<span style="background:#dcfce7;color:#166534;padding:3px 9px;border-radius:12px;font-size:0.76rem;font-weight:600;">All 29 Admin Modules (*)</span>';
+        }
+        return pages.map(p => {
+            const norm = normalizePath(p);
+            const label = MODULE_LABELS[norm] || norm.replace("/user/admin/", "");
+            const bg = isRestricted ? "#fee2e2" : "#e0e7ff";
+            const fg = isRestricted ? "#991b1b" : "#1e40af";
+            const icon = isRestricted ? "fa-lock" : "fa-external-link-alt";
+            return `<a href="${p}" style="display:inline-block;background:${bg};color:${fg};padding:2px 8px;border-radius:10px;font-size:0.74rem;font-weight:600;margin:2px;text-decoration:none;"><i class="fas ${icon} me-1" style="font-size:0.68rem;"></i>${label}</a>`;
+        }).join("");
+    }
+
+    window.previewAdminRole = function (roleKey) {
+        if (window.FinanzaAdminRBAC && window.FinanzaAdminRBAC.setPreviewRole) {
+            window.FinanzaAdminRBAC.setPreviewRole(roleKey);
+            const roleEl = document.getElementById("admNavRoleBadge");
+            if (roleEl) roleEl.textContent = window.FinanzaAdminRBAC.getRole();
+            updateMegaMenuForRole();
+            window.openAdminRolesMatrixModal();
+        }
+    };
+
     window.openAdminRolesMatrixModal = function () {
         let modal = document.getElementById("finanzaAdminRolesModal");
         const matrix = (window.FinanzaAdminRBAC && window.FinanzaAdminRBAC.getRoleMatrix()) || window.DEFAULT_ROLE_MATRIX || {};
         const currentRole = (window.FinanzaAdminRBAC && window.FinanzaAdminRBAC.getRole()) || localStorage.getItem("admin_role") || "SUPER_ADMIN";
+        const actualRole = (window.FinanzaAdminRBAC && window.FinanzaAdminRBAC.getActualRole()) || currentRole;
+        const isPreview = Boolean(window.FinanzaAdminRBAC && window.FinanzaAdminRBAC.getPreviewRole());
 
         if (!modal) {
             modal = document.createElement("div");
@@ -89,17 +160,34 @@ window.navigateTo = window.navigateTo || function (url) {
         const roleCardsHtml = Object.keys(matrix).map(roleKey => {
             const r = matrix[roleKey];
             const isCurrent = roleKey === currentRole;
+            const defaultEmail = r.default_account || DEFAULT_ROLE_ACCOUNTS[roleKey] || "";
             const canList = (r.can_do || []).map(item => `<li style="margin-bottom:6px;color:#1e293b;font-size:0.86rem;"><i class="fas fa-check-circle text-success me-2"></i>${item}</li>`).join("");
             const cannotList = (r.cannot_do || []).map(item => `<li style="margin-bottom:6px;color:#64748b;font-size:0.85rem;"><i class="fas fa-times-circle text-danger me-2"></i>${item}</li>`).join("");
+            const allowedPills = formatPagePills(r.allowed_pages || [], false);
+            const restrictedPills = formatPagePills(r.restricted_pages || [], true);
+
+            const actionBtns = [];
+            if (actualRole === "SUPER_ADMIN") {
+                if (!isCurrent) {
+                    actionBtns.push(`<button type="button" onclick="window.previewAdminRole('${roleKey}')" style="background:#f1f5f9;border:1px solid #cbd5e1;color:#0f172a;padding:4px 10px;border-radius:6px;font-size:0.75rem;font-weight:600;cursor:pointer;"><i class="fas fa-eye me-1"></i>Preview as ${roleKey}</button>`);
+                } else if (isPreview) {
+                    actionBtns.push(`<button type="button" onclick="window.previewAdminRole(null)" style="background:#fee2e2;border:1px solid #fca5a5;color:#991b1b;padding:4px 10px;border-radius:6px;font-size:0.75rem;font-weight:600;cursor:pointer;"><i class="fas fa-undo me-1"></i>Restore SUPER_ADMIN</button>`);
+                }
+                actionBtns.push(`<a href="/user/admin/management_panel?role=${roleKey}" style="background:#eef2ff;border:1px solid #c7d2fe;color:#3730a3;padding:4px 10px;border-radius:6px;font-size:0.75rem;font-weight:600;text-decoration:none;"><i class="fas fa-user-cog me-1"></i>Assign / Manage</a>`);
+            }
 
             return `
                 <div style="border:${isCurrent ? '2px solid #667eea' : '1px solid #e2e8f0'};border-radius:12px;padding:18px;background:${isCurrent ? '#f8faff' : '#ffffff'};box-shadow:0 2px 8px rgba(0,0,0,0.04);">
-                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
-                        <div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
+                        <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
                             <span style="background:${r.badge_color || '#667eea'};color:#fff;padding:4px 12px;border-radius:20px;font-size:0.78rem;font-weight:700;letter-spacing:0.5px;">${roleKey}</span>
-                            <strong style="font-size:1.05rem;color:#0f172a;margin-left:8px;">${r.title || roleKey}</strong>
+                            <strong style="font-size:1.05rem;color:#0f172a;">${r.title || roleKey}</strong>
+                            ${defaultEmail ? `<span style="background:#f1f5f9;color:#475569;padding:2px 8px;border-radius:6px;font-size:0.75rem;font-family:monospace;"><i class="fas fa-envelope me-1"></i>${defaultEmail}</span>` : ''}
                         </div>
-                        ${isCurrent ? '<span style="background:#667eea;color:#fff;padding:3px 10px;border-radius:6px;font-size:0.75rem;font-weight:600;"><i class="fas fa-user-check me-1"></i>Your Active Role</span>' : ''}
+                        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                            ${isCurrent ? `<span style="background:#667eea;color:#fff;padding:3px 10px;border-radius:6px;font-size:0.75rem;font-weight:600;"><i class="fas fa-user-check me-1"></i>${isPreview ? 'Previewing Role' : 'Your Active Role'}</span>` : ''}
+                            ${actionBtns.join('')}
+                        </div>
                     </div>
                     <p style="font-size:0.88rem;color:#475569;margin-bottom:12px;">${r.summary || ''}</p>
                     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;">
@@ -112,32 +200,70 @@ window.navigateTo = window.navigateTo || function (url) {
                             <ul style="list-style:none;padding:0;margin:0;">${cannotList}</ul>
                         </div>
                     </div>
+                    <div style="margin-top:12px;padding-top:10px;border-top:1px dashed #e2e8f0;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;">
+                        <div>
+                            <div style="font-size:0.74rem;font-weight:700;color:#1e40af;text-transform:uppercase;margin-bottom:4px;"><i class="fas fa-check me-1"></i>Allowed Modules</div>
+                            <div>${allowedPills}</div>
+                        </div>
+                        <div>
+                            <div style="font-size:0.74rem;font-weight:700;color:#991b1b;text-transform:uppercase;margin-bottom:4px;"><i class="fas fa-lock me-1"></i>Restricted Modules</div>
+                            <div>${restrictedPills}</div>
+                        </div>
+                    </div>
                 </div>
             `;
         }).join("");
 
         modal.innerHTML = `
-            <div style="background:#fff;border-radius:16px;max-width:980px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,0.3);overflow:hidden;">
+            <div style="background:#fff;border-radius:16px;max-width:1020px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,0.3);overflow:hidden;">
                 <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:20px 26px;display:flex;justify-content:space-between;align-items:center;">
                     <div>
                         <h4 style="margin:0;font-weight:700;font-size:1.25rem;"><i class="fas fa-user-shield me-2"></i>Finanza Admin Roles & Privileges Matrix</h4>
-                        <small style="opacity:0.9;">Complete breakdown of all 5 Administrator tiers — what each role can and cannot do</small>
+                        <small style="opacity:0.9;">Complete breakdown of all 5 Administrator tiers — what each role can and cannot do, assigned accounts, and module access</small>
                     </div>
                     <button type="button" onclick="document.getElementById('finanzaAdminRolesModal').style.display='none'" style="background:rgba(255,255,255,0.2);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:1.2rem;cursor:pointer;">&times;</button>
                 </div>
                 <div style="padding:22px 26px;overflow-y:auto;display:flex;flex-direction:column;gap:16px;">
                     ${roleCardsHtml}
                 </div>
-                <div style="padding:14px 26px;background:#f8fafc;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;">
-                    <a href="/user/admin/management_panel" class="btn btn-sm btn-primary" style="background:linear-gradient(135deg,#667eea,#764ba2);border:none;color:#fff;padding:8px 16px;border-radius:6px;text-decoration:none;font-weight:600;">
-                        <i class="fas fa-sliders-h me-1"></i> Open Admin Management Panel
-                    </a>
+                <div style="padding:14px 26px;background:#f8fafc;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+                    <div style="display:flex;gap:10px;align-items:center;">
+                        <a href="/user/admin/management_panel" class="btn btn-sm btn-primary" style="background:linear-gradient(135deg,#667eea,#764ba2);border:none;color:#fff;padding:8px 16px;border-radius:6px;text-decoration:none;font-weight:600;">
+                            <i class="fas fa-sliders-h me-1"></i> Open Admin Management Panel
+                        </a>
+                        ${isPreview ? `<button type="button" onclick="window.previewAdminRole(null)" style="background:#ef4444;border:none;color:#fff;padding:8px 14px;border-radius:6px;font-weight:600;cursor:pointer;"><i class="fas fa-undo me-1"></i>Exit Role Preview</button>` : ''}
+                    </div>
                     <button type="button" onclick="document.getElementById('finanzaAdminRolesModal').style.display='none'" style="background:#e2e8f0;border:none;color:#1e293b;padding:8px 18px;border-radius:6px;font-weight:600;cursor:pointer;">Close</button>
                 </div>
             </div>
         `;
         modal.style.display = "flex";
     };
+
+    function updateMegaMenuForRole() {
+        const rbac = window.FinanzaAdminRBAC;
+        if (!rbac || !rbac.canAccessPage) return;
+        const role = rbac.getRole();
+        document.querySelectorAll("#admMegaGrid .adm-mega-item").forEach(el => {
+            const href = el.getAttribute("href");
+            const allowed = rbac.canAccessPage(href, role);
+            const lockBadge = el.querySelector(".adm-lock-icon");
+            if (!allowed) {
+                el.style.opacity = "0.55";
+                el.title = `Restricted for ${role}`;
+                if (!lockBadge) {
+                    const i = document.createElement("i");
+                    i.className = "fas fa-lock adm-lock-icon ms-auto text-danger";
+                    i.style.fontSize = "0.72rem";
+                    el.appendChild(i);
+                }
+            } else {
+                el.style.opacity = "";
+                el.title = "";
+                if (lockBadge) lockBadge.remove();
+            }
+        });
+    }
 
     function mountAdminNavbar() {
         if (document.getElementById("finanzaUnifiedAdminNav")) return;
@@ -166,7 +292,7 @@ window.navigateTo = window.navigateTo || function (url) {
         });
 
         const isActive = (paths) => paths.some(p => normalizePath(p) === currentPath) ? "active" : "";
-        const initialRole = localStorage.getItem("admin_role") || "SUPER_ADMIN";
+        const initialRole = (window.FinanzaAdminRBAC && window.FinanzaAdminRBAC.getRole()) || localStorage.getItem("admin_role") || "SUPER_ADMIN";
 
         const nav = document.createElement("nav");
         nav.id = "finanzaUnifiedAdminNav";
@@ -233,12 +359,23 @@ window.navigateTo = window.navigateTo || function (url) {
         `;
 
         document.body.prepend(nav);
+        updateMegaMenuForRole();
 
         window.addEventListener("finanza:admin-ready", function (e) {
             const roleEl = document.getElementById("admNavRoleBadge");
-            if (roleEl && e.detail && e.detail.admin_role) {
-                roleEl.textContent = e.detail.admin_role;
+            const activeRole = (window.FinanzaAdminRBAC && window.FinanzaAdminRBAC.getRole()) || (e.detail && e.detail.admin_role);
+            if (roleEl && activeRole) {
+                roleEl.textContent = activeRole;
             }
+            updateMegaMenuForRole();
+        });
+
+        window.addEventListener("finanza:role-changed", function (e) {
+            const roleEl = document.getElementById("admNavRoleBadge");
+            if (roleEl && e.detail && e.detail.role) {
+                roleEl.textContent = e.detail.role;
+            }
+            updateMegaMenuForRole();
         });
 
         const wrap = document.getElementById("admMegaWrap");

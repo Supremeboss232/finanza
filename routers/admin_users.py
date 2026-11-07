@@ -152,8 +152,8 @@ async def build_user_info(
         )
         transaction_count = result.scalar() or 0
     
-    # 4. GET KYC STATUS (from single source of truth: DBKYCSubmission)
-    kyc_status = "not_submitted"
+    # 4. GET KYC STATUS (synchronized between DBUser and DBKYCSubmission)
+    kyc_status = getattr(user, "kyc_status", None) or "not_started"
     kyc_details = None
     
     result = await db_session.execute(
@@ -164,17 +164,21 @@ async def build_user_info(
     kyc_submission = result.scalars().first()
     
     if kyc_submission:
-        # CRITICAL: Use KYCSubmission as source of truth
-        kyc_status = kyc_submission.status
+        if kyc_status in ("not_started", "not_submitted", "pending") and kyc_submission.status:
+            kyc_status = kyc_submission.status
+        sub_dt = getattr(kyc_submission, "submitted_at", None)
+        rev_dt = getattr(kyc_submission, "reviewed_at", None)
         kyc_details = {
-            "status": kyc_submission.status,
+            "id": kyc_submission.id,
+            "status": kyc_status,
             "document_type": kyc_submission.document_type,
-            "submission_date": kyc_submission.created_at.isoformat() if kyc_submission.created_at else None,
-            "approval_date": kyc_submission.approval_date.isoformat() if kyc_submission.approval_date else None,
-            "rejection_reason": kyc_submission.rejection_reason
+            "submission_date": sub_dt.isoformat() if sub_dt else None,
+            "approval_date": rev_dt.isoformat() if rev_dt else None,
+            "rejection_reason": getattr(kyc_submission, "rejection_reason", None)
         }
     
     return {
+        "id": user.id,
         "user_id": user.id,
         "full_name": user.full_name,
         "email": user.email,

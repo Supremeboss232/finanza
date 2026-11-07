@@ -141,13 +141,9 @@ async def get_admin_metrics(
         # 6. Total volume (sum of all credits)
         total_volume = await BalanceServiceLedger.get_admin_total_volume(db_session)
         
-        # 7. Pending KYC count
-        pending_kyc_result = await db_session.execute(
-            select(func.count(KYCSubmission.id)).where(
-                KYCSubmission.status == "pending"
-            )
-        )
-        pending_kyc = pending_kyc_result.scalar() or 0
+        # 7. Pending KYC count (synchronized across User, KYCSubmission, and KYCInfo)
+        from admin_service import admin_service
+        pending_kyc = await admin_service.reconcile_kyc_records(db_session)
         
         # 8. Total transactions (posted ledger entries)
         total_transactions_result = await db_session.execute(
@@ -591,7 +587,8 @@ async def admin_approve_kyc(
     from admin_service import admin_service
     try:
         notes = (payload or {}).get("notes", "") if isinstance(payload, dict) else ""
-        result = await admin_service.approve_kyc(db_session, submission_id, notes=notes)
+        target_id = (payload or {}).get("user_id") or submission_id if isinstance(payload, dict) else submission_id
+        result = await admin_service.approve_kyc(db_session, int(target_id), notes=notes)
         return {
             "success": True,
             "status": "approved",
@@ -622,7 +619,8 @@ async def admin_reject_kyc(
             notes = payload.get("notes", "") or payload.get("rejection_reason", "") or payload.get("reason", "")
             body_reason = f"{rc}: {notes}".strip(": ") if (rc or notes) else ""
         final_reason = reason or body_reason or "Verification criteria not met"
-        result = await admin_service.reject_kyc(db_session, submission_id, reason=final_reason)
+        target_id = (payload or {}).get("user_id") or submission_id if isinstance(payload, dict) else submission_id
+        result = await admin_service.reject_kyc(db_session, int(target_id), reason=final_reason)
         return {
             "success": True,
             "status": "rejected",

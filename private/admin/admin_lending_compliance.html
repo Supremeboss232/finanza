@@ -74,7 +74,7 @@
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item"><a class="nav-link" href="/user/admin/dashboard">Dashboard</a></li>
                     <li class="nav-item"><a class="nav-link" href="/user/admin/lending">Loans</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/user/admin/dashboard">HMDA</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/hmda">HMDA</a></li>
                     <li class="nav-item"><a class="nav-link" href="/logout">Logout</a></li>
                 </ul>
             </div>
@@ -1041,7 +1041,7 @@
         }
 
         function openCreateHoldModal() {
-            loadDelinquencyDropdown('holdAccountId');
+            loadAccountsDropdown('holdAccountId');
             new bootstrap.Modal(document.getElementById('createHoldModal')).show();
         }
 
@@ -1077,7 +1077,7 @@
                         showToast('Account hold created', 'success');
                         document.getElementById('holdForm').reset();
                         bootstrap.Modal.getInstance(document.getElementById('createHoldModal')).hide();
-                        await loadAccountHolds();
+                        await loadAccountHolds(); await loadComplianceMetrics();
                         await logAuditEvent('hold_created', 'compliance', { account_id: accountId, hold_type: holdType });
                     } else {
                         showToast('Failed to create hold', 'error');
@@ -1090,7 +1090,7 @@
         }
 
         function openForbearanceModal() {
-            loadDelinquencyDropdown('forbearanceLoanId');
+            loadLoansDropdown('forbearanceLoanId');
             new bootstrap.Modal(document.getElementById('forbearanceModal')).show();
         }
 
@@ -1138,7 +1138,7 @@
                         showToast('Forbearance plan created', 'success');
                         document.getElementById('forbearanceForm').reset();
                         bootstrap.Modal.getInstance(document.getElementById('forbearanceModal')).hide();
-                        await loadForbearancePlans();
+                        await loadForbearancePlans(); await loadComplianceMetrics(); await loadChartData();
                         await logAuditEvent('forbearance_created', 'compliance', { loan_id: loanId, plan_type: planType, duration });
                     } else {
                         showToast('Failed to create forbearance plan', 'error');
@@ -1202,22 +1202,73 @@
         }
 
         // ==================== UTILITIES ====================
+        async function loadAccountsDropdown(selectId) {
+            try {
+                const select = document.getElementById(selectId);
+                if (!select) return;
+                select.innerHTML = '<option value="">Select Account / User...</option>';
+                const response = await fetch('/api/admin/users?limit=100', {
+                    headers: securityManager.getSecureHeaders()
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    (data.data || []).forEach(u => {
+                        const accId = (u.primary_account && u.primary_account.id) ? u.primary_account.id : (u.id || u.user_id);
+                        const option = document.createElement('option');
+                        option.value = accId;
+                        option.textContent = `Account #${accId} — ${u.full_name || u.email} (${u.email})`;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading accounts dropdown:', error);
+            }
+        }
+
+        async function loadLoansDropdown(selectId) {
+            try {
+                const select = document.getElementById(selectId);
+                if (!select) return;
+                select.innerHTML = '<option value="">Select Loan...</option>';
+                const response = await fetch('/api/v1/loans?limit=100', {
+                    headers: securityManager.getSecureHeaders()
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    (data.data || []).forEach(l => {
+                        const option = document.createElement('option');
+                        option.value = l.id;
+                        option.textContent = `Loan #${l.id} — ${l.borrower_name || ('Borrower #' + l.user_id)} ($${Number(l.balance ?? l.amount ?? 0).toLocaleString()})`;
+                        select.appendChild(option);
+                    });
+                }
+            } catch (error) {
+                console.error('Error loading loans dropdown:', error);
+            }
+        }
+
         async function loadDelinquencyDropdown(selectId) {
             try {
+                const select = document.getElementById(selectId);
+                if (!select) return;
+                select.innerHTML = '<option value="">Select...</option>';
                 const response = await fetch(`${CONFIG.API_BASE}/compliance/delinquencies/search?limit=100`, {
                     headers: securityManager.getSecureHeaders()
                 });
                 if (response.ok) {
                     const data = await response.json();
-                    const select = document.getElementById(selectId);
-                    select.innerHTML = '<option value="">Select...</option>';
-                    (data.data || []).forEach(d => {
-                        const option = document.createElement('option');
-                        option.value = d.id;
-                        option.textContent = `${d.id} - ${d.borrower_name}`;
-                        select.appendChild(option);
-                    });
+                    const rows = data.data || [];
+                    if (rows.length > 0) {
+                        rows.forEach(d => {
+                            const option = document.createElement('option');
+                            option.value = selectId === 'contactLoanId' ? (d.loan_id || d.id) : d.id;
+                            option.textContent = `${d.id} - ${d.borrower_name} (Loan #${d.loan_id || d.id})`;
+                            select.appendChild(option);
+                        });
+                        return;
+                    }
                 }
+                await loadLoansDropdown(selectId);
             } catch (error) {
                 console.error('Error:', error);
             }

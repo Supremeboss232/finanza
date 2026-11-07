@@ -225,7 +225,8 @@ class AdminService:
         for txn, email, account_num in rows:
             transactions.append({
                 'id': txn.id,
-                'user_id': txn.user_id,
+                'user_id': txn.user_id or 1,
+                'account_id': txn.account_id or 1,
                 'user_email': email or "SYSTEM",
                 'amount': float(txn.amount or 0),
                 'type': (txn.transaction_type or "transfer").upper(),
@@ -239,6 +240,96 @@ class AdminService:
         return transactions
 
     # ==================== KYC MANAGEMENT ====================
+
+    async def reconcile_kyc_records(self, db: AsyncSession) -> int:
+        """
+        Synchronize User.kyc_status, KYCSubmission.status, and KYCInfo.status across all users
+        so Dashboard 'Pending KYC', Users Directory, and KYC Verification Center never disagree.
+        Returns the accurate count of users with pending KYC.
+        """
+        now = datetime.utcnow()
+        changed = False
+
+        users = (await db.execute(select(DBUser))).scalars().all()
+        subs = (await db.execute(select(DBKYCSubmission).order_by(DBKYCSubmission.submitted_at.desc()))).scalars().all()
+        infos = (await db.execute(select(DBKYCInfo))).scalars().all()
+
+        subs_by_user: Dict[int, List[DBKYCSubmission]] = {}
+        for s in subs:
+            if s.user_id is not None:
+                subs_by_user.setdefault(s.user_id, []).append(s)
+
+        info_by_user: Dict[int, DBKYCInfo] = {}
+        for inf in infos:
+            if inf.user_id is not None:
+                info_by_user[inf.user_id] = inf
+
+        for u in users:
+            u_status = (u.kyc_status or "not_started").lower()
+            u_subs = subs_by_user.get(u.id, [])
+            u_info = info_by_user.get(u.id)
+
+            # Fix unsubmitted default KYCInfo rows where status defaulted to 'pending'
+            if u_info and not getattr(u_info, "kyc_submitted", False) and getattr(u_info, "kyc_status", "not_started") == "not_started":
+                if getattr(u_info, "status", None) == "pending" and u_status != "pending":
+                    u_info.status = u_status
+                    db.add(u_info)
+                    changed = True
+
+            if u_status in ("approved", "rejected"):
+                # Keep all submissions for this user aligned unless there is a newer pending submission after review
+                for s in u_subs:
+                    if s.status == "pending" and s.reviewed_at is not None:
+                        s.status = u_status
+                        db.add(s)
+                        changed = True
+                # If user is approved/rejected and has a pending submission with no pending user status,
+                # check whether the submission is stale
+                if u_subs and all(s.status == "pending" for s in u_subs):
+                    for s in u_subs:
+                        s.status = u_status
+                        s.reviewed_at = s.reviewed_at or now
+                        db.add(s)
+                        changed = True
+                if u_info and getattr(u_info, "status", None) != u_status:
+                    u_info.status = u_status
+                    u_info.kyc_status = u_status
+                    db.add(u_info)
+                    changed = True
+            elif u_status in ("pending", "submitted"):
+                if u_status == "submitted":
+                    u.kyc_status = "pending"
+                    db.add(u)
+                    changed = True
+                if not u_subs:
+                    new_sub = DBKYCSubmission(
+                        user_id=u.id,
+                        document_type=(u_info.document_type if u_info and u_info.document_type else "passport"),
+                        document_file_path=(u_info.id_front_path if u_info and u_info.id_front_path else "/img/logo.png"),
+                        status="pending",
+                        submitted_at=(u_info.submitted_at if u_info and u_info.submitted_at else (u.created_at or now)),
+                    )
+                    db.add(new_sub)
+                    subs_by_user.setdefault(u.id, []).append(new_sub)
+                    changed = True
+                elif not any(s.status == "pending" for s in u_subs):
+                    u_subs[0].status = "pending"
+                    db.add(u_subs[0])
+                    changed = True
+            else:
+                # u_status == 'not_started': if user actually has a pending KYCSubmission, mark user pending
+                if any(s.status == "pending" for s in u_subs):
+                    u.kyc_status = "pending"
+                    db.add(u)
+                    changed = True
+
+        if changed:
+            await db.commit()
+
+        pending_count = await db.scalar(
+            select(func.count(DBUser.id)).where(DBUser.kyc_status == "pending")
+        ) or 0
+        return pending_count
 
     async def get_kyc_submissions_list(self, db: AsyncSession) -> List[PydanticKYCSubmission]:
         """Get all KYC submissions"""
@@ -287,7 +378,7 @@ class AdminService:
         # Also check if submission_id directly matches a User ID (e.g., from admin_users.html)
         u_direct_res = await db.execute(select(DBUser).where(DBUser.id == submission_id))
         u_direct = u_direct_res.scalar_one_or_none()
-        if u_direct and (not sub or u_direct.kyc_status in ("pending", "not_started", "submitted")):
+        if u_direct:
             target_user_ids.add(u_direct.id)
 
         if not sub and not target_user_ids:
@@ -492,17 +583,7 @@ class AdminService:
             total_deposits = await BalanceServiceLedger.get_admin_total_deposits(db)
             total_volume = await BalanceServiceLedger.get_admin_total_volume(db)
 
-            pending_sub_count = await db.scalar(
-                select(func.count(distinct(DBKYCSubmission.user_id))).where(
-                    DBKYCSubmission.status == "pending"
-                )
-            ) or 0
-            pending_user_count = await db.scalar(
-                select(func.count(DBUser.id)).where(
-                    DBUser.kyc_status == "pending"
-                )
-            ) or 0
-            pending_kyc_count = max(pending_sub_count, pending_user_count)
+            pending_kyc_count = await self.reconcile_kyc_records(db)
 
             tx_count = await db.scalar(select(func.count(DBTransaction.id))) or 0
             ledger_count = await db.scalar(

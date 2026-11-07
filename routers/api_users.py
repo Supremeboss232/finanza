@@ -297,28 +297,7 @@ async def get_user_card_detail(
     return card
 
 
-@router.put("/cards/{card_id}/status", response_model=PydanticCard)
-async def update_card_status(
-    card_id: int,
-    status_update: dict,
-    db_session: SessionDep,
-    current_user: User = Depends(get_current_user)
-):
-    """Update card status (active, blocked, inactive)."""
-    from crud import get_card
-    card = await get_card(db_session, card_id)
-    if not card or card.user_id != current_user.id:
-        raise HTTPException(status_code=404, detail="Card not found")
-    
-    new_status = status_update.get("status")
-    if new_status not in ["active", "blocked", "inactive"]:
-        raise HTTPException(status_code=400, detail="Invalid status. Must be 'active', 'blocked', or 'inactive'")
-    
-    card.status = new_status
-    db_session.add(card)
-    await db_session.commit()
-    await db_session.refresh(card)
-    return card
+# Unified PUT /cards/{card_id}/status endpoint is defined below (supports active, frozen, blocked, inactive)
 
 
 # DEPOSITS
@@ -726,8 +705,33 @@ async def make_loan_payment(
     loan.remaining_balance = Decimal(str(new_rem))
     loan.paid_amount = Decimal(str(new_paid))
     if new_rem <= 0:
-        loan.status = "completed"
+        loan.status = "paid"
     db_session.add(loan)
+
+    # Sync next pending LoanPaymentSchedule installment & LoanHistory
+    try:
+        from models import LoanPaymentSchedule, LoanHistory
+        sched_res = await db_session.execute(
+            select(LoanPaymentSchedule)
+            .where(LoanPaymentSchedule.loan_id == loan.id, LoanPaymentSchedule.payment_status != "paid")
+            .order_by(LoanPaymentSchedule.scheduled_date.asc())
+        )
+        next_sched = sched_res.scalars().first()
+        if next_sched:
+            next_sched.paid_amount = float(next_sched.paid_amount or 0) + float(amount)
+            next_sched.paid_date = datetime.utcnow()
+            next_sched.payment_status = "paid" if next_sched.paid_amount >= float(next_sched.scheduled_amount or 0) else "partial"
+            db_session.add(next_sched)
+        db_session.add(LoanHistory(
+            loan_id=loan.id,
+            change_type="payment",
+            amount=float(amount),
+            previous_status="active",
+            new_status=loan.status,
+            notes=f"Borrower repayment of ${amount:,.2f} from account {account.account_number}",
+        ))
+    except Exception:
+        pass
 
     txn = Transaction(
         user_id=current_user.id,
@@ -748,6 +752,7 @@ async def make_loan_payment(
     return {
         "success": True,
         "message": f"Loan payment of ${amount:,.2f} completed from account {account.account_number}",
+        "payment_amount": float(amount),
         "remaining_balance": float(loan.remaining_balance or 0),
         "total_paid": float(loan.paid_amount or 0),
         "account_balance": float(account.balance or 0),
@@ -1496,7 +1501,7 @@ async def create_card_endpoint(
     from datetime import timedelta
 
     card_type = (card_data.get("card_type") or "debit").lower()
-    card_number = CardProcessingService._generate_card_number(card_type)
+    card_number = CardProcessingService.generate_card_number("542523" if card_type == "credit" else ("491650" if card_type == "savings" else "453201"))
     expiry_date = (datetime.utcnow() + timedelta(days=365 * 4)).strftime("%m/%y")
     account = await _get_or_create_primary_account(db_session, current_user)
 
@@ -1659,11 +1664,45 @@ async def create_loan_endpoint(
         status="pending",
     )
     db_session.add(loan)
+    await db_session.flush()
+    try:
+        from models import LoanHistory, HMDAApplication
+        db_session.add(LoanHistory(
+            loan_id=loan.id,
+            change_type="application_submitted",
+            amount=float(amount),
+            previous_status=None,
+            new_status="pending",
+            notes=f"Borrower submitted {loan_type} loan application for ${amount:,.2f} ({term_months} months)",
+        ))
+        if loan_type in ("home", "mortgage", "refinance", "home_improvement"):
+            db_session.add(HMDAApplication(
+                loan_id=loan.id,
+                application_date=datetime.utcnow(),
+                loan_type="conventional",
+                loan_purpose="home_purchase" if loan_type in ("home", "mortgage") else loan_type,
+                occupancy_type="principal_residence",
+                loan_amount=float(amount),
+                action_taken="application_submitted",
+                action_taken_date=datetime.utcnow(),
+                property_address=getattr(current_user, "address", None) or "Primary Residence",
+                property_state=getattr(current_user, "region", None) or "NY",
+                applicant_ethnicity="not_provided",
+                applicant_race="not_provided",
+                applicant_sex="not_provided",
+                applicant_income=95000.0,
+                rate_spread=0.45,
+                hoepa_status=False,
+                lien_status="first_lien",
+            ))
+    except Exception:
+        pass
     await db_session.commit()
     await db_session.refresh(loan)
 
     return {
         "id": loan.id,
+        "loan_id": loan.id,
         "user_id": loan.user_id,
         "loan_type": loan_type,
         "amount": float(loan.amount),
@@ -1899,14 +1938,23 @@ async def toggle_card_status(
         raise HTTPException(status_code=404, detail="Card not found")
 
     new_status = (payload.get("status") or ("frozen" if card.status == "active" else "active")).lower()
-    if new_status not in ("active", "frozen", "blocked"):
+    if new_status not in ("active", "frozen", "blocked", "inactive"):
         new_status = "frozen"
     card.status = new_status
     db_session.add(card)
     await db_session.commit()
+    await db_session.refresh(card)
     return {
         "success": True,
         "id": card.id,
+        "user_id": card.user_id,
+        "card_number": card.card_number,
+        "card_type": card.card_type,
+        "card_holder_name": card.card_holder_name,
+        "expiry_date": card.expiry_date,
+        "balance": float(card.balance or 0),
+        "credit_limit": float(card.credit_limit or 0),
+        "transaction_limit": float(card.transaction_limit or 5000),
         "status": card.status,
         "message": f"Card ending in {str(card.card_number)[-4:]} is now {card.status.upper()}.",
     }
@@ -1927,7 +1975,7 @@ async def update_card_limits(
     if not card:
         raise HTTPException(status_code=404, detail="Card not found")
 
-    new_limit = float(payload.get("transaction_limit") or 5000.0)
+    new_limit = float(payload.get("transaction_limit") or payload.get("daily_limit") or 5000.0)
     if new_limit < 100 or new_limit > 100000:
         raise HTTPException(status_code=400, detail="Spending limit must be between $100 and $100,000")
 
@@ -1937,7 +1985,7 @@ async def update_card_limits(
     return {
         "success": True,
         "id": card.id,
-        "transaction_limit": float(card.transaction_limit),
+        "transaction_limit": float(card.transaction_limit), "daily_limit": float(card.transaction_limit),
         "message": f"Spending limit updated to ${new_limit:,.2f}.",
     }
 

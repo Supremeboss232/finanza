@@ -1366,18 +1366,22 @@ async def get_admin_kyc(
 ):
     """Get KYC submissions for admin dashboard with complete document information"""
     try:
-        # Auto-backfill any KYCInfo records OR pending Users that don't yet have a KYCSubmission row
+        # Reconcile KYC status across User, KYCInfo, and KYCSubmission
+        await admin_service.reconcile_kyc_records(db)
         info_rows = (await db.execute(select(models.KYCInfo))).scalars().all()
         existing_sub_uids = set((await db.execute(select(models.KYCSubmission.user_id))).scalars().all())
         backfilled = False
         for kinfo in info_rows:
-            if kinfo.user_id not in existing_sub_uids and (kinfo.document_type or kinfo.id_front_path or kinfo.status == "pending"):
-                u_obj = await db.get(models.User, kinfo.user_id)
+            u_obj = await db.get(models.User, kinfo.user_id)
+            u_kyc = (u_obj.kyc_status if u_obj and u_obj.kyc_status else "not_started").lower()
+            if kinfo.user_id not in existing_sub_uids and (kinfo.kyc_submitted or kinfo.id_front_path or u_kyc in ("pending", "approved", "rejected")):
+                if u_kyc == "not_started" and not kinfo.kyc_submitted and not kinfo.id_front_path:
+                    continue
                 db.add(models.KYCSubmission(
                     user_id=kinfo.user_id,
                     document_type=kinfo.document_type or "national_id",
                     document_file_path=kinfo.id_front_path or "/img/logo.png",
-                    status=(u_obj.kyc_status if u_obj and u_obj.kyc_status in ("pending", "approved", "rejected") else "pending"),
+                    status=(u_kyc if u_kyc in ("pending", "approved", "rejected") else "pending"),
                     submitted_at=kinfo.submitted_at or datetime.utcnow(),
                 ))
                 existing_sub_uids.add(kinfo.user_id)

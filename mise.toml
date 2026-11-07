@@ -1,0 +1,6 @@
+[tools]
+python = "3.11"
+
+[settings]
+# Forces mise to use precompiled binaries to avoid building from source on deployment environments
+python.compile = false

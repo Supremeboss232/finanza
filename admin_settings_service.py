@@ -35,12 +35,14 @@ class AdminSettingsService:
 
     DEFAULT_SETTINGS: Dict[str, Any] = {
         "platform_name": "Finanza Bank",
+        "platform_url": "https://finanzabank.com",
         "support_email": "support@finanzabank.com",
         "support_phone": "+1 (800) 555-0199",
         "default_currency": "USD",
+        "fiscal_year_start": "01-01",
         "timezone": "UTC",
         "maintenance_mode": False,
-        "maintenance_message": "",
+        "maintenance_message": "We are performing scheduled system upgrades. Services will resume shortly.",
         "allow_signups": True,
         "min_deposit_amount": 10,
         "max_withdrawal_amount": 100000,
@@ -49,16 +51,32 @@ class AdminSettingsService:
         "enable_withdrawals": True,
         "require_kyc_deposits": True,
         "require_kyc_transfers": True,
-        "require_2fa_admins": False,
+        "kyc_auto_approve_score": 85,
+        "kyc_verification_duration_days": 365,
+        "require_2fa": True,
+        "require_2fa_admins": True,
+        "password_expiry_days": 90,
+        "session_timeout_mins": 30,
         "session_timeout_minutes": 30,
         "max_login_attempts": 5,
         "smtp_host": "smtp.finanzabank.com",
         "smtp_port": 587,
+        "smtp_username": "notifications@finanzabank.com",
         "smtp_user": "notifications@finanzabank.com",
+        "smtp_password": "app_pwd_finanza_smtp_live",
+        "from_email": "noreply@finanzabank.com",
+        "notify_new_user_registration": True,
+        "notify_kyc_submission": True,
+        "notify_large_transactions": True,
+        "large_transaction_threshold": 10000,
         "email_notifications_enabled": True,
         "sms_notifications_enabled": True,
+        "webhook_secret": "whsec_finanza_live_9f8e7d6c5b4a3f2e1d0c",
+        "api_key": "fz_live_pk_8a7b6c5d4e3f2a1b9c8d7e6f",
         "webhook_retries": 3,
-        "backup_frequency": "daily",
+        "auto_backup_enabled": True,
+        "backup_schedule": "daily_2am",
+        "backup_frequency": "daily_2am",
         "backup_retention_days": 30,
     }
 
@@ -115,19 +133,33 @@ class AdminSettingsService:
     ) -> Dict[str, Any]:
         """Update multiple settings and log to audit trail."""
         updated_settings = {}
+        old_values_map = {}
         for key, new_value in settings_dict.items():
+            old_values_map[key] = AdminSettingsService._settings_cache.get(key, "-")
             AdminSettingsService._settings_cache[key] = new_value
             updated_settings[key] = new_value
 
         try:
-            from models import AuditLog
+            from models import AuditLog, AdminAuditLog
+            aid = int(admin_id) if str(admin_id).isdigit() else 1
+            for key, new_value in updated_settings.items():
+                old_val = old_values_map.get(key, "-")
+                if str(old_val) != str(new_value):
+                    db_session.add(AdminAuditLog(
+                        admin_id=aid,
+                        action="update_setting",
+                        setting_name=str(key),
+                        old_value="••••••••" if key in AdminSettingsService.SENSITIVE_FIELDS else str(old_val),
+                        new_value="••••••••" if key in AdminSettingsService.SENSITIVE_FIELDS else str(new_value),
+                        ip_address=ip_address or "127.0.0.1",
+                        timestamp=datetime.utcnow()
+                    ))
             audit_log = AuditLog(
-                admin_id=int(admin_id) if str(admin_id).isdigit() else 1,
-                action="SETTINGS_UPDATED",
-                resource_type="system_setting",
-                resource_id="global",
-                details=json.dumps({k: str(v) for k, v in updated_settings.items() if k not in AdminSettingsService.SENSITIVE_FIELDS}),
-                ip_address=ip_address,
+                admin_id=aid,
+                user_id=aid,
+                action_type="SETTINGS_UPDATED",
+                details=f"Updated settings: {', '.join(updated_settings.keys())}",
+                status_message=ip_address or "127.0.0.1",
                 created_at=datetime.utcnow()
             )
             db_session.add(audit_log)

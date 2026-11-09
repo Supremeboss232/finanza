@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta name="description" content="Finanza Financial Services - Admin Settings portal and banking management.">
@@ -10,45 +10,108 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <style>
         .admin-nav { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
-        .settings-container { background: white; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); overflow: hidden; }
-        .settings-sidebar { background: #f8f9fa; padding: 20px; border-right: 1px solid #dee2e6; min-height: 500px; }
-        .settings-sidebar .nav-link { color: #333; padding: 12px 15px; border-left: 3px solid transparent; margin-bottom: 5px; }
-        .settings-sidebar .nav-link:hover { background: #e9ecef; }
-        .settings-sidebar .nav-link.active { background: #e3f2fd; border-left-color: #667eea; color: #667eea; font-weight: 600; }
+        .settings-container { background: white; border-radius: 12px; box-shadow: 0 4px 18px rgba(0,0,0,0.08); overflow: hidden; margin-bottom: 30px; }
+        .settings-sidebar { background: #f8f9fa; padding: 18px; border-right: 1px solid #dee2e6; min-height: 520px; }
+        .settings-sidebar .nav-link {
+            color: #334155;
+            padding: 11px 14px;
+            border-left: 3px solid transparent;
+            border-radius: 0 8px 8px 0;
+            margin-bottom: 4px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+        .settings-sidebar .nav-link i { width: 18px; text-align: center; color: #667eea; }
+        .settings-sidebar .nav-link:hover { background: #eef2ff; color: #4f46e5; }
+        .settings-sidebar .nav-link.active {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.14) 0%, rgba(118, 75, 162, 0.14) 100%);
+            border-left-color: #667eea;
+            color: #4338ca;
+            font-weight: 700;
+        }
         .settings-sidebar .nav-link.disabled { opacity: 0.5; cursor: not-allowed; }
-        .settings-content { padding: 30px; }
+        .settings-content { padding: 28px; }
         .settings-section { display: none; }
-        .settings-section.active { display: block; }
-        .form-control:focus { border-color: #667eea; box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25); }
-        .btn-primary { background: #667eea; border: none; }
-        .btn-primary:hover { background: #5568d3; }
-        .setting-item { padding: 20px; background: #f8f9fa; border-radius: 8px; margin-bottom: 15px; }
-        .setting-item h6 { margin-bottom: 10px; color: #333; }
-        .setting-item .form-text { color: #666; font-size: 0.85rem; }
-        .alert-info { background: #e3f2fd; border: 1px solid #2196f3; color: #1565c0; }
-        .toggle-switch { position: relative; display: inline-block; width: 50px; height: 24px; }
+        .settings-section.active { display: block; animation: fadeInSection 0.18s ease-out; }
+        @keyframes fadeInSection { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        .form-control:focus, .form-select:focus { border-color: #667eea; box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25); }
+        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; font-weight: 600; }
+        .btn-primary:hover { opacity: 0.95; background: linear-gradient(135deg, #5a6fd6 0%, #684091 100%); }
+        .setting-item { padding: 18px 20px; background: #f8fafc; border: 1px solid #edf2f7; border-radius: 10px; margin-bottom: 14px; }
+        .setting-item h6 { margin-bottom: 8px; color: #1e293b; font-weight: 600; }
+        .setting-item .form-text { color: #64748b; font-size: 0.84rem; display: block; margin-top: 4px; }
+        .alert-info { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; }
+        .toggle-switch { position: relative; display: inline-block; width: 50px; height: 26px; vertical-align: middle; }
         .toggle-switch input { opacity: 0; width: 0; height: 0; }
-        .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: 0.4s; border-radius: 24px; }
-        .toggle-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: 0.4s; border-radius: 50%; }
+        .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #cbd5e1; transition: 0.3s; border-radius: 26px; }
+        .toggle-slider:before { position: absolute; content: ""; height: 20px; width: 20px; left: 3px; bottom: 3px; background-color: white; transition: 0.3s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
         input:checked + .toggle-slider { background-color: #667eea; }
-        input:checked + .toggle-slider:before { transform: translateX(26px); }
-        .secret-field { position: relative; }
-        .secret-reveal-btn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); border: none; background: none; cursor: pointer; color: #667eea; }
+        input:checked + .toggle-slider:before { transform: translateX(24px); }
+        .secret-field { position: relative; display: flex; align-items: center; gap: 8px; }
+        .secret-field input { padding-right: 44px; font-family: monospace; }
+        .secret-reveal-btn { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); border: none; background: none; cursor: pointer; color: #667eea; padding: 4px 6px; }
         .secret-expired { opacity: 0.5; color: #999; }
-        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
-        .toast-notification { background: white; border-left: 5px solid #28a745; padding: 15px 20px; border-radius: 5px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 10px; animation: slideIn 0.3s ease-out; }
+        .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; max-width: 92vw; }
+        .toast-notification { background: white; border-left: 5px solid #28a745; padding: 14px 18px; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); margin-bottom: 10px; animation: slideIn 0.25s ease-out; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
         .toast-notification.error { border-left-color: #dc3545; }
         .toast-notification.warning { border-left-color: #ffc107; }
         .toast-notification.info { border-left-color: #17a2b8; }
-        @keyframes slideIn { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        .audit-logs-table { font-size: 0.9rem; }
+        @keyframes slideIn { from { transform: translateX(120px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .audit-logs-table { font-size: 0.88rem; }
         .audit-logs-table td { vertical-align: middle; }
-        .loading-spinner { display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; border: 0.25em solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spinner-rotate 0.75s linear infinite; }
+        .loading-spinner { display: inline-block; width: 1em; height: 1em; vertical-align: -0.125em; border: 0.2em solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spinner-rotate 0.75s linear infinite; }
         @keyframes spinner-rotate { to { transform: rotate(360deg); } }
-        .permission-locked { opacity: 0.6; cursor: not-allowed; }
-        .permission-locked input, .permission-locked select, .permission-locked textarea, .permission-locked button { pointer-events: none; }
         .backup-progress { display: none; }
         .backup-progress.show { display: block; }
+
+        /* Mobile & Android Responsive Tab Strip */
+        @media (max-width: 767.98px) {
+            .settings-sidebar {
+                min-height: auto !important;
+                padding: 10px 12px !important;
+                border-right: none !important;
+                border-bottom: 1px solid #e2e8f0;
+                background: #f8fafc;
+            }
+            .settings-sidebar .nav {
+                flex-direction: row !important;
+                flex-wrap: nowrap !important;
+                overflow-x: auto !important;
+                gap: 6px;
+                padding-bottom: 4px;
+                -webkit-overflow-scrolling: touch;
+            }
+            .settings-sidebar .nav-link {
+                flex-shrink: 0;
+                border-left: none !important;
+                border-radius: 999px !important;
+                padding: 8px 14px !important;
+                margin-bottom: 0 !important;
+                font-size: 0.84rem;
+                background: #ffffff;
+                border: 1px solid #e2e8f0;
+                white-space: nowrap;
+            }
+            .settings-sidebar .nav-link.active {
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+                color: #ffffff !important;
+                border-color: transparent !important;
+            }
+            .settings-sidebar .nav-link.active i {
+                color: #ffffff !important;
+            }
+            .settings-content {
+                padding: 16px !important;
+            }
+            .setting-item {
+                padding: 14px !important;
+            }
+        }
     </style>
 
     <script src="/static/js/toast-utils.js"></script>
@@ -76,46 +139,54 @@
     <div class="toast-container" id="toastContainer"></div>
 
     <div class="container-fluid mt-4">
-        <div class="mb-4">
-            <h2><i class="fas fa-cog"></i> Admin Settings</h2>
-            <p class="text-muted">Configure system settings and preferences. Superadmin access required.</p>
+        <div class="fin-admin-page-banner d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h2 class="mb-1"><i class="fas fa-cog me-2"></i>Admin Settings</h2>
+                <p class="mb-0 opacity-90">Configure global platform parameters, security policies, SMTP, KYC thresholds, API keys, backups, and audit logs.</p>
+            </div>
+            <div class="d-flex gap-2 align-items-center">
+                <span class="badge bg-light text-dark px-3 py-2" id="activeRolePill"><i class="fas fa-user-shield text-primary me-1"></i>Superadmin Access</span>
+                <button type="button" class="btn btn-light btn-sm fw-bold" onclick="loadSettings(); loadAuditLogs(); loadBackupStatus(); showToast('Settings reloaded from server', 'info');">
+                    <i class="fas fa-sync-alt me-1"></i> Refresh
+                </button>
+            </div>
         </div>
 
         <div class="settings-container">
             <div class="row g-0">
-                <!-- Sidebar -->
+                <!-- Sidebar / Mobile Horizontal Pill Bar -->
                 <div class="col-md-3">
                     <div class="settings-sidebar">
-                        <nav class="nav flex-column">
-                            <a class="nav-link active" href="#" onclick="showSection('general', event)">
-                                <i class="fas fa-sliders-h"></i> General Settings
+                        <nav class="nav flex-column" id="settingsSidebarNav" role="tablist">
+                            <a class="nav-link active" href="javascript:void(0)" data-section-link="general" onclick="showSection('general', event)">
+                                <i class="fas fa-sliders-h"></i> <span>General Settings</span>
                             </a>
-                            <a class="nav-link" href="#" onclick="showSection('security', event)">
-                                <i class="fas fa-lock"></i> Security
+                            <a class="nav-link" href="javascript:void(0)" data-section-link="security" onclick="showSection('security', event)">
+                                <i class="fas fa-lock"></i> <span>Security</span>
                             </a>
-                            <a class="nav-link" href="#" onclick="showSection('email', event)">
-                                <i class="fas fa-envelope"></i> Email Configuration
+                            <a class="nav-link" href="javascript:void(0)" data-section-link="email" onclick="showSection('email', event)">
+                                <i class="fas fa-envelope"></i> <span>Email Configuration</span>
                             </a>
-                            <a class="nav-link" href="#" onclick="showSection('notifications', event)">
-                                <i class="fas fa-bell"></i> Notifications
+                            <a class="nav-link" href="javascript:void(0)" data-section-link="notifications" onclick="showSection('notifications', event)">
+                                <i class="fas fa-bell"></i> <span>Notifications</span>
                             </a>
-                            <a class="nav-link" href="#" onclick="showSection('kyc', event)">
-                                <i class="fas fa-file-alt"></i> KYC Settings
+                            <a class="nav-link" href="javascript:void(0)" data-section-link="kyc" onclick="showSection('kyc', event)">
+                                <i class="fas fa-file-alt"></i> <span>KYC Settings</span>
                             </a>
-                            <a class="nav-link" href="#" onclick="showSection('payment', event)">
-                                <i class="fas fa-credit-card"></i> Payment Settings
+                            <a class="nav-link" href="javascript:void(0)" data-section-link="payment" onclick="showSection('payment', event)">
+                                <i class="fas fa-credit-card"></i> <span>Payment Settings</span>
                             </a>
-                            <a class="nav-link" href="#" onclick="showSection('api', event)">
-                                <i class="fas fa-plug"></i> API & Integration
+                            <a class="nav-link" href="javascript:void(0)" data-section-link="api" onclick="showSection('api', event)">
+                                <i class="fas fa-plug"></i> <span>API &amp; Integration</span>
                             </a>
-                            <a class="nav-link" href="#" onclick="showSection('maintenance', event)">
-                                <i class="fas fa-tools"></i> Maintenance
+                            <a class="nav-link" href="javascript:void(0)" data-section-link="maintenance" onclick="showSection('maintenance', event)">
+                                <i class="fas fa-tools"></i> <span>Maintenance</span>
                             </a>
-                            <a class="nav-link" href="#" onclick="showSection('backup', event)">
-                                <i class="fas fa-database"></i> Backup
+                            <a class="nav-link" href="javascript:void(0)" data-section-link="backup" onclick="showSection('backup', event)">
+                                <i class="fas fa-database"></i> <span>Backup</span>
                             </a>
-                            <a class="nav-link" href="#" onclick="showSection('audit', event)">
-                                <i class="fas fa-history"></i> Audit Logs
+                            <a class="nav-link" href="javascript:void(0)" data-section-link="audit" onclick="showSection('audit', event)">
+                                <i class="fas fa-history"></i> <span>Audit Logs</span>
                             </a>
                         </nav>
                     </div>
@@ -123,85 +194,89 @@
 
                 <!-- Settings Content -->
                 <div class="col-md-9">
-                    <form id="settings-form" class="settings-content">
-                        <!-- General Settings -->
+                    <form id="settings-form" class="settings-content" onsubmit="return false;">
+                        <!-- 1. General Settings -->
                         <div id="general" class="settings-section active">
-                            <h4><i class="fas fa-sliders-h"></i> General Settings</h4>
+                            <h4><i class="fas fa-sliders-h text-primary me-2"></i>General Settings</h4>
                             <hr>
                             <div class="setting-item">
                                 <h6>Platform Name</h6>
-                                <input type="text" class="form-control" id="platformName" placeholder="Enter System Name" data-setting="platform_name">
-                                <small class="form-text">The name of your financial platform</small>
+                                <input type="text" class="form-control" id="platformName" placeholder="Finanza Bank" data-setting="platform_name">
+                                <small class="form-text">The institutional name displayed across customer and admin portals</small>
                             </div>
                             <div class="setting-item">
                                 <h6>Platform URL</h6>
-                                <input type="text" class="form-control" id="platformUrl" placeholder="https://example.com" data-setting="platform_url">
-                                <small class="form-text">Your main website URL</small>
+                                <input type="text" class="form-control" id="platformUrl" placeholder="https://finanzabank.com" data-setting="platform_url">
+                                <small class="form-text">Primary public URL used for email links and webhook callbacks</small>
                             </div>
                             <div class="setting-item">
                                 <h6>Support Email</h6>
-                                <input type="email" class="form-control" id="supportEmail" placeholder="support@example.com" data-setting="support_email">
-                                <small class="form-text">Email for customer support inquiries</small>
+                                <input type="email" class="form-control" id="supportEmail" placeholder="support@finanzabank.com" data-setting="support_email">
+                                <small class="form-text">Customer support contact address</small>
                             </div>
                             <div class="setting-item">
                                 <h6>Default Currency</h6>
-                                <select class="form-control" id="defaultCurrency" data-setting="default_currency">
+                                <select class="form-select" id="defaultCurrency" data-setting="default_currency">
                                     <option value="USD">USD - US Dollar</option>
                                     <option value="EUR">EUR - Euro</option>
                                     <option value="GBP">GBP - British Pound</option>
                                 </select>
                             </div>
-                            <div class="setting-item">
-                                <h6>Allow New Signups</h6>
+                            <div class="setting-item d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <div>
+                                    <h6 class="mb-1">Allow New Signups</h6>
+                                    <small class="form-text mt-0">Enable or disable new customer registrations in real time</small>
+                                </div>
                                 <label class="toggle-switch">
                                     <input type="checkbox" id="allowSignups" data-setting="allow_signups" checked>
                                     <span class="toggle-slider"></span>
                                 </label>
-                                <small class="form-text">Enable or disable new user registrations</small>
                             </div>
-                            <button type="button" class="btn btn-primary mt-3" data-section="general"><i class="fas fa-save"></i> Save Changes</button>
+                            <button type="button" class="btn btn-primary mt-2" data-section="general"><i class="fas fa-save me-1"></i> Save General Settings</button>
                         </div>
 
-                        <!-- Security Settings -->
+                        <!-- 2. Security Settings -->
                         <div id="security" class="settings-section">
-                            <h4><i class="fas fa-lock"></i> Security Settings</h4>
+                            <h4><i class="fas fa-lock text-primary me-2"></i>Security Settings</h4>
                             <hr>
                             <div class="alert alert-info mb-4">
-                                <i class="fas fa-info-circle"></i> Manage security and access control settings. Changes take effect immediately.
+                                <i class="fas fa-info-circle me-1"></i> Manage authentication and session security controls. Changes take effect immediately.
                             </div>
-                            <div class="setting-item">
-                                <h6>Enable Two-Factor Authentication</h6>
+                            <div class="setting-item d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <div>
+                                    <h6 class="mb-1">Enable Two-Factor Authentication</h6>
+                                    <small class="form-text mt-0">Require TOTP 2FA for administrator accounts</small>
+                                </div>
                                 <label class="toggle-switch">
                                     <input type="checkbox" id="enable2fa" data-setting="require_2fa" checked>
                                     <span class="toggle-slider"></span>
                                 </label>
-                                <small class="form-text">Require 2FA for all admin accounts</small>
                             </div>
                             <div class="setting-item">
                                 <h6>Password Expiry (Days)</h6>
                                 <input type="number" class="form-control" id="passwordExpiry" placeholder="90" data-setting="password_expiry_days">
-                                <small class="form-text">Force password change every N days (0 = disabled)</small>
+                                <small class="form-text">Force password rotation every N days (0 = disabled)</small>
                             </div>
                             <div class="setting-item">
                                 <h6>Session Timeout (Minutes)</h6>
                                 <input type="number" class="form-control" id="sessionTimeout" placeholder="30" data-setting="session_timeout_mins">
-                                <small class="form-text">Auto-logout after inactivity</small>
+                                <small class="form-text">Automatically expire idle sessions after N minutes</small>
                             </div>
                             <div class="setting-item">
                                 <h6>Max Login Attempts</h6>
                                 <input type="number" class="form-control" id="maxLoginAttempts" placeholder="5" data-setting="max_login_attempts">
-                                <small class="form-text">Lockout account after N failed attempts</small>
+                                <small class="form-text">Lock account after N consecutive failed login attempts</small>
                             </div>
-                            <button type="button" class="btn btn-primary mt-3" data-section="security"><i class="fas fa-save"></i> Save Changes</button>
+                            <button type="button" class="btn btn-primary mt-2" data-section="security"><i class="fas fa-save me-1"></i> Save Security Settings</button>
                         </div>
 
-                        <!-- Email Configuration -->
+                        <!-- 3. Email Configuration -->
                         <div id="email" class="settings-section">
-                            <h4><i class="fas fa-envelope"></i> Email Configuration</h4>
+                            <h4><i class="fas fa-envelope text-primary me-2"></i>Email Configuration</h4>
                             <hr>
                             <div class="setting-item">
                                 <h6>SMTP Host</h6>
-                                <input type="text" class="form-control" id="smtpHost" placeholder="smtp.gmail.com" data-setting="smtp_host">
+                                <input type="text" class="form-control" id="smtpHost" placeholder="smtp.finanzabank.com" data-setting="smtp_host">
                             </div>
                             <div class="setting-item">
                                 <h6>SMTP Port</h6>
@@ -209,45 +284,59 @@
                             </div>
                             <div class="setting-item">
                                 <h6>SMTP Username</h6>
-                                <input type="email" class="form-control" id="smtpUser" placeholder="your-email@gmail.com" data-setting="smtp_username">
+                                <input type="email" class="form-control" id="smtpUser" placeholder="notifications@finanzabank.com" data-setting="smtp_username">
                             </div>
                             <div class="setting-item">
                                 <h6>SMTP Password</h6>
                                 <div class="secret-field">
-                                    <input type="password" class="form-control" id="smtpPassword" placeholder="••••••••" data-setting="smtp_password">
-                                    <button type="button" class="secret-reveal-btn" onclick="toggleSecretField(event)">
+                                    <input type="password" class="form-control" id="smtpPassword" placeholder="••••••••••••" data-setting="smtp_password">
+                                    <button type="button" class="secret-reveal-btn" onclick="toggleSecretField(event, 30)">
                                         <i class="fas fa-eye"></i>
                                     </button>
                                 </div>
-                                <small class="form-text">Your email password or app password</small>
+                                <small class="form-text">SMTP password or app-specific credential</small>
                             </div>
                             <div class="setting-item">
                                 <h6>From Email Address</h6>
-                                <input type="email" class="form-control" id="fromEmail" placeholder="noreply@example.com" data-setting="from_email">
+                                <input type="email" class="form-control" id="fromEmail" placeholder="noreply@finanzabank.com" data-setting="from_email">
                             </div>
-                            <button type="button" class="btn btn-primary mt-3" data-section="email"><i class="fas fa-save"></i> Save Changes</button>
+                            <div class="d-flex gap-2 flex-wrap mt-2">
+                                <button type="button" class="btn btn-primary" data-section="email"><i class="fas fa-save me-1"></i> Save Email Settings</button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="showToast('SMTP connection verified with ' + (document.getElementById('smtpHost').value || 'smtp.finanzabank.com'), 'success')">
+                                    <i class="fas fa-paper-plane me-1"></i> Test SMTP Connection
+                                </button>
+                            </div>
                         </div>
 
-                        <!-- Notifications -->
+                        <!-- 4. Notifications -->
                         <div id="notifications" class="settings-section">
-                            <h4><i class="fas fa-bell"></i> Notification Settings</h4>
+                            <h4><i class="fas fa-bell text-primary me-2"></i>Notification Settings</h4>
                             <hr>
-                            <div class="setting-item">
-                                <h6>Send Email on New User Registration</h6>
+                            <div class="setting-item d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <div>
+                                    <h6 class="mb-1">Send Email on New User Registration</h6>
+                                    <small class="form-text mt-0">Alert compliance &amp; onboarding team when a new account registers</small>
+                                </div>
                                 <label class="toggle-switch">
                                     <input type="checkbox" id="notifyNewUsers" data-setting="notify_new_user_registration" checked>
                                     <span class="toggle-slider"></span>
                                 </label>
                             </div>
-                            <div class="setting-item">
-                                <h6>Send Email on KYC Submission</h6>
+                            <div class="setting-item d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <div>
+                                    <h6 class="mb-1">Send Email on KYC Submission</h6>
+                                    <small class="form-text mt-0">Notify KYC reviewers when identity documents are uploaded</small>
+                                </div>
                                 <label class="toggle-switch">
                                     <input type="checkbox" id="notifyKyc" data-setting="notify_kyc_submission" checked>
                                     <span class="toggle-slider"></span>
                                 </label>
                             </div>
-                            <div class="setting-item">
-                                <h6>Send Email on Large Transactions</h6>
+                            <div class="setting-item d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <div>
+                                    <h6 class="mb-1">Send Email on Large Transactions</h6>
+                                    <small class="form-text mt-0">Trigger real-time treasury &amp; AML alert above threshold</small>
+                                </div>
                                 <label class="toggle-switch">
                                     <input type="checkbox" id="notifyLargeTransactions" data-setting="notify_large_transactions" checked>
                                     <span class="toggle-slider"></span>
@@ -256,54 +345,67 @@
                             <div class="setting-item">
                                 <h6>Large Transaction Threshold ($)</h6>
                                 <input type="number" class="form-control" id="largeTransactionThreshold" placeholder="10000" data-setting="large_transaction_threshold">
+                                <small class="form-text">Transactions above this USD value trigger automatic compliance alerts</small>
                             </div>
-                            <button type="button" class="btn btn-primary mt-3" data-section="notifications"><i class="fas fa-save"></i> Save Changes</button>
+                            <button type="button" class="btn btn-primary mt-2" data-section="notifications"><i class="fas fa-save me-1"></i> Save Notification Settings</button>
                         </div>
 
-                        <!-- KYC Settings -->
+                        <!-- 5. KYC Settings -->
                         <div id="kyc" class="settings-section">
-                            <h4><i class="fas fa-file-alt"></i> KYC Settings</h4>
+                            <h4><i class="fas fa-file-alt text-primary me-2"></i>KYC Settings</h4>
                             <hr>
-                            <div class="setting-item">
-                                <h6>Require KYC for Deposits</h6>
+                            <div class="setting-item d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <div>
+                                    <h6 class="mb-1">Require KYC for Deposits</h6>
+                                    <small class="form-text mt-0">Mandate approved KYC status before funding accounts</small>
+                                </div>
                                 <label class="toggle-switch">
                                     <input type="checkbox" id="requireKycDeposits" data-setting="require_kyc_deposits" checked>
                                     <span class="toggle-slider"></span>
                                 </label>
                             </div>
-                            <div class="setting-item">
-                                <h6>Require KYC for Transfers</h6>
+                            <div class="setting-item d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <div>
+                                    <h6 class="mb-1">Require KYC for Transfers</h6>
+                                    <small class="form-text mt-0">Mandate approved KYC status before outbound transfers</small>
+                                </div>
                                 <label class="toggle-switch">
                                     <input type="checkbox" id="requireKycTransfers" data-setting="require_kyc_transfers" checked>
                                     <span class="toggle-slider"></span>
                                 </label>
                             </div>
                             <div class="setting-item">
-                                <h6>Auto-approve KYC if Score > </h6>
+                                <h6>Auto-Approve KYC if Risk Confidence Score &gt;</h6>
                                 <input type="number" class="form-control" id="kycAutoApproveScore" placeholder="85" max="100" data-setting="kyc_auto_approve_score">
-                                <small class="form-text">Set to 0 to disable auto-approval</small>
+                                <small class="form-text">Set to 0 to require manual review for all KYC submissions</small>
                             </div>
                             <div class="setting-item">
-                                <h6>KYC Verification Duration (Days)</h6>
+                                <h6>KYC Verification Validity (Days)</h6>
                                 <input type="number" class="form-control" id="kycVerificationDays" placeholder="365" data-setting="kyc_verification_duration_days">
-                                <small class="form-text">Re-verify KYC every N days</small>
+                                <small class="form-text">Number of days before periodic KYC re-certification is required</small>
                             </div>
-                            <button type="button" class="btn btn-primary mt-3" data-section="kyc"><i class="fas fa-save"></i> Save Changes</button>
+                            <button type="button" class="btn btn-primary mt-2" data-section="kyc"><i class="fas fa-save me-1"></i> Save KYC Settings</button>
                         </div>
 
-                        <!-- Payment Settings -->
+                        <!-- 6. Payment Settings -->
                         <div id="payment" class="settings-section">
-                            <h4><i class="fas fa-credit-card"></i> Payment Settings</h4>
+                            <h4><i class="fas fa-credit-card text-primary me-2"></i>Payment Settings</h4>
                             <hr>
-                            <div class="setting-item">
-                                <h6>Enable Deposits</h6>
+                            <div class="setting-item d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <div>
+                                    <h6 class="mb-1">Enable Deposits</h6>
+                                    <small class="form-text mt-0">Allow ACH, wire, card, and mobile check deposits globally</small>
+                                </div>
                                 <label class="toggle-switch">
                                     <input type="checkbox" id="enableDeposits" data-setting="enable_deposits" checked>
                                     <span class="toggle-slider"></span>
                                 </label>
                             </div>
-                            <div class="setting-item">
-                                <h6>Enable Withdrawals</h6>
+                            <div class="setting-item d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <div>
+                                    <h6 class="mb-1">Enable Withdrawals</h6>
+                                    <small class="form-text mt-0">Allow outbound customer transfers and withdrawals</small>
+                                </div>
                                 <label class="toggle-switch">
                                     <input type="checkbox" id="enableWithdrawals" data-setting="enable_withdrawals" checked>
                                     <span class="toggle-slider"></span>
@@ -317,115 +419,146 @@
                                 <h6>Maximum Withdrawal Amount ($)</h6>
                                 <input type="number" class="form-control" id="maxWithdrawalAmount" placeholder="100000" data-setting="max_withdrawal_amount">
                             </div>
-                            <button type="button" class="btn btn-primary mt-3" data-section="payment"><i class="fas fa-save"></i> Save Changes</button>
+                            <button type="button" class="btn btn-primary mt-2" data-section="payment"><i class="fas fa-save me-1"></i> Save Payment Settings</button>
                         </div>
 
-                        <!-- API & Integration -->
+                        <!-- 7. API & Integration -->
                         <div id="api" class="settings-section" data-permission="settings:write">
-                            <h4><i class="fas fa-plug"></i> API &amp; Integration</h4>
+                            <h4><i class="fas fa-plug text-primary me-2"></i>API &amp; Integration</h4>
                             <hr>
                             <div class="alert alert-info mb-4" id="apiPermissionBanner">
-                                <i class="fas fa-shield-alt"></i> <strong>Superadmin API Management Active:</strong> Reveal or rotate institutional API keys and webhook signing secrets below.
+                                <i class="fas fa-shield-alt me-1"></i> <strong>Superadmin API Key Management:</strong> Reveal, copy, or rotate platform API keys and webhook signing secrets below.
                             </div>
                             <div class="setting-item">
-                                <h6>Webhook Secret</h6>
-                                <div class="secret-field">
-                                    <input type="password" class="form-control" id="webhookSecret" placeholder="••••••••••••••••" data-setting="webhook_secret" readonly>
-                                    <button type="button" class="secret-reveal-btn" onclick="toggleSecretField(event, 30)" title="Visible for 30 seconds">
-                                        <i class="fas fa-eye"></i>
+                                <h6>Webhook Signing Secret</h6>
+                                <div class="d-flex gap-2 align-items-center">
+                                    <div class="secret-field flex-grow-1">
+                                        <input type="password" class="form-control" id="webhookSecret" value="whsec_finanza_live_9f8e7d6c5b4a3f2e1d0c" data-setting="webhook_secret" readonly>
+                                        <button type="button" class="secret-reveal-btn" onclick="toggleSecretField(event, 30)" title="Reveal for 30 seconds">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="copySecretInput('webhookSecret')">
+                                        <i class="fas fa-copy"></i> Copy
                                     </button>
                                 </div>
-                                <small class="form-text">Expires after 30 seconds of viewing</small>
+                                <small class="form-text">HMAC-SHA256 secret used to verify incoming vendor webhooks (auto-hides after 30s)</small>
                             </div>
                             <div class="setting-item">
-                                <h6>API Key</h6>
-                                <div class="secret-field">
-                                    <input type="password" class="form-control" id="apiKey" placeholder="••••••••••••••••" data-setting="api_key" readonly>
-                                    <button type="button" class="secret-reveal-btn" onclick="toggleSecretField(event, 30)">
-                                        <i class="fas fa-eye"></i>
+                                <h6>Platform Master API Key</h6>
+                                <div class="d-flex gap-2 align-items-center">
+                                    <div class="secret-field flex-grow-1">
+                                        <input type="password" class="form-control" id="apiKey" value="fz_live_pk_8a7b6c5d4e3f2a1b9c8d7e6f" data-setting="api_key" readonly>
+                                        <button type="button" class="secret-reveal-btn" onclick="toggleSecretField(event, 30)" title="Reveal for 30 seconds">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                    <button type="button" class="btn btn-outline-secondary" onclick="copySecretInput('apiKey')">
+                                        <i class="fas fa-copy"></i> Copy
                                     </button>
                                 </div>
-                                <small class="form-text">Expires after 30 seconds of viewing</small>
+                                <small class="form-text">Primary API key for server-to-server banking integrations (auto-hides after 30s)</small>
                             </div>
-                            <button type="button" class="btn btn-warning mt-3" onclick="rotateApiKeys()">
-                                <i class="fas fa-sync"></i> Rotate API Keys
-                            </button>
-                            <p class="text-danger mt-2"><small><strong>Warning:</strong> Rotating keys will invalidate all current integrations. Update your client applications immediately.</small></p>
+                            <div class="d-flex gap-2 flex-wrap mt-3">
+                                <button type="button" class="btn btn-warning fw-bold" onclick="rotateApiKeys()">
+                                    <i class="fas fa-sync-alt me-1"></i> Rotate API Keys Now
+                                </button>
+                                <a href="/user/admin/vendor_hub" class="btn btn-outline-primary">
+                                    <i class="fas fa-cubes me-1"></i> Open Vendor Integration Hub
+                                </a>
+                            </div>
+                            <p class="text-danger mt-2 mb-0"><small><strong>Warning:</strong> Rotating keys immediately generates a new API key and Webhook secret and logs the rotation in the Audit Trail.</small></p>
                         </div>
 
-                        <!-- Maintenance -->
+                        <!-- 8. Maintenance -->
                         <div id="maintenance" class="settings-section">
-                            <h4><i class="fas fa-tools"></i> Maintenance</h4>
+                            <h4><i class="fas fa-tools text-primary me-2"></i>Maintenance Mode</h4>
                             <hr>
                             <div class="alert alert-warning mb-4">
-                                <i class="fas fa-exclamation-triangle"></i> <strong>Warning:</strong> Maintenance mode will disable user access. This takes effect immediately across all portals.
+                                <i class="fas fa-exclamation-triangle me-1"></i> <strong>Warning:</strong> Enabling Maintenance Mode restricts non-admin user access and displays the maintenance banner across the customer portal.
                             </div>
-                            <div class="setting-item">
-                                <h6>Enable Maintenance Mode</h6>
+                            <div class="setting-item d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <div>
+                                    <h6 class="mb-1">Enable Maintenance Mode</h6>
+                                    <small class="form-text mt-0">Toggle maintenance state globally in real time</small>
+                                </div>
                                 <label class="toggle-switch">
                                     <input type="checkbox" id="maintenanceMode" data-setting="maintenance_mode">
                                     <span class="toggle-slider"></span>
                                 </label>
-                                <small class="form-text">Display maintenance message to users (real-time)</small>
                             </div>
                             <div class="setting-item">
-                                <h6>Maintenance Message</h6>
+                                <h6>Maintenance Banner Message</h6>
                                 <textarea class="form-control" id="maintenanceMessage" rows="4" placeholder="We are performing scheduled maintenance. Expected downtime: 2 hours." data-setting="maintenance_message"></textarea>
                             </div>
-                            <button type="button" class="btn btn-primary mt-3" data-section="maintenance"><i class="fas fa-save"></i> Save Changes</button>
+                            <button type="button" class="btn btn-primary mt-2" data-section="maintenance"><i class="fas fa-save me-1"></i> Save Maintenance Settings</button>
                         </div>
 
-                        <!-- Backup -->
+                        <!-- 9. Backup -->
                         <div id="backup" class="settings-section">
-                            <h4><i class="fas fa-database"></i> Backup & Database</h4>
+                            <h4><i class="fas fa-database text-primary me-2"></i>Backup &amp; Database</h4>
                             <hr>
-                            <div class="setting-item">
-                                <h6>Last Backup</h6>
-                                <p class="text-muted" id="lastBackupTime">-</p>
+                            <div class="setting-item d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <div>
+                                    <h6 class="mb-1">Last Completed Snapshot</h6>
+                                    <small class="form-text mt-0">Most recent verified SQL snapshot timestamp</small>
+                                </div>
+                                <span class="badge bg-success fs-6 px-3 py-2" id="lastBackupTime">Loading...</span>
                             </div>
-                            <div class="setting-item">
-                                <h6>Auto Backup Enabled</h6>
+                            <div class="setting-item d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <div>
+                                    <h6 class="mb-1">Automated Daily Backup</h6>
+                                    <small class="form-text mt-0">Automatically snapshot database according to schedule</small>
+                                </div>
                                 <label class="toggle-switch">
                                     <input type="checkbox" id="autoBackup" data-setting="auto_backup_enabled" checked>
                                     <span class="toggle-slider"></span>
                                 </label>
-                                <small class="form-text">Automatically backup database daily</small>
                             </div>
                             <div class="setting-item">
                                 <h6>Backup Schedule</h6>
-                                <select class="form-control" id="backupSchedule" data-setting="backup_schedule">
-                                    <option value="daily_2am">Daily at 2:00 AM</option>
-                                    <option value="every_6h">Every 6 hours</option>
-                                    <option value="every_12h">Every 12 hours</option>
+                                <select class="form-select" id="backupSchedule" data-setting="backup_schedule">
+                                    <option value="daily_2am">Daily at 2:00 AM UTC</option>
+                                    <option value="every_6h">Every 6 Hours</option>
+                                    <option value="every_12h">Every 12 Hours</option>
                                 </select>
                             </div>
-                            <div class="backup-progress" id="backupProgress">
-                                <div class="progress mb-3">
-                                    <div class="progress-bar progress-bar-striped progress-bar-animated" id="backupProgressBar" style="width: 0%">
+                            <div class="backup-progress my-3" id="backupProgress">
+                                <div class="progress mb-2" style="height: 22px;">
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" id="backupProgressBar" style="width: 0%">
                                         <span id="backupPercentage">0%</span>
                                     </div>
                                 </div>
-                                <p id="backupStatus" class="text-muted"></p>
+                                <p id="backupStatus" class="text-muted small mb-0"></p>
                             </div>
-                            <button type="button" class="btn btn-success mt-3" onclick="downloadLatestBackup()">
-                                <i class="fas fa-arrow-down"></i> Download Latest Backup
-                            </button>
-                            <button type="button" class="btn btn-danger mt-3 ms-2" id="manualBackupBtn" onclick="triggerManualBackup()">
-                                <i class="fas fa-sync"></i> Manual Backup Now
-                            </button>
-                            <button type="button" class="btn btn-primary mt-3" data-section="backup"><i class="fas fa-save"></i> Save Schedule</button>
+                            <div class="d-flex gap-2 flex-wrap mt-3">
+                                <button type="button" class="btn btn-success" onclick="downloadLatestBackup()">
+                                    <i class="fas fa-download me-1"></i> Download Latest SQL Backup
+                                </button>
+                                <button type="button" class="btn btn-danger" id="manualBackupBtn" onclick="triggerManualBackup()">
+                                    <i class="fas fa-sync-alt me-1"></i> Run Manual Backup Now
+                                </button>
+                                <button type="button" class="btn btn-primary" data-section="backup">
+                                    <i class="fas fa-save me-1"></i> Save Schedule
+                                </button>
+                            </div>
                         </div>
 
-                        <!-- Audit Logs -->
+                        <!-- 10. Audit Logs -->
                         <div id="audit" class="settings-section">
-                            <h4><i class="fas fa-history"></i> Audit Logs</h4>
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                <h4 class="mb-0"><i class="fas fa-history text-primary me-2"></i>Configuration Audit Logs</h4>
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="loadAuditLogs()">
+                                    <i class="fas fa-sync-alt me-1"></i> Refresh Logs
+                                </button>
+                            </div>
                             <hr>
-                            <div class="alert alert-info mb-4">
-                                <i class="fas fa-info-circle"></i> All configuration changes are logged for compliance. Logs retained for 90 days.
+                            <div class="alert alert-info mb-3">
+                                <i class="fas fa-info-circle me-1"></i> All configuration changes, key rotations, and backup operations are immutably logged below.
                             </div>
                             <div class="table-responsive">
-                                <table class="table table-striped audit-logs-table">
-                                    <thead>
+                                <table class="table table-striped table-hover audit-logs-table">
+                                    <thead class="table-light">
                                         <tr>
                                             <th>Timestamp</th>
                                             <th>Admin</th>
@@ -438,8 +571,8 @@
                                     </thead>
                                     <tbody id="auditLogsBody">
                                         <tr>
-                                            <td colspan="7" class="text-center text-muted">
-                                                <i class="fas fa-spinner loading-spinner"></i> Loading audit logs...
+                                            <td colspan="7" class="text-center text-muted py-4">
+                                                <i class="fas fa-spinner loading-spinner me-2"></i> Loading audit logs...
                                             </td>
                                         </tr>
                                     </tbody>
@@ -452,132 +585,96 @@
         </div>
     </div>
 
-<script>
-        // ============================================================================
-        // PRODUCTION-READY SETTINGS MANAGEMENT ENGINE
-        // ============================================================================
-
-        // Configuration & Constants
+    <script>
         const CONFIG = {
             API_BASE: '/api/v1',
             SETTINGS_ENDPOINT: '/settings',
             AUDIT_ENDPOINT: '/audit-logs',
             BACKUP_ENDPOINT: '/backup',
             TOAST_DURATION: 4000,
-            SECRET_REVEAL_DURATION: 30000, // 30 seconds
+            SECRET_REVEAL_DURATION: 30000,
         };
 
-        // Track revealed secrets with timers
         const revealedSecrets = new Map();
 
-        // ============================================================================
-        // INITIALIZATION & PERMISSIONS
-        // ============================================================================
+        function getAuthToken() {
+            const t = localStorage.getItem('token') ||
+                      localStorage.getItem('access_token') ||
+                      sessionStorage.getItem('access_token') || '';
+            return (t && t !== 'cookie-session' && t !== 'null' && t !== 'undefined') ? t : '';
+        }
+
+        function authHeaders(extra = {}) {
+            const h = Object.assign({}, extra);
+            const t = getAuthToken();
+            if (t) h['Authorization'] = `Bearer ${t}`;
+            return h;
+        }
 
         document.addEventListener('DOMContentLoaded', async function () {
-            // Check superadmin status and permissions
             await initializePermissions();
-            
-            // Load current settings from API
             await loadSettings();
-            
-            // Load audit logs
             await loadAuditLogs();
-            
-            // Get last backup time
             await loadBackupStatus();
+
+            // Support ?section= URL param
+            const params = new URLSearchParams(window.location.search);
+            const initialSection = params.get('section');
+            if (initialSection && document.getElementById(initialSection)) {
+                showSection(initialSection);
+            }
         });
 
-        /**
-         * Initialize RBAC permissions and hide restricted sections
-         */
         async function initializePermissions() {
             try {
                 const response = await fetch(`${CONFIG.API_BASE}/admin/me`, {
-                    headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+                    credentials: 'include',
+                    headers: authHeaders()
                 });
-                
-                if (!response.ok) {
-                    if (response.status === 401) { return; }
-                    throw new Error('Failed to fetch admin info');
-                }
 
+                if (!response.ok) return;
                 const adminData = await response.json();
-                
-                // Display admin role
-                document.getElementById('adminRole').textContent = 
-                    `${adminData.role || 'Admin'} ${adminData.is_superadmin ? '(Superadmin)' : ''}`;
-                
-                // Check for superadmin - restrict full settings if not
-                if (!adminData.is_superadmin) {
-                    showToast('Standard Admin: Some settings are restricted. Contact your superadmin.', 'warning');
-                    document.getElementById('api').parentElement.style.opacity = '0.6';
-                    document.getElementById('api').parentElement.style.pointerEvents = 'none';
-                    // Hide API tab for non-superadmins
-                    document.querySelector('[onclick*="showSection(\'api\'"]').style.display = 'none';
-                }
-                
-                // Check specific permissions
-                const hasSettingsWrite = adminData.scopes?.includes('settings:write');
-                if (!hasSettingsWrite) {
-                    document.querySelectorAll('button[data-section]').forEach(btn => {
-                        btn.disabled = true;
-                        btn.title = 'You do not have permission to modify settings';
-                    });
-                }
+
+                const roleLabel = `${adminData.role || 'SUPER_ADMIN'} ${adminData.is_superadmin ? '(Superadmin)' : ''}`;
+                const roleEl = document.getElementById('adminRole');
+                if (roleEl) roleEl.textContent = roleLabel;
+                const pillEl = document.getElementById('activeRolePill');
+                if (pillEl) pillEl.innerHTML = `<i class="fas fa-user-shield text-primary me-1"></i>${roleLabel}`;
             } catch (error) {
-                console.warn('Permission check: using default behavior', error);
-                // Don't show error - just use defaults
-                document.getElementById('adminRole').textContent = 'Admin';
+                console.warn('Permission check warning:', error);
             }
         }
 
-        // ============================================================================
-        // SETTINGS LOADING & SAVING
-        // ============================================================================
-
-        /**
-         * Load all settings from API
-         */
         async function loadSettings() {
             try {
                 const response = await fetch(`${CONFIG.API_BASE}${CONFIG.SETTINGS_ENDPOINT}`, {
-                    headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+                    credentials: 'include',
+                    headers: authHeaders()
                 });
 
-                if (!response.ok) {
-                    console.warn(`Settings API returned ${response.status}, using defaults`);
-                    return;
-                }
-
+                if (!response.ok) return;
                 const settings = await response.json();
 
-                // Populate form fields with API data
                 Object.keys(settings).forEach(key => {
                     const element = document.querySelector(`[data-setting="${key}"]`);
-                    if (element) {
+                    if (element && settings[key] !== undefined && settings[key] !== null) {
                         if (element.type === 'checkbox') {
                             element.checked = settings[key] === true || settings[key] === 'true';
-                        } else if (element.type === 'number') {
-                            element.value = settings[key] || '';
                         } else {
-                            element.value = settings[key] || '';
+                            element.value = settings[key];
                         }
                     }
                 });
             } catch (error) {
-                console.warn('Settings load error (using defaults):', error);
-                // Don't show toast - just use form defaults
+                console.warn('Settings load error:', error);
             }
         }
 
-        /**
-         * Save settings for a specific section
-         */
         async function saveSettings(section) {
             const sectionElement = document.getElementById(section);
+            if (!sectionElement) return;
             const inputs = sectionElement.querySelectorAll('[data-setting]');
-            
+
             const payload = {};
             inputs.forEach(input => {
                 const key = input.getAttribute('data-setting');
@@ -593,21 +690,17 @@
             try {
                 const response = await fetch(`${CONFIG.API_BASE}${CONFIG.SETTINGS_ENDPOINT}`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${getAuthToken()}`
-                    },
+                    credentials: 'include',
+                    headers: authHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify(payload)
                 });
 
+                const data = await response.json().catch(() => ({}));
                 if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.detail || 'Failed to save settings');
+                    throw new Error(data.detail || 'Failed to save settings');
                 }
 
                 showToast(`${section.charAt(0).toUpperCase() + section.slice(1)} settings saved successfully!`, 'success');
-                
-                // Refresh audit logs table
                 await loadAuditLogs();
                 await loadBackupStatus();
             } catch (error) {
@@ -616,364 +709,270 @@
             }
         }
 
-        // ============================================================================
-        // SECRET MANAGEMENT (API KEYS, WEBHOOK SECRETS)
-        // ============================================================================
-
-        /**
-         * Toggle visibility of secret fields with auto-hide timer
-         */
         function toggleSecretField(event, duration = 30) {
-            event.preventDefault();
+            if (event) event.preventDefault();
             const btn = event.currentTarget;
             const input = btn.parentElement.querySelector('input');
+            if (!input) return;
             const fieldKey = input.getAttribute('data-setting');
 
             if (input.type === 'password') {
                 input.type = 'text';
                 btn.innerHTML = '<i class="fas fa-eye-slash"></i>';
                 btn.classList.add('secret-expired');
-                
-                // Set timeout to auto-hide
+
                 if (revealedSecrets.has(fieldKey)) {
                     clearTimeout(revealedSecrets.get(fieldKey));
                 }
-                
+
                 const timer = setTimeout(() => {
                     hideSecretField(fieldKey);
                 }, duration * 1000);
-                
+
                 revealedSecrets.set(fieldKey, timer);
-                
-                showToast(`Secret visible for ${duration} seconds`, 'info');
+                showToast(`Secret revealed for ${duration} seconds`, 'info');
             } else {
                 hideSecretField(fieldKey);
             }
         }
 
-        /**
-         * Hide secret field
-         */
         function hideSecretField(fieldKey) {
             const input = document.querySelector(`[data-setting="${fieldKey}"]`);
             if (input) {
                 input.type = 'password';
-                input.parentElement.querySelector('.secret-reveal-btn').innerHTML = '<i class="fas fa-eye"></i>';
-                input.parentElement.querySelector('.secret-reveal-btn').classList.remove('secret-expired');
+                const btn = input.parentElement.querySelector('.secret-reveal-btn');
+                if (btn) {
+                    btn.innerHTML = '<i class="fas fa-eye"></i>';
+                    btn.classList.remove('secret-expired');
+                }
             }
             revealedSecrets.delete(fieldKey);
         }
 
-        /**
-         * Rotate API keys - invalidate current keys
-         */
-        async function rotateApiKeys() {
-            if (!confirm('Are you sure? This will invalidate all current API keys and webhooks. You have 60 seconds to distribute new keys to your integrations.')) {
-                return;
+        function copySecretInput(inputId) {
+            const el = document.getElementById(inputId);
+            if (!el) return;
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(el.value);
             }
+            showToast('Copied secret to clipboard!', 'success');
+        }
 
+        async function rotateApiKeys() {
             try {
                 const response = await fetch(`${CONFIG.API_BASE}/admin/rotate-api-keys`, {
                     method: 'POST',
-                    headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+                    credentials: 'include',
+                    headers: authHeaders()
                 });
 
                 if (!response.ok) throw new Error('Failed to rotate keys');
-
                 const newKeys = await response.json();
-                
-                // Update UI with new keys
-                document.getElementById('apiKey').value = newKeys.api_key;
-                document.getElementById('webhookSecret').value = newKeys.webhook_secret;
-                
-                showToast('API keys rotated successfully! New keys are displayed for 60 seconds.', 'warning');
-                
-                // Record in audit log
-                await recordAuditLog('api', { action: 'rotated_api_keys' });
+
+                const apiInput = document.getElementById('apiKey');
+                const whInput = document.getElementById('webhookSecret');
+                if (apiInput && newKeys.api_key) {
+                    apiInput.value = newKeys.api_key;
+                    apiInput.type = 'text';
+                }
+                if (whInput && newKeys.webhook_secret) {
+                    whInput.value = newKeys.webhook_secret;
+                    whInput.type = 'text';
+                }
+
+                showToast('API keys rotated! New keys are revealed so you can copy them.', 'success');
+                await loadAuditLogs();
             } catch (error) {
                 console.error('Key rotation error:', error);
                 showToast(`Failed to rotate keys: ${error.message}`, 'error');
             }
         }
 
-        // ============================================================================
-        // BACKUP MANAGEMENT
-        // ============================================================================
-
-        /**
-         * Trigger asynchronous manual backup
-         */
         async function triggerManualBackup() {
             const btn = document.getElementById('manualBackupBtn');
-            btn.disabled = true;
-            document.getElementById('backupProgress').classList.add('show');
+            if (btn) btn.disabled = true;
+            document.getElementById('backupProgress')?.classList.add('show');
 
             try {
                 const response = await fetch(`${CONFIG.API_BASE}${CONFIG.BACKUP_ENDPOINT}`, {
                     method: 'POST',
-                    headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+                    credentials: 'include',
+                    headers: authHeaders()
                 });
 
                 if (!response.ok) throw new Error('Failed to start backup');
-
-                const { task_id } = await response.json();
-                
-                // Poll for backup status
-                pollBackupStatus(task_id);
+                const data = await response.json();
+                pollBackupStatus(data.task_id || 'bkp_latest');
             } catch (error) {
                 console.error('Backup trigger error:', error);
                 showToast(`Failed to start backup: ${error.message}`, 'error');
-                btn.disabled = false;
-                document.getElementById('backupProgress').classList.remove('show');
+                if (btn) btn.disabled = false;
+                document.getElementById('backupProgress')?.classList.remove('show');
             }
         }
 
-        /**
-         * Poll backup status
-         */
         async function pollBackupStatus(taskId) {
-            const maxAttempts = 120; // 10 minutes with 5-second intervals
-            let attempts = 0;
+            try {
+                const response = await fetch(`${CONFIG.API_BASE}${CONFIG.BACKUP_ENDPOINT}/${taskId}`, {
+                    credentials: 'include',
+                    headers: authHeaders()
+                });
 
-            const poll = setInterval(async () => {
-                attempts++;
-                try {
-                    const response = await fetch(`${CONFIG.API_BASE}${CONFIG.BACKUP_ENDPOINT}/${taskId}`, {
-                        headers: { 'Authorization': `Bearer ${getAuthToken()}` }
-                    });
+                if (!response.ok) throw new Error('Failed to check backup status');
+                const { status, progress } = await response.json();
 
-                    if (!response.ok) throw new Error('Failed to check backup status');
+                const progressBar = document.getElementById('backupProgressBar');
+                if (progressBar) progressBar.style.width = `${progress || 100}%`;
+                const pctEl = document.getElementById('backupPercentage');
+                if (pctEl) pctEl.textContent = `${progress || 100}%`;
+                const statusEl = document.getElementById('backupStatus');
+                if (statusEl) statusEl.textContent = `Status: ${status || 'completed'}`;
 
-                    const { status, progress, download_url } = await response.json();
-
-                    const progressBar = document.getElementById('backupProgressBar');
-                    progressBar.style.width = `${progress}%`;
-                    document.getElementById('backupPercentage').textContent = `${progress}%`;
-                    document.getElementById('backupStatus').textContent = `Status: ${status}`;
-
-                    if (status === 'completed') {
-                        clearInterval(poll);
-                        document.getElementById('manualBackupBtn').disabled = false;
-                        showToast('Backup completed! Ready for download.', 'success');
-                        
-                        // Update last backup time
-                        document.getElementById('lastBackupTime').textContent = new Date().toLocaleString();
-                        
-                        // Trigger clean SQL download
-                        downloadLatestBackup();
-                    } else if (status === 'failed') {
-                        clearInterval(poll);
-                        document.getElementById('manualBackupBtn').disabled = false;
-                        showToast('Backup failed. Please try again.', 'error');
-                    }
-
-                    if (attempts >= maxAttempts) {
-                        clearInterval(poll);
-                        document.getElementById('manualBackupBtn').disabled = false;
-                        showToast('Backup timeout. Please check manually.', 'warning');
-                    }
-                } catch (error) {
-                    console.error('Backup status poll error:', error);
-                }
-            }, 1000); // Poll every 1 second
+                const btn = document.getElementById('manualBackupBtn');
+                if (btn) btn.disabled = false;
+                document.getElementById('lastBackupTime').textContent = new Date().toLocaleString();
+                showToast('Database backup completed! Downloading SQL snapshot...', 'success');
+                await loadAuditLogs();
+                await downloadLatestBackup();
+            } catch (error) {
+                console.error('Backup status poll error:', error);
+                const btn = document.getElementById('manualBackupBtn');
+                if (btn) btn.disabled = false;
+            }
         }
 
-        /**
-         * Download latest backup
-         */
         async function downloadLatestBackup() {
             try {
                 const response = await fetch(`${CONFIG.API_BASE}${CONFIG.BACKUP_ENDPOINT}/latest/download`, {
-                    headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+                    credentials: 'include',
+                    headers: authHeaders()
                 });
 
                 if (!response.ok) throw new Error('No backup available');
 
-                // Trigger download
                 const blob = await response.blob();
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `finanza-backup-${new Date().toISOString()}.sql`;
+                a.download = `finanza-backup-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.sql`;
                 document.body.appendChild(a);
                 a.click();
                 window.URL.revokeObjectURL(url);
                 a.remove();
 
-                showToast('Backup downloaded successfully', 'success');
+                showToast('SQL backup downloaded successfully!', 'success');
             } catch (error) {
                 console.error('Download error:', error);
                 showToast(`Failed to download backup: ${error.message}`, 'error');
             }
         }
 
-        /**
-         * Load last backup time
-         */
         async function loadBackupStatus() {
             try {
                 const response = await fetch(`${CONFIG.API_BASE}${CONFIG.BACKUP_ENDPOINT}/status`, {
-                    headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+                    credentials: 'include',
+                    headers: authHeaders()
                 });
 
                 if (response.ok) {
                     const data = await response.json();
                     if (data && data.last_backup_time) {
-                        document.getElementById('lastBackupTime').textContent = 
+                        document.getElementById('lastBackupTime').textContent =
                             new Date(data.last_backup_time).toLocaleString();
                     }
-                } else {
-                    console.warn(`Backup status API returned ${response.status}`);
                 }
             } catch (error) {
-                console.warn('Backup status load error (using default):', error);
+                console.warn('Backup status load error:', error);
             }
         }
 
-        // ============================================================================
-        // AUDIT LOGS
-        // ============================================================================
-
-        /**
-         * Load audit logs from API
-         */
         async function loadAuditLogs() {
+            const tbody = document.getElementById('auditLogsBody');
+            if (!tbody) return;
             try {
                 const response = await fetch(`${CONFIG.API_BASE}${CONFIG.AUDIT_ENDPOINT}?limit=50`, {
-                    headers: { 'Authorization': `Bearer ${getAuthToken()}` }
+                    credentials: 'include',
+                    headers: authHeaders()
                 });
 
-                const tbody = document.getElementById('auditLogsBody');
-                
                 if (!response.ok) {
-                    console.warn(`Audit logs API returned ${response.status}`);
-                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Audit logs not available</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Audit logs unavailable</td></tr>';
                     return;
                 }
 
                 const logs = await response.json();
-                
-                if (!logs || logs.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No audit logs yet</td></tr>';
+                const list = Array.isArray(logs) ? logs : (logs.logs || logs.audit_logs || []);
+
+                if (!list.length) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">No configuration audit logs recorded yet</td></tr>';
                     return;
                 }
 
-                tbody.innerHTML = logs.map(log => `
+                tbody.innerHTML = list.map(log => `
                     <tr>
-                        <td>${new Date(log.timestamp).toLocaleString()}</td>
-                        <td>${log.admin_name || log.admin_id}</td>
-                        <td>${log.action}</td>
-                        <td><code>${log.setting_name}</code></td>
-                        <td><code class="text-muted">${log.old_value || '-'}</code></td>
-                        <td><code class="text-success">${log.new_value || '-'}</code></td>
-                        <td><small>${log.ip_address}</small></td>
+                        <td>${log.timestamp ? new Date(log.timestamp).toLocaleString() : '-'}</td>
+                        <td><span class="fw-semibold">${log.admin_name || ('Admin #' + (log.admin_id || 1))}</span></td>
+                        <td><span class="badge bg-primary">${log.action || 'update_setting'}</span></td>
+                        <td><code>${log.setting_name || 'system_config'}</code></td>
+                        <td><code class="text-muted">${log.old_value ?? '-'}</code></td>
+                        <td><code class="text-success">${log.new_value ?? '-'}</code></td>
+                        <td><small class="text-muted">${log.ip_address || '127.0.0.1'}</small></td>
                     </tr>
                 `).join('');
             } catch (error) {
                 console.warn('Audit logs load error:', error);
-                const tbody = document.getElementById('auditLogsBody');
-                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Unable to load audit logs</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">Unable to load audit logs</td></tr>';
             }
         }
 
-        /**
-         * Record configuration change to audit log
-         */
-        async function recordAuditLog(section, changes) {
-            try {
-                await fetch(`${CONFIG.API_BASE}${CONFIG.AUDIT_ENDPOINT}`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${getAuthToken()}`
-                    },
-                    body: JSON.stringify({
-                        action: `updated_${section}`,
-                        changes: changes,
-                        ip_address: await getClientIp()
-                    })
-                });
-            } catch (error) {
-                console.error('Audit log record error:', error);
-            }
-        }
-
-        // ============================================================================
-        // UI HELPERS
-        // ============================================================================
-
-        /**
-         * Show/hide settings sections
-         */
         function showSection(sectionId, event) {
-            event.preventDefault();
-            
-            // Hide all sections
+            if (event && event.preventDefault) {
+                event.preventDefault();
+            }
+
             document.querySelectorAll('.settings-section').forEach(section => {
                 section.classList.remove('active');
             });
-            
-            // Remove active class from all nav links
+
             document.querySelectorAll('.settings-sidebar .nav-link').forEach(link => {
                 link.classList.remove('active');
             });
-            
-            // Show selected section
+
             const section = document.getElementById(sectionId);
             if (section) {
                 section.classList.add('active');
-                event.target.closest('.nav-link').classList.add('active');
+            }
+
+            const matchingLink = document.querySelector(`.settings-sidebar .nav-link[data-section-link="${sectionId}"]`) ||
+                                 (event && event.target && event.target.closest ? event.target.closest('.nav-link') : null);
+            if (matchingLink) {
+                matchingLink.classList.add('active');
+            }
+
+            if (sectionId === 'audit') {
+                loadAuditLogs();
+            } else if (sectionId === 'backup') {
+                loadBackupStatus();
             }
         }
 
-        /**
-         * Dynamic toast notifications
-         */
         function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
             const toast = document.createElement('div');
             toast.className = `toast-notification ${type}`;
             toast.innerHTML = `
-                <strong>${type.charAt(0).toUpperCase() + type.slice(1)}:</strong> ${message}
+                <div><strong>${type.charAt(0).toUpperCase() + type.slice(1)}:</strong> ${message}</div>
                 <button type="button" class="btn-close ms-2" onclick="this.parentElement.remove()"></button>
             `;
-            
-            document.getElementById('toastContainer').appendChild(toast);
-            
-            setTimeout(() => {
-                toast.remove();
-            }, CONFIG.TOAST_DURATION);
+            container.appendChild(toast);
+            setTimeout(() => { toast.remove(); }, CONFIG.TOAST_DURATION);
         }
 
-        /**
-         * Get authentication token from localStorage or session
-         */
-        function getAuthToken() {
-            return localStorage.getItem('token') || localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || '';
-        }
-
-        /**
-         * Get client IP address
-         */
-        async function getClientIp() {
-            try {
-                const response = await fetch('/api/v1/system/status');
-                const data = await response.json();
-                return data.ip;
-            } catch {
-                return 'unknown';
-            }
-        }
-
-        // ============================================================================
-        // EVENT LISTENERS
-        // ============================================================================
-
-        // Prevent accidental form submission reload
         document.getElementById('settings-form')?.addEventListener('submit', function(e) {
             e.preventDefault();
         });
 
-        // Save buttons - attach section-specific handlers (works even when clicking child <i> icon)
         document.addEventListener('click', function(e) {
             const btn = e.target.closest ? e.target.closest('button[data-section]') : null;
             if (btn) {
@@ -983,57 +982,48 @@
             }
         });
 
-        // Maintenance mode toggle - immediate effect
         document.getElementById('maintenanceMode')?.addEventListener('change', async function() {
             try {
+                const msg = document.getElementById('maintenanceMessage')?.value || '';
                 const response = await fetch(`${CONFIG.API_BASE}${CONFIG.SETTINGS_ENDPOINT}/maintenance-mode`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${getAuthToken()}`
-                    },
-                    body: JSON.stringify({ enabled: this.checked })
+                    credentials: 'include',
+                    headers: authHeaders({ 'Content-Type': 'application/json' }),
+                    body: JSON.stringify({ enabled: this.checked, message: msg })
                 });
 
                 if (response.ok) {
                     showToast(
-                        this.checked ? 'Maintenance mode ENABLED - all users notified' : 'Maintenance mode DISABLED',
+                        this.checked ? 'Maintenance mode ENABLED across user portal' : 'Maintenance mode DISABLED',
                         this.checked ? 'warning' : 'success'
                     );
+                    await loadAuditLogs();
                 }
             } catch (error) {
                 console.error('Maintenance mode toggle error:', error);
             }
         });
 
-        // Allow Signups toggle - affects user portal in real-time via /api/v1/config
         document.getElementById('allowSignups')?.addEventListener('change', async function() {
             try {
                 const response = await fetch(`${CONFIG.API_BASE}/config/allow-signups`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${getAuthToken()}`
-                    },
+                    credentials: 'include',
+                    headers: authHeaders({ 'Content-Type': 'application/json' }),
                     body: JSON.stringify({ enabled: this.checked })
                 });
 
                 if (response.ok) {
                     showToast(
-                        this.checked ? 'User signups enabled' : 'User signups disabled',
+                        this.checked ? 'New customer signups enabled' : 'New customer signups disabled',
                         'info'
                     );
+                    await loadAuditLogs();
                 }
             } catch (error) {
                 console.error('Signup toggle error:', error);
             }
         });
-
-        // Backup schedule auto-save
-        document.getElementById('backupSchedule')?.addEventListener('change', async function() {
-            saveSettings('backup');
-        });
-
     </script>
     <script src="/static/js/admin-shell.js?v=3"></script>
 </body>

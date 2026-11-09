@@ -102,14 +102,16 @@ class AuditLogRequest(BaseModel):
 @router.post("/balance/adjust")
 async def manual_balance_adjustment(
     request: ManualBalanceAdjustmentRequest,
-    db_session: SessionDep
+    db_session: SessionDep,
+    current_admin = Depends(get_current_admin_user)
 ):
     """
     Manually adjust user balance with audit trail.
-    Creates a ledger entry with reason code.
+    Creates a transaction and ledger entry with reason code, and syncs account balance.
     """
+    from decimal import Decimal
+    import time
     try:
-        # Get user
         user_result = await db_session.execute(
             select(DBUser).where(DBUser.id == request.user_id)
         )
@@ -117,31 +119,82 @@ async def manual_balance_adjustment(
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
-        # Get system account for the transfer FROM
-        system_account_result = await db_session.execute(
-            select(DBAccount).where(DBAccount.account_number.in_(["SYS-RESERVE-0001", "SYSTEM_RESERVE"]))
-        )
-        system_account = system_account_result.scalar_one_or_none()
-        if not system_account:
-            raise HTTPException(status_code=400, detail="System reserve account not found")
+        if request.amount == 0:
+            raise HTTPException(status_code=400, detail="Adjustment amount cannot be zero")
 
-        # Create ledger entry
+        # Get or create user's primary account
+        acc_res = await db_session.execute(
+            select(DBAccount).where(DBAccount.owner_id == request.user_id)
+        )
+        account = acc_res.scalars().first()
+        if not account:
+            account = DBAccount(
+                owner_id=request.user_id,
+                account_number=user.account_number or f"ACC{request.user_id}_{int(time.time())}",
+                account_type="checking",
+                balance=0.0,
+                currency="USD",
+                status="active"
+            )
+            db_session.add(account)
+            await db_session.flush()
+
+        is_credit = request.amount > 0
+        abs_amount = round(abs(float(request.amount)), 2)
+
+        if not is_credit:
+            current_bal = await BalanceServiceLedger.get_user_balance(db_session, request.user_id)
+            if current_bal < abs_amount and float(account.balance or 0) < abs_amount:
+                raise HTTPException(status_code=400, detail=f"Insufficient balance (${current_bal:.2f}) for debit of ${abs_amount:.2f}")
+
+        ref_no = f"INTV_{request.user_id}_{int(time.time() * 1000)}"
+        desc_text = f"[{request.reason_code}] {request.description}"
+
+        txn = Transaction(
+            user_id=request.user_id,
+            account_id=account.id,
+            transaction_type="deposit" if is_credit else "withdrawal",
+            direction="credit" if is_credit else "debit",
+            amount=Decimal(str(abs_amount)),
+            status="completed",
+            description=desc_text,
+            reference_number=ref_no
+        )
+        db_session.add(txn)
+        await db_session.flush()
+
         ledger_entry = DBLedger(
-            account_id=user.id,  # Simplified for this example
-            transaction_type="manual_adjustment",
-            amount=request.amount,
-            direction="credit" if request.amount > 0 else "debit",
-            reason=f"{request.reason_code}: {request.description}",
-            status="posted",
-            created_by=request.created_by,
-            audit_reason=f"Admin intervention: {request.description}"
+            user_id=request.user_id,
+            entry_type="credit" if is_credit else "debit",
+            amount=Decimal(str(abs_amount)),
+            transaction_id=txn.id,
+            source_user_id=(current_admin.id if current_admin else 1) if is_credit else request.user_id,
+            destination_user_id=request.user_id if is_credit else (current_admin.id if current_admin else 1),
+            description=desc_text,
+            reference_number=ref_no,
+            status="posted"
         )
-        
         db_session.add(ledger_entry)
-        await db_session.commit()
 
-        # Get updated balance
+        # Update account cached balance from ledger
+        await db_session.flush()
         new_balance = await BalanceServiceLedger.get_user_balance(db_session, request.user_id)
+        account.balance = Decimal(str(round(float(new_balance), 2)))
+        db_session.add(account)
+
+        # Log in AuditLog
+        admin_id_val = current_admin.id if current_admin else (request.created_by or 1)
+        db_session.add(AuditLog(
+            admin_id=admin_id_val,
+            user_id=request.user_id,
+            account_id=account.id,
+            action_type="BALANCE_ADJUSTMENT",
+            reason=request.reason_code,
+            details=f"Adjusted balance by ${request.amount:+.2f} ({request.reason_code}): {request.description}",
+            status="success"
+        ))
+
+        await db_session.commit()
 
         return {
             "success": True,
@@ -154,7 +207,10 @@ async def manual_balance_adjustment(
             "created_at": ledger_entry.created_at.isoformat() if ledger_entry.created_at else None
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
+        await db_session.rollback()
         logger.error(f"Balance adjustment error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -164,11 +220,11 @@ async def manual_balance_adjustment(
 @router.post("/holds/release")
 async def release_hold(
     request: ReleaseHoldRequest,
-    db_session: SessionDep
+    db_session: SessionDep,
+    current_admin = Depends(get_current_admin_user)
 ):
-    """Release a hold and restore funds"""
+    """Release a hold and restore account status if no other active holds remain"""
     try:
-        # Get hold
         hold_result = await db_session.execute(
             select(AccountHold).where(AccountHold.id == request.hold_id)
         )
@@ -176,12 +232,28 @@ async def release_hold(
         if not hold:
             raise HTTPException(status_code=404, detail="Hold not found")
 
-        # Release the hold
         hold.released_at = datetime.utcnow()
-        hold.released_by = request.approved_by
-        hold.release_notes = request.approval_notes
-
+        if request.approval_notes:
+            hold.reason = f"{hold.reason} | Released: {request.approval_notes}"
         db_session.add(hold)
+        await db_session.flush()
+
+        # Check if the account has any other active holds; if not, unfreeze the account
+        account = await db_session.get(DBAccount, hold.account_id) if hold.account_id else None
+        if account:
+            rem_res = await db_session.execute(
+                select(func.count(AccountHold.id)).where(
+                    (AccountHold.account_id == account.id) & (AccountHold.released_at == None)
+                )
+            )
+            if (rem_res.scalar() or 0) == 0:
+                account.status = "active"
+                db_session.add(account)
+                user = await db_session.get(DBUser, account.owner_id)
+                if user:
+                    user.is_frozen = False
+                    db_session.add(user)
+
         await db_session.commit()
 
         return {
@@ -192,6 +264,8 @@ async def release_hold(
             "approval_notes": request.approval_notes
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Hold release error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -204,7 +278,7 @@ async def extend_hold(
 ):
     """Extend an existing hold"""
     try:
-        # Get hold
+        from datetime import timedelta
         hold_result = await db_session.execute(
             select(AccountHold).where(AccountHold.id == request.hold_id)
         )
@@ -212,12 +286,8 @@ async def extend_hold(
         if not hold:
             raise HTTPException(status_code=404, detail="Hold not found")
 
-        # Extend the hold
-        from datetime import timedelta
-        old_release_date = hold.release_date
-        hold.release_date = old_release_date + timedelta(days=request.additional_days) if old_release_date else datetime.utcnow() + timedelta(days=request.additional_days)
-        hold.current_reason = request.reason
-
+        new_release_date = datetime.utcnow() + timedelta(days=request.additional_days)
+        hold.reason = f"{hold.reason} | Extended +{request.additional_days}d: {request.reason}"
         db_session.add(hold)
         await db_session.commit()
 
@@ -225,11 +295,12 @@ async def extend_hold(
             "success": True,
             "message": "Hold extended successfully",
             "hold_id": request.hold_id,
-            "old_release_date": old_release_date.isoformat() if old_release_date else None,
-            "new_release_date": hold.release_date.isoformat() if hold.release_date else None,
+            "new_release_date": new_release_date.isoformat(),
             "extended_by_days": request.additional_days
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Hold extension error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -244,18 +315,17 @@ async def revoke_session(
 ):
     """Revoke a specific device session"""
     try:
-        # Get device
         device_result = await db_session.execute(
             select(DeviceFingerprint).where(DeviceFingerprint.id == request.device_id)
         )
         device = device_result.scalar_one_or_none()
         if not device:
-            raise HTTPException(status_code=404, detail="Device not found")
+            raise HTTPException(status_code=404, detail="Device session not found")
 
-        # Mark as revoked
-        device.is_active = False
-        device.last_activity = datetime.utcnow()
-
+        ua = device.user_agent or ""
+        if "[REVOKED]" not in ua:
+            device.user_agent = f"[REVOKED] {ua}".strip()
+        device.last_used = datetime.utcnow()
         db_session.add(device)
         await db_session.commit()
 
@@ -269,6 +339,8 @@ async def revoke_session(
             "reason": request.reason
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Session revocation error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -588,8 +660,9 @@ async def get_activity_feed(
                 "type": "hold",
                 "timestamp": hold.created_at.isoformat() if hold.created_at else None,
                 "account_id": hold.account_id,
-                "amount": float(hold.amount) if hasattr(hold, 'amount') else None,
-                "reason": hold.current_reason if hasattr(hold, 'current_reason') else None
+                "amount": None,
+                "description": f"Hold on account #{hold.account_id}: {hold.reason}",
+                "reason": hold.reason
             })
 
         # Sort by timestamp
@@ -680,8 +753,8 @@ async def create_hold(
     """
     try:
         from datetime import timedelta
-        
-        # Get user
+        import time
+
         user_result = await db_session.execute(
             select(DBUser).where(DBUser.id == request.user_id)
         )
@@ -689,53 +762,59 @@ async def create_hold(
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
-        # Get user's accounts
         accounts_result = await db_session.execute(
             select(DBAccount).where(DBAccount.owner_id == request.user_id)
         )
         accounts = accounts_result.scalars().all()
         if not accounts:
-            raise HTTPException(status_code=404, detail="User has no accounts")
+            new_acc = DBAccount(
+                owner_id=request.user_id,
+                account_number=user.account_number or f"ACC{request.user_id}_{int(time.time())}",
+                account_type="checking",
+                balance=0.0,
+                currency="USD",
+                status="frozen"
+            )
+            db_session.add(new_acc)
+            await db_session.flush()
+            accounts = [new_acc]
 
-        # Create hold for each account
         hold_ids = []
         release_date = datetime.utcnow() + timedelta(days=request.duration_days)
+        formatted_reason = f"[{request.hold_type}] {request.reason}"
+
+        user.is_frozen = True
+        db_session.add(user)
 
         for account in accounts:
-            # Update account status to frozen
             account.status = "frozen"
+            db_session.add(account)
 
-            # Create hold
             hold = AccountHold(
                 account_id=account.id,
-                hold_type=request.hold_type,
-                reason=request.reason,
-                current_reason=request.reason,
-                amount=account.balance,
-                created_by=request.created_by,
-                created_at=datetime.utcnow(),
-                release_date=release_date
+                reason=formatted_reason,
+                created_at=datetime.utcnow()
             )
             db_session.add(hold)
-            await db_session.flush()  # Get hold ID
+            await db_session.flush()
             hold_ids.append(hold.id)
 
-        # Create audit log
+        admin_id_val = current_admin.id if current_admin else (request.created_by or 1)
         audit_entry = AuditLog(
-            admin_id=request.created_by,
+            admin_id=admin_id_val,
             user_id=request.user_id,
+            account_id=accounts[0].id if accounts else None,
             action_type="HOLD_CREATE",
-            details=f"Hold created: {request.hold_type} - {request.reason} for {request.duration_days} days",
-            resource_type="AccountHold",
-            resource_id=hold_ids[0] if hold_ids else None,
+            reason=request.hold_type,
+            details=f"Hold created: {formatted_reason} for {request.duration_days} days",
+            status="success",
             created_at=datetime.utcnow()
         )
         db_session.add(audit_entry)
 
-        # Commit all changes
         await db_session.commit()
 
-        logger.info(f"Hold created for user {request.user_id} by admin {request.created_by}")
+        logger.info(f"Hold created for user {request.user_id} by admin {admin_id_val}")
 
         return {
             "success": True,
@@ -749,6 +828,7 @@ async def create_hold(
     except HTTPException:
         raise
     except Exception as e:
+        await db_session.rollback()
         logger.error(f"Hold creation error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -766,28 +846,30 @@ async def log_audit_action(
     Called automatically by all admin actions.
     """
     try:
-        # Create audit log
+        target_uid = request.target_user_id or (current_admin.id if current_admin else 1)
         audit_entry = AuditLog(
-            admin_id=current_admin.id,
-            user_id=request.target_user_id,
+            admin_id=current_admin.id if current_admin else 1,
+            user_id=target_uid,
             action_type=request.action,
+            reason=request.action,
             details=request.details,
-            resource_type="AdminAction",
+            status="success",
             created_at=datetime.utcnow()
         )
         db_session.add(audit_entry)
         await db_session.commit()
-
-        logger.info(f"Audit logged: {request.action} by admin {current_admin.id}")
 
         return {
             "success": True,
             "message": "Audit logged successfully",
             "id": audit_entry.id,
             "action": request.action,
-            "timestamp": audit_entry.created_at.isoformat()
+            "timestamp": audit_entry.created_at.isoformat() if audit_entry.created_at else datetime.utcnow().isoformat()
         }
 
     except Exception as e:
         logger.error(f"Audit log error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return {
+            "success": False,
+            "message": str(e)
+        }

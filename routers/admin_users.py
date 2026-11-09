@@ -314,6 +314,7 @@ async def get_all_users(
             "skip": skip,
             "limit": limit,
             "count": len(users_info),
+            "data": users_info,
             "users": users_info
         }
         
@@ -448,6 +449,7 @@ async def get_users_by_status(
                 "active_status": active_status
             },
             "count": len(users_info),
+            "data": users_info,
             "users": users_info
         }
         
@@ -768,8 +770,8 @@ async def get_user_audit_history(
                 "admin_email": admin.email if admin else "Unknown Admin",
                 "timestamp": entry.created_at.isoformat() if entry.created_at else None,
                 "details": entry.details,
-                "resource_type": entry.resource_type,
-                "resource_id": entry.resource_id
+                "reason": getattr(entry, "reason", None),
+                "status": getattr(entry, "status", "success")
             })
 
         logger.info(f"Audit history retrieved for user {user_id} by admin {current_admin.id}")
@@ -841,8 +843,7 @@ async def suspend_user(
             action_type="USER_SUSPENDED",
             admin_id=current_admin.id,
             user_id=user_id,
-            resource_type="User",
-            resource_id=str(user_id),
+            reason=reason,
             details=f"Suspended: {reason} | Note: {note} | Duration: {duration_days} days"
         )
         db_session.add(audit_entry)
@@ -922,10 +923,8 @@ async def freeze_account(
 
             hold = AccountHold(
                 account_id=account.id,
-                reason=reason,
-                description=note,
-                created_at=datetime.utcnow(),
-                release_date=release_date
+                reason=f"{reason} - {note}" if note else reason,
+                created_at=datetime.utcnow()
             )
             db_session.add(hold)
 
@@ -937,8 +936,7 @@ async def freeze_account(
             action_type="ACCOUNT_FROZEN",
             admin_id=current_admin.id,
             user_id=user_id,
-            resource_type="Account",
-            resource_id=f"user_{user_id}_all",
+            reason=reason,
             details=f"Froze {frozen_count} account(s). Reason: {reason} | Duration: {duration_days} days"
         )
         db_session.add(audit_entry)

@@ -134,19 +134,25 @@
 
         <!-- Users Table -->
         <div class="dashboard-section">
-            <div class="section-header">
+            <div class="section-header" style="flex-wrap: wrap; gap: 10px;">
                 <h5><i class="fas fa-list"></i> Users Directory</h5>
-                <button class="btn btn-sm btn-primary" onclick="openModal('bulkEmailModal')" data-require-role="bulkActions">
-                    <i class="fas fa-envelope"></i> Bulk Email
-                </button>
+                <div class="d-flex flex-wrap gap-2">
+                    <button class="btn btn-sm btn-success" onclick="openModal('addUserModal')">
+                        <i class="fas fa-user-plus"></i> Create User
+                    </button>
+                    <button class="btn btn-sm btn-primary" onclick="openModal('bulkEmailModal')" data-require-role="bulkActions">
+                        <i class="fas fa-envelope"></i> Bulk Email
+                    </button>
+                </div>
             </div>
             <div class="table-responsive">
                 <table class="table table-hover table-striped mb-0">
                     <thead class="table-light">
                         <tr>
                             <th>ID</th>
-                            <th>Email</th>
+                            <th>Email &amp; Account</th>
                             <th>Name</th>
+                            <th>Balance</th>
                             <th>Status</th>
                             <th>KYC</th>
                             <th>Credit</th>
@@ -581,6 +587,177 @@
         </div>
     </div>
 
+    <!-- Create User Modal (#addUserModal) -->
+    <div class="modal fade" id="addUserModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-user-plus"></i> Create New User</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="addUserForm" onsubmit="handleCreateUser(event)">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Full Name *</label>
+                            <input type="text" id="newUserName" class="form-control" required placeholder="e.g., Jane Doe">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email Address *</label>
+                            <input type="email" id="newUserEmail" class="form-control" required placeholder="e.g., jane.doe@example.com">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Initial Password *</label>
+                            <input type="password" id="newUserPassword" class="form-control" required minlength="6" placeholder="Minimum 6 characters">
+                        </div>
+                        <div class="row">
+                            <div class="col-6 mb-3">
+                                <label class="form-label">Account Type</label>
+                                <select id="newUserAccountType" class="form-select">
+                                    <option value="Checking">Checking</option>
+                                    <option value="Savings">Savings</option>
+                                    <option value="Business">Business</option>
+                                </select>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <label class="form-label">Initial KYC Status</label>
+                                <select id="newUserKycStatus" class="form-select">
+                                    <option value="not_started">Not Started</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="approved">Approved</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success"><i class="fas fa-check"></i> Create User</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit User Modal (#editUserModal) -->
+    <div class="modal fade" id="editUserModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-user-edit"></i> Edit User Profile &amp; Status</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="editUserForm" onsubmit="handleEditUser(event)">
+                    <div class="modal-body">
+                        <input type="hidden" id="editUserId">
+                        <div class="mb-3">
+                            <label class="form-label">Full Name</label>
+                            <input type="text" id="editUserName" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email Address</label>
+                            <input type="email" id="editUserEmail" class="form-control" required>
+                        </div>
+                        <div class="row">
+                            <div class="col-6 mb-3">
+                                <label class="form-label">Account Type</label>
+                                <select id="editUserAccountType" class="form-select">
+                                    <option value="Checking">Checking</option>
+                                    <option value="Savings">Savings</option>
+                                    <option value="Business">Business</option>
+                                </select>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <label class="form-label">KYC Status</label>
+                                <select id="editUserKycStatus" class="form-select">
+                                    <option value="not_started">Not Started</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="approved">Approved</option>
+                                    <option value="rejected">Rejected</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-6 mb-3">
+                                <label class="form-label">Access Status</label>
+                                <select id="editUserActive" class="form-select">
+                                    <option value="true">Active</option>
+                                    <option value="false">Suspended (Inactive)</option>
+                                </select>
+                            </div>
+                            <div class="col-6 mb-3">
+                                <label class="form-label">Freeze Status</label>
+                                <select id="editUserFrozen" class="form-select">
+                                    <option value="false">Normal (Unfrozen)</option>
+                                    <option value="true">Frozen</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reset Password Modal (#resetPasswordModal) -->
+    <div class="modal fade" id="resetPasswordModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-key"></i> Reset User Password</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="resetPasswordForm" onsubmit="handleResetPassword(event)">
+                    <div class="modal-body">
+                        <input type="hidden" id="resetPassUserId">
+                        <div class="mb-3">
+                            <label class="form-label">User</label>
+                            <input type="text" id="resetPassUserEmail" class="form-control" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">New Password *</label>
+                            <input type="password" id="resetPassNewPassword" class="form-control" required minlength="6" placeholder="Minimum 6 characters">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Audit Reason *</label>
+                            <input type="text" id="resetPassReason" class="form-control" required value="Admin initiated password recovery">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-warning"><i class="fas fa-key"></i> Reset Password</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete User Modal (#deleteUserModal) -->
+    <div class="modal fade" id="deleteUserModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Delete User Permanently</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="deleteTargetUserId">
+                    <input type="hidden" id="deleteTargetUserEmail">
+                    <div class="alert alert-danger mb-3">
+                        <strong>Warning:</strong> This will permanently delete <strong id="deleteUserDisplayEmail"></strong> and all associated accounts, holds, and records.
+                    </div>
+                    <p class="mb-0 text-muted small">This action is logged in the immutable Admin Audit Trail and cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmDeleteUser()"><i class="fas fa-trash"></i> Delete Permanently</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // ============================================================
@@ -636,18 +813,22 @@
 
             // Unified fetch with token injection
             async fetch(url, options = {}) {
-                const token = localStorage.getItem('token');
+                const token = localStorage.getItem('token') || localStorage.getItem('access_token');
                 /* Cookie + JWT supported via admin-guard.js */
 
                 const headers = options.headers || {};
-                headers['Authorization'] = 'Bearer ' + token;
+                if (token && token !== 'cookie-session' && token !== 'null' && token !== 'undefined') {
+                    headers['Authorization'] = 'Bearer ' + token;
+                }
                 if (options.body && typeof options.body === 'object') {
                     headers['Content-Type'] = 'application/json';
                     options.body = JSON.stringify(options.body);
+                } else if (typeof options.body === 'string' && !headers['Content-Type']) {
+                    headers['Content-Type'] = 'application/json';
                 }
 
                 try {
-                    const response = await fetch(url, { ...options, headers });
+                    const response = await fetch(url, { credentials: 'same-origin', ...options, headers });
 
                     // Handle 401 Unauthorized - token expired or invalid
                     if (response.status === 401) { throw new Error("Unauthorized request"); }
@@ -813,7 +994,7 @@
 
                 try {
                     // Log to backend if endpoint exists
-                    await api.fetch('/api/admin/audit/log', {
+                    await api.fetch('/api/admin/intervention/audit/log', {
                         method: 'POST',
                         body: auditData
                     });
@@ -878,8 +1059,66 @@
             document.head.appendChild(style);
         });
 
+        window.loadedUsersCache = [];
+
         function openModal(id) {
-            new bootstrap.Modal(document.getElementById(id)).show();
+            const el = document.getElementById(id);
+            if (!el) return;
+            bootstrap.Modal.getOrCreateInstance(el).show();
+        }
+
+        function hideModal(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const inst = bootstrap.Modal.getInstance(el);
+            if (inst) inst.hide();
+        }
+
+        function setupHoldUserSearch() {
+            const holdInput = document.getElementById('holdUserInput');
+            const holdDropdown = document.getElementById('holdUserDropdown');
+            if (!holdInput || !holdDropdown || holdInput.dataset.bound === '1') return;
+            holdInput.dataset.bound = '1';
+
+            const renderMatches = (q) => {
+                const query = (q || '').toLowerCase().trim();
+                const list = (window.loadedUsersCache || []).filter(u =>
+                    !query ||
+                    (u.email && u.email.toLowerCase().includes(query)) ||
+                    (u.full_name && u.full_name.toLowerCase().includes(query)) ||
+                    String(u.id) === query
+                ).slice(0, 15);
+
+                if (!list.length) {
+                    holdDropdown.innerHTML = '<div class="search-result-item text-muted">No matching users</div>';
+                } else {
+                    holdDropdown.innerHTML = list.map(u => {
+                        const safeEmail = (u.email || '').replace(/'/g, "\'");
+                        return `<div class="search-result-item" onclick="selectHoldUser(${u.id}, '${safeEmail}')">
+                            <strong>#${u.id} — ${u.email}</strong> <small class="text-muted">(${u.full_name || '-'})</small>
+                        </div>`;
+                    }).join('');
+                }
+                holdDropdown.style.display = 'block';
+            };
+
+            holdInput.addEventListener('focus', () => renderMatches(holdInput.value));
+            holdInput.addEventListener('input', (e) => {
+                document.getElementById('selectedHoldUserId').value = '';
+                renderMatches(e.target.value);
+            });
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('#createHoldModal .mb-3')) {
+                    holdDropdown.style.display = 'none';
+                }
+            });
+        }
+
+        function selectHoldUser(userId, email) {
+            document.getElementById('selectedHoldUserId').value = userId;
+            document.getElementById('holdUserInput').value = email;
+            const holdDropdown = document.getElementById('holdUserDropdown');
+            if (holdDropdown) holdDropdown.style.display = 'none';
         }
 
         async function loadAllData() {
@@ -929,45 +1168,73 @@
                 const total = d.total || 0;
                 Pagination.totalPages = Math.ceil(total / Pagination.pageSize) || 1;
 
+                const usersArr = d.data || d.users || [];
+                window.loadedUsersCache = usersArr;
+                setupHoldUserSearch();
+
                 const tbody = document.getElementById('usersTable');
-                if (!d.data || !d.data.length) {
-                    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No users found</td></tr>';
+                if (!usersArr.length) {
+                    tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">No users found</td></tr>';
                     Pagination.renderControls('usersPagination', 'loadUsers');
                     return;
                 }
 
-                tbody.innerHTML = d.data.map(u => {
-                    const phoneDisplay = VisibilityRules.phoneNumber() 
-                        ? (u.phone_number || '-') 
-                        : '••••••••';
+                tbody.innerHTML = usersArr.map(u => {
+                    const safeEmail = (u.email || '').replace(/'/g, "\'");
+                    const balNum = parseFloat(u.balance || 0);
+                    const balFormatted = '$' + balNum.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    const isFrozen = Boolean(u.is_frozen);
+
+                    const suspendBtn = u.is_active
+                        ? `<button class="btn btn-xs btn-warning" onclick="openSuspendModal(${u.id}, '${safeEmail}', true)" data-require-role="bulkActions" title="Suspend User">
+                               <i class="fas fa-ban"></i> Suspend
+                           </button>`
+                        : `<button class="btn btn-xs btn-success" onclick="openSuspendModal(${u.id}, '${safeEmail}', false)" data-require-role="bulkActions" title="Activate User">
+                               <i class="fas fa-check-circle"></i> Activate
+                           </button>`;
+
+                    const freezeBtn = isFrozen
+                        ? `<button class="btn btn-xs btn-info text-white" onclick="openFreezeModal(${u.id}, '${safeEmail}', true)" data-require-role="bulkActions" title="Unfreeze Account">
+                               <i class="fas fa-unlock"></i> Unfreeze
+                           </button>`
+                        : `<button class="btn btn-xs btn-secondary" onclick="openFreezeModal(${u.id}, '${safeEmail}', false)" data-require-role="bulkActions" title="Freeze Account">
+                               <i class="fas fa-snowflake"></i> Freeze
+                           </button>`;
 
                     return `
                         <tr>
                             <td>#${u.id}</td>
                             <td>
-                                <a href="javascript:void(0)" onclick="openUserDetailModal(${u.id})" style="cursor: pointer; color: #667eea; text-decoration: underline;">
+                                <a href="javascript:void(0)" onclick="openUserDetailModal(${u.id})" style="cursor: pointer; color: #667eea; text-decoration: underline; font-weight: 600;">
                                     ${u.email}
                                 </a>
+                                ${u.account_number ? `<br><small class="text-muted"><code>${u.account_number}</code></small>` : ''}
                             </td>
                             <td>${u.full_name || '-'}</td>
-                            <td><span class="status-badge status-${u.is_active ? 'active' : 'inactive'}">${u.is_active ? 'Active' : 'Inactive'}</span></td>
+                            <td><strong>${balFormatted}</strong></td>
+                            <td>
+                                <span class="status-badge status-${u.is_active ? 'active' : 'inactive'}">${u.is_active ? 'Active' : 'Inactive'}</span>
+                                ${isFrozen ? '<span class="badge bg-info text-dark ms-1"><i class="fas fa-snowflake"></i> Frozen</span>' : ''}
+                            </td>
                             <td><span class="kyc-badge kyc-${(u.kyc_status||'pending').toLowerCase()}">${(u.kyc_status||'PENDING').toUpperCase()}</span></td>
                             <td>${u.credit_score ? `<span class="credit-score">${u.credit_score}</span>` : '-'}</td>
-                            <td><span class="badge bg-warning">${u.account_holds_count || 0}</span></td>
-                            <td>
-                                <button class="btn btn-xs btn-primary" onclick="openBalanceModal(${u.id}, '${u.email}')" data-require-role="balance" title="Balance Adjustment">
+                            <td><span class="badge bg-warning text-dark">${u.account_holds_count || 0}</span></td>
+                            <td style="white-space: nowrap;">
+                                <button class="btn btn-xs btn-primary" onclick="openBalanceModal(${u.id}, '${safeEmail}')" data-require-role="balance" title="Balance Adjustment">
                                     <i class="fas fa-money-bill"></i> Balance
                                 </button>
-                                <button class="btn btn-xs btn-info" onclick="openKYCReviewer(${u.id})" data-require-role="kycApproval" title="KYC Review">
+                                <button class="btn btn-xs btn-info text-white" onclick="openKYCReviewer(${u.id})" data-require-role="kycApproval" title="KYC Review">
                                     <i class="fas fa-id-card"></i> KYC
                                 </button>
-                                <button class="btn btn-xs btn-warning" onclick="openSuspendModal(${u.id}, '${u.email}')" data-require-role="bulkActions" title="Suspend/Unsuspend User">
-                                    <i class="fas fa-ban"></i> Suspend
+                                <button class="btn btn-xs btn-outline-primary" onclick="openEditUserModal(${u.id})" title="Edit Profile & Status">
+                                    <i class="fas fa-edit"></i> Edit
                                 </button>
-                                <button class="btn btn-xs btn-secondary" onclick="openFreezeModal(${u.id}, '${u.email}')" data-require-role="bulkActions" title="Freeze/Unfreeze Account">
-                                    <i class="fas fa-snowflake"></i> Freeze
+                                <button class="btn btn-xs btn-outline-dark" onclick="openResetPasswordModal(${u.id}, '${safeEmail}')" title="Reset Password">
+                                    <i class="fas fa-key"></i> Pass
                                 </button>
-                                <button class="btn btn-xs btn-danger" onclick="requestDeleteUser(${u.id})" data-require-role="deleteUser" title="Delete User">
+                                ${suspendBtn}
+                                ${freezeBtn}
+                                <button class="btn btn-xs btn-danger" onclick="requestDeleteUser(${u.id}, '${safeEmail}')" data-require-role="deleteUser" title="Delete User">
                                     <i class="fas fa-trash"></i> Delete
                                 </button>
                             </td>
@@ -995,19 +1262,25 @@
                     tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No active holds</td></tr>';
                     return;
                 }
-                tbody.innerHTML = d.data.map(h => `
+                tbody.innerHTML = d.data.map(h => {
+                    const safeReason = (h.reason || '').replace(/'/g, "\'");
+                    const isReleased = Boolean(h.released_at) || h.is_active === false || h.status === 'released';
+                    return `
                     <tr>
-                        <td>${h.id}</td>
+                        <td>#${h.id}</td>
                         <td>${h.user_email || h.email || '-'}</td>
-                        <td><span class="badge bg-danger">${h.hold_type || 'UNKNOWN'}</span></td>
+                        <td><span class="badge ${isReleased ? 'bg-secondary' : 'bg-danger'}">${h.hold_type || 'HOLD'}</span></td>
                         <td>${h.reason || '-'}</td>
                         <td>${h.created_at ? new Date(h.created_at).toLocaleDateString() : '-'}</td>
-                        <td>${h.released_at ? new Date(h.released_at).toLocaleDateString() : 'TBD'}</td>
+                        <td>${h.released_at ? new Date(h.released_at).toLocaleDateString() : '<span class="badge bg-warning text-dark">Active</span>'}</td>
                         <td>
-                            <button class="btn btn-xs btn-success" onclick="openReleaseModal(${h.id}, '${h.reason}')"><i class="fas fa-unlock"></i></button>
+                            ${isReleased
+                                ? '<span class="badge bg-success"><i class="fas fa-check"></i> Released</span>'
+                                : `<button class="btn btn-xs btn-success" onclick="openReleaseModal(${h.id}, '${safeReason}')" title="Release Hold"><i class="fas fa-unlock"></i> Release</button>`
+                            }
                         </td>
                     </tr>
-                `).join('');
+                `}).join('');
             } catch (e) {
                 console.error(e);
                 api.showToast('Failed to load holds', 'danger');
@@ -1025,20 +1298,27 @@
                     tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No sessions to display</td></tr>';
                     return;
                 }
-                tbody.innerHTML = d.data.map(dev => `
+                tbody.innerHTML = d.data.map(dev => {
+                    const recordId = dev.id || dev.device_record_id || 1;
+                    const safeIp = (dev.ip_address || '127.0.0.1').replace(/'/g, "\'");
+                    const isRevoked = dev.status === 'revoked' || (dev.browser_info && dev.browser_info.includes('Revoked'));
+                    return `
                     <tr>
                         <td>${dev.email || dev.user_email || '-'}</td>
-                        <td>${dev.device_type || '-'}</td>
-                        <td><code>${dev.ip_address || '-'}</code></td>
-                        <td>${dev.browser || dev.browser_info || '-'}</td>
+                        <td>${dev.device_type || 'Web'}</td>
+                        <td><code>${dev.ip_address || '127.0.0.1'}</code></td>
+                        <td>${dev.browser || dev.browser_info || 'Browser'}</td>
                         <td>${dev.last_active ? new Date(dev.last_active).toLocaleDateString() : '-'}</td>
                         <td>
-                            <button class="btn btn-xs btn-danger" onclick="openRevokeModal(${dev.device_id || dev.id}, '${dev.ip_address}')">
-                                <i class="fas fa-power-off"></i>
-                            </button>
+                            ${isRevoked
+                                ? '<span class="badge bg-secondary">Revoked</span>'
+                                : `<button class="btn btn-xs btn-danger" onclick="openRevokeModal(${recordId}, '${safeIp}')" title="Revoke Session">
+                                       <i class="fas fa-power-off"></i> Revoke
+                                   </button>`
+                            }
                         </td>
                     </tr>
-                `).join('');
+                `}).join('');
             } catch (e) {
                 console.error(e);
                 api.showToast('Failed to load devices', 'danger');
@@ -1110,12 +1390,25 @@
                     createUserDetailModal();
                 }
 
+                const safeEmail = (user.email || '').replace(/'/g, "\'");
+                const cachedUser = (window.loadedUsersCache || []).find(item => item.id === userId) || {};
+                const balVal = user.balance !== undefined ? user.balance : (cachedUser.balance || 0);
+                const isFrozen = Boolean(user.is_frozen || cachedUser.is_frozen);
                 document.getElementById('userDetailInfo').innerHTML = `
-                    <p><strong>Email:</strong> ${user.email}</p>
-                    <p><strong>Name:</strong> ${user.full_name || '-'}</p>
-                    <p><strong>Status:</strong> ${user.is_active ? 'Active' : 'Inactive'}</p>
-                    <p><strong>KYC Status:</strong> ${user.kyc_status || 'PENDING'}</p>
-                    <p><strong>Last Login:</strong> ${user.last_login ? new Date(user.last_login).toLocaleString() : 'Never'}</p>
+                    <p class="mb-2"><strong>User ID:</strong> #${user.id || userId}</p>
+                    <p class="mb-2"><strong>Email:</strong> ${user.email}</p>
+                    <p class="mb-2"><strong>Name:</strong> ${user.full_name || '-'}</p>
+                    <p class="mb-2"><strong>Account #:</strong> <code>${user.account_number || cachedUser.account_number || 'N/A'}</code></p>
+                    <p class="mb-2"><strong>Balance:</strong> <strong>$${parseFloat(balVal || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></p>
+                    <p class="mb-2"><strong>Access Status:</strong> <span class="status-badge status-${user.is_active ? 'active' : 'inactive'}">${user.is_active ? 'Active' : 'Inactive'}</span></p>
+                    <p class="mb-2"><strong>Freeze Status:</strong> <span class="badge ${isFrozen ? 'bg-danger' : 'bg-success'}">${isFrozen ? 'Frozen' : 'Normal'}</span></p>
+                    <p class="mb-2"><strong>KYC Status:</strong> <span class="kyc-badge kyc-${(user.kyc_status||'pending').toLowerCase()}">${(user.kyc_status || 'PENDING').toUpperCase()}</span></p>
+                    <p class="mb-3"><strong>Registered:</strong> ${user.created_at ? new Date(user.created_at).toLocaleString() : 'N/A'}</p>
+                    <div class="d-flex flex-wrap gap-2 pt-2 border-top">
+                        <button class="btn btn-sm btn-outline-primary" onclick="hideModal('userDetailModal'); openEditUserModal(${userId});"><i class="fas fa-edit"></i> Edit</button>
+                        <button class="btn btn-sm btn-outline-dark" onclick="hideModal('userDetailModal'); openResetPasswordModal(${userId}, '${safeEmail}');"><i class="fas fa-key"></i> Reset Password</button>
+                        <button class="btn btn-sm btn-primary" onclick="hideModal('userDetailModal'); openBalanceModal(${userId}, '${safeEmail}');"><i class="fas fa-money-bill"></i> Balance</button>
+                    </div>
                 `;
 
                 document.getElementById('userAuditHistory').innerHTML = `
@@ -1436,9 +1729,17 @@
 
         async function handleCreateHold(event) {
             event.preventDefault();
-            const userId = document.getElementById('selectedHoldUserId').value;
+            let userId = document.getElementById('selectedHoldUserId').value;
+            const typedVal = (document.getElementById('holdUserInput').value || '').trim().toLowerCase();
+            if (!userId && typedVal && Array.isArray(window.loadedUsersCache)) {
+                const found = window.loadedUsersCache.find(u =>
+                    (u.email && u.email.toLowerCase() === typedVal) ||
+                    String(u.id) === typedVal
+                );
+                if (found) userId = found.id;
+            }
             if (!userId) {
-                api.showToast('Please select a user', 'warning');
+                api.showToast('Please select a user from the dropdown list', 'warning');
                 return;
             }
 
@@ -1446,8 +1747,8 @@
                 user_id: parseInt(userId),
                 hold_type: document.getElementById('holdType').value,
                 reason: document.getElementById('holdReason').value,
-                duration_days: parseInt(document.getElementById('holdDuration').value),
-                created_by: api.adminInfo.user_id
+                duration_days: parseInt(document.getElementById('holdDuration').value) || 30,
+                created_by: api.adminInfo?.user_id || 1
             };
 
             try {
@@ -1460,8 +1761,10 @@
                     api.showToast('Hold created successfully', 'success');
                     await auditLogger.logAction('HOLD_CREATE', parseInt(userId), 
                         `Type: ${data.hold_type}, Duration: ${data.duration_days}d`);
-                    bootstrap.Modal.getInstance(document.getElementById('createHoldModal')).hide();
-                    loadHolds();
+                    hideModal('createHoldModal');
+                    document.getElementById('createHoldForm').reset();
+                    document.getElementById('selectedHoldUserId').value = '';
+                    loadAllData();
                 } else {
                     const error = await r.json();
                     api.showToast(error.detail || 'Failed to create hold', 'danger');
@@ -1512,13 +1815,19 @@
             }
         }
 
-        async function requestDeleteUser(userId) {
-            if (!api.requireSuperAdmin()) return;
+        function requestDeleteUser(userId, userEmail) {
+            const u = (window.loadedUsersCache || []).find(item => item.id === userId);
+            const emailStr = userEmail || (u ? u.email : `User #${userId}`);
+            document.getElementById('deleteTargetUserId').value = userId;
+            document.getElementById('deleteTargetUserEmail').value = emailStr;
+            document.getElementById('deleteUserDisplayEmail').textContent = emailStr;
+            openModal('deleteUserModal');
+        }
 
-            const confirmDelete = confirm(
-                'WARNING: This will permanently delete the user and all associated data. This action cannot be undone. Continue?'
-            );
-            if (!confirmDelete) return;
+        async function confirmDeleteUser() {
+            const userId = parseInt(document.getElementById('deleteTargetUserId').value);
+            const emailStr = document.getElementById('deleteTargetUserEmail').value;
+            if (!userId) return;
 
             try {
                 const r = await api.fetch(`/api/admin/users/${userId}`, {
@@ -1526,11 +1835,12 @@
                 });
 
                 if (r.ok) {
-                    api.showToast('User deleted successfully', 'success');
-                    await auditLogger.logAction('USER_DELETED', userId, 'Permanent deletion');
-                    loadUsers();
+                    hideModal('deleteUserModal');
+                    api.showToast(`User ${emailStr} deleted successfully`, 'success');
+                    await auditLogger.logAction('USER_DELETED', userId, `Permanent deletion of ${emailStr}`);
+                    loadAllData();
                 } else {
-                    const error = await r.json();
+                    const error = await r.json().catch(() => ({}));
                     api.showToast(error.detail || 'Failed to delete user', 'danger');
                 }
             } catch (e) {
@@ -1538,84 +1848,256 @@
             }
         }
 
-        function openSuspendModal(userId, userEmail) {
-            document.getElementById('suspendUserId').value = userId;
-            document.getElementById('suspendUserEmail').value = userEmail;
-            document.getElementById('suspendReasonDiv').style.display = 'block';
-            document.getElementById('suspendNoteDiv').style.display = 'block';
-            document.getElementById('suspendDurationDiv').style.display = 'block';
-            const suspendModal = new bootstrap.Modal(document.getElementById('suspendModal'));
-            suspendModal.show();
-        }
-
-        async function handleSuspendUser(event) {
+        async function handleCreateUser(event) {
             event.preventDefault();
+            const payload = {
+                full_name: document.getElementById('newUserName').value.trim(),
+                email: document.getElementById('newUserEmail').value.trim(),
+                password: document.getElementById('newUserPassword').value,
+                account_type: document.getElementById('newUserAccountType').value,
+                kyc_status: document.getElementById('newUserKycStatus').value
+            };
+
             try {
-                const userId = document.getElementById('suspendUserId').value;
-                const reason = document.getElementById('suspendReason').value;
-                const note = document.getElementById('suspendNote').value;
-                const duration = parseInt(document.getElementById('suspendDuration').value) || 0;
-
-                const r = await api.fetch(`/api/admin/users/${userId}/suspend`, {
+                const r = await api.fetch('/api/admin/users', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        reason: reason,
-                        note: note,
-                        duration_days: duration
-                    })
+                    body: payload
                 });
-
+                const res = await r.json().catch(() => ({}));
                 if (r.ok) {
-                    api.showToast('User account suspended successfully', 'success');
-                    await auditLogger.logAction('USER_SUSPENDED', userId, `Reason: ${reason}`);
-                    bootstrap.Modal.getInstance(document.getElementById('suspendModal')).hide();
-                    loadUsers();
+                    hideModal('addUserModal');
+                    document.getElementById('addUserForm').reset();
+                    api.showToast(`User ${payload.email} created successfully`, 'success');
+                    await auditLogger.logAction('USER_CREATED', res.id || null, `Created user ${payload.email}`);
+                    loadAllData();
                 } else {
-                    const error = await r.json();
-                    api.showToast(error.detail || 'Failed to suspend user', 'danger');
+                    api.showToast(res.detail || 'Failed to create user', 'danger');
                 }
             } catch (e) {
                 api.showToast('Error: ' + e.message, 'danger');
             }
         }
 
-        function openFreezeModal(userId, userEmail) {
+        function openEditUserModal(userId) {
+            const u = (window.loadedUsersCache || []).find(item => item.id === userId);
+            if (!u) {
+                api.showToast('User details not found', 'warning');
+                return;
+            }
+            document.getElementById('editUserId').value = u.id;
+            document.getElementById('editUserName').value = u.full_name || '';
+            document.getElementById('editUserEmail').value = u.email || '';
+            document.getElementById('editUserAccountType').value = u.account_type || 'Checking';
+            document.getElementById('editUserKycStatus').value = u.kyc_status || 'not_started';
+            document.getElementById('editUserActive').value = u.is_active ? 'true' : 'false';
+            document.getElementById('editUserFrozen').value = u.is_frozen ? 'true' : 'false';
+            openModal('editUserModal');
+        }
+
+        async function handleEditUser(event) {
+            event.preventDefault();
+            const userId = parseInt(document.getElementById('editUserId').value);
+            const payload = {
+                full_name: document.getElementById('editUserName').value.trim(),
+                email: document.getElementById('editUserEmail').value.trim(),
+                account_type: document.getElementById('editUserAccountType').value,
+                kyc_status: document.getElementById('editUserKycStatus').value,
+                is_active: document.getElementById('editUserActive').value === 'true',
+                is_frozen: document.getElementById('editUserFrozen').value === 'true'
+            };
+
+            try {
+                const r = await api.fetch(`/api/admin/users/${userId}`, {
+                    method: 'PUT',
+                    body: payload
+                });
+                const res = await r.json().catch(() => ({}));
+                if (r.ok) {
+                    hideModal('editUserModal');
+                    api.showToast(`User ${payload.email} updated successfully`, 'success');
+                    await auditLogger.logAction('USER_UPDATED', userId, `Updated user ${payload.email}`);
+                    loadAllData();
+                } else {
+                    api.showToast(res.detail || 'Failed to update user', 'danger');
+                }
+            } catch (e) {
+                api.showToast('Error: ' + e.message, 'danger');
+            }
+        }
+
+        function openResetPasswordModal(userId, userEmail) {
+            document.getElementById('resetPassUserId').value = userId;
+            document.getElementById('resetPassUserEmail').value = userEmail;
+            document.getElementById('resetPassNewPassword').value = '';
+            openModal('resetPasswordModal');
+        }
+
+        async function handleResetPassword(event) {
+            event.preventDefault();
+            const userId = parseInt(document.getElementById('resetPassUserId').value);
+            const userEmail = document.getElementById('resetPassUserEmail').value;
+            const new_password = document.getElementById('resetPassNewPassword').value;
+            const reason = document.getElementById('resetPassReason').value.trim() || 'Admin password reset';
+
+            try {
+                const r = await api.fetch(`/api/admin/users/${userId}/reset-password`, {
+                    method: 'POST',
+                    body: { new_password, reason }
+                });
+                const res = await r.json().catch(() => ({}));
+                if (r.ok) {
+                    hideModal('resetPasswordModal');
+                    api.showToast(`Password reset for ${userEmail}`, 'success');
+                } else {
+                    api.showToast(res.detail || 'Failed to reset password', 'danger');
+                }
+            } catch (e) {
+                api.showToast('Error: ' + e.message, 'danger');
+            }
+        }
+
+        function openSuspendModal(userId, userEmail, isCurrentlyActive) {
+            const u = (window.loadedUsersCache || []).find(item => item.id === userId);
+            const activeState = isCurrentlyActive !== undefined ? isCurrentlyActive : (u ? u.is_active : true);
+            window.currentSuspendMode = activeState ? 'suspend' : 'activate';
+
+            document.getElementById('suspendUserId').value = userId;
+            document.getElementById('suspendUserEmail').value = userEmail;
+
+            const reasonSel = document.getElementById('suspendReason');
+            if (activeState) {
+                document.getElementById('suspendActionText').textContent = 'Suspend User';
+                document.getElementById('suspendWarningText').textContent = 'suspend';
+                document.getElementById('suspendSubmitBtn').textContent = 'Suspend Account';
+                document.getElementById('suspendSubmitBtn').className = 'btn btn-warning';
+                document.getElementById('suspendReasonDiv').style.display = 'block';
+                document.getElementById('suspendNoteDiv').style.display = 'block';
+                document.getElementById('suspendDurationDiv').style.display = 'block';
+                if (reasonSel) reasonSel.required = true;
+            } else {
+                document.getElementById('suspendActionText').textContent = 'Activate User Account';
+                document.getElementById('suspendWarningText').textContent = 'reactivate access for';
+                document.getElementById('suspendSubmitBtn').textContent = 'Activate Account';
+                document.getElementById('suspendSubmitBtn').className = 'btn btn-success';
+                document.getElementById('suspendReasonDiv').style.display = 'none';
+                document.getElementById('suspendNoteDiv').style.display = 'block';
+                document.getElementById('suspendDurationDiv').style.display = 'none';
+                if (reasonSel) reasonSel.required = false;
+            }
+            openModal('suspendModal');
+        }
+
+        async function handleSuspendUser(event) {
+            event.preventDefault();
+            try {
+                const userId = parseInt(document.getElementById('suspendUserId').value);
+                const mode = window.currentSuspendMode || 'suspend';
+                const reason = document.getElementById('suspendReason').value || 'admin_request';
+                const note = document.getElementById('suspendNote').value || '';
+                const duration = parseInt(document.getElementById('suspendDuration').value) || 0;
+
+                const endpoint = mode === 'activate'
+                    ? `/api/admin/users/${userId}/activate`
+                    : `/api/admin/users/${userId}/suspend`;
+
+                const r = await api.fetch(endpoint, {
+                    method: 'POST',
+                    body: {
+                        reason: mode === 'activate' ? (note || 'Admin reactivation') : reason,
+                        note: note,
+                        duration_days: duration
+                    }
+                });
+
+                if (r.ok) {
+                    api.showToast(
+                        mode === 'activate' ? 'User account activated successfully' : 'User account suspended successfully',
+                        'success'
+                    );
+                    await auditLogger.logAction(
+                        mode === 'activate' ? 'USER_ACTIVATED' : 'USER_SUSPENDED',
+                        userId,
+                        `Reason: ${note || reason}`
+                    );
+                    hideModal('suspendModal');
+                    loadAllData();
+                } else {
+                    const error = await r.json().catch(() => ({}));
+                    api.showToast(error.detail || `Failed to ${mode} user`, 'danger');
+                }
+            } catch (e) {
+                api.showToast('Error: ' + e.message, 'danger');
+            }
+        }
+
+        function openFreezeModal(userId, userEmail, isCurrentlyFrozen) {
+            const u = (window.loadedUsersCache || []).find(item => item.id === userId);
+            const frozenState = isCurrentlyFrozen !== undefined ? isCurrentlyFrozen : Boolean(u && u.is_frozen);
+            window.currentFreezeMode = frozenState ? 'unfreeze' : 'freeze';
+
             document.getElementById('freezeUserId').value = userId;
             document.getElementById('freezeUserEmail').value = userEmail;
-            document.getElementById('freezeReasonDiv').style.display = 'block';
-            document.getElementById('freezeNoteDiv').style.display = 'block';
-            document.getElementById('freezeDurationDiv').style.display = 'block';
-            const freezeModal = new bootstrap.Modal(document.getElementById('freezeModal'));
-            freezeModal.show();
+
+            const reasonSel = document.getElementById('freezeReason');
+            if (!frozenState) {
+                document.getElementById('freezeActionText').textContent = 'Freeze Account';
+                document.getElementById('freezeWarningText').textContent = 'freeze';
+                document.getElementById('freezeSubmitBtn').textContent = 'Freeze Account';
+                document.getElementById('freezeSubmitBtn').className = 'btn btn-danger';
+                document.getElementById('freezeReasonDiv').style.display = 'block';
+                document.getElementById('freezeNoteDiv').style.display = 'block';
+                document.getElementById('freezeDurationDiv').style.display = 'block';
+                if (reasonSel) reasonSel.required = true;
+            } else {
+                document.getElementById('freezeActionText').textContent = 'Unfreeze Account';
+                document.getElementById('freezeWarningText').textContent = 'unfreeze and release holds on';
+                document.getElementById('freezeSubmitBtn').textContent = 'Unfreeze Account';
+                document.getElementById('freezeSubmitBtn').className = 'btn btn-info text-white';
+                document.getElementById('freezeReasonDiv').style.display = 'none';
+                document.getElementById('freezeNoteDiv').style.display = 'block';
+                document.getElementById('freezeDurationDiv').style.display = 'none';
+                if (reasonSel) reasonSel.required = false;
+            }
+            openModal('freezeModal');
         }
 
         async function handleFreezeAccount(event) {
             event.preventDefault();
             try {
-                const userId = document.getElementById('freezeUserId').value;
-                const reason = document.getElementById('freezeReason').value;
-                const note = document.getElementById('freezeNote').value;
+                const userId = parseInt(document.getElementById('freezeUserId').value);
+                const mode = window.currentFreezeMode || 'freeze';
+                const reason = document.getElementById('freezeReason').value || 'admin_hold';
+                const note = document.getElementById('freezeNote').value || '';
                 const duration = parseInt(document.getElementById('freezeDuration').value) || 0;
 
-                const r = await api.fetch(`/api/admin/users/${userId}/freeze`, {
+                const endpoint = mode === 'unfreeze'
+                    ? `/api/admin/users/${userId}/unfreeze`
+                    : `/api/admin/users/${userId}/freeze`;
+
+                const r = await api.fetch(endpoint, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        reason: reason,
+                    body: {
+                        reason: mode === 'unfreeze' ? (note || 'Admin unfreeze') : reason,
                         note: note,
                         duration_days: duration
-                    })
+                    }
                 });
 
                 if (r.ok) {
-                    api.showToast('User account frozen successfully', 'success');
-                    await auditLogger.logAction('ACCOUNT_FROZEN', userId, `Reason: ${reason}`);
-                    bootstrap.Modal.getInstance(document.getElementById('freezeModal')).hide();
-                    loadUsers();
+                    api.showToast(
+                        mode === 'unfreeze' ? 'User accounts unfrozen successfully' : 'User accounts frozen successfully',
+                        'success'
+                    );
+                    await auditLogger.logAction(
+                        mode === 'unfreeze' ? 'ACCOUNT_UNFROZEN' : 'ACCOUNT_FROZEN',
+                        userId,
+                        `Reason: ${note || reason}`
+                    );
+                    hideModal('freezeModal');
+                    loadAllData();
                 } else {
-                    const error = await r.json();
-                    api.showToast(error.detail || 'Failed to freeze account', 'danger');
+                    const error = await r.json().catch(() => ({}));
+                    api.showToast(error.detail || `Failed to ${mode} account`, 'danger');
                 }
             } catch (e) {
                 api.showToast('Error: ' + e.message, 'danger');

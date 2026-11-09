@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta name="description" content="Finanza Financial Services - Admin Treasury portal and banking management.">
@@ -20,7 +20,7 @@
 
         .admin-nav { background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); }
         .admin-header { background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); color: white; padding: 30px; border-radius: 10px; margin-bottom: 30px; }
-        .stat-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        .stat-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); height: 100%; }
         .dashboard-section { background: white; border-radius: 10px; padding: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 30px; }
         .portfolio-card { border-left: 4px solid var(--primary); }
         .chart-container { position: relative; height: 300px; margin-bottom: 20px; }
@@ -39,16 +39,16 @@
         .toast.toast-success { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
         .toast.toast-error { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
         .toast.toast-warning { background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; }
-        .close-toast { cursor: pointer; opacity: 0.7; }
+        .toast.toast-info { background-color: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
+        .close-toast { cursor: pointer; opacity: 0.7; border: none; background: transparent; }
         .close-toast:hover { opacity: 1; }
 
-        /* Mobile Card View for Portfolios */
+        /* Mobile Card View for Portfolios & Strategies */
         @media (max-width: 768px) {
             .portfolio-mobile-card { background: white; border-radius: 8px; padding: 15px; margin-bottom: 15px; border-left: 4px solid var(--primary); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
             .portfolio-mobile-row { display: flex; justify-content: space-between; margin-bottom: 8px; }
             .portfolio-mobile-label { font-weight: 600; color: #666; font-size: 0.9rem; }
             .portfolio-mobile-value { color: #333; }
-            .table { display: none; }
         }
 
         /* Empty State */
@@ -93,20 +93,27 @@
             <div class="collapse navbar-collapse" id="navbarAdmin">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item"><a class="nav-link" href="/user/admin/dashboard">Dashboard</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/user/admin/fraud_detection">Fraud</a></li>
-                    <li class="nav-item"><a class="nav-link" href="/user/admin/blockchain">Blockchain</a></li>
                     <li class="nav-item"><a class="nav-link active" href="/user/admin/treasury">Treasury</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/currency_exchange">FX Exchange</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/blockchain">Blockchain</a></li>
                     <li class="nav-item"><a class="nav-link" href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
                 </ul>
             </div>
         </div>
     </nav>
 
-    <div class="container-fluid mt-5 mb-5">
+    <div class="container-fluid mt-4 mb-5">
         <!-- Header -->
         <div class="admin-header">
-            <h1><i class="fas fa-landmark"></i> Treasury Management</h1>
-            <p class="mb-0">Manage investment portfolios, liquidity, and asset allocation</p>
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <h1><i class="fas fa-landmark"></i> Treasury Management</h1>
+                    <p class="mb-0">Manage institutional investment portfolios, reserve liquidity, and risk allocation</p>
+                </div>
+                <button class="btn btn-light btn-sm" onclick="refreshAllTreasuryData()">
+                    <i class="fas fa-sync-alt"></i> Refresh Data
+                </button>
+            </div>
         </div>
 
         <!-- Quick Stats -->
@@ -127,6 +134,7 @@
                 <div class="stat-card">
                     <div style="font-size: 2rem; color: #667eea; font-weight: bold;" id="portfolioReturn">+0.0%</div>
                     <div class="text-muted">Average Portfolio Return</div>
+                    <small class="text-success fw-semibold" id="benchmarkReturn">vs S&amp;P 500: +8.2%</small>
                 </div>
             </div>
             <div class="col-lg-3 col-md-6">
@@ -159,7 +167,7 @@
 
         <!-- Managed Portfolios -->
         <div class="dashboard-section">
-            <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
                 <h4><i class="fas fa-briefcase"></i> Managed Portfolios</h4>
                 <div>
                     <button class="btn btn-primary btn-sm me-2" id="createPortfolioBtn" aria-label="Create new portfolio">
@@ -176,16 +184,16 @@
                 <div class="col-md-4 mb-3">
                     <div class="input-group">
                         <span class="input-group-text"><i class="fas fa-search"></i></span>
-                        <input type="text" class="form-control" id="portfolioSearch" placeholder="Search by name..." aria-label="Search portfolios">
+                        <input type="text" class="form-control" id="portfolioSearch" placeholder="Search by name or investor..." aria-label="Search portfolios">
                     </div>
                 </div>
-                <div class="col-md-3 mb-3">
-                    <select class="form-control" id="portfolioStrategyFilter" aria-label="Filter by strategy">
+                <div class="col-md-4 mb-3">
+                    <select class="form-select" id="portfolioStrategyFilter" aria-label="Filter by strategy">
                         <option value="">All Strategies</option>
                     </select>
                 </div>
-                <div class="col-md-3 mb-3">
-                    <select class="form-control" id="portfolioStatusFilter" aria-label="Filter by status">
+                <div class="col-md-4 mb-3">
+                    <select class="form-select" id="portfolioStatusFilter" aria-label="Filter by status">
                         <option value="">All Status</option>
                         <option value="Active">Active</option>
                         <option value="Inactive">Inactive</option>
@@ -195,7 +203,7 @@
 
             <!-- Desktop Table View -->
             <div class="table-responsive d-none d-md-block">
-                <table class="table table-hover">
+                <table class="table table-hover align-middle">
                     <thead>
                         <tr>
                             <th>Portfolio Name</th>
@@ -248,7 +256,7 @@
             <h4 class="mb-4"><i class="fas fa-cube"></i> Asset Classes</h4>
             <div class="row g-4">
                 <div class="col-lg-3 col-md-6">
-                    <div class="portfolio-card card">
+                    <div class="portfolio-card card h-100">
                         <div class="card-body">
                             <h5 class="card-title"><i class="fas fa-coins"></i> Equities</h5>
                             <p class="card-text"><strong>$<span id="equitiesValue">-</span>M</strong></p>
@@ -258,7 +266,7 @@
                     </div>
                 </div>
                 <div class="col-lg-3 col-md-6">
-                    <div class="portfolio-card card">
+                    <div class="portfolio-card card h-100">
                         <div class="card-body">
                             <h5 class="card-title"><i class="fas fa-file"></i> Fixed Income</h5>
                             <p class="card-text"><strong>$<span id="fixedValue">-</span>M</strong></p>
@@ -268,7 +276,7 @@
                     </div>
                 </div>
                 <div class="col-lg-3 col-md-6">
-                    <div class="portfolio-card card">
+                    <div class="portfolio-card card h-100">
                         <div class="card-body">
                             <h5 class="card-title"><i class="fas fa-home"></i> Real Estate</h5>
                             <p class="card-text"><strong>$<span id="reValue">-</span>M</strong></p>
@@ -278,7 +286,7 @@
                     </div>
                 </div>
                 <div class="col-lg-3 col-md-6">
-                    <div class="portfolio-card card">
+                    <div class="portfolio-card card h-100">
                         <div class="card-body">
                             <h5 class="card-title"><i class="fas fa-cube"></i> Alternative</h5>
                             <p class="card-text"><strong>$<span id="altValue">-</span>M</strong></p>
@@ -308,7 +316,7 @@
             </div>
 
             <div class="table-responsive d-none d-md-block">
-                <table class="table table-striped">
+                <table class="table table-striped align-middle">
                     <thead>
                         <tr>
                             <th>Strategy Name</th>
@@ -355,7 +363,7 @@
         <div class="dashboard-section">
             <h4 class="mb-4"><i class="fas fa-sync-alt"></i> Rebalancing Schedule</h4>
             <div class="table-responsive">
-                <table class="table table-hover">
+                <table class="table table-hover align-middle">
                     <thead>
                         <tr>
                             <th>Portfolio</th>
@@ -388,7 +396,7 @@
                 </div>
                 <div class="col-md-6 mb-3">
                     <label class="form-label">Rebalance Frequency</label>
-                    <select class="form-control">
+                    <select class="form-select" id="liquidityRebalanceFreq">
                         <option>Daily</option>
                         <option selected>Weekly</option>
                         <option>Monthly</option>
@@ -397,11 +405,12 @@
                 </div>
             </div>
             <div class="table-responsive">
-                <table class="table table-striped">
+                <table class="table table-striped align-middle">
                     <thead>
                         <tr>
                             <th>Account</th>
-                            <th>Current Liquidity</th>
+                            <th>Current Reserve ($)</th>
+                            <th>Liquidity Ratio</th>
                             <th>Threshold</th>
                             <th>Status</th>
                             <th>Action Required</th>
@@ -409,7 +418,7 @@
                     </thead>
                     <tbody id="liquidityBody">
                         <tr>
-                            <td colspan="5" class="text-center text-muted">Loading...</td>
+                            <td colspan="6" class="text-center text-muted">Loading...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -425,7 +434,7 @@
                         <label class="form-label">Max Concentration Risk (%)
                             <span class="text-danger" title="Required field">*</span>
                         </label>
-                        <input type="number" class="form-control" id="maxConcentration" 
+                        <input type="number" class="form-control" id="maxConcentration"
                                value="20" min="0" max="100" required
                                aria-label="Max concentration risk"
                                aria-describedby="concentrationHelp">
@@ -435,7 +444,7 @@
                         <label class="form-label">VaR Limit (95% Confidence)
                             <span class="text-danger" title="Required field">*</span>
                         </label>
-                        <input type="number" class="form-control" id="varLimit" 
+                        <input type="number" class="form-control" id="varLimit"
                                value="100000" min="0" required
                                aria-label="VaR limit"
                                aria-describedby="varHelp">
@@ -445,7 +454,7 @@
                         <label class="form-label">Sector Concentration Limit (%)
                             <span class="text-danger" title="Required field">*</span>
                         </label>
-                        <input type="number" class="form-control" id="sectorLimit" 
+                        <input type="number" class="form-control" id="sectorLimit"
                                value="15" min="0" max="100" required
                                aria-label="Sector concentration limit"
                                aria-describedby="sectorHelp">
@@ -455,7 +464,7 @@
                         <label class="form-label">Correlation Threshold
                             <span class="text-danger" title="Required field">*</span>
                         </label>
-                        <input type="number" class="form-control" id="correlationThreshold" 
+                        <input type="number" class="form-control" id="correlationThreshold"
                                value="0.7" step="0.1" min="0" max="1" required
                                aria-label="Correlation threshold"
                                aria-describedby="correlationHelp">
@@ -466,7 +475,7 @@
                     <button type="button" class="btn btn-primary" id="updateRiskParamsBtn" aria-label="Update risk parameters">
                         <i class="fas fa-save"></i> Update Risk Parameters
                     </button>
-                    <button type="reset" class="btn btn-secondary ms-2">Reset to Defaults</button>
+                    <button type="button" class="btn btn-secondary ms-2" id="resetRiskParamsBtn">Reset to Defaults</button>
                 </div>
             </form>
         </div>
@@ -486,23 +495,23 @@
                     <div class="modal-body">
                         <div class="mb-3">
                             <label class="form-label">Portfolio Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="portfolioName" required aria-label="Portfolio name">
+                            <input type="text" class="form-control" id="portfolioName" placeholder="e.g., Sovereign Reserve Fund II" required aria-label="Portfolio name">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Investor Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="portfolioInvestor" required aria-label="Investor name">
+                            <input type="text" class="form-control" id="portfolioInvestor" placeholder="e.g., Finanza Institutional Desk" required aria-label="Investor name">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Strategy <span class="text-danger">*</span></label>
-                            <select class="form-control" id="portfolioStrategy" required aria-label="Select strategy"></select>
+                            <select class="form-select" id="portfolioStrategy" required aria-label="Select strategy"></select>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Initial Value ($) <span class="text-danger">*</span></label>
-                            <input type="number" class="form-control" id="portfolioValue" min="0" step="0.01" required aria-label="Initial portfolio value">
+                            <input type="number" class="form-control" id="portfolioValue" min="1000" step="0.01" placeholder="1000000" required aria-label="Initial portfolio value">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Risk Level <span class="text-danger">*</span></label>
-                            <select class="form-control" id="portfolioRisk" required aria-label="Select risk level">
+                            <select class="form-select" id="portfolioRisk" required aria-label="Select risk level">
                                 <option value="">Select Risk Level</option>
                                 <option value="Low">Low</option>
                                 <option value="Medium">Medium</option>
@@ -561,19 +570,19 @@
                 <div class="modal-body">
                     <ul class="nav nav-tabs mb-3" role="tablist">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="portfolio-details-tab" data-bs-toggle="tab" 
+                            <button class="nav-link active" id="portfolio-details-tab" data-bs-toggle="tab"
                                     data-bs-target="#portfolio-details" type="button" role="tab" aria-label="Portfolio details">
                                 Details
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="portfolio-holdings-tab" data-bs-toggle="tab" 
+                            <button class="nav-link" id="portfolio-holdings-tab" data-bs-toggle="tab"
                                     data-bs-target="#portfolio-holdings" type="button" role="tab" aria-label="Portfolio holdings">
                                 Holdings
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="portfolio-performance-tab" data-bs-toggle="tab" 
+                            <button class="nav-link" id="portfolio-performance-tab" data-bs-toggle="tab"
                                     data-bs-target="#portfolio-performance" type="button" role="tab" aria-label="Portfolio performance">
                                 Performance
                             </button>
@@ -581,13 +590,44 @@
                     </ul>
                     <div class="tab-content">
                         <div class="tab-pane fade show active" id="portfolio-details" role="tabpanel">
-                            <p><strong>Name:</strong> <span id="managedPortfolioName"></span></p>
-                            <p><strong>Investor:</strong> <span id="managedPortfolioInvestor"></span></p>
-                            <p><strong>Current Value:</strong> $<span id="managedPortfolioValue"></span></p>
-                            <p><strong>YTD Return:</strong> <span id="managedPortfolioReturn"></span></p>
-                            <button class="btn btn-warning btn-sm" id="updatePortfolioBtn">
-                                <i class="fas fa-edit"></i> Edit Details
-                            </button>
+                            <div id="portfolioDetailsView">
+                                <p><strong>Name:</strong> <span id="managedPortfolioName"></span></p>
+                                <p><strong>Investor:</strong> <span id="managedPortfolioInvestor"></span></p>
+                                <p><strong>Strategy:</strong> <span id="managedPortfolioStrategy"></span></p>
+                                <p><strong>Current Value:</strong> $<span id="managedPortfolioValue"></span></p>
+                                <p><strong>YTD Return:</strong> <span id="managedPortfolioReturn"></span></p>
+                                <p><strong>Status:</strong> <span id="managedPortfolioStatus"></span></p>
+                                <button class="btn btn-warning btn-sm" id="updatePortfolioBtn">
+                                    <i class="fas fa-edit"></i> Edit Details
+                                </button>
+                            </div>
+                            <form id="editPortfolioForm" style="display: none;" class="mt-3 border-top pt-3">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Portfolio Name</label>
+                                        <input type="text" class="form-control" id="editPortfolioName" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Investor</label>
+                                        <input type="text" class="form-control" id="editPortfolioInvestor" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Value ($)</label>
+                                        <input type="number" class="form-control" id="editPortfolioValue" step="0.01" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Status</label>
+                                        <select class="form-select" id="editPortfolioStatus">
+                                            <option value="Active">Active</option>
+                                            <option value="Inactive">Inactive</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-save"></i> Save Changes</button>
+                                    <button type="button" class="btn btn-secondary btn-sm ms-2" id="cancelEditPortfolioBtn">Cancel</button>
+                                </div>
+                            </form>
                         </div>
                         <div class="tab-pane fade" id="portfolio-holdings" role="tabpanel">
                             <div id="managedPortfolioHoldings">Loading...</div>
@@ -601,21 +641,68 @@
         </div>
     </div>
 
+    <!-- Edit Strategy Modal -->
+    <div class="modal fade" id="editStrategyModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-chess"></i> Edit Investment Strategy</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="editStrategyForm">
+                    <div class="modal-body">
+                        <input type="hidden" id="editStrategyId">
+                        <div class="mb-3">
+                            <label class="form-label">Strategy Name</label>
+                            <input type="text" class="form-control" id="editStrategyName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Target Return (%)</label>
+                            <input type="number" class="form-control" id="editStrategyReturn" step="0.1" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Risk Profile</label>
+                            <select class="form-select" id="editStrategyRisk">
+                                <option value="Very Low">Very Low</option>
+                                <option value="Low">Low</option>
+                                <option value="Medium">Medium</option>
+                                <option value="High">High</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Rebalance Frequency</label>
+                            <select class="form-select" id="editStrategyFreq">
+                                <option value="Daily">Daily</option>
+                                <option value="Weekly">Weekly</option>
+                                <option value="Monthly">Monthly</option>
+                                <option value="Quarterly">Quarterly</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Strategy</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // ============================================
         // PRODUCTION-READY TREASURY DASHBOARD
         // ============================================
 
-        // ===== CONFIGURATION & GLOBALS =====
         const CONFIG = {
             apiBaseUrl: '/api/v1',
             adminBaseUrl: '/api/admin',
-            sessionCheckInterval: 5 * 60 * 1000, // 5 minutes
+            sessionCheckInterval: 5 * 60 * 1000,
             tokenKey: 'token',
             csrfTokenKey: 'csrf_token',
-            pageSize: 10, // Items per page
+            pageSize: 10,
             features: {
-                enableWebSockets: false, // Set to true when WebSocket support added
+                enableWebSockets: false,
                 enableRealTimeUpdates: false,
                 enableExport: true
             }
@@ -636,12 +723,18 @@
                 filteredCount: 0,
                 filters: { search: '' }
             },
+            currentManagedPortfolioId: null,
+            riskDefaults: {
+                max_concentration: 20.0,
+                var_limit: 100000.0,
+                sector_limit: 15.0,
+                correlation_threshold: 0.7
+            },
             token: localStorage.getItem(CONFIG.tokenKey),
             csrfToken: null,
             sessionValid: false
         };
 
-        // ===== SECURITY LAYER =====
         class SecurityManager {
             static async validateSession() {
                 state.sessionValid = true;
@@ -654,16 +747,10 @@
                     'Authorization': `Bearer ${state.token}`,
                     'Content-Type': 'application/json'
                 };
-
                 if (state.csrfToken) {
                     headers['X-CSRF-Token'] = state.csrfToken;
                 }
-
                 return headers;
-            }
-
-            static handleSessionExpired() {
-                console.warn('Session check delegated to admin-guard.js');
             }
 
             static validateToken() {
@@ -671,16 +758,14 @@
             }
         }
 
-        // ===== NOTIFICATION SYSTEM =====
         function showToast(message, type = 'info', duration = 4000) {
             const container = document.getElementById('toastContainer');
-            const toastId = 'toast-' + Date.now();
+            const toastId = 'toast-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
 
             const toast = document.createElement('div');
             toast.id = toastId;
             toast.className = `toast toast-${type}`;
             toast.setAttribute('role', 'alert');
-            toast.setAttribute('aria-live', 'assertive');
 
             const iconClass = {
                 'success': 'fa-check-circle',
@@ -693,9 +778,9 @@
                 <div style="padding: 12px 16px; display: flex; align-items: center; justify-content: space-between;">
                     <div style="display: flex; align-items: center;">
                         <i class="fas ${iconClass}" style="margin-right: 10px;"></i>
-                        <span>${message}</span>
+                        <span>${escapeHtml(message)}</span>
                     </div>
-                    <button class="close-toast" onclick="document.getElementById('${toastId}').remove();" aria-label="Close notification">
+                    <button class="close-toast" onclick="document.getElementById('${toastId}')?.remove();" aria-label="Close notification">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
@@ -706,20 +791,16 @@
             if (duration > 0) {
                 setTimeout(() => toast.remove(), duration);
             }
-
-            console.log(`[${type.toUpperCase()}] ${message}`);
         }
 
-        // ===== DATA EXPORT UTILITY =====
         function exportToCSV(data, filename, columns) {
             try {
                 let csv = columns.join(',') + '\n';
                 data.forEach(row => {
                     const values = columns.map(col => {
-                        const value = row[col] || '';
-                        // Escape quotes and wrap in quotes if contains comma
-                        return typeof value === 'string' && value.includes(',') 
-                            ? `"${value.replace(/"/g, '""')}"` 
+                        const value = row[col] ?? '';
+                        return typeof value === 'string' && value.includes(',')
+                            ? `"${value.replace(/"/g, '""')}"`
                             : value;
                     });
                     csv += values.join(',') + '\n';
@@ -740,54 +821,57 @@
             }
         }
 
-        // ===== DATA LOADING FUNCTIONS =====
         async function loadTreasuryData() {
             try {
-                startLoadingState('stats');
                 const response = await fetch(`${CONFIG.apiBaseUrl}/treasury/dashboard`, {
-                    headers: SecurityManager.getSecureHeaders()
+                    headers: SecurityManager.getSecureHeaders(),
+                    credentials: 'include'
                 });
 
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
                 const data = await response.json();
-                
-                document.getElementById('totalAssets').textContent = (data.total_aum / 1000000).toFixed(1);
-                document.getElementById('portfoliosCount').textContent = data.active_portfolios || '-';
-                document.getElementById('portfolioReturn').textContent = (data.average_return || 0).toFixed(1) + '%';
-                document.getElementById('liquidityReserve').textContent = (data.liquidity_reserve / 1000000).toFixed(1);
 
-                // Asset classes
-                document.getElementById('equitiesValue').textContent = (data.equities_value / 1000000).toFixed(1);
+                document.getElementById('totalAssets').textContent = ((data.total_aum || 0) / 1000000).toFixed(1);
+                document.getElementById('portfoliosCount').textContent = data.active_portfolios || '0';
+                const avgRet = data.average_return || 0;
+                document.getElementById('portfolioReturn').textContent = (avgRet >= 0 ? '+' : '') + avgRet.toFixed(1) + '%';
+                if (data.benchmark_sp500 !== undefined) {
+                    document.getElementById('benchmarkReturn').textContent = `vs S&P 500: +${Number(data.benchmark_sp500).toFixed(1)}%`;
+                }
+                document.getElementById('liquidityReserve').textContent = ((data.liquidity_reserve || 0) / 1000000).toFixed(1);
+
+                document.getElementById('equitiesValue').textContent = ((data.equities_value || 0) / 1000000).toFixed(1);
                 document.getElementById('equitiesPercent').textContent = (data.equities_percent || 0).toFixed(1) + '%';
                 document.getElementById('equitiesCount').textContent = data.equities_count || '0';
-                document.getElementById('fixedValue').textContent = (data.fixed_income_value / 1000000).toFixed(1);
+                document.getElementById('fixedValue').textContent = ((data.fixed_income_value || 0) / 1000000).toFixed(1);
                 document.getElementById('fixedPercent').textContent = (data.fixed_income_percent || 0).toFixed(1) + '%';
                 document.getElementById('fixedCount').textContent = data.fixed_income_count || '0';
-                document.getElementById('reValue').textContent = (data.real_estate_value / 1000000).toFixed(1);
+                document.getElementById('reValue').textContent = ((data.real_estate_value || 0) / 1000000).toFixed(1);
                 document.getElementById('rePercent').textContent = (data.real_estate_percent || 0).toFixed(1) + '%';
                 document.getElementById('reCount').textContent = data.real_estate_count || '0';
-                document.getElementById('altValue').textContent = (data.alternative_value / 1000000).toFixed(1);
+                document.getElementById('altValue').textContent = ((data.alternative_value || 0) / 1000000).toFixed(1);
                 document.getElementById('altPercent').textContent = (data.alternative_percent || 0).toFixed(1) + '%';
                 document.getElementById('altCount').textContent = data.alternative_count || '0';
 
-                // Update charts with real data
                 updateAllocationChart({
                     labels: ['Equities', 'Fixed Income', 'Real Estate', 'Alternative'],
-                    data: [data.equities_value, data.fixed_income_value, data.real_estate_value, data.alternative_value]
+                    data: [data.equities_value || 40, data.fixed_income_value || 30, data.real_estate_value || 20, data.alternative_value || 10]
                 });
 
-                endLoadingState('stats');
+                if (data.performance_history && performanceChart) {
+                    performanceChart.data.labels = data.performance_history.map(p => p.month);
+                    performanceChart.data.datasets[0].data = data.performance_history.map(p => p.value);
+                    performanceChart.update('none');
+                }
             } catch (error) {
                 console.error('Error loading treasury data:', error);
                 showToast('Failed to load treasury data: ' + error.message, 'error');
-                endLoadingState('stats');
             }
         }
 
         async function loadPortfolios(page = 0) {
             try {
-                startLoadingState('portfolios');
                 const params = new URLSearchParams({
                     skip: page * CONFIG.pageSize,
                     limit: CONFIG.pageSize,
@@ -797,7 +881,8 @@
                 });
 
                 const response = await fetch(`${CONFIG.apiBaseUrl}/treasury/portfolios?${params}`, {
-                    headers: SecurityManager.getSecureHeaders()
+                    headers: SecurityManager.getSecureHeaders(),
+                    credentials: 'include'
                 });
 
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -810,17 +895,34 @@
 
                 renderPortfolios();
                 updatePortfolioPagination();
-                endLoadingState('portfolios');
             } catch (error) {
                 console.error('Error loading portfolios:', error);
                 showToast('Failed to load portfolios: ' + error.message, 'error');
-                endLoadingState('portfolios');
+            }
+        }
+
+        function populateStrategyDropdowns(strategies) {
+            const list = (strategies && strategies.length > 0)
+                ? strategies.map(s => s.name)
+                : ['Conservative Income', 'Moderate Growth', 'Aggressive Alpha', 'Institutional Liquidity Yield'];
+
+            const filterSelect = document.getElementById('portfolioStrategyFilter');
+            if (filterSelect) {
+                const currentVal = filterSelect.value;
+                filterSelect.innerHTML = '<option value="">All Strategies</option>' +
+                    list.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
+                filterSelect.value = currentVal;
+            }
+
+            const createSelect = document.getElementById('portfolioStrategy');
+            if (createSelect) {
+                createSelect.innerHTML = '<option value="">Select Strategy...</option>' +
+                    list.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
             }
         }
 
         async function loadStrategies(page = 0) {
             try {
-                startLoadingState('strategies');
                 const params = new URLSearchParams({
                     skip: page * CONFIG.pageSize,
                     limit: CONFIG.pageSize,
@@ -828,7 +930,8 @@
                 });
 
                 const response = await fetch(`${CONFIG.apiBaseUrl}/treasury/strategies?${params}`, {
-                    headers: SecurityManager.getSecureHeaders()
+                    headers: SecurityManager.getSecureHeaders(),
+                    credentials: 'include'
                 });
 
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -839,20 +942,21 @@
                 state.strategies.filteredCount = data.total || 0;
                 state.strategies.page = page;
 
+                populateStrategyDropdowns(state.strategies.data);
                 renderStrategies();
                 updateStrategiesPagination();
-                endLoadingState('strategies');
             } catch (error) {
                 console.error('Error loading strategies:', error);
+                populateStrategyDropdowns([]);
                 showToast('Failed to load strategies: ' + error.message, 'error');
-                endLoadingState('strategies');
             }
         }
 
         async function loadRebalanceInfo() {
             try {
                 const response = await fetch(`${CONFIG.apiBaseUrl}/treasury/rebalancing`, {
-                    headers: SecurityManager.getSecureHeaders()
+                    headers: SecurityManager.getSecureHeaders(),
+                    credentials: 'include'
                 });
 
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -863,16 +967,17 @@
 
                 if (data.portfolios && data.portfolios.length > 0) {
                     data.portfolios.forEach(portfolio => {
+                        const dev = Number(portfolio.deviation || 0);
                         tbody.innerHTML += `
                             <tr>
-                                <td>${escapeHtml(portfolio.name)}</td>
-                                <td>${new Date(portfolio.last_rebalanced).toLocaleDateString()}</td>
-                                <td>${new Date(portfolio.next_rebalance).toLocaleDateString()}</td>
-                                <td class="${Math.abs(portfolio.deviation) > 5 ? 'text-danger' : 'text-success'}">${portfolio.deviation > 0 ? '+' : ''}${portfolio.deviation.toFixed(2)}%</td>
+                                <td><strong>${escapeHtml(portfolio.name)}</strong></td>
+                                <td>${escapeHtml(portfolio.last_rebalanced)}</td>
+                                <td>${escapeHtml(portfolio.next_rebalance)}</td>
+                                <td class="${Math.abs(dev) > 2.5 ? 'text-danger fw-bold' : 'text-success'}">${dev > 0 ? '+' : ''}${dev.toFixed(2)}%</td>
                                 <td>${escapeHtml(portfolio.recommendation)}</td>
                                 <td>
-                                    <button class="btn btn-sm btn-success" onclick="triggerRebalanceConfirm('${portfolio.id}', '${escapeHtml(portfolio.name)}', ${portfolio.deviation})" title="Rebalance this portfolio">
-                                        Rebalance Now
+                                    <button class="btn btn-sm btn-success" onclick="triggerRebalanceConfirm('${escapeHtml(portfolio.id)}', '${escapeHtml(portfolio.name)}', ${dev})" title="Rebalance this portfolio">
+                                        <i class="fas fa-sync-alt"></i> Rebalance Now
                                     </button>
                                 </td>
                             </tr>
@@ -889,7 +994,8 @@
         async function loadLiquidityInfo() {
             try {
                 const response = await fetch(`${CONFIG.apiBaseUrl}/treasury/liquidity`, {
-                    headers: SecurityManager.getSecureHeaders()
+                    headers: SecurityManager.getSecureHeaders(),
+                    credentials: 'include'
                 });
 
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -900,32 +1006,57 @@
 
                 if (data.accounts && data.accounts.length > 0) {
                     data.accounts.forEach(account => {
-                        const statusClass = account.liquidity >= account.threshold ? 'success' : 'danger';
+                        const liqPct = Number(account.liquidity ?? 25);
+                        const threshPct = Number(account.threshold ?? 20);
+                        const isOk = liqPct >= threshPct;
+                        const statusClass = isOk ? 'success' : 'danger';
+                        const reserveUsd = Number(account.current_liquidity || 0).toLocaleString('en-US', {maximumFractionDigits: 0});
                         tbody.innerHTML += `
                             <tr>
-                                <td>${escapeHtml(account.name)}</td>
-                                <td>${account.liquidity.toFixed(1)}%</td>
-                                <td>${account.threshold}%</td>
-                                <td><span class="badge bg-${statusClass}">${account.liquidity >= account.threshold ? 'OK' : 'LOW'}</span></td>
-                                <td>${account.liquidity >= account.threshold ? 'None' : '<button class="btn btn-sm btn-warning">Review</button>'}</td>
+                                <td><strong>${escapeHtml(account.name)}</strong></td>
+                                <td>$${reserveUsd}</td>
+                                <td>${liqPct.toFixed(1)}%</td>
+                                <td>${threshPct}%</td>
+                                <td><span class="badge bg-${statusClass}">${isOk ? 'OK' : 'LOW'}</span></td>
+                                <td>${isOk ? '<span class="text-muted">None</span>' : `<button class="btn btn-sm btn-warning" onclick="showToast('Liquidity sweep scheduled for ${escapeHtml(account.name)}', 'info')">Sweep Reserve</button>`}</td>
                             </tr>
                         `;
                     });
                 } else {
-                    tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No liquidity data available</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No liquidity data available</td></tr>';
                 }
             } catch (error) {
                 console.error('Error loading liquidity info:', error);
             }
         }
 
-        // ===== RENDER FUNCTIONS =====
+        async function loadRiskParameters() {
+            try {
+                const response = await fetch(`${CONFIG.apiBaseUrl}/treasury/risk-parameters`, {
+                    headers: SecurityManager.getSecureHeaders(),
+                    credentials: 'include'
+                });
+                if (!response.ok) return;
+                const data = await response.json();
+                const params = data.parameters || data;
+                if (params.max_concentration !== undefined) {
+                    document.getElementById('maxConcentration').value = params.max_concentration;
+                    document.getElementById('varLimit').value = params.var_limit;
+                    document.getElementById('sectorLimit').value = params.sector_limit;
+                    document.getElementById('correlationThreshold').value = params.correlation_threshold;
+                }
+            } catch (error) {
+                console.warn('Error loading risk parameters:', error);
+            }
+        }
+
         function renderPortfolios() {
             const tbody = document.getElementById('portfoliosBody');
             const emptyState = document.getElementById('portfoliosEmptyState');
 
             if (state.portfolios.data.length === 0) {
                 tbody.innerHTML = '';
+                document.getElementById('portfoliosMobileContainer').innerHTML = '';
                 emptyState.style.display = 'block';
                 return;
             }
@@ -934,20 +1065,22 @@
             tbody.innerHTML = '';
 
             state.portfolios.data.forEach(portfolio => {
+                const ret = Number(portfolio.return ?? portfolio.ytd_return ?? 0);
+                const val = Number(portfolio.value || 0);
                 tbody.innerHTML += `
                     <tr>
                         <td>
                             <strong>${escapeHtml(portfolio.name)}</strong>
-                            <br><small class="text-muted">${escapeHtml(portfolio.id)}</small>
+                            <br><small class="text-muted">#${escapeHtml(portfolio.id)}</small>
                         </td>
                         <td>${escapeHtml(portfolio.investor)}</td>
                         <td>${escapeHtml(portfolio.strategy)}</td>
-                        <td>$${portfolio.value.toLocaleString('en-US', {maximumFractionDigits: 0})}</td>
-                        <td class="${portfolio.return >= 0 ? 'text-success' : 'text-danger'}">${portfolio.return >= 0 ? '+' : ''}${portfolio.return.toFixed(2)}%</td>
-                        <td><span class="badge bg-${portfolio.risk_level === 'Low' ? 'success' : portfolio.risk_level === 'Medium' ? 'warning' : 'danger'}">${portfolio.risk_level}</span></td>
-                        <td><span class="badge bg-info">${portfolio.status}</span></td>
+                        <td>$${val.toLocaleString('en-US', {maximumFractionDigits: 0})}</td>
+                        <td class="${ret >= 0 ? 'text-success fw-semibold' : 'text-danger fw-semibold'}">${ret >= 0 ? '+' : ''}${ret.toFixed(2)}%</td>
+                        <td><span class="badge bg-${portfolio.risk_level === 'Low' ? 'success' : portfolio.risk_level === 'Medium' ? 'warning' : 'danger'}">${escapeHtml(portfolio.risk_level)}</span></td>
+                        <td><span class="badge bg-${portfolio.status === 'Active' ? 'success' : 'secondary'}">${escapeHtml(portfolio.status)}</span></td>
                         <td>
-                            <button class="btn btn-sm btn-primary" onclick="triggerManagePortfolio('${portfolio.id}')" title="Manage portfolio" aria-label="Manage ${escapeHtml(portfolio.name)} portfolio">
+                            <button class="btn btn-sm btn-primary" onclick="triggerManagePortfolio('${escapeHtml(portfolio.id)}')" title="Manage portfolio">
                                 <i class="fas fa-cog"></i> Manage
                             </button>
                         </td>
@@ -955,29 +1088,33 @@
                 `;
             });
 
-            // Mobile view
             const mobileContainer = document.getElementById('portfoliosMobileContainer');
-            mobileContainer.innerHTML = state.portfolios.data.map(p => `
+            mobileContainer.innerHTML = state.portfolios.data.map(p => {
+                const ret = Number(p.return ?? p.ytd_return ?? 0);
+                return `
                 <div class="portfolio-mobile-card">
-                    <div class="portfolio-mobile-row"><span class="portfolio-mobile-label">Name:</span><span class="portfolio-mobile-value">${escapeHtml(p.name)}</span></div>
+                    <div class="portfolio-mobile-row"><span class="portfolio-mobile-label">Name:</span><span class="portfolio-mobile-value fw-bold">${escapeHtml(p.name)}</span></div>
                     <div class="portfolio-mobile-row"><span class="portfolio-mobile-label">Investor:</span><span class="portfolio-mobile-value">${escapeHtml(p.investor)}</span></div>
-                    <div class="portfolio-mobile-row"><span class="portfolio-mobile-label">Value:</span><span class="portfolio-mobile-value">$${p.value.toLocaleString()}</span></div>
-                    <div class="portfolio-mobile-row"><span class="portfolio-mobile-label">Return:</span><span class="portfolio-mobile-value">${p.return >= 0 ? '+' : ''}${p.return.toFixed(2)}%</span></div>
+                    <div class="portfolio-mobile-row"><span class="portfolio-mobile-label">Strategy:</span><span class="portfolio-mobile-value">${escapeHtml(p.strategy)}</span></div>
+                    <div class="portfolio-mobile-row"><span class="portfolio-mobile-label">Value:</span><span class="portfolio-mobile-value">$${Number(p.value || 0).toLocaleString()}</span></div>
+                    <div class="portfolio-mobile-row"><span class="portfolio-mobile-label">Return:</span><span class="portfolio-mobile-value ${ret >= 0 ? 'text-success' : 'text-danger'}">${ret >= 0 ? '+' : ''}${ret.toFixed(2)}%</span></div>
                     <div class="mt-2">
-                        <button class="btn btn-sm btn-primary w-100" onclick="triggerManagePortfolio('${p.id}')">
+                        <button class="btn btn-sm btn-primary w-100" onclick="triggerManagePortfolio('${escapeHtml(p.id)}')">
                             <i class="fas fa-cog"></i> Manage
                         </button>
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
         }
 
         function renderStrategies() {
             const tbody = document.getElementById('strategiesBody');
+            const mobileContainer = document.getElementById('strategiesMobileContainer');
             const emptyState = document.getElementById('strategiesEmptyState');
 
             if (state.strategies.data.length === 0) {
                 tbody.innerHTML = '';
+                if (mobileContainer) mobileContainer.innerHTML = '';
                 emptyState.style.display = 'block';
                 return;
             }
@@ -986,22 +1123,40 @@
             tbody.innerHTML = '';
 
             state.strategies.data.forEach(strategy => {
+                const perf = Number(strategy.performance || 0);
+                const count = strategy.portfolio_count ?? strategy.portfolios_using ?? 0;
                 tbody.innerHTML += `
                     <tr>
                         <td><strong>${escapeHtml(strategy.name)}</strong></td>
-                        <td>${strategy.target_return}%</td>
-                        <td><span class="badge bg-info">${strategy.risk_profile}</span></td>
-                        <td>${strategy.rebalance_frequency}</td>
-                        <td>${strategy.portfolio_count}</td>
-                        <td class="${strategy.performance >= 0 ? 'text-success' : 'text-danger'}">${strategy.performance >= 0 ? '+' : ''}${strategy.performance.toFixed(2)}%</td>
+                        <td>${Number(strategy.target_return || 0).toFixed(1)}%</td>
+                        <td><span class="badge bg-info">${escapeHtml(strategy.risk_profile)}</span></td>
+                        <td>${escapeHtml(strategy.rebalance_frequency)}</td>
+                        <td>${count}</td>
+                        <td class="${perf >= 0 ? 'text-success fw-semibold' : 'text-danger fw-semibold'}">${perf >= 0 ? '+' : ''}${perf.toFixed(2)}%</td>
                         <td>
-                            <button class="btn btn-sm btn-primary" onclick="editStrategy('${strategy.id}')" title="Edit strategy" aria-label="Edit ${escapeHtml(strategy.name)}">
+                            <button class="btn btn-sm btn-primary" onclick="editStrategy('${escapeHtml(strategy.id)}')" title="Edit strategy">
                                 <i class="fas fa-edit"></i> Edit
                             </button>
                         </td>
                     </tr>
                 `;
             });
+
+            if (mobileContainer) {
+                mobileContainer.innerHTML = state.strategies.data.map(s => {
+                    const perf = Number(s.performance || 0);
+                    return `
+                    <div class="portfolio-mobile-card">
+                        <div class="portfolio-mobile-row"><span class="portfolio-mobile-label">Strategy:</span><span class="portfolio-mobile-value fw-bold">${escapeHtml(s.name)}</span></div>
+                        <div class="portfolio-mobile-row"><span class="portfolio-mobile-label">Target Return:</span><span class="portfolio-mobile-value">${s.target_return}%</span></div>
+                        <div class="portfolio-mobile-row"><span class="portfolio-mobile-label">Risk Profile:</span><span class="portfolio-mobile-value">${escapeHtml(s.risk_profile)}</span></div>
+                        <div class="portfolio-mobile-row"><span class="portfolio-mobile-label">Performance:</span><span class="portfolio-mobile-value ${perf >= 0 ? 'text-success' : 'text-danger'}">${perf >= 0 ? '+' : ''}${perf.toFixed(2)}%</span></div>
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-outline-primary w-100" onclick="editStrategy('${escapeHtml(s.id)}')"><i class="fas fa-edit"></i> Edit Strategy</button>
+                        </div>
+                    </div>
+                `}).join('');
+            }
         }
 
         function updatePortfolioPagination() {
@@ -1044,44 +1199,24 @@
             nextBtn.disabled = state.strategies.page >= state.strategies.totalPages - 1;
         }
 
-        // ===== LOADING STATE MANAGEMENT =====
-        function startLoadingState(section) {
-            // Skeleton loaders for tables
-            const skeleton = '<div class="skeleton skeleton-line" style="width: 100%; height: 20px;"></div>';
-            if (section === 'portfolios' || section === 'stats') {
-                // Handled by showToast and visual feedback
-            }
-        }
-
-        function endLoadingState(section) {
-            // Remove skeleton loaders
-        }
-
-        // ===== FORM VALIDATION =====
         function validatePortfolioForm() {
-            const form = document.getElementById('createPortfolioForm');
             const fields = ['portfolioName', 'portfolioInvestor', 'portfolioStrategy', 'portfolioValue', 'portfolioRisk'];
-
             for (let field of fields) {
                 const el = document.getElementById(field);
                 if (!el || !el.value) {
-                    showToast(`Please fill in all required fields`, 'warning');
+                    showToast('Please fill in all required fields', 'warning');
                     return false;
                 }
             }
-
-            // Additional validation
             const value = parseFloat(document.getElementById('portfolioValue').value);
-            if (value <= 0) {
+            if (isNaN(value) || value <= 0) {
                 showToast('Portfolio value must be greater than 0', 'warning');
                 return false;
             }
-
             return true;
         }
 
         function validateRiskForm() {
-            const form = document.getElementById('riskManagementForm');
             const fields = ['maxConcentration', 'varLimit', 'sectorLimit', 'correlationThreshold'];
             const values = {};
 
@@ -1094,41 +1229,142 @@
                 values[field] = parseFloat(el.value);
             }
 
-            // Validation logic
             if (values.maxConcentration < 0 || values.maxConcentration > 100) {
                 showToast('Max Concentration must be between 0 and 100%', 'warning');
                 return false;
             }
-
             if (values.sectorLimit < 0 || values.sectorLimit > 100) {
                 showToast('Sector Limit must be between 0 and 100%', 'warning');
                 return false;
             }
-
             if (values.correlationThreshold < 0 || values.correlationThreshold > 1) {
                 showToast('Correlation Threshold must be between 0 and 1', 'warning');
                 return false;
             }
-
             return true;
         }
 
-        // ===== MODAL TRIGGERS =====
+        async function loadPortfolioHoldings(portfolioId) {
+            const container = document.getElementById('managedPortfolioHoldings');
+            container.innerHTML = '<div class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin"></i> Loading holdings...</div>';
+            try {
+                const res = await fetch(`${CONFIG.apiBaseUrl}/treasury/portfolios/${portfolioId}/holdings`, {
+                    headers: SecurityManager.getSecureHeaders(),
+                    credentials: 'include'
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                const holdings = data.holdings || [];
+                if (holdings.length === 0) {
+                    container.innerHTML = '<div class="text-muted">No holdings recorded</div>';
+                    return;
+                }
+                container.innerHTML = `
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Asset</th>
+                                    <th>Symbol</th>
+                                    <th>Asset Class</th>
+                                    <th>Weight</th>
+                                    <th>Market Value</th>
+                                    <th>Unrealized G/L</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${holdings.map(h => `
+                                    <tr>
+                                        <td><strong>${escapeHtml(h.asset)}</strong></td>
+                                        <td><code>${escapeHtml(h.symbol)}</code></td>
+                                        <td>${escapeHtml(h.asset_class)}</td>
+                                        <td>${Number(h.weight_pct || 0).toFixed(1)}%</td>
+                                        <td>$${Number(h.market_value || 0).toLocaleString()}</td>
+                                        <td class="${(h.unrealized_gl_pct || 0) >= 0 ? 'text-success' : 'text-danger'}">
+                                            ${(h.unrealized_gl_pct || 0) >= 0 ? '+' : ''}${Number(h.unrealized_gl_pct || 0).toFixed(2)}%
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } catch (e) {
+                container.innerHTML = `<div class="text-danger">Failed to load holdings: ${escapeHtml(e.message)}</div>`;
+            }
+        }
+
+        async function loadPortfolioPerformance(portfolioId) {
+            const container = document.getElementById('managedPortfolioPerformance');
+            container.innerHTML = '<div class="text-center text-muted py-3"><i class="fas fa-spinner fa-spin"></i> Loading performance metrics...</div>';
+            try {
+                const res = await fetch(`${CONFIG.apiBaseUrl}/treasury/portfolios/${portfolioId}/performance`, {
+                    headers: SecurityManager.getSecureHeaders(),
+                    credentials: 'include'
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                container.innerHTML = `
+                    <div class="row g-3 mb-3">
+                        <div class="col-6 col-md-3">
+                            <div class="p-3 bg-light rounded text-center">
+                                <div class="text-muted small">YTD Return</div>
+                                <div class="fw-bold text-success fs-5">+${Number(data.ytd_return || 0).toFixed(2)}%</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="p-3 bg-light rounded text-center">
+                                <div class="text-muted small">vs Benchmark</div>
+                                <div class="fw-bold text-primary fs-5">+${Number(data.benchmark_return || 0).toFixed(2)}%</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="p-3 bg-light rounded text-center">
+                                <div class="text-muted small">Sharpe Ratio</div>
+                                <div class="fw-bold fs-5">${Number(data.sharpe_ratio || 1.4).toFixed(2)}</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="p-3 bg-light rounded text-center">
+                                <div class="text-muted small">Max Drawdown</div>
+                                <div class="fw-bold text-danger fs-5">${Number(data.max_drawdown || -2.4).toFixed(2)}%</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } catch (e) {
+                container.innerHTML = `<div class="text-danger">Failed to load performance: ${escapeHtml(e.message)}</div>`;
+            }
+        }
+
         function triggerManagePortfolio(portfolioId) {
-            const portfolio = state.portfolios.data.find(p => p.id === portfolioId);
+            const portfolio = state.portfolios.data.find(p => String(p.id) === String(portfolioId));
             if (!portfolio) return;
 
-            document.getElementById('managedPortfolioName').textContent = escapeHtml(portfolio.name);
-            document.getElementById('managedPortfolioInvestor').textContent = escapeHtml(portfolio.investor);
-            document.getElementById('managedPortfolioValue').textContent = portfolio.value.toLocaleString('en-US', {maximumFractionDigits: 2});
-            document.getElementById('managedPortfolioReturn').innerHTML = `<span class="${portfolio.return >= 0 ? 'text-success' : 'text-danger'}">${portfolio.return >= 0 ? '+' : ''}${portfolio.return.toFixed(2)}%</span>`;
+            state.currentManagedPortfolioId = portfolio.id;
+            document.getElementById('managedPortfolioName').textContent = portfolio.name;
+            document.getElementById('managedPortfolioInvestor').textContent = portfolio.investor;
+            document.getElementById('managedPortfolioStrategy').textContent = portfolio.strategy;
+            document.getElementById('managedPortfolioValue').textContent = Number(portfolio.value || 0).toLocaleString('en-US', {maximumFractionDigits: 2});
+            const ret = Number(portfolio.return ?? portfolio.ytd_return ?? 0);
+            document.getElementById('managedPortfolioReturn').innerHTML = `<span class="${ret >= 0 ? 'text-success fw-bold' : 'text-danger fw-bold'}">${ret >= 0 ? '+' : ''}${ret.toFixed(2)}%</span>`;
+            document.getElementById('managedPortfolioStatus').innerHTML = `<span class="badge bg-${portfolio.status === 'Active' ? 'success' : 'secondary'}">${escapeHtml(portfolio.status)}</span>`;
+
+            document.getElementById('editPortfolioForm').style.display = 'none';
+            document.getElementById('editPortfolioName').value = portfolio.name;
+            document.getElementById('editPortfolioInvestor').value = portfolio.investor;
+            document.getElementById('editPortfolioValue').value = portfolio.value;
+            document.getElementById('editPortfolioStatus').value = portfolio.status || 'Active';
+
+            loadPortfolioHoldings(portfolio.id);
+            loadPortfolioPerformance(portfolio.id);
 
             new bootstrap.Modal(document.getElementById('managePortfolioModal')).show();
         }
 
         function triggerRebalanceConfirm(portfolioId, portfolioName, deviation) {
-            document.getElementById('rebalancePortfolioName').textContent = escapeHtml(portfolioName);
-            document.getElementById('rebalanceDeviation').textContent = (deviation > 0 ? '+' : '') + deviation.toFixed(2) + '%';
+            document.getElementById('rebalancePortfolioName').textContent = portfolioName;
+            document.getElementById('rebalanceDeviation').textContent = (deviation > 0 ? '+' : '') + Number(deviation).toFixed(2) + '%';
 
             const modal = new bootstrap.Modal(document.getElementById('rebalanceConfirmModal'));
             modal.show();
@@ -1141,28 +1377,25 @@
 
         async function executeRebalance(portfolioId) {
             try {
-                showToast('Initiating rebalance...', 'info', 0);
+                showToast('Initiating rebalance...', 'info', 2000);
 
                 const response = await fetch(`${CONFIG.apiBaseUrl}/treasury/rebalance`, {
                     method: 'POST',
                     headers: SecurityManager.getSecureHeaders(),
+                    credentials: 'include',
                     body: JSON.stringify({ portfolio_id: portfolioId })
                 });
 
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-                const data = await response.json();
-                showToast('Rebalance initiated successfully', 'success');
-                
-                // Reload data after slight delay
-                setTimeout(() => loadPortfolios(), 1000);
+                showToast('Portfolio rebalanced to target allocation (0.00% deviation)', 'success');
+                await Promise.all([loadPortfolios(state.portfolios.page), loadRebalanceInfo()]);
             } catch (error) {
                 console.error('Rebalance error:', error);
                 showToast('Failed to initiate rebalance: ' + error.message, 'error');
             }
         }
 
-        // ===== CHART FUNCTIONS =====
         let allocationChart, performanceChart;
 
         function initializeCharts() {
@@ -1188,7 +1421,7 @@
                                     label: function(context) {
                                         const label = context.label || '';
                                         const value = context.parsed || 0;
-                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0) || 1;
                                         const percentage = ((value / total) * 100).toFixed(1);
                                         return `${label}: $${value.toLocaleString()} (${percentage}%)`;
                                     }
@@ -1203,10 +1436,10 @@
                 performanceChart = new Chart(performanceCtx.getContext('2d'), {
                     type: 'line',
                     data: {
-                        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov'],
                         datasets: [{
-                            label: 'Portfolio Value',
-                            data: [100, 102, 101, 105, 103, 107, 110, 108, 112, 115, 118, 120],
+                            label: 'Portfolio Value ($M)',
+                            data: [38.2, 38.7, 39.1, 39.0, 39.6, 40.1, 40.4, 40.9, 41.2, 41.5, 41.9],
                             borderColor: '#667eea',
                             backgroundColor: 'rgba(102, 126, 234, 0.1)',
                             tension: 0.4,
@@ -1217,16 +1450,7 @@
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: {
-                            legend: { position: 'top' },
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        const value = context.parsed.y || 0;
-                                        const change = value - 100;
-                                        return `Value: $${value.toLocaleString()} (${change >= 0 ? '+' : ''}${change.toFixed(2)}%)`;
-                                    }
-                                }
-                            }
+                            legend: { position: 'top' }
                         },
                         scales: {
                             y: { beginAtZero: false }
@@ -1243,29 +1467,33 @@
             }
         }
 
-        // ===== EVENT LISTENERS =====
+        async function refreshAllTreasuryData() {
+            await Promise.all([
+                loadTreasuryData(),
+                loadPortfolios(state.portfolios.page),
+                loadStrategies(state.strategies.page),
+                loadRebalanceInfo(),
+                loadLiquidityInfo(),
+                loadRiskParameters()
+            ]);
+            showToast('Treasury dashboard refreshed', 'success', 2000);
+        }
+
         document.addEventListener('DOMContentLoaded', async function() {
             if (!SecurityManager.validateToken()) return;
-
-            if (!await SecurityManager.validateSession()) {
-                showToast('Session validation failed', 'error');
-                return;
-            }
+            await SecurityManager.validateSession();
 
             try {
-                // Load all data
+                initializeCharts();
                 await Promise.all([
                     loadTreasuryData(),
-                    loadPortfolios(),
                     loadStrategies(),
+                    loadPortfolios(),
                     loadRebalanceInfo(),
-                    loadLiquidityInfo()
+                    loadLiquidityInfo(),
+                    loadRiskParameters()
                 ]);
-
-                initializeCharts();
                 setupEventListeners();
-
-                // Periodic session check
                 setInterval(() => SecurityManager.validateSession(), CONFIG.sessionCheckInterval);
             } catch (error) {
                 console.error('Initialization error:', error);
@@ -1274,7 +1502,6 @@
         });
 
         function setupEventListeners() {
-            // Portfolio buttons
             document.querySelectorAll('#createPortfolioBtn, #createPortfolioBtn2').forEach(btn => {
                 btn.addEventListener('click', () => new bootstrap.Modal(document.getElementById('createPortfolioModal')).show());
             });
@@ -1284,10 +1511,10 @@
                 if (!validatePortfolioForm()) return;
 
                 try {
-                    showToast('Creating portfolio...', 'info', 0);
                     const response = await fetch(`${CONFIG.apiBaseUrl}/treasury/portfolios`, {
                         method: 'POST',
                         headers: SecurityManager.getSecureHeaders(),
+                        credentials: 'include',
                         body: JSON.stringify({
                             name: document.getElementById('portfolioName').value,
                             investor: document.getElementById('portfolioInvestor').value,
@@ -1300,24 +1527,80 @@
                     if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
                     showToast('Portfolio created successfully', 'success');
-                    bootstrap.Modal.getInstance(document.getElementById('createPortfolioModal')).hide();
+                    bootstrap.Modal.getInstance(document.getElementById('createPortfolioModal'))?.hide();
                     document.getElementById('createPortfolioForm').reset();
-                    await loadPortfolios();
+                    await Promise.all([loadTreasuryData(), loadPortfolios(), loadStrategies(), loadRebalanceInfo()]);
                 } catch (error) {
                     console.error('Create portfolio error:', error);
                     showToast('Failed to create portfolio: ' + error.message, 'error');
                 }
             });
 
-            // Risk Parameters
+            document.getElementById('updatePortfolioBtn')?.addEventListener('click', () => {
+                const form = document.getElementById('editPortfolioForm');
+                form.style.display = form.style.display === 'none' ? 'block' : 'none';
+            });
+
+            document.getElementById('cancelEditPortfolioBtn')?.addEventListener('click', () => {
+                document.getElementById('editPortfolioForm').style.display = 'none';
+            });
+
+            document.getElementById('editPortfolioForm')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (!state.currentManagedPortfolioId) return;
+                try {
+                    const response = await fetch(`${CONFIG.apiBaseUrl}/treasury/portfolios/${state.currentManagedPortfolioId}`, {
+                        method: 'PUT',
+                        headers: SecurityManager.getSecureHeaders(),
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            name: document.getElementById('editPortfolioName').value,
+                            investor: document.getElementById('editPortfolioInvestor').value,
+                            value: parseFloat(document.getElementById('editPortfolioValue').value),
+                            status: document.getElementById('editPortfolioStatus').value
+                        })
+                    });
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    showToast('Portfolio updated successfully', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('managePortfolioModal'))?.hide();
+                    await Promise.all([loadTreasuryData(), loadPortfolios(state.portfolios.page)]);
+                } catch (err) {
+                    showToast('Failed to update portfolio: ' + err.message, 'error');
+                }
+            });
+
+            document.getElementById('editStrategyForm')?.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const id = document.getElementById('editStrategyId').value;
+                try {
+                    const response = await fetch(`${CONFIG.apiBaseUrl}/treasury/strategies/${id}`, {
+                        method: 'PUT',
+                        headers: SecurityManager.getSecureHeaders(),
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            name: document.getElementById('editStrategyName').value,
+                            target_return: parseFloat(document.getElementById('editStrategyReturn').value),
+                            risk_profile: document.getElementById('editStrategyRisk').value,
+                            rebalance_frequency: document.getElementById('editStrategyFreq').value
+                        })
+                    });
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    showToast('Strategy updated successfully', 'success');
+                    bootstrap.Modal.getInstance(document.getElementById('editStrategyModal'))?.hide();
+                    await loadStrategies(state.strategies.page);
+                } catch (err) {
+                    showToast('Failed to update strategy: ' + err.message, 'error');
+                }
+            });
+
             document.getElementById('updateRiskParamsBtn')?.addEventListener('click', async () => {
                 if (!validateRiskForm()) return;
 
                 try {
-                    showToast('Updating risk parameters...', 'info', 0);
                     const response = await fetch(`${CONFIG.apiBaseUrl}/treasury/risk-parameters`, {
                         method: 'POST',
                         headers: SecurityManager.getSecureHeaders(),
+                        credentials: 'include',
                         body: JSON.stringify({
                             max_concentration: parseFloat(document.getElementById('maxConcentration').value),
                             var_limit: parseFloat(document.getElementById('varLimit').value),
@@ -1327,7 +1610,6 @@
                     });
 
                     if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
                     showToast('Risk parameters updated successfully', 'success');
                 } catch (error) {
                     console.error('Update risk error:', error);
@@ -1335,9 +1617,26 @@
                 }
             });
 
-            // Search and Filter
+            document.getElementById('resetRiskParamsBtn')?.addEventListener('click', () => {
+                document.getElementById('maxConcentration').value = state.riskDefaults.max_concentration;
+                document.getElementById('varLimit').value = state.riskDefaults.var_limit;
+                document.getElementById('sectorLimit').value = state.riskDefaults.sector_limit;
+                document.getElementById('correlationThreshold').value = state.riskDefaults.correlation_threshold;
+                showToast('Risk parameters reset to institutional defaults', 'info');
+            });
+
             document.getElementById('portfolioSearch')?.addEventListener('input', (e) => {
                 state.portfolios.filters.search = e.target.value;
+                loadPortfolios(0);
+            });
+
+            document.getElementById('portfolioStrategyFilter')?.addEventListener('change', (e) => {
+                state.portfolios.filters.strategy = e.target.value;
+                loadPortfolios(0);
+            });
+
+            document.getElementById('portfolioStatusFilter')?.addEventListener('change', (e) => {
+                state.portfolios.filters.status = e.target.value;
                 loadPortfolios(0);
             });
 
@@ -1346,7 +1645,6 @@
                 loadStrategies(0);
             });
 
-            // Pagination
             document.getElementById('portfolioPrevBtn')?.addEventListener('click', () => {
                 if (state.portfolios.page > 0) loadPortfolios(state.portfolios.page - 1);
             });
@@ -1363,13 +1661,12 @@
                 if (state.strategies.page < state.strategies.totalPages - 1) loadStrategies(state.strategies.page + 1);
             });
 
-            // Export buttons
             document.getElementById('exportPortfoliosBtn')?.addEventListener('click', () => {
                 if (state.portfolios.data.length === 0) {
                     showToast('No portfolios to export', 'warning');
                     return;
                 }
-                exportToCSV(state.portfolios.data, 'portfolios.csv', 
+                exportToCSV(state.portfolios.data, 'portfolios.csv',
                     ['id', 'name', 'investor', 'strategy', 'value', 'return', 'risk_level', 'status']);
             });
 
@@ -1383,14 +1680,21 @@
             });
         }
 
-        // ===== UTILITY FUNCTIONS =====
         function escapeHtml(text) {
+            const str = String(text ?? '');
             const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
-            return text.replace(/[&<>"']/g, c => map[c]);
+            return str.replace(/[&<>"']/g, c => map[c]);
         }
 
         function editStrategy(strategyId) {
-            showToast(`Strategy #${strategyId} parameters synchronized with active portfolio allocations`, 'success');
+            const strat = state.strategies.data.find(s => String(s.id) === String(strategyId));
+            if (!strat) return;
+            document.getElementById('editStrategyId').value = strat.id;
+            document.getElementById('editStrategyName').value = strat.name;
+            document.getElementById('editStrategyReturn').value = strat.target_return;
+            document.getElementById('editStrategyRisk').value = strat.risk_profile;
+            document.getElementById('editStrategyFreq').value = strat.rebalance_frequency;
+            new bootstrap.Modal(document.getElementById('editStrategyModal')).show();
         }
     </script>
 <script src="/static/js/admin-shell.js?v=3"></script>

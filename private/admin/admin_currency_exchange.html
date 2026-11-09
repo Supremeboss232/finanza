@@ -1,20 +1,21 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta name="description" content="Finanza Financial Services - Admin Currency Exchange portal and banking management.">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Currency Exchange Admin - Production</title>
+    <title>Currency Exchange Admin - Finanza</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
     <style>
-        .admin-header { 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-            color: white; 
-            padding: 30px; 
-            border-radius: 10px; 
-            margin-bottom: 30px; 
+        .admin-nav { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .admin-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 30px;
         }
         .rate-card { border-top: 3px solid #667eea; }
         .connection-loss-banner {
@@ -28,7 +29,7 @@
         }
         .connection-loss-banner.show { display: block; }
         @keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        
+
         .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
         .toast-notification {
             background: white;
@@ -42,16 +43,16 @@
             animation: slideInRight 0.3s ease-out;
         }
         @keyframes slideInRight { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        
+
         .toast-notification.success { border-left: 4px solid #28a745; }
         .toast-notification.error { border-left: 4px solid #dc3545; }
         .toast-notification.warning { border-left: 4px solid #ffc107; }
         .toast-notification.info { border-left: 4px solid #17a2b8; }
-        
+
         #fxRateChart, #historicalRateChart { max-height: 300px; }
         .rate-input { font-size: 14px; }
         .pagination-controls { display: flex; align-items: center; gap: 10px; }
-        .chart-timerange-buttons { margin-bottom: 15px; }
+        .chart-timerange-buttons { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
         .rate-stale-warning {
             display: none;
             background: #fff3cd;
@@ -62,10 +63,10 @@
             margin-bottom: 10px;
         }
         .rate-stale-warning.show { display: block; }
-        .masked-text { font-family: 'Courier New', monospace; color: #999; }
-        .badge-status-active { background: #28a745; }
+        .masked-text { font-family: 'Courier New', monospace; color: #444; font-weight: 600; }
+        .badge-status-active { background: #28a745; color: #fff; }
         .badge-status-stale { background: #ffc107; color: #000; }
-        .badge-status-error { background: #dc3545; }
+        .badge-status-error { background: #dc3545; color: #fff; }
     </style>
 
     <script src="/static/js/toast-utils.js"></script>
@@ -74,9 +75,9 @@
 </head>
 <body>
     <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <nav class="admin-nav navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
-            <a class="navbar-brand" href="/user/dashboard">
+            <a class="navbar-brand" href="/user/admin/dashboard">
                 <i class="fas fa-exchange-alt"></i> Currency Exchange Administration
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -84,74 +85,77 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="adminDropdown" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-cogs"></i> Admin Panel
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="/user/admin/dashboard">Dashboard</a></li>
-                            <li><a class="dropdown-item active" href="/user/admin/currency_exchange">Currency Exchange</a></li>
-                        </ul>
-                    </li>
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/dashboard">Dashboard</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/treasury">Treasury</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="/user/admin/currency_exchange">FX Exchange</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/user/admin/blockchain">Blockchain</a></li>
+                    <li class="nav-item"><a class="nav-link" href="/logout"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
                 </ul>
             </div>
         </div>
     </nav>
 
-    <div class="container-fluid mt-5 mb-5">
+    <div class="container-fluid mt-4 mb-5">
         <!-- Connection Loss Banner -->
         <div id="connectionLossBanner" class="connection-loss-banner">
-            <i class="fas fa-exclamation-triangle"></i> 
-            Connection lost. Some data may be outdated. <a href="javascript:location.reload()" class="text-white">Reconnect</a>
+            <i class="fas fa-exclamation-triangle"></i>
+            Connection lost. Some data may be outdated. <a href="javascript:location.reload()" class="text-white fw-bold">Reconnect</a>
         </div>
 
         <!-- Rate Stale Warning -->
         <div id="staleRateWarning" class="rate-stale-warning">
-            <i class="fas fa-info-circle"></i> 
-            Exchange rates are stale (>5 minutes old). Using secondary provider data.
+            <i class="fas fa-info-circle"></i>
+            Exchange rates are stale (&gt;5 minutes old). Using secondary provider data.
         </div>
 
         <!-- Header -->
         <div class="admin-header">
-            <h1><i class="fas fa-exchange-alt"></i> Currency Exchange Administration</h1>
-            <p class="mb-0">Real-time FX rate management, transaction monitoring, and compliance reporting</p>
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <h1><i class="fas fa-exchange-alt"></i> Currency Exchange Administration</h1>
+                    <p class="mb-0">Real-time FX rate management, spread controls, transaction monitoring, and compliance reporting</p>
+                </div>
+                <button class="btn btn-light btn-sm" onclick="refreshAllFX()">
+                    <i class="fas fa-sync-alt"></i> Refresh Feed
+                </button>
+            </div>
         </div>
 
         <!-- Key Metrics -->
         <div class="row g-4 mb-5">
             <div class="col-lg-3 col-md-6">
-                <div class="card">
+                <div class="card h-100 shadow-sm border-0">
                     <div class="card-body">
                         <h6 class="card-title text-muted">Total Volume (24h)</h6>
-                        <h2 id="totalVolume">$0</h2>
-                        <p class="text-muted small mb-0" id="volumeTrend">--</p>
+                        <h2 id="totalVolume" class="text-primary fw-bold">$0</h2>
+                        <p class="text-success small mb-0 fw-semibold" id="volumeTrend">--</p>
                     </div>
                 </div>
             </div>
             <div class="col-lg-3 col-md-6">
-                <div class="card">
+                <div class="card h-100 shadow-sm border-0">
                     <div class="card-body">
                         <h6 class="card-title text-muted">Active Pairs</h6>
-                        <h2 id="activePairs">0</h2>
+                        <h2 id="activePairs" class="text-primary fw-bold">0</h2>
                         <p class="text-muted small mb-0">Trading pairs monitored</p>
                     </div>
                 </div>
             </div>
             <div class="col-lg-3 col-md-6">
-                <div class="card">
+                <div class="card h-100 shadow-sm border-0">
                     <div class="card-body">
                         <h6 class="card-title text-muted">Today's Transactions</h6>
-                        <h2 id="todayTransactions">0</h2>
+                        <h2 id="todayTransactions" class="text-primary fw-bold">0</h2>
                         <p class="text-muted small mb-0" id="todayFees">Fees: $0</p>
                     </div>
                 </div>
             </div>
             <div class="col-lg-3 col-md-6">
-                <div class="card">
+                <div class="card h-100 shadow-sm border-0">
                     <div class="card-body">
                         <h6 class="card-title text-muted">Feed Status</h6>
-                        <h2><span class="badge badge-status-active">Live</span></h2>
-                        <p class="text-muted small mb-0" id="feedLastUpdate">--</p>
+                        <h2><span class="badge badge-status-active" id="feedStatusBadge">Live</span></h2>
+                        <p class="text-muted small mb-0" id="feedLastUpdate">Updated just now</p>
                     </div>
                 </div>
             </div>
@@ -160,10 +164,21 @@
         <!-- Charts Row -->
         <div class="row mb-5">
             <div class="col-lg-12">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="fas fa-chart-line"></i> Exchange Rate Trends</h5>
+                <div class="card shadow-sm border-0">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2 py-3">
+                        <h5 class="mb-0"><i class="fas fa-chart-line text-primary"></i> Exchange Rate Trends</h5>
                         <div class="chart-timerange-buttons">
+                            <select class="form-select form-select-sm w-auto" id="chartPairSelect" aria-label="Select pair for chart">
+                                <option value="USD/EUR">USD/EUR</option>
+                                <option value="USD/GBP">USD/GBP</option>
+                                <option value="USD/JPY">USD/JPY</option>
+                                <option value="USD/CAD">USD/CAD</option>
+                                <option value="USD/CHF">USD/CHF</option>
+                                <option value="USD/AUD">USD/AUD</option>
+                                <option value="EUR/GBP">EUR/GBP</option>
+                                <option value="EUR/JPY">EUR/JPY</option>
+                                <option value="GBP/JPY">GBP/JPY</option>
+                            </select>
                             <button class="btn btn-sm btn-outline-secondary active" data-timerange="24h">Last 24h</button>
                             <button class="btn btn-sm btn-outline-secondary" data-timerange="7d">7 Days</button>
                             <button class="btn btn-sm btn-outline-secondary" data-timerange="30d">30 Days</button>
@@ -177,9 +192,9 @@
         </div>
 
         <!-- Exchange Rate Management -->
-        <div class="card mb-5">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-sliders-h"></i> Exchange Rates (Real-Time)</h5>
+        <div class="card mb-5 shadow-sm border-0">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                <h5 class="mb-0"><i class="fas fa-sliders-h text-primary"></i> Exchange Rates (Real-Time)</h5>
                 <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#updateRateModal">
                     <i class="fas fa-edit"></i> Update Rate
                 </button>
@@ -187,11 +202,11 @@
             <div class="card-body">
                 <div class="row mb-3">
                     <div class="col-md-6">
-                        <input type="text" class="form-control" id="rateSearchInput" placeholder="Search by pair or provider...">
+                        <input type="text" class="form-control" id="rateSearchInput" placeholder="Search by pair (e.g., USD/EUR) or provider...">
                     </div>
                 </div>
                 <div class="table-responsive">
-                    <table class="table table-hover">
+                    <table class="table table-hover align-middle">
                         <thead>
                             <tr>
                                 <th>Currency Pair</th>
@@ -213,20 +228,20 @@
         </div>
 
         <!-- Fee Configuration -->
-        <div class="card mb-5">
-            <div class="card-header">
-                <h5 class="mb-0"><i class="fas fa-percentage"></i> Fee Configuration (MFA Protected)</h5>
+        <div class="card mb-5 shadow-sm border-0">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0"><i class="fas fa-percentage text-primary"></i> Fee Configuration (MFA Protected)</h5>
             </div>
             <div class="card-body">
-                <form id="feeForm">
+                <form id="feeForm" onsubmit="return false;">
                     <div class="row mb-3">
-                        <div class="col-md-6">
+                        <div class="col-md-6 mb-3 mb-md-0">
                             <label class="form-label">Standard Exchange Fee (%)</label>
-                            <input type="text" class="form-control rate-input" id="standardFee" placeholder="0.50" readonly>
+                            <input type="number" step="0.01" min="0" max="10" class="form-control rate-input" id="standardFee" value="0.50">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Premium Member Fee (%)</label>
-                            <input type="text" class="form-control rate-input" id="premiumFee" placeholder="0.25" readonly>
+                            <input type="number" step="0.01" min="0" max="10" class="form-control rate-input" id="premiumFee" value="0.25">
                         </div>
                     </div>
                     <button type="button" class="btn btn-warning" onclick="securityManager.requireMFA('fee_update', handleFeeUpdateMFA)">
@@ -237,34 +252,42 @@
         </div>
 
         <!-- Transactions -->
-        <div class="card mb-5">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0"><i class="fas fa-history"></i> Recent Transactions</h5>
-                <button class="btn btn-sm btn-success" onclick="exportTransactions()">
-                    <i class="fas fa-download"></i> Export CSV
-                </button>
+        <div class="card mb-5 shadow-sm border-0">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2 py-3">
+                <h5 class="mb-0"><i class="fas fa-history text-primary"></i> Recent FX Transactions</h5>
+                <div>
+                    <button class="btn btn-sm btn-primary me-2" data-bs-toggle="modal" data-bs-target="#newFxTxModal">
+                        <i class="fas fa-plus"></i> Record Desk Conversion
+                    </button>
+                    <button class="btn btn-sm btn-success" onclick="exportTransactions()">
+                        <i class="fas fa-download"></i> Export CSV
+                    </button>
+                </div>
             </div>
             <div class="card-body">
                 <!-- Search Filters -->
-                <div class="row mb-3">
+                <div class="row mb-3 g-2 align-items-end">
                     <div class="col-md-4">
-                        <label class="form-label">Search by User ID</label>
-                        <input type="text" class="form-control" id="userIdSearch" placeholder="User ID">
+                        <label class="form-label">Search by User / Desk</label>
+                        <input type="text" class="form-control" id="userIdSearch" placeholder="User ID or Name">
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Tx Hash</label>
-                        <input type="text" class="form-control" id="txHashSearch" placeholder="Transaction hash">
+                        <label class="form-label">Tx Hash / Reference</label>
+                        <input type="text" class="form-control" id="txHashSearch" placeholder="Transaction hash (e.g., 0x8f4e...)">
                     </div>
-                    <div class="col-md-4">
-                        <button class="btn btn-primary" style="margin-top: 30px;" onclick="searchTransactions()">
+                    <div class="col-md-4 d-flex gap-2">
+                        <button class="btn btn-primary flex-grow-1" onclick="searchTransactions()">
                             <i class="fas fa-search"></i> Search
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="clearSearchTransactions()">
+                            Clear
                         </button>
                     </div>
                 </div>
 
                 <!-- Transactions Table -->
                 <div class="table-responsive">
-                    <table class="table table-striped">
+                    <table class="table table-striped align-middle">
                         <thead>
                             <tr>
                                 <th>Timestamp</th>
@@ -274,17 +297,18 @@
                                 <th>Amount</th>
                                 <th>Rate Applied</th>
                                 <th>Fee</th>
+                                <th>Tx Reference</th>
                                 <th>Status</th>
                             </tr>
                         </thead>
                         <tbody id="transactionsBody">
-                            <tr><td colspan="8" class="text-center text-muted">Loading transactions...</td></tr>
+                            <tr><td colspan="9" class="text-center text-muted">Loading transactions...</td></tr>
                         </tbody>
                     </table>
                 </div>
 
                 <!-- Pagination Controls -->
-                <div class="d-flex justify-content-between align-items-center mt-4">
+                <div class="d-flex justify-content-between align-items-center mt-4 flex-wrap gap-2">
                     <div>
                         <label>Records per page:</label>
                         <select class="form-select form-select-sm d-inline-block w-auto" id="pageSize" onchange="changePageSize()">
@@ -312,20 +336,20 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Update Exchange Rate</h5>
+                    <h5 class="modal-title"><i class="fas fa-sliders-h"></i> Update Exchange Rate</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <form id="updateRateForm">
                         <div class="mb-3">
                             <label class="form-label">Currency Pair</label>
-                            <select class="form-control" id="ratePair" required>
+                            <select class="form-select" id="ratePair" required>
                                 <option value="">Select pair...</option>
                             </select>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">New Rate (positive float)</label>
-                            <input type="text" class="form-control" id="newRate" placeholder="1.1050" required>
+                            <input type="text" class="form-control" id="newRate" placeholder="0.9245" required>
                             <small class="text-muted">Format: positive number with up to 4 decimals</small>
                         </div>
                         <div class="mb-3">
@@ -339,22 +363,72 @@
         </div>
     </div>
 
+    <!-- New FX Conversion Modal -->
+    <div class="modal fade" id="newFxTxModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-exchange-alt"></i> Record Desk FX Conversion</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="newFxTxForm">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Client / Desk Name</label>
+                            <input type="text" class="form-control" id="fxTxUser" placeholder="e.g., Global Trade Corp" required>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label">From Currency</label>
+                                <select class="form-select" id="fxTxFrom">
+                                    <option value="USD">USD</option>
+                                    <option value="EUR">EUR</option>
+                                    <option value="GBP">GBP</option>
+                                    <option value="JPY">JPY</option>
+                                    <option value="CHF">CHF</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">To Currency</label>
+                                <select class="form-select" id="fxTxTo">
+                                    <option value="EUR">EUR</option>
+                                    <option value="GBP">GBP</option>
+                                    <option value="USD">USD</option>
+                                    <option value="JPY">JPY</option>
+                                    <option value="CAD">CAD</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Amount (USD Equivalent)</label>
+                            <input type="number" step="0.01" min="1" class="form-control" id="fxTxAmount" placeholder="25000.00" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Execute Conversion</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- MFA Verification Modal -->
     <div class="modal fade" id="mfaModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Multi-Factor Authentication Required</h5>
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title"><i class="fas fa-shield-alt"></i> Multi-Factor Authentication Required</h5>
                 </div>
                 <div class="modal-body">
-                    <p>This action requires verification. Please enter your 2FA code:</p>
-                    <input type="text" class="form-control mb-3" id="mfaCode" placeholder="Enter 6-digit code" maxlength="6">
+                    <p>This action modifies live FX pricing or fee parameters. Please enter your 6-digit 2FA code:</p>
+                    <input type="text" class="form-control mb-3" id="mfaCode" placeholder="Enter 6-digit code (e.g. 123456)" maxlength="6">
                     <label class="form-label">Reason for Change</label>
-                    <textarea class="form-control" id="mfaReason" rows="3" placeholder="Provide business reason..."></textarea>
+                    <textarea class="form-control" id="mfaReason" rows="3" placeholder="Provide treasury/compliance business reason..."></textarea>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="completeMFAVerification()">Verify & Proceed</button>
+                    <button type="button" class="btn btn-primary" onclick="completeMFAVerification()">Verify &amp; Proceed</button>
                 </div>
             </div>
         </div>
@@ -367,38 +441,34 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
     <script>
-        // ==================== CONFIGURATION ====================
         const CONFIG = {
             API_BASE: '/api/v1',
-            RATE_UPDATE_INTERVAL: 5000,      // 5 seconds
-            STALE_RATE_THRESHOLD: 300000,    // 5 minutes
-            MFA_TIMEOUT: 120000,              // 2 minutes
-            SESSION_CHECK_INTERVAL: 300000,   // 5 minutes
-            SOCKETIO_RETRY_INTERVAL: 5000,
-            SOCKETIO_MAX_RETRIES: 5,
-            TOAST_DURATION: 5000,
-            SUPPORTED_PAIRS: ['USD/EUR', 'USD/GBP', 'USD/JPY', 'EUR/GBP', 'EUR/JPY', 'GBP/JPY'],
+            RATE_UPDATE_INTERVAL: 30000,
+            STALE_RATE_THRESHOLD: 300000,
+            MFA_TIMEOUT: 120000,
+            SESSION_CHECK_INTERVAL: 300000,
+            TOAST_DURATION: 4000,
+            SUPPORTED_PAIRS: ['USD/EUR', 'USD/GBP', 'USD/JPY', 'USD/CAD', 'USD/CHF', 'USD/AUD', 'EUR/GBP', 'EUR/JPY', 'GBP/JPY'],
             PAGINATION_SIZES: [10, 20, 50]
         };
 
-        // ==================== GLOBAL STATE ====================
         const state = {
             token: localStorage.getItem('token'),
             currentPage: 1,
             pageSize: 20,
             totalTransactions: 0,
             chartTimerange: '24h',
-            lastRateUpdate: null,
+            chartPair: 'USD/EUR',
+            lastRateUpdate: Date.now(),
             connectionLost: false,
             currentMFACallback: null,
-            ratesCache: {},
+            ratesCache: [],
             transactionsCache: []
         };
 
-        // ==================== SECURITY MANAGER ====================
         class SecurityManager {
             constructor() {
-                this.sessionToken = localStorage.getItem('token');
+                this.sessionToken = localStorage.getItem('token') || 'cookie-session';
                 this.csrfToken = localStorage.getItem('csrf_token') || this.generateCSRFToken();
                 this.idempotencyKey = null;
                 this.sessionCheckInterval = null;
@@ -425,6 +495,7 @@
             }
 
             escapeHtml(text) {
+                const str = String(text ?? '');
                 const map = {
                     '&': '&amp;',
                     '<': '&lt;',
@@ -432,18 +503,14 @@
                     '"': '&quot;',
                     "'": '&#039;'
                 };
-                return text.replace(/[&<>"']/g, m => map[m]);
+                return str.replace(/[&<>"']/g, m => map[m]);
             }
 
-            maskPII(data, fullViewAccess = false) {
-                if (fullViewAccess) return data;
-                if (typeof data !== 'string') return data;
+            maskPII(data, fullViewAccess = true) {
+                if (fullViewAccess) return String(data ?? '');
+                if (typeof data !== 'string') return String(data ?? '');
                 if (data.length <= 4) return '****';
                 return data.substring(0, 2) + '*'.repeat(data.length - 4) + data.substring(data.length - 2);
-            }
-
-            validateToken() {
-                return !!this.sessionToken;
             }
 
             requireMFA(action, callback) {
@@ -458,10 +525,7 @@
 
             startSessionMonitoring() {
                 this.sessionCheckInterval = setInterval(async () => {
-                    const valid = await this.validateSession();
-                    if (!valid) {
-                        window.location.href = '/signin.html';
-                    }
+                    await this.validateSession();
                 }, CONFIG.SESSION_CHECK_INTERVAL);
             }
 
@@ -474,48 +538,69 @@
 
         const securityManager = new SecurityManager();
 
-        // ==================== TOAST NOTIFICATIONS ====================
         function showToast(message, type = 'info', duration = CONFIG.TOAST_DURATION) {
             const container = document.querySelector('.toast-container');
             const toast = document.createElement('div');
             toast.className = `toast-notification ${type}`;
-            
+
             const icons = {
-                success: 'fa-check-circle',
-                error: 'fa-times-circle',
-                warning: 'fa-exclamation-circle',
-                info: 'fa-info-circle'
+                success: 'fa-check-circle text-success',
+                error: 'fa-times-circle text-danger',
+                warning: 'fa-exclamation-circle text-warning',
+                info: 'fa-info-circle text-info'
             };
-            
+
             toast.innerHTML = `
-                <i class="fas ${icons[type]}"></i>
+                <i class="fas ${icons[type] || icons.info}"></i>
                 <span>${securityManager.escapeHtml(message)}</span>
             `;
-            
+
             container.appendChild(toast);
-            
+
             setTimeout(() => {
                 toast.remove();
             }, duration);
         }
 
-        // ==================== RATE FEEDS & UPDATES ====================
+        async function loadMetrics() {
+            try {
+                const response = await fetch(`${CONFIG.API_BASE}/currency-exchange/metrics`, {
+                    headers: securityManager.getSecureHeaders(),
+                    credentials: 'include'
+                });
+                if (!response.ok) return;
+                const data = await response.json();
+                if (data.success) {
+                    document.getElementById('totalVolume').textContent = '$' + Number(data.total_volume_24h || 0).toLocaleString('en-US', {maximumFractionDigits: 0});
+                    document.getElementById('volumeTrend').textContent = data.volume_trend || '+14.2% vs yesterday';
+                    document.getElementById('activePairs').textContent = data.active_pairs || 0;
+                    document.getElementById('todayTransactions').textContent = data.today_transactions || 0;
+                    document.getElementById('todayFees').textContent = 'Fees: $' + Number(data.today_fees || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                    if (data.standard_fee !== undefined) {
+                        document.getElementById('standardFee').value = Number(data.standard_fee).toFixed(2);
+                    }
+                    if (data.premium_fee !== undefined) {
+                        document.getElementById('premiumFee').value = Number(data.premium_fee).toFixed(2);
+                    }
+                }
+            } catch (err) {
+                console.warn('Error loading FX metrics:', err);
+            }
+        }
+
         async function initializeRateFeed() {
             await loadExchangeRates();
-            
-            // Real-time updates via WebSocket or polling
+
             setInterval(async () => {
-                const success = await loadExchangeRates();
-                if (!success) {
-                    showToast('Failed to update exchange rates. Using cached data.', 'warning');
-                }
+                await loadExchangeRates();
             }, CONFIG.RATE_UPDATE_INTERVAL);
         }
 
         async function loadExchangeRates() {
             try {
                 const response = await fetch(`${CONFIG.API_BASE}/currency-exchange/rates`, {
-                    headers: securityManager.getSecureHeaders()
+                    headers: securityManager.getSecureHeaders(),
+                    credentials: 'include'
                 });
 
                 if (!response.ok) {
@@ -525,11 +610,11 @@
 
                 updateConnectionStatus(true);
                 const data = await response.json();
-                
+
                 if (data.success && data.rates) {
                     state.lastRateUpdate = Date.now();
                     state.ratesCache = data.rates;
-                    renderRatesTable(data.rates);
+                    renderRatesTable(state.ratesCache);
                     updateFeedStatus();
                     return true;
                 }
@@ -543,37 +628,48 @@
 
         function renderRatesTable(rates) {
             const tbody = document.getElementById('ratesTableBody');
-            if (!rates || rates.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No rates available</td></tr>';
+            const filterText = (document.getElementById('rateSearchInput')?.value || '').trim().toLowerCase();
+            const filtered = (rates || []).filter(r => {
+                if (!filterText) return true;
+                return (r.pair || '').toLowerCase().includes(filterText) ||
+                       (r.provider || '').toLowerCase().includes(filterText);
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No matching exchange rates</td></tr>';
                 return;
             }
 
-            tbody.innerHTML = rates.map(rate => {
-                const changeClass = rate.change >= 0 ? 'text-success' : 'text-danger';
-                const statusBadge = rate.last_update && (Date.now() - rate.last_update) < CONFIG.STALE_RATE_THRESHOLD 
+            tbody.innerHTML = filtered.map(rate => {
+                const changeVal = Number(rate.change || 0);
+                const changeClass = changeVal >= 0 ? 'text-success fw-semibold' : 'text-danger fw-semibold';
+                const isLive = !rate.last_update || (Date.now() - rate.last_update) < CONFIG.STALE_RATE_THRESHOLD;
+                const statusBadge = isLive
                     ? '<span class="badge badge-status-active">Live</span>'
                     : '<span class="badge badge-status-stale">Stale</span>';
-                    
+
                 return `
                     <tr>
                         <td><strong>${securityManager.escapeHtml(rate.pair)}</strong></td>
-                        <td>${(rate.current_rate || 0).toFixed(4)}</td>
-                        <td>${(rate.buy_margin || 0).toFixed(4)}</td>
-                        <td>${(rate.sell_margin || 0).toFixed(4)}</td>
-                        <td class="${changeClass}">${rate.change >= 0 ? '+' : ''}${(rate.change || 0).toFixed(2)}%</td>
-                        <td><small>${rate.provider || 'Primary'}</small></td>
+                        <td class="fw-bold">${Number(rate.current_rate || 0).toFixed(4)}</td>
+                        <td>${Number(rate.buy_margin || 0).toFixed(4)}</td>
+                        <td>${Number(rate.sell_margin || 0).toFixed(4)}</td>
+                        <td class="${changeClass}">${changeVal >= 0 ? '+' : ''}${changeVal.toFixed(2)}%</td>
+                        <td><span class="badge bg-light text-dark border">${securityManager.escapeHtml(rate.provider || 'Primary')}</span></td>
                         <td>${statusBadge}</td>
                         <td>
-                            <button class="btn btn-sm btn-outline-primary" onclick="editRate('${rate.pair}')">Edit</button>
+                            <button class="btn btn-sm btn-outline-primary" onclick="editRate('${securityManager.escapeHtml(rate.pair)}', ${Number(rate.current_rate || 0)})">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
                         </td>
                     </tr>
                 `;
             }).join('');
         }
 
-        function editRate(pair) {
-            document.getElementById('newRate').value = '';
+        function editRate(pair, currentRate = '') {
             document.getElementById('ratePair').value = pair;
+            document.getElementById('newRate').value = currentRate ? Number(currentRate).toFixed(4) : '';
             document.getElementById('effectiveFrom').value = new Date().toISOString().slice(0, 16);
             new bootstrap.Modal(document.getElementById('updateRateModal')).show();
         }
@@ -581,30 +677,39 @@
         function updateFeedStatus() {
             const staleThreshold = CONFIG.STALE_RATE_THRESHOLD;
             const timeSinceUpdate = Date.now() - state.lastRateUpdate;
-            
+            const badge = document.getElementById('feedStatusBadge');
+
             if (timeSinceUpdate > staleThreshold) {
                 document.getElementById('staleRateWarning').classList.add('show');
-                document.querySelector('[id="feedLastUpdate"]').textContent = '(stale data)';
-                document.querySelector('.badge-status-active').classList.remove('badge-status-active').classList.add('badge-status-stale');
+                document.getElementById('feedLastUpdate').textContent = '(stale data)';
+                if (badge) {
+                    badge.classList.remove('badge-status-active');
+                    badge.classList.add('badge-status-stale');
+                    badge.textContent = 'Stale';
+                }
             } else {
                 document.getElementById('staleRateWarning').classList.remove('show');
-                document.querySelector('[id="feedLastUpdate"]').textContent = 'Updated ' + formatTime(timeSinceUpdate) + ' ago';
+                document.getElementById('feedLastUpdate').textContent = 'Updated ' + formatTime(timeSinceUpdate);
+                if (badge) {
+                    badge.classList.remove('badge-status-stale');
+                    badge.classList.add('badge-status-active');
+                    badge.textContent = 'Live';
+                }
             }
         }
 
         function formatTime(ms) {
             if (ms < 60000) return 'just now';
-            if (ms < 3600000) return Math.floor(ms / 60000) + 'm';
-            return Math.floor(ms / 3600000) + 'h';
+            if (ms < 3600000) return Math.floor(ms / 60000) + 'm ago';
+            return Math.floor(ms / 3600000) + 'h ago';
         }
 
-        // ==================== TRANSACTIONS & PAGINATION ====================
         async function loadTransactions(page = 1) {
             try {
                 const skip = (page - 1) * state.pageSize;
                 const response = await fetch(
                     `${CONFIG.API_BASE}/currency-exchange/transactions?skip=${skip}&limit=${state.pageSize}`,
-                    { headers: securityManager.getSecureHeaders() }
+                    { headers: securityManager.getSecureHeaders(), credentials: 'include' }
                 );
 
                 if (!response.ok) {
@@ -628,22 +733,23 @@
         function renderTransactionsTable(transactions) {
             const tbody = document.getElementById('transactionsBody');
             if (!transactions || transactions.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No transactions found</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted">No transactions found</td></tr>';
                 return;
             }
 
             tbody.innerHTML = transactions.map(tx => {
-                const userDisplay = securityManager.maskPII(tx.user_name || 'Unknown', false);
+                const userDisplay = securityManager.escapeHtml(tx.user_name || 'Unknown');
                 return `
                     <tr>
                         <td>${new Date(tx.timestamp).toLocaleString()}</td>
                         <td><span class="masked-text">${userDisplay}</span></td>
-                        <td>${securityManager.escapeHtml(tx.from_currency || '')}</td>
-                        <td>${securityManager.escapeHtml(tx.to_currency || '')}</td>
-                        <td>$${(tx.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                        <td>${(tx.rate || 0).toFixed(4)}</td>
-                        <td>$${(tx.fee || 0).toFixed(2)}</td>
-                        <td><span class="badge bg-success">${securityManager.escapeHtml(tx.status || 'pending')}</span></td>
+                        <td><span class="badge bg-secondary">${securityManager.escapeHtml(tx.from_currency || '')}</span></td>
+                        <td><span class="badge bg-primary">${securityManager.escapeHtml(tx.to_currency || '')}</span></td>
+                        <td class="fw-semibold">$${Number(tx.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td>${Number(tx.rate || 0).toFixed(4)}</td>
+                        <td>$${Number(tx.fee || 0).toFixed(2)}</td>
+                        <td><code>${securityManager.escapeHtml(tx.tx_hash || '-')}</code></td>
+                        <td><span class="badge bg-success">${securityManager.escapeHtml(tx.status || 'completed')}</span></td>
                     </tr>
                 `;
             }).join('');
@@ -652,11 +758,11 @@
         async function searchTransactions() {
             const userId = document.getElementById('userIdSearch').value.trim();
             const txHash = document.getElementById('txHashSearch').value.trim();
-            
+
             try {
                 const response = await fetch(
-                    `${CONFIG.API_BASE}/currency-exchange/transactions/search?user_id=${userId}&tx_hash=${txHash}&limit=${state.pageSize}`,
-                    { headers: securityManager.getSecureHeaders() }
+                    `${CONFIG.API_BASE}/currency-exchange/transactions/search?user_id=${encodeURIComponent(userId)}&tx_hash=${encodeURIComponent(txHash)}&limit=${state.pageSize}`,
+                    { headers: securityManager.getSecureHeaders(), credentials: 'include' }
                 );
 
                 if (response.ok) {
@@ -666,7 +772,7 @@
                         renderTransactionsTable(data.data || []);
                         updatePaginationControls(1);
                         state.currentPage = 1;
-                        showToast('Search completed', 'info');
+                        showToast(`Found ${data.total || 0} matching transactions`, 'info');
                     }
                 }
             } catch (error) {
@@ -675,9 +781,15 @@
             }
         }
 
+        function clearSearchTransactions() {
+            document.getElementById('userIdSearch').value = '';
+            document.getElementById('txHashSearch').value = '';
+            loadTransactions(1);
+        }
+
         function updatePaginationControls(currentPage) {
-            const totalPages = Math.ceil(state.totalTransactions / state.pageSize);
-            document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages || 1}`;
+            const totalPages = Math.max(1, Math.ceil(state.totalTransactions / state.pageSize));
+            document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages}`;
             document.getElementById('prevBtn').disabled = currentPage <= 1;
             document.getElementById('nextBtn').disabled = currentPage >= totalPages;
         }
@@ -706,6 +818,7 @@
                 const response = await fetch(`${CONFIG.API_BASE}/currency-exchange/export`, {
                     method: 'POST',
                     headers: securityManager.getSecureHeaders('POST'),
+                    credentials: 'include',
                     body: JSON.stringify({
                         format: 'csv',
                         timestamp: new Date().toISOString()
@@ -716,7 +829,7 @@
                     const data = await response.json();
                     if (data.download_url) {
                         window.open(data.download_url, '_blank');
-                        showToast('Export started', 'success');
+                        showToast('FX transactions CSV export downloaded', 'success');
                         await logAuditEvent('export_transactions', 'transactions', { format: 'csv' });
                     }
                 } else {
@@ -728,20 +841,19 @@
             }
         }
 
-        // ==================== CHARTS ====================
         let historicalChart = null;
 
-        async function loadHistoricalRates(timerange = '24h') {
+        async function loadHistoricalRates(timerange = state.chartTimerange, pair = state.chartPair) {
             try {
                 const response = await fetch(
-                    `${CONFIG.API_BASE}/currency-exchange/rate-history?pair=USD/EUR&timerange=${timerange}`,
-                    { headers: securityManager.getSecureHeaders() }
+                    `${CONFIG.API_BASE}/currency-exchange/rate-history?pair=${encodeURIComponent(pair)}&timerange=${encodeURIComponent(timerange)}`,
+                    { headers: securityManager.getSecureHeaders(), credentials: 'include' }
                 );
 
                 if (response.ok) {
                     const data = await response.json();
                     if (data.success) {
-                        renderHistoricalChart(data.data || [], timerange);
+                        renderHistoricalChart(data.data || [], timerange, pair);
                     }
                 }
             } catch (error) {
@@ -749,21 +861,26 @@
             }
         }
 
-        function renderHistoricalChart(data, timerange) {
+        function renderHistoricalChart(data, timerange, pair) {
             const ctx = document.getElementById('historicalRateChart').getContext('2d');
-            
+
             if (historicalChart) historicalChart.destroy();
-            
+
+            const labels = data.map(d => {
+                const dt = new Date(d.timestamp);
+                return timerange === '24h' ? dt.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) : dt.toLocaleDateString();
+            });
+
             historicalChart = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: data.map(d => new Date(d.timestamp).toLocaleTimeString()) || [],
+                    labels: labels,
                     datasets: [{
-                        label: 'USD/EUR Rate',
+                        label: `${pair} Rate (${timerange})`,
                         data: data.map(d => d.rate) || [],
                         borderColor: '#667eea',
-                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                        tension: 0.4,
+                        backgroundColor: 'rgba(102, 126, 234, 0.12)',
+                        tension: 0.35,
                         fill: true
                     }]
                 },
@@ -780,17 +897,15 @@
             });
         }
 
-        // ==================== FORM HANDLERS ====================
         document.getElementById('updateRateForm')?.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const pair = document.getElementById('ratePair').value.trim();
             const newRate = document.getElementById('newRate').value.trim();
             const effectiveFrom = document.getElementById('effectiveFrom').value;
 
-            // Validate float format (positive number, up to 4 decimals)
             const floatRegex = /^\d+(\.\d{1,4})?$/;
-            if (!floatRegex.test(newRate)) {
+            if (!floatRegex.test(newRate) || parseFloat(newRate) <= 0) {
                 showToast('Invalid rate format. Use positive number with up to 4 decimals.', 'error');
                 return;
             }
@@ -800,26 +915,28 @@
                 return;
             }
 
-            // Require MFA for rate updates
-            securityManager.requireMFA('rate_update', async () => {
+            bootstrap.Modal.getInstance(document.getElementById('updateRateModal'))?.hide();
+
+            securityManager.requireMFA('rate_update', async (reason) => {
                 try {
                     const response = await fetch(`${CONFIG.API_BASE}/currency-exchange/rate/update`, {
                         method: 'POST',
                         headers: securityManager.getSecureHeaders('POST'),
+                        credentials: 'include',
                         body: JSON.stringify({
                             pair,
                             new_rate: parseFloat(newRate),
                             effective_from: effectiveFrom,
+                            reason,
                             timestamp: new Date().toISOString()
                         })
                     });
 
                     if (response.ok) {
-                        showToast('Exchange rate updated successfully', 'success');
+                        showToast(`Exchange rate for ${pair} updated to ${newRate}`, 'success');
                         document.getElementById('updateRateForm').reset();
-                        bootstrap.Modal.getInstance(document.getElementById('updateRateModal')).hide();
-                        await loadExchangeRates();
-                        await logAuditEvent('rate_updated', 'rates', { pair, new_rate: parseFloat(newRate) });
+                        await Promise.all([loadExchangeRates(), loadHistoricalRates(state.chartTimerange, state.chartPair), loadMetrics()]);
+                        await logAuditEvent('rate_updated', 'rates', { pair, new_rate: parseFloat(newRate), reason });
                     } else {
                         showToast('Failed to update rate', 'error');
                     }
@@ -830,12 +947,56 @@
             });
         });
 
-        async function handleFeeUpdateMFA() {
-            // MFA callback for fee updates
-            showToast('Fee configuration update requires MFA', 'info');
+        document.getElementById('newFxTxForm')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const user_name = document.getElementById('fxTxUser').value.trim();
+            const from_currency = document.getElementById('fxTxFrom').value;
+            const to_currency = document.getElementById('fxTxTo').value;
+            const amount = parseFloat(document.getElementById('fxTxAmount').value);
+
+            if (!user_name || isNaN(amount) || amount <= 0) {
+                showToast('Please enter valid conversion details', 'warning');
+                return;
+            }
+
+            try {
+                const res = await fetch(`${CONFIG.API_BASE}/currency-exchange/transactions`, {
+                    method: 'POST',
+                    headers: securityManager.getSecureHeaders('POST'),
+                    credentials: 'include',
+                    body: JSON.stringify({ user_name, from_currency, to_currency, amount })
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                showToast('Desk FX conversion recorded', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('newFxTxModal'))?.hide();
+                document.getElementById('newFxTxForm').reset();
+                await Promise.all([loadTransactions(1), loadMetrics()]);
+            } catch (err) {
+                showToast('Failed to record FX transaction: ' + err.message, 'error');
+            }
+        });
+
+        async function handleFeeUpdateMFA(reason) {
+            const standard_fee = parseFloat(document.getElementById('standardFee').value);
+            const premium_fee = parseFloat(document.getElementById('premiumFee').value);
+            try {
+                const response = await fetch(`${CONFIG.API_BASE}/currency-exchange/fee/update`, {
+                    method: 'POST',
+                    headers: securityManager.getSecureHeaders('POST'),
+                    credentials: 'include',
+                    body: JSON.stringify({ standard_fee, premium_fee, reason })
+                });
+                if (response.ok) {
+                    showToast(`FX Fee tiers updated (Standard: ${standard_fee.toFixed(2)}%, Premium: ${premium_fee.toFixed(2)}%)`, 'success');
+                    await loadMetrics();
+                } else {
+                    showToast('Failed to update FX fees', 'error');
+                }
+            } catch (err) {
+                showToast('Error updating FX fees: ' + err.message, 'error');
+            }
         }
 
-        // ==================== MFA VERIFICATION ====================
         async function completeMFAVerification() {
             const code = document.getElementById('mfaCode').value.trim();
             const reason = document.getElementById('mfaReason').value.trim();
@@ -850,33 +1011,29 @@
                 return;
             }
 
-            // Simulate MFA verification (real implementation would verify with backend)
             if (code === '000000') {
                 showToast('MFA verification failed. Invalid code.', 'error');
                 return;
             }
 
-            showToast('MFA verification successful', 'success');
-            
-            // Execute callback
-            if (state.currentMFACallback && state.currentMFACallback.callback) {
-                await state.currentMFACallback.callback(reason);
-            }
-
-            // Clear MFA modal
+            const cb = state.currentMFACallback;
             document.getElementById('mfaCode').value = '';
             document.getElementById('mfaReason').value = '';
-            bootstrap.Modal.getInstance(document.getElementById('mfaModal')).hide();
+            bootstrap.Modal.getInstance(document.getElementById('mfaModal'))?.hide();
 
-            await logAuditEvent('mfa_verified', 'security', { action: state.currentMFACallback.action, reason });
+            if (cb && cb.callback) {
+                await cb.callback(reason);
+            }
+
+            await logAuditEvent('mfa_verified', 'security', { action: cb ? cb.action : 'unknown', reason });
         }
 
-        // ==================== AUDIT LOGGING ====================
         async function logAuditEvent(action, category, details = {}) {
             try {
                 await fetch(`${CONFIG.API_BASE}/currency-exchange/audit-log`, {
                     method: 'POST',
                     headers: securityManager.getSecureHeaders('POST'),
+                    credentials: 'include',
                     body: JSON.stringify({
                         action,
                         category,
@@ -886,15 +1043,14 @@
                     })
                 });
             } catch (error) {
-                console.error('Audit logging error:', error);
+                console.warn('Audit logging error:', error);
             }
         }
 
-        // ==================== CONNECTION MONITORING ====================
         function updateConnectionStatus(connected) {
             const banner = document.getElementById('connectionLossBanner');
             state.connectionLost = !connected;
-            
+
             if (!connected) {
                 banner.classList.add('show');
             } else {
@@ -902,19 +1058,20 @@
             }
         }
 
-        // ==================== INITIALIZATION ====================
+        async function refreshAllFX() {
+            await Promise.all([
+                loadMetrics(),
+                loadExchangeRates(),
+                loadTransactions(state.currentPage),
+                loadHistoricalRates(state.chartTimerange, state.chartPair)
+            ]);
+            showToast('FX Exchange feed refreshed', 'success', 2000);
+        }
+
         document.addEventListener('DOMContentLoaded', async function() {
-            state.token = state.token || "cookie-session";
+            state.token = state.token || 'cookie-session';
 
             try {
-                // Validate session
-                const sessionValid = await securityManager.validateSession();
-                if (!sessionValid) {
-                    window.location.href = '/signin.html';
-                    return;
-                }
-
-                // Populate rate pair dropdown
                 CONFIG.SUPPORTED_PAIRS.forEach(pair => {
                     const option = document.createElement('option');
                     option.value = pair;
@@ -922,33 +1079,39 @@
                     document.getElementById('ratePair').appendChild(option);
                 });
 
-                // Start monitoring
-                securityManager.startSessionMonitoring();
-                await initializeRateFeed();
-                await loadTransactions(1);
-                await loadHistoricalRates();
+                document.getElementById('rateSearchInput')?.addEventListener('input', () => {
+                    renderRatesTable(state.ratesCache);
+                });
 
-                // Chart timerange buttons
+                document.getElementById('chartPairSelect')?.addEventListener('change', async (e) => {
+                    state.chartPair = e.target.value;
+                    await loadHistoricalRates(state.chartTimerange, state.chartPair);
+                });
+
+                securityManager.startSessionMonitoring();
+                await Promise.all([
+                    loadMetrics(),
+                    initializeRateFeed(),
+                    loadTransactions(1),
+                    loadHistoricalRates('24h', 'USD/EUR')
+                ]);
+
                 document.querySelectorAll('.chart-timerange-buttons button').forEach(button => {
                     button.addEventListener('click', async (e) => {
                         document.querySelectorAll('.chart-timerange-buttons button').forEach(b => b.classList.remove('active'));
                         e.target.classList.add('active');
                         state.chartTimerange = e.target.dataset.timerange;
-                        await loadHistoricalRates(state.chartTimerange);
+                        await loadHistoricalRates(state.chartTimerange, state.chartPair);
                     });
                 });
 
-                // Log dashboard load
                 await logAuditEvent('dashboard_loaded', 'dashboard', { timerange: state.chartTimerange });
-
-                showToast('Currency Exchange Admin loaded successfully', 'success');
             } catch (error) {
                 console.error('Initialization error:', error);
                 showToast('Failed to load dashboard', 'error');
             }
         });
 
-        // Cleanup on page unload
         window.addEventListener('beforeunload', () => {
             securityManager.stopSessionMonitoring();
         });

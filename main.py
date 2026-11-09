@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from fastapi.responses import FileResponse, RedirectResponse
 
-from fastapi import Request, Depends, status, WebSocket, WebSocketDisconnect, Body
+from fastapi import Request, Depends, status, WebSocket, WebSocketDisconnect, Body, Query
 
 from sqlalchemy import text, select, func
 

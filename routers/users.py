@@ -192,11 +192,37 @@ async def update_users_profile(
     current_user: CurrentUserDep,
     db_session: SessionDep
 ):
-    """Update current user's profile."""
+    """Update current user's profile (including email and password if provided)."""
+    from auth_utils import get_password_hash
+    from models import AuditLog
+
     for field in ("full_name", "phone", "address", "country", "region"):
         if field in payload and payload[field] is not None and hasattr(current_user, field):
-            setattr(current_user, field, payload[field])
+            val = str(payload[field]).strip()
+            if val:
+                setattr(current_user, field, val)
+
+    if payload.get("email") and str(payload["email"]).strip():
+        new_email = str(payload["email"]).strip().lower()
+        if new_email != current_user.email:
+            existing = (await db_session.execute(select(DBUser).where(DBUser.email == new_email))).scalars().first()
+            if existing and existing.id != current_user.id:
+                raise HTTPException(status_code=400, detail="Email is already in use by another account")
+            current_user.email = new_email
+
+    if payload.get("password") and str(payload["password"]).strip():
+        pwd = str(payload["password"]).strip()
+        if len(pwd) < 8:
+            raise HTTPException(status_code=400, detail="Password must be at least 8 characters long")
+        current_user.hashed_password = get_password_hash(pwd)
+
     db_session.add(current_user)
+    db_session.add(AuditLog(
+        admin_id=current_user.id,
+        user_id=current_user.id,
+        action_type="PROFILE_UPDATED",
+        details=f"Updated profile settings for {current_user.email}"
+    ))
     await db_session.commit()
     await db_session.refresh(current_user)
     return {

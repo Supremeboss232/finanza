@@ -3859,52 +3859,7 @@ async def reporting_kyc_submissions(limit: int = Query(50, ge=1, le=100), skip: 
     """KYC submission reports"""
     return {"success": True, "data": [], "total": 0, "limit": limit, "skip": skip}
 
-# ==================== MONITORING DASHBOARD ====================
-@router.get("/api/v1/monitoring/chart-data")
-async def monitoring_chart_data(timeframe: str = Query("hourly"), db: Session = Depends(get_db)):
-    """System monitoring chart data"""
-    return {"success": True, "data": [], "timeframe": timeframe}
-
-@router.get("/api/v1/monitoring/services")
-async def monitoring_services(db: Session = Depends(get_db)):
-    """Service health status"""
-    return {
-        "success": True,
-        "services": [],
-        "healthy": 0,
-        "degraded": 0,
-        "down": 0
-    }
-
-@router.get("/api/v1/monitoring/database")
-async def monitoring_database(db: Session = Depends(get_db)):
-    """Database health metrics"""
-    return {
-        "success": True,
-        "status": "healthy",
-        "connections": 0,
-        "queries_per_sec": 0,
-        "response_time_ms": 0,
-        "disk_usage": 0
-    }
-
-@router.get("/api/v1/monitoring/alerts")
-async def monitoring_alerts(limit: int = Query(10, ge=1, le=100), db: Session = Depends(get_db)):
-    """Active alerts"""
-    return {"success": True, "data": [], "total": 0, "limit": limit}
-
-@router.get("/api/v1/monitoring/infrastructure")
-async def monitoring_infrastructure(db: Session = Depends(get_db)):
-    """Infrastructure metrics"""
-    return {
-        "success": True,
-        "cpu_usage": 0,
-        "memory_usage": 0,
-        "disk_usage": 0,
-        "network_in": 0,
-        "network_out": 0,
-        "uptime_hours": 0
-    }
+# ==================== MONITORING DASHBOARD (DELEGATED TO routers/monitoring_api.py) ====================
 
 # ==================== BLOCKCHAIN DASHBOARD ====================
 @router.get("/api/v1/blockchain/dashboard")
@@ -4818,9 +4773,7 @@ async def bank_connect_test():
     return {"success": True, "status": "connected", "latency_ms": 29, "message": "Inter-bank gateway handshake verified"}
 
 
-@router.api_route("/api/v1/admin/bulk/{op_type}", methods=["GET", "POST"])
-async def admin_bulk_op_alias(op_type: str):
-    return {"success": True, "operation": op_type, "processed": 1, "failed": 0, "message": f"Bulk {op_type} completed"}
+# Bulk operations handled by main.py
 
 
 @router.api_route("/api/admin/kyc/{kyc_id}/approve", methods=["GET", "POST", "PUT"])
@@ -4895,14 +4848,4 @@ async def admin_intervention_safe_fallbacks():
     return {"success": True, "message": "Intervention action processed"}
 
 
-@router.api_route("/api/admin/advanced/admin/change-role/{admin_id}", methods=["GET", "POST", "PUT"])
-@router.api_route("/api/admin/advanced/admin/create", methods=["GET", "POST"])
-@router.api_route("/api/admin/advanced/admin/reset-password/{admin_id}", methods=["GET", "POST"])
-@router.api_route("/api/admin/advanced/admin/revoke/{admin_id}", methods=["GET", "POST", "DELETE"])
-@router.api_route("/api/admin/advanced/mfa/backup-codes/{admin_id}/regenerate", methods=["GET", "POST"])
-@router.api_route("/api/admin/advanced/mfa/disable/{admin_id}", methods=["GET", "POST", "DELETE"])
-@router.api_route("/api/admin/advanced/mfa/setup-complete", methods=["GET", "POST"])
-@router.api_route("/api/admin/advanced/mfa/setup-initiate", methods=["GET", "POST"])
-@router.api_route("/api/admin/advanced/mfa/verify-totp", methods=["GET", "POST"])
-async def admin_advanced_safe_fallbacks(admin_id: Optional[str] = None):
-    return {"success": True, "admin_id": admin_id, "backup_codes": ["FIN-8821-9012", "FIN-3341-7721"], "message": "Admin security operation completed"}
+# Advanced admin & MFA routes handled by routers/admin_advanced_operations.py

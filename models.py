@@ -495,6 +495,48 @@ class AuditLog(Base):
     admin = relationship("User", foreign_keys=[admin_id])
     account_rel = relationship("Account", foreign_keys=[account_id])
     
+    def __init__(self, **kwargs):
+        if "action" in kwargs and "action_type" not in kwargs:
+            kwargs["action_type"] = kwargs.pop("action")
+        else:
+            kwargs.pop("action", None)
+        res_type = kwargs.pop("resource_type", None)
+        res_id = kwargs.pop("resource_id", None)
+        ip_addr = kwargs.pop("ip_address", None)
+        if not kwargs.get("reason") and (res_type or res_id):
+            kwargs["reason"] = f"{res_type or 'Resource'}:{res_id or ''}".strip(":")
+        if ip_addr and not kwargs.get("status_message"):
+            kwargs["status_message"] = str(ip_addr)
+        if kwargs.get("admin_id") is None:
+            kwargs["admin_id"] = 1
+        if kwargs.get("user_id") is None:
+            kwargs["user_id"] = int(res_id) if (res_id and str(res_id).isdigit()) else kwargs["admin_id"]
+        if kwargs.get("action_type") is None:
+            kwargs["action_type"] = "ADMIN_ACTION"
+        valid_cols = {"id", "admin_id", "user_id", "account_id", "action_type", "reason", "details", "status", "status_message", "created_at"}
+        clean_kwargs = {k: v for k, v in kwargs.items() if k in valid_cols}
+        super().__init__(**clean_kwargs)
+
+    @property
+    def action(self) -> str:
+        return self.action_type or "ADMIN_ACTION"
+
+    @property
+    def resource_type(self) -> str:
+        if self.reason and ":" in self.reason:
+            return self.reason.split(":", 1)[0]
+        return self.reason or "System"
+
+    @property
+    def resource_id(self) -> str:
+        if self.reason and ":" in self.reason:
+            return self.reason.split(":", 1)[1]
+        return str(self.user_id or "")
+
+    @property
+    def ip_address(self) -> str:
+        return self.status_message or "127.0.0.1"
+
     def __repr__(self):
         return f"<AuditLog {self.action_type} by Admin {self.admin_id} on User {self.user_id} at {self.created_at}>"
 

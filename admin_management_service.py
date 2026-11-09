@@ -148,8 +148,7 @@ class AdminManagementService:
             if admin.id == revoked_by_admin_id:
                 return {"success": False, "error": "You cannot revoke your own admin access"}
 
-            admin.is_admin = False
-            admin.admin_role = "STANDARD"
+            admin.is_active = False
             admin.custom_permissions = None
 
             await db_session.flush()
@@ -354,3 +353,33 @@ class AdminManagementService:
         except Exception as e:
             logger.error(f"Error getting admin activity: {e}")
             return []
+
+
+    @staticmethod
+    async def restore_admin_access(
+        db_session: AsyncSession,
+        admin_id: int,
+        restored_by_admin_id: int
+    ) -> Dict:
+        """Restore / reactivate a revoked admin account."""
+        try:
+            admin = await db_session.get(DBUser, admin_id)
+            if not admin:
+                return {"success": False, "error": "Admin not found"}
+            admin.is_admin = True
+            admin.is_active = True
+            if not admin.admin_role or admin.admin_role == "STANDARD":
+                admin.admin_role = "ADMIN"
+            await db_session.flush()
+            audit = AuditLog(
+                action_type="ADMIN_RESTORED",
+                admin_id=restored_by_admin_id,
+                user_id=admin_id,
+                details=f"Admin access restored for {admin.email}"
+            )
+            db_session.add(audit)
+            await db_session.commit()
+            return {"success": True, "message": f"Admin access restored for {admin.email}"}
+        except Exception as e:
+            await db_session.rollback()
+            return {"success": False, "error": str(e)}

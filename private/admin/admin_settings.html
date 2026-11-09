@@ -759,8 +759,8 @@
                         // Update last backup time
                         document.getElementById('lastBackupTime').textContent = new Date().toLocaleString();
                         
-                        // Auto-download
-                        window.location.href = download_url;
+                        // Trigger clean SQL download
+                        downloadLatestBackup();
                     } else if (status === 'failed') {
                         clearInterval(poll);
                         document.getElementById('manualBackupBtn').disabled = false;
@@ -775,7 +775,7 @@
                 } catch (error) {
                     console.error('Backup status poll error:', error);
                 }
-            }, 5000); // Poll every 5 seconds
+            }, 1000); // Poll every 1 second
         }
 
         /**
@@ -948,7 +948,7 @@
          * Get authentication token from localStorage or session
          */
         function getAuthToken() {
-            return localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || '';
+            return localStorage.getItem('token') || localStorage.getItem('access_token') || sessionStorage.getItem('access_token') || '';
         }
 
         /**

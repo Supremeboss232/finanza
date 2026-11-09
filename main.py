@@ -4563,92 +4563,92 @@ async def search_users_v1_endpoint(
 
 
 @app.get("/api/v1/admin/bulk/{op_type}/preview")
-
 async def preview_bulk_admin_operation(
-
     op_type: str,
-
     db: SessionDep,
-
-    current_admin: User = Depends(get_current_admin_user)
-
+    current_admin: User = Depends(get_current_admin_user),
+    kyc_threshold_hours: int = Query(0),
+    inactive_days: int = Query(90),
+    hold_hours: int = Query(0),
 ):
-
     """Preview affected record counts for bulk operations."""
-
     from sqlalchemy import func
-
     count = 0
-
     if op_type == "bulk_kyc_approve":
-
         count = await db.scalar(select(func.count(models.KYCSubmission.id)).where(models.KYCSubmission.status == "pending")) or 0
-
+        if count == 0:
+            count = await db.scalar(select(func.count(models.User.id)).where(models.User.kyc_status == "pending")) or 0
     elif op_type == "bulk_suspend_inactive":
-
-        count = await db.scalar(select(func.count(models.User.id)).where(models.User.is_active == False)) or 0
-
+        count = await db.scalar(select(func.count(models.User.id)).where(models.User.is_admin == False, models.User.is_suspended == False, models.User.kyc_status != "approved")) or 0
     elif op_type == "release_held_transactions":
-
-        count = await db.scalar(select(func.count(models.Transaction.id)).where(models.Transaction.status == "pending")) or 0
-
+        count = await db.scalar(select(func.count(models.Transaction.id)).where(models.Transaction.status.in_(["pending", "blocked"]))) or 0
     elif op_type == "purge_failed_transactions":
-
-        count = await db.scalar(select(func.count(models.Transaction.id)).where(models.Transaction.status == "failed")) or 0
-
-    return {"success": True, "operation": op_type, "affected_count": count}
-
-
-
+        count = await db.scalar(select(func.count(models.Transaction.id)).where(models.Transaction.status.in_(["failed", "cancelled"]))) or 0
+    return {"success": True, "operation": op_type, "affected_count": count, "processed": count}
 
 
 @app.post("/api/v1/admin/bulk/{op_type}")
-
 async def execute_bulk_admin_operation(
-
     op_type: str,
-
     db: SessionDep,
-
     current_admin: User = Depends(get_current_admin_user),
-
     payload: Optional[dict] = Body(default=None)
-
 ):
-
-    """Execute batch administrative operations."""
-
+    """Execute batch administrative operations and log to AuditLog."""
     affected = 0
-
     if op_type == "bulk_kyc_approve":
-
         res = await db.execute(select(models.KYCSubmission).where(models.KYCSubmission.status == "pending"))
-
         subs = res.scalars().all()
-
         for s in subs:
-
-            await admin_service.approve_kyc(db, s.id, notes="Bulk KYC approval")
-
+            s.status = "approved"
+            s.reviewed_at = datetime.now(timezone.utc)
+            db.add(s)
+            u = await db.get(models.User, s.user_id)
+            if u:
+                u.kyc_status = "approved"
+                u.is_verified = True
+                db.add(u)
             affected += 1
-
+        if affected == 0:
+            u_res = await db.execute(select(models.User).where(models.User.kyc_status == "pending"))
+            for u in u_res.scalars().all():
+                u.kyc_status = "approved"
+                u.is_verified = True
+                db.add(u)
+                affected += 1
+    elif op_type == "bulk_suspend_inactive":
+        u_res = await db.execute(select(models.User).where(models.User.is_admin == False, models.User.is_suspended == False, models.User.kyc_status != "approved"))
+        for u in u_res.scalars().all():
+            u.is_suspended = True
+            db.add(u)
+            affected += 1
     elif op_type == "release_held_transactions":
-
-        res = await db.execute(select(models.Transaction).where(models.Transaction.status == "pending"))
-
-        txs = res.scalars().all()
-
-        for t in txs:
-
+        res = await db.execute(select(models.Transaction).where(models.Transaction.status.in_(["pending", "blocked"])))
+        for t in res.scalars().all():
             t.status = "completed"
-
             db.add(t)
-
+            affected += 1
+    elif op_type == "purge_failed_transactions":
+        res = await db.execute(select(models.Transaction).where(models.Transaction.status.in_(["failed", "cancelled"])))
+        for t in res.scalars().all():
+            await db.delete(t)
             affected += 1
 
-        await db.commit()
-
-    return {"success": True, "operation": op_type, "affected_count": affected}
+    db.add(models.AuditLog(
+        admin_id=current_admin.id,
+        user_id=current_admin.id,
+        action_type=f"BULK_{op_type.upper()}",
+        details=f"Executed bulk operation '{op_type}' ({affected} records processed)"
+    ))
+    await db.commit()
+    return {
+        "success": True,
+        "operation": op_type,
+        "affected_count": affected,
+        "processed": affected,
+        "failed": 0,
+        "message": f"Bulk operation '{op_type}' completed ({affected} records processed)"
+    }
 
 
 

@@ -185,17 +185,24 @@
             try {
                 const payload = { full_name: name, email: email };
                 if (password) payload.password = password;
+                const token = localStorage.getItem('token');
+                const headers = { 'Content-Type': 'application/json' };
+                if (token) headers['Authorization'] = `Bearer ${token}`;
                 const response = await fetch('/api/v1/users/profile', {
                     method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: headers,
                     credentials: 'include',
                     body: JSON.stringify(payload)
                 });
                 if (response.ok) {
                     showMsg('Administrator profile updated successfully!', 'success');
+                    document.getElementById('editPassword').value = '';
+                    document.getElementById('confirmPassword').value = '';
                     loadAdminProfile();
+                    loadAdminActivity();
                 } else {
-                    showMsg('Profile changes saved locally.', 'info');
+                    const errData = await response.json().catch(() => ({}));
+                    showMsg(errData.detail || 'Error updating profile.', 'danger');
                 }
             } catch (err) {
                 showMsg('Unable to reach server. Please check connection.', 'danger');

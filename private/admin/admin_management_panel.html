@@ -384,7 +384,9 @@
         }
 
         .modal.active {
-            display: flex;
+            display: flex !important;
+            opacity: 1 !important;
+            pointer-events: auto !important;
         }
 
         .modal-content {
@@ -1102,11 +1104,31 @@
         }
 
         // Filter admins by search
+        async function restoreAdmin(adminId, adminEmail) {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/admin/advanced/admin/restore/${adminId}`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+                    }
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.detail || 'Failed to restore admin');
+                showAlert('✓ Admin access restored for ' + adminEmail, 'success');
+                loadAdmins();
+            } catch (error) {
+                showAlert('✗ Error: ' + error.message, 'error');
+            }
+        }
+
         function filterAdmins() {
             const search = document.getElementById('searchAdmin').value.toLowerCase();
             document.querySelectorAll('.admin-item').forEach(item => {
                 const email = item.querySelector('.admin-email').textContent.toLowerCase();
-                item.style.display = email.includes(search) ? 'block' : 'none';
+                item.style.display = email.includes(search) ? 'flex' : 'none';
             });
         }
 

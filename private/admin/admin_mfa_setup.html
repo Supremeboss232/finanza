@@ -400,7 +400,9 @@
         }
 
         .modal.active {
-            display: flex;
+            display: flex !important;
+            opacity: 1 !important;
+            pointer-events: auto !important;
         }
 
         .modal-content {
@@ -1043,7 +1045,7 @@
             const search = document.getElementById('searchAdmin').value.toLowerCase();
             document.querySelectorAll('.mfa-item').forEach(item => {
                 const email = item.querySelector('.mfa-email').textContent.toLowerCase();
-                item.style.display = email.includes(search) ? 'block' : 'none';
+                item.style.display = email.includes(search) ? 'flex' : 'none';
             });
         }
 

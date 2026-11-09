@@ -500,7 +500,13 @@
         }
 
         function inspectRisk(type) {
-            showToast(`Inspecting logs filtering by: ${type}`, 'info');
+            const filterEl = document.getElementById('adminFilter');
+            if (filterEl) {
+                filterEl.value = '';
+                renderRecentActions();
+                document.getElementById('recentActionsTable')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            showToast(`Inspecting logs filtered by risk vector: ${type}`, 'info');
         }
 
         function exportToCSV() {

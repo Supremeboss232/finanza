@@ -885,8 +885,13 @@ html, body {
 }
 
 @media (max-width: 991.98px) {
+    html, body {
+        max-width: 100vw;
+        overflow-x: hidden;
+    }
     .fb-sidebar {
         transform: translateX(-100%);
+        max-width: 84vw;
     }
     .fb-sidebar.open {
         transform: translateX(0);
@@ -896,21 +901,167 @@ html, body {
     }
     .fb-main {
         margin-left: 0;
+        max-width: 100vw;
     }
     .fb-mobile-toggle {
         display: inline-flex;
+        flex-shrink: 0;
     }
     .fb-topbar {
-        padding: 0 16px;
+        height: 58px;
+        padding: 0 12px;
+        gap: 8px;
     }
     .fb-workspace {
-        padding: 18px 16px 84px;
+        padding: 14px 12px 84px;
     }
     .fb-mobile-bottom-bar {
         display: flex;
+        box-shadow: 0 -4px 18px rgba(15, 23, 42, 0.08);
     }
     .hide-mobile {
         display: none !important;
+    }
+    #fb-toast-container {
+        bottom: 72px;
+        right: 12px;
+        left: 12px;
+        max-width: none;
+    }
+    .table-responsive {
+        display: block;
+        width: 100%;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+    .fb-table thead th,
+    .fb-table tbody td {
+        white-space: nowrap;
+        padding: 10px 12px;
+        font-size: 0.82rem;
+    }
+    input, select, textarea, .form-control, .form-select {
+        font-size: 16px !important;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .fb-topbar-left {
+        gap: 8px;
+    }
+    .fb-page-title {
+        font-size: 0.96rem;
+        max-width: 135px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .fb-topbar-right {
+        gap: 6px;
+    }
+    .fb-header-pill {
+        padding: 4px 9px;
+        font-size: 0.76rem;
+        gap: 5px;
+    }
+    .fb-icon-btn {
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+    }
+    /* 2x2 KPI Grid on Android Phones */
+    #bank-page-content > .row.g-3 > .col-md-6,
+    #bank-page-content > .row.g-3 > .col-xl-3 {
+        width: 50%;
+        flex: 0 0 50%;
+    }
+    .fb-kpi-card {
+        padding: 13px 14px;
+        border-radius: 13px;
+    }
+    .fb-kpi-top {
+        margin-bottom: 6px;
+    }
+    .fb-kpi-label {
+        font-size: 0.66rem;
+        line-height: 1.2;
+    }
+    .fb-kpi-icon {
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        font-size: 0.82rem;
+        flex-shrink: 0;
+    }
+    .fb-kpi-value {
+        font-size: 1.18rem;
+        margin: 2px 0 4px;
+        word-break: break-word;
+    }
+    .fb-kpi-sub {
+        font-size: 0.68rem;
+        line-height: 1.2;
+    }
+    /* Cards & Headers */
+    .fb-card-header {
+        padding: 13px 15px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .fb-card-body {
+        padding: 14px 15px;
+    }
+    .fb-tabs {
+        display: flex;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        width: 100%;
+        -webkit-overflow-scrolling: touch;
+    }
+    .fb-tab-btn {
+        flex-shrink: 0;
+        padding: 7px 12px;
+        font-size: 0.78rem;
+    }
+    .fb-bank-card {
+        padding: 18px;
+        min-height: 185px;
+    }
+    .fb-card-number {
+        font-size: 1.02rem;
+        letter-spacing: 0.1em;
+    }
+    .modal-dialog {
+        margin: 8px !important;
+        max-width: calc(100vw - 16px) !important;
+    }
+}
+
+@media (max-width: 575.98px) {
+    /* 3-Column Touch Action Grid on Portrait Android Phones */
+    .fb-quick-actions {
+        grid-template-columns: repeat(3, 1fr) !important;
+        gap: 8px;
+    }
+    .fb-action-tile {
+        flex-direction: column;
+        text-align: center;
+        justify-content: center;
+        padding: 11px 6px;
+        gap: 6px;
+        font-size: 0.76rem;
+        border-radius: 12px;
+    }
+    .fb-action-tile small {
+        display: none;
+    }
+    .fb-action-tile .tile-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 0.92rem;
+    }
+    .fb-mobile-nav-item {
+        font-size: 0.62rem;
+        padding: 4px 4px;
     }
 }
 

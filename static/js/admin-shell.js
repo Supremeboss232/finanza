@@ -1,5 +1,6 @@
 /**
- * Finanza Admin — Unified Purple-Indigo Gradient Top Navbar, Role Privileges Matrix Modal & 29-Module Switcher
+ * Finanza Admin — Unified Purple-Indigo Gradient Top Navbar, Role Privileges Matrix Modal,
+ * 29-Module Switcher, and Android/Mobile Slide-Over Drawer + Bottom Navigation Bar.
  */
 
 window.navigateTo = window.navigateTo || function (url) {
@@ -137,7 +138,10 @@ window.navigateTo = window.navigateTo || function (url) {
         if (window.FinanzaAdminRBAC && window.FinanzaAdminRBAC.setPreviewRole) {
             window.FinanzaAdminRBAC.setPreviewRole(roleKey);
             const roleEl = document.getElementById("admNavRoleBadge");
-            if (roleEl) roleEl.textContent = window.FinanzaAdminRBAC.getRole();
+            const drawerRoleEl = document.getElementById("admDrawerRoleBadge");
+            const active = window.FinanzaAdminRBAC.getRole();
+            if (roleEl) roleEl.textContent = active;
+            if (drawerRoleEl) drawerRoleEl.textContent = active;
             updateMegaMenuForRole();
             window.openAdminRolesMatrixModal();
         }
@@ -153,7 +157,7 @@ window.navigateTo = window.navigateTo || function (url) {
         if (!modal) {
             modal = document.createElement("div");
             modal.id = "finanzaAdminRolesModal";
-            modal.style.cssText = "display:none;position:fixed;inset:0;background:rgba(15,23,42,0.72);z-index:99999;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px);";
+            modal.style.cssText = "display:none;position:fixed;inset:0;background:rgba(15,23,42,0.72);z-index:99999;align-items:center;justify-content:center;padding:10px;backdrop-filter:blur(4px);";
             document.body.appendChild(modal);
         }
 
@@ -161,8 +165,8 @@ window.navigateTo = window.navigateTo || function (url) {
             const r = matrix[roleKey];
             const isCurrent = roleKey === currentRole;
             const defaultEmail = r.default_account || DEFAULT_ROLE_ACCOUNTS[roleKey] || "";
-            const canList = (r.can_do || []).map(item => `<li style="margin-bottom:6px;color:#1e293b;font-size:0.86rem;"><i class="fas fa-check-circle text-success me-2"></i>${item}</li>`).join("");
-            const cannotList = (r.cannot_do || []).map(item => `<li style="margin-bottom:6px;color:#64748b;font-size:0.85rem;"><i class="fas fa-times-circle text-danger me-2"></i>${item}</li>`).join("");
+            const canList = (r.can_do || []).map(item => `<li style="margin-bottom:6px;color:#1e293b;font-size:0.84rem;"><i class="fas fa-check-circle text-success me-2"></i>${item}</li>`).join("");
+            const cannotList = (r.cannot_do || []).map(item => `<li style="margin-bottom:6px;color:#64748b;font-size:0.83rem;"><i class="fas fa-times-circle text-danger me-2"></i>${item}</li>`).join("");
             const allowedPills = formatPagePills(r.allowed_pages || [], false);
             const restrictedPills = formatPagePills(r.restricted_pages || [], true);
 
@@ -177,36 +181,36 @@ window.navigateTo = window.navigateTo || function (url) {
             }
 
             return `
-                <div style="border:${isCurrent ? '2px solid #667eea' : '1px solid #e2e8f0'};border-radius:12px;padding:18px;background:${isCurrent ? '#f8faff' : '#ffffff'};box-shadow:0 2px 8px rgba(0,0,0,0.04);">
+                <div style="border:${isCurrent ? '2px solid #667eea' : '1px solid #e2e8f0'};border-radius:12px;padding:14px;background:${isCurrent ? '#f8faff' : '#ffffff'};box-shadow:0 2px 8px rgba(0,0,0,0.04);">
                     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px;">
                         <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
-                            <span style="background:${r.badge_color || '#667eea'};color:#fff;padding:4px 12px;border-radius:20px;font-size:0.78rem;font-weight:700;letter-spacing:0.5px;">${roleKey}</span>
-                            <strong style="font-size:1.05rem;color:#0f172a;">${r.title || roleKey}</strong>
-                            ${defaultEmail ? `<span style="background:#f1f5f9;color:#475569;padding:2px 8px;border-radius:6px;font-size:0.75rem;font-family:monospace;"><i class="fas fa-envelope me-1"></i>${defaultEmail}</span>` : ''}
+                            <span style="background:${r.badge_color || '#667eea'};color:#fff;padding:4px 12px;border-radius:20px;font-size:0.76rem;font-weight:700;letter-spacing:0.5px;">${roleKey}</span>
+                            <strong style="font-size:1rem;color:#0f172a;">${r.title || roleKey}</strong>
+                            ${defaultEmail ? `<span style="background:#f1f5f9;color:#475569;padding:2px 8px;border-radius:6px;font-size:0.73rem;font-family:monospace;"><i class="fas fa-envelope me-1"></i>${defaultEmail}</span>` : ''}
                         </div>
                         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                            ${isCurrent ? `<span style="background:#667eea;color:#fff;padding:3px 10px;border-radius:6px;font-size:0.75rem;font-weight:600;"><i class="fas fa-user-check me-1"></i>${isPreview ? 'Previewing Role' : 'Your Active Role'}</span>` : ''}
+                            ${isCurrent ? `<span style="background:#667eea;color:#fff;padding:3px 10px;border-radius:6px;font-size:0.74rem;font-weight:600;"><i class="fas fa-user-check me-1"></i>${isPreview ? 'Previewing Role' : 'Your Active Role'}</span>` : ''}
                             ${actionBtns.join('')}
                         </div>
                     </div>
-                    <p style="font-size:0.88rem;color:#475569;margin-bottom:12px;">${r.summary || ''}</p>
-                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;">
+                    <p style="font-size:0.85rem;color:#475569;margin-bottom:12px;">${r.summary || ''}</p>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;">
                         <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px;">
-                            <div style="font-weight:700;font-size:0.8rem;color:#166534;text-transform:uppercase;margin-bottom:8px;"><i class="fas fa-shield-alt me-1"></i>What ${roleKey} CAN Do</div>
+                            <div style="font-weight:700;font-size:0.78rem;color:#166534;text-transform:uppercase;margin-bottom:8px;"><i class="fas fa-shield-alt me-1"></i>What ${roleKey} CAN Do</div>
                             <ul style="list-style:none;padding:0;margin:0;">${canList}</ul>
                         </div>
                         <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px;">
-                            <div style="font-weight:700;font-size:0.8rem;color:#991b1b;text-transform:uppercase;margin-bottom:8px;"><i class="fas fa-ban me-1"></i>What ${roleKey} CANNOT Do</div>
+                            <div style="font-weight:700;font-size:0.78rem;color:#991b1b;text-transform:uppercase;margin-bottom:8px;"><i class="fas fa-ban me-1"></i>What ${roleKey} CANNOT Do</div>
                             <ul style="list-style:none;padding:0;margin:0;">${cannotList}</ul>
                         </div>
                     </div>
-                    <div style="margin-top:12px;padding-top:10px;border-top:1px dashed #e2e8f0;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;">
+                    <div style="margin-top:12px;padding-top:10px;border-top:1px dashed #e2e8f0;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;">
                         <div>
-                            <div style="font-size:0.74rem;font-weight:700;color:#1e40af;text-transform:uppercase;margin-bottom:4px;"><i class="fas fa-check me-1"></i>Allowed Modules</div>
+                            <div style="font-size:0.73rem;font-weight:700;color:#1e40af;text-transform:uppercase;margin-bottom:4px;"><i class="fas fa-check me-1"></i>Allowed Modules</div>
                             <div>${allowedPills}</div>
                         </div>
                         <div>
-                            <div style="font-size:0.74rem;font-weight:700;color:#991b1b;text-transform:uppercase;margin-bottom:4px;"><i class="fas fa-lock me-1"></i>Restricted Modules</div>
+                            <div style="font-size:0.73rem;font-weight:700;color:#991b1b;text-transform:uppercase;margin-bottom:4px;"><i class="fas fa-lock me-1"></i>Restricted Modules</div>
                             <div>${restrictedPills}</div>
                         </div>
                     </div>
@@ -215,25 +219,25 @@ window.navigateTo = window.navigateTo || function (url) {
         }).join("");
 
         modal.innerHTML = `
-            <div style="background:#fff;border-radius:16px;max-width:1020px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,0.3);overflow:hidden;">
-                <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:20px 26px;display:flex;justify-content:space-between;align-items:center;">
+            <div style="background:#fff;border-radius:16px;max-width:1020px;width:100%;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,0.3);overflow:hidden;">
+                <div style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px;">
                     <div>
-                        <h4 style="margin:0;font-weight:700;font-size:1.25rem;"><i class="fas fa-user-shield me-2"></i>Finanza Admin Roles & Privileges Matrix</h4>
-                        <small style="opacity:0.9;">Complete breakdown of all 5 Administrator tiers — what each role can and cannot do, assigned accounts, and module access</small>
+                        <h4 style="margin:0;font-weight:700;font-size:1.1rem;"><i class="fas fa-user-shield me-2"></i>Finanza Admin Roles & Privileges Matrix</h4>
+                        <small style="opacity:0.9;font-size:0.78rem;">Complete breakdown of all 5 Administrator tiers — what each role can and cannot do</small>
                     </div>
-                    <button type="button" onclick="document.getElementById('finanzaAdminRolesModal').style.display='none'" style="background:rgba(255,255,255,0.2);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:1.2rem;cursor:pointer;">&times;</button>
+                    <button type="button" onclick="document.getElementById('finanzaAdminRolesModal').style.display='none'" style="background:rgba(255,255,255,0.2);border:none;color:#fff;width:34px;height:34px;border-radius:50%;font-size:1.2rem;cursor:pointer;flex-shrink:0;">&times;</button>
                 </div>
-                <div style="padding:22px 26px;overflow-y:auto;display:flex;flex-direction:column;gap:16px;">
+                <div style="padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:14px;-webkit-overflow-scrolling:touch;">
                     ${roleCardsHtml}
                 </div>
-                <div style="padding:14px 26px;background:#f8fafc;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-                    <div style="display:flex;gap:10px;align-items:center;">
-                        <a href="/user/admin/management_panel" class="btn btn-sm btn-primary" style="background:linear-gradient(135deg,#667eea,#764ba2);border:none;color:#fff;padding:8px 16px;border-radius:6px;text-decoration:none;font-weight:600;">
-                            <i class="fas fa-sliders-h me-1"></i> Open Admin Management Panel
+                <div style="padding:12px 16px;background:#f8fafc;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <a href="/user/admin/management_panel" class="btn btn-sm btn-primary" style="background:linear-gradient(135deg,#667eea,#764ba2);border:none;color:#fff;padding:7px 14px;border-radius:6px;text-decoration:none;font-weight:600;font-size:0.82rem;">
+                            <i class="fas fa-sliders-h me-1"></i> Admin Management Panel
                         </a>
-                        ${isPreview ? `<button type="button" onclick="window.previewAdminRole(null)" style="background:#ef4444;border:none;color:#fff;padding:8px 14px;border-radius:6px;font-weight:600;cursor:pointer;"><i class="fas fa-undo me-1"></i>Exit Role Preview</button>` : ''}
+                        ${isPreview ? `<button type="button" onclick="window.previewAdminRole(null)" style="background:#ef4444;border:none;color:#fff;padding:7px 12px;border-radius:6px;font-weight:600;font-size:0.82rem;cursor:pointer;"><i class="fas fa-undo me-1"></i>Exit Role Preview</button>` : ''}
                     </div>
-                    <button type="button" onclick="document.getElementById('finanzaAdminRolesModal').style.display='none'" style="background:#e2e8f0;border:none;color:#1e293b;padding:8px 18px;border-radius:6px;font-weight:600;cursor:pointer;">Close</button>
+                    <button type="button" onclick="document.getElementById('finanzaAdminRolesModal').style.display='none'" style="background:#e2e8f0;border:none;color:#1e293b;padding:7px 16px;border-radius:6px;font-weight:600;font-size:0.82rem;cursor:pointer;">Close</button>
                 </div>
             </div>
         `;
@@ -244,7 +248,7 @@ window.navigateTo = window.navigateTo || function (url) {
         const rbac = window.FinanzaAdminRBAC;
         if (!rbac || !rbac.canAccessPage) return;
         const role = rbac.getRole();
-        document.querySelectorAll("#admMegaGrid .adm-mega-item").forEach(el => {
+        document.querySelectorAll(".adm-mega-item").forEach(el => {
             const href = el.getAttribute("href");
             const allowed = rbac.canAccessPage(href, role);
             const lockBadge = el.querySelector(".adm-lock-icon");
@@ -265,6 +269,32 @@ window.navigateTo = window.navigateTo || function (url) {
         });
     }
 
+    window.toggleAdminMobileDrawer = function (forceState) {
+        const drawer = document.getElementById("admMobileDrawer");
+        const backdrop = document.getElementById("admMobileBackdrop");
+        if (!drawer || !backdrop) return;
+        const shouldOpen = typeof forceState === "boolean" ? forceState : !drawer.classList.contains("open");
+        if (shouldOpen) {
+            drawer.classList.add("open");
+            backdrop.classList.add("open");
+        } else {
+            drawer.classList.remove("open");
+            backdrop.classList.remove("open");
+        }
+    };
+
+    function wrapAdminTablesForMobile() {
+        document.querySelectorAll("table").forEach(tbl => {
+            if (tbl.closest(".table-responsive") || tbl.closest(".adm-touch-table")) return;
+            const wrapper = document.createElement("div");
+            wrapper.className = "table-responsive adm-touch-table";
+            if (tbl.parentNode) {
+                tbl.parentNode.insertBefore(wrapper, tbl);
+                wrapper.appendChild(tbl);
+            }
+        });
+    }
+
     function mountAdminNavbar() {
         if (document.getElementById("finanzaUnifiedAdminNav")) return;
         document.body.classList.add("finanza-admin-shell-ready");
@@ -272,6 +302,7 @@ window.navigateTo = window.navigateTo || function (url) {
         const currentPath = normalizePath(window.location.pathname);
 
         let megaColsHtml = "";
+        let drawerDivisionsHtml = "";
         ADMIN_DIVISIONS.forEach(div => {
             let itemsHtml = "";
             div.items.forEach(item => {
@@ -289,6 +320,12 @@ window.navigateTo = window.navigateTo || function (url) {
                     ${itemsHtml}
                 </div>
             `;
+            drawerDivisionsHtml += `
+                <div class="adm-drawer-div mb-3">
+                    <div class="adm-mega-col-title">${div.title}</div>
+                    ${itemsHtml}
+                </div>
+            `;
         });
 
         const isActive = (paths) => paths.some(p => normalizePath(p) === currentPath) ? "active" : "";
@@ -299,10 +336,15 @@ window.navigateTo = window.navigateTo || function (url) {
         nav.className = "navbar navbar-expand-lg navbar-dark";
         nav.innerHTML = `
             <div class="adm-nav-container">
-                <a class="adm-brand" href="/user/admin/dashboard">
-                    <span class="adm-brand-icon"><i class="fas fa-university"></i></span>
-                    <span>Finanza Admin</span>
-                </a>
+                <div class="adm-brand-group">
+                    <button type="button" class="adm-mobile-hamburger" id="admMobileMenuBtn" onclick="window.toggleAdminMobileDrawer()" aria-label="Open Admin Menu">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <a class="adm-brand" href="/user/admin/dashboard">
+                        <span class="adm-brand-icon"><i class="fas fa-university"></i></span>
+                        <span>Finanza Admin</span>
+                    </a>
+                </div>
 
                 <div class="adm-links">
                     <a href="/user/admin/dashboard" class="adm-link ${isActive(['/user/admin', '/user/admin/dashboard'])}">
@@ -348,32 +390,99 @@ window.navigateTo = window.navigateTo || function (url) {
                     <button type="button" class="adm-pill-btn" id="admRoleMatrixBtn" onclick="window.openAdminRolesMatrixModal()" title="View Admin Role Privileges (What Each Admin Can & Cannot Do)" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.35);color:#fff;cursor:pointer;">
                         <i class="fas fa-shield-alt"></i> <span id="admNavRoleBadge">${initialRole}</span>
                     </button>
-                    <a href="/user/dashboard" class="adm-pill-btn" title="Open Client Portal">
-                        <i class="fas fa-external-link-alt"></i> Client View
+                    <a href="/user/dashboard" class="adm-pill-btn adm-hide-mobile" title="Open Client Portal">
+                        <i class="fas fa-external-link-alt"></i> <span>Client View</span>
                     </a>
                     <a href="/logout" data-action="admin-logout" class="adm-pill-btn logout" title="Sign Out">
-                        <i class="fas fa-sign-out-alt"></i> Logout
+                        <i class="fas fa-sign-out-alt"></i> <span class="adm-hide-mobile">Logout</span>
                     </a>
                 </div>
             </div>
         `;
 
+        const mobileShell = document.createElement("div");
+        mobileShell.innerHTML = `
+            <div id="admMobileBackdrop" onclick="window.toggleAdminMobileDrawer(false)"></div>
+            <aside id="admMobileDrawer" aria-label="Admin Mobile Navigation">
+                <div class="adm-drawer-header">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="adm-brand-icon" style="width:32px;height:32px;border-radius:8px;background:rgba(255,255,255,0.2);display:inline-flex;align-items:center;justify-content:center;"><i class="fas fa-university"></i></span>
+                        <div>
+                            <div class="fw-bold" style="font-size:0.96rem;line-height:1.1;">Finanza Admin</div>
+                            <small style="font-size:0.72rem;opacity:0.88;">Role: <strong id="admDrawerRoleBadge">${initialRole}</strong></small>
+                        </div>
+                    </div>
+                    <button type="button" onclick="window.toggleAdminMobileDrawer(false)" style="background:rgba(255,255,255,0.18);border:none;color:#fff;width:32px;height:32px;border-radius:8px;font-size:1.05rem;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="p-2 border-bottom bg-light">
+                    <div class="adm-mega-search">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="admDrawerSearchInput" placeholder="Search 29 admin modules..." autocomplete="off">
+                    </div>
+                </div>
+                <div class="adm-drawer-body" id="admDrawerList">
+                    ${drawerDivisionsHtml}
+                </div>
+                <div class="adm-drawer-footer">
+                    <button type="button" onclick="window.toggleAdminMobileDrawer(false);window.openAdminRolesMatrixModal();" class="btn btn-sm btn-outline-primary flex-fill fw-semibold" style="font-size:0.76rem;">
+                        <i class="fas fa-shield-alt me-1"></i>Role Matrix
+                    </button>
+                    <a href="/user/dashboard" class="btn btn-sm btn-outline-secondary flex-fill fw-semibold" style="font-size:0.76rem;">
+                        <i class="fas fa-external-link-alt me-1"></i>Client View
+                    </a>
+                </div>
+            </aside>
+
+            <nav id="admMobileBottomNav" aria-label="Admin Quick Bottom Bar">
+                <a href="/user/admin/dashboard" class="adm-bnav-item ${isActive(['/user/admin', '/user/admin/dashboard'])}">
+                    <i class="fas fa-th-large"></i>
+                    <span>Hub</span>
+                </a>
+                <a href="/user/admin/users" class="adm-bnav-item ${isActive(['/user/admin/users'])}">
+                    <i class="fas fa-users"></i>
+                    <span>Users</span>
+                </a>
+                <a href="/user/admin/kyc" class="adm-bnav-item ${isActive(['/user/admin/kyc'])}">
+                    <i class="fas fa-id-card"></i>
+                    <span>KYC</span>
+                    <span class="adm-bnav-badge" id="admBottomKycBadge" style="display:none;">0</span>
+                </a>
+                <a href="/user/admin/lending" class="adm-bnav-item ${isActive(['/user/admin/lending', '/user/admin/lending_compliance', '/user/admin/hmda'])}">
+                    <i class="fas fa-hand-holding-usd"></i>
+                    <span>Lending</span>
+                </a>
+                <button type="button" class="adm-bnav-item" onclick="window.toggleAdminMobileDrawer()">
+                    <i class="fas fa-bars"></i>
+                    <span>All 29</span>
+                </button>
+            </nav>
+        `;
+
         document.body.prepend(nav);
+        document.body.appendChild(mobileShell);
         updateMegaMenuForRole();
+        wrapAdminTablesForMobile();
+
+        const obs = new MutationObserver(() => wrapAdminTablesForMobile());
+        obs.observe(document.body, { childList: true, subtree: true });
 
         window.addEventListener("finanza:admin-ready", function (e) {
             const roleEl = document.getElementById("admNavRoleBadge");
+            const drawerRoleEl = document.getElementById("admDrawerRoleBadge");
             const activeRole = (window.FinanzaAdminRBAC && window.FinanzaAdminRBAC.getRole()) || (e.detail && e.detail.admin_role);
-            if (roleEl && activeRole) {
-                roleEl.textContent = activeRole;
-            }
+            if (roleEl && activeRole) roleEl.textContent = activeRole;
+            if (drawerRoleEl && activeRole) drawerRoleEl.textContent = activeRole;
             updateMegaMenuForRole();
         });
 
         window.addEventListener("finanza:role-changed", function (e) {
             const roleEl = document.getElementById("admNavRoleBadge");
-            if (roleEl && e.detail && e.detail.role) {
-                roleEl.textContent = e.detail.role;
+            const drawerRoleEl = document.getElementById("admDrawerRoleBadge");
+            if (e.detail && e.detail.role) {
+                if (roleEl) roleEl.textContent = e.detail.role;
+                if (drawerRoleEl) drawerRoleEl.textContent = e.detail.role;
             }
             updateMegaMenuForRole();
         });
@@ -381,26 +490,38 @@ window.navigateTo = window.navigateTo || function (url) {
         const wrap = document.getElementById("admMegaWrap");
         const btn = document.getElementById("admMegaToggleBtn");
         const searchInput = document.getElementById("admMegaSearchInput");
+        const drawerSearchInput = document.getElementById("admDrawerSearchInput");
 
-        btn.addEventListener("click", function (e) {
-            e.stopPropagation();
-            wrap.classList.toggle("open");
-            if (wrap.classList.contains("open") && searchInput) {
-                setTimeout(() => searchInput.focus(), 50);
-            }
-        });
+        if (btn && wrap) {
+            btn.addEventListener("click", function (e) {
+                e.stopPropagation();
+                wrap.classList.toggle("open");
+                if (wrap.classList.contains("open") && searchInput) {
+                    setTimeout(() => searchInput.focus(), 50);
+                }
+            });
 
-        document.addEventListener("click", function (e) {
-            if (!wrap.contains(e.target)) {
-                wrap.classList.remove("open");
-            }
-        });
+            document.addEventListener("click", function (e) {
+                if (!wrap.contains(e.target)) {
+                    wrap.classList.remove("open");
+                }
+            });
+        }
 
-        if (searchInput) {
+        if (searchInput && wrap) {
             searchInput.addEventListener("input", function () {
                 const q = this.value.trim().toLowerCase();
-                const items = wrap.querySelectorAll(".adm-mega-item");
-                items.forEach(el => {
+                wrap.querySelectorAll(".adm-mega-item").forEach(el => {
+                    const hay = el.getAttribute("data-search") || "";
+                    el.style.display = (!q || hay.includes(q)) ? "flex" : "none";
+                });
+            });
+        }
+
+        if (drawerSearchInput) {
+            drawerSearchInput.addEventListener("input", function () {
+                const q = this.value.trim().toLowerCase();
+                document.querySelectorAll("#admDrawerList .adm-mega-item").forEach(el => {
                     const hay = el.getAttribute("data-search") || "";
                     el.style.display = (!q || hay.includes(q)) ? "flex" : "none";
                 });
@@ -413,9 +534,14 @@ window.navigateTo = window.navigateTo || function (url) {
                 if (!data) return;
                 const pendingKyc = data.pending_kyc || (data.data && data.data.pending_kyc) || 0;
                 const badge = document.getElementById("admNavKycBadge");
+                const bottomBadge = document.getElementById("admBottomKycBadge");
                 if (badge && pendingKyc > 0) {
                     badge.textContent = pendingKyc;
                     badge.style.display = "inline-block";
+                }
+                if (bottomBadge && pendingKyc > 0) {
+                    bottomBadge.textContent = pendingKyc;
+                    bottomBadge.style.display = "inline-flex";
                 }
             })
             .catch(() => {});

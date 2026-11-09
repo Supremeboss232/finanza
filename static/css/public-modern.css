@@ -256,3 +256,127 @@ body {
     color: #94a3b8 !important;
     border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
+
+
+/* ==========================================================================
+   Android & Mobile Browser Responsive Rules (Public & Auth Pages)
+   ========================================================================== */
+@media (max-width: 991.98px) {
+    html, body {
+        max-width: 100vw;
+        overflow-x: hidden;
+    }
+
+    .navbar {
+        min-height: 60px;
+        padding: 8px 14px !important;
+    }
+
+    .navbar-brand {
+        margin-left: 4px !important;
+    }
+
+    .navbar-brand h1 {
+        font-size: 1.55rem !important;
+    }
+
+    .navbar-toggler {
+        margin-right: 4px !important;
+        padding: 6px 10px;
+        border-radius: 8px;
+    }
+
+    .navbar-collapse {
+        background: #ffffff;
+        border-radius: 12px;
+        padding: 12px 16px 16px;
+        margin-top: 8px;
+        box-shadow: 0 14px 34px rgba(15, 23, 42, 0.14);
+        border: 1px solid var(--fz-border);
+        max-height: 78vh;
+        overflow-y: auto;
+    }
+
+    .navbar-light .navbar-nav .nav-link {
+        padding: 11px 8px !important;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 0.94rem;
+    }
+
+    .fz-nav-cta-group {
+        flex-direction: column;
+        width: 100%;
+        margin-top: 12px;
+        gap: 8px;
+    }
+
+    .fz-nav-cta-group a,
+    .fz-nav-cta-group .btn {
+        width: 100%;
+        text-align: center;
+        justify-content: center;
+    }
+
+    input, select, textarea, .form-control, .form-select {
+        font-size: 16px !important;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .page-header {
+        padding-top: 5.2rem !important;
+        padding-bottom: 2.2rem !important;
+        margin-bottom: 1.5rem !important;
+    }
+
+    .page-header h1,
+    .page-header .display-2,
+    .page-header .display-3,
+    .page-header .display-4 {
+        font-size: 1.65rem !important;
+    }
+
+    #header-carousel .carousel-item {
+        min-height: 400px;
+    }
+
+    #header-carousel .carousel-item img {
+        min-height: 400px;
+        object-fit: cover;
+    }
+
+    .carousel-caption {
+        background: linear-gradient(180deg, rgba(10, 25, 47, 0.78) 0%, rgba(10, 25, 47, 0.88) 100%) !important;
+        padding: 70px 16px 24px !important;
+    }
+
+    .carousel-caption h1,
+    .carousel-caption .display-1 {
+        font-size: 1.65rem !important;
+        line-height: 1.25 !important;
+    }
+
+    .container-xxl,
+    .container {
+        padding-left: 14px !important;
+        padding-right: 14px !important;
+    }
+
+    .py-5 {
+        padding-top: 2rem !important;
+        padding-bottom: 2rem !important;
+    }
+
+    .p-5 {
+        padding: 1.25rem !important;
+    }
+
+    .p-4 {
+        padding: 1rem !important;
+    }
+
+    .fz-trust-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+}

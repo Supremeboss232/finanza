@@ -285,6 +285,9 @@
                 <a href="/user/transactions" class="fb-mobile-nav-item ${currentPath.includes('transactions') ? 'active' : ''}">
                     <i class="fas fa-list-check"></i><span>Activity</span>
                 </a>
+                <a href="#" onclick="document.getElementById('fbMobileMenuBtn') && document.getElementById('fbMobileMenuBtn').click();return false;" class="fb-mobile-nav-item">
+                    <i class="fas fa-bars"></i><span>Menu</span>
+                </a>
             </nav>
         `;
 
@@ -292,6 +295,22 @@
         const mount = document.getElementById('fbWorkspaceMount');
         mount.appendChild(pageContent);
         pageContent.style.display = 'block';
+
+        // Ensure all tables inside user workspace are touch-scrollable on Android
+        const wrapUserTables = () => {
+            mount.querySelectorAll('table').forEach(tbl => {
+                if (!tbl.closest('.table-responsive')) {
+                    const w = document.createElement('div');
+                    w.className = 'table-responsive';
+                    if (tbl.parentNode) {
+                        tbl.parentNode.insertBefore(w, tbl);
+                        w.appendChild(tbl);
+                    }
+                }
+            });
+        };
+        wrapUserTables();
+        new MutationObserver(wrapUserTables).observe(mount, { childList: true, subtree: true });
 
         // Inject Global Modals (Add Money Modal + Printable Receipt Modal)
         injectGlobalModals();

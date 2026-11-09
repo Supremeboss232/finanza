@@ -35,11 +35,13 @@ _BLOCKED_TRANSACTIONS_STORE: List[Dict[str, Any]] = [
         "risk_score": 94,
         "reason": "Counterparty intermediary bank matched OFAC SDN corridor alert",
         "blocked_at": (datetime.utcnow() - timedelta(minutes=24)).isoformat(),
+        "blocked_date": (datetime.utcnow() - timedelta(minutes=24)).isoformat(),
         "status": "blocked",
         "device_id": "DEV-9041-X88",
         "ip_address": "185.220.101.44",
         "city": "Riga",
         "country": "Latvia",
+        "country_code": "LV",
         "isp": "Baltic Transit Telecom",
         "vpn_detected": True,
     },
@@ -52,11 +54,13 @@ _BLOCKED_TRANSACTIONS_STORE: List[Dict[str, Any]] = [
         "risk_score": 82,
         "reason": "7 rapid wire transfers initiated within 8 minutes exceeding velocity threshold",
         "blocked_at": (datetime.utcnow() - timedelta(hours=1, minutes=15)).isoformat(),
+        "blocked_date": (datetime.utcnow() - timedelta(hours=1, minutes=15)).isoformat(),
         "status": "blocked",
         "device_id": "DEV-9038-B12",
         "ip_address": "104.28.194.11",
         "city": "Miami",
         "country": "United States",
+        "country_code": "US",
         "isp": "Cloudflare Warp Proxy",
         "vpn_detected": True,
     },
@@ -69,11 +73,13 @@ _BLOCKED_TRANSACTIONS_STORE: List[Dict[str, Any]] = [
         "risk_score": 76,
         "reason": "Unrecognized Linux headless browser fingerprint from new geolocation",
         "blocked_at": (datetime.utcnow() - timedelta(hours=3, minutes=10)).isoformat(),
+        "blocked_date": (datetime.utcnow() - timedelta(hours=3, minutes=10)).isoformat(),
         "status": "blocked",
         "device_id": "DEV-9034-K09",
         "ip_address": "91.132.147.88",
         "city": "Frankfurt",
-        "country": "Germany",
+        "country": "United Kingdom",
+        "country_code": "GB",
         "isp": "Hetzner Datacenter ASN",
         "vpn_detected": True,
     },
@@ -86,11 +92,13 @@ _BLOCKED_TRANSACTIONS_STORE: List[Dict[str, Any]] = [
         "risk_score": 68,
         "reason": "Behavioral biometrics anomaly: automated paste into beneficiary IBAN field",
         "blocked_at": (datetime.utcnow() - timedelta(hours=5, minutes=45)).isoformat(),
+        "blocked_date": (datetime.utcnow() - timedelta(hours=5, minutes=45)).isoformat(),
         "status": "under_review",
         "device_id": "DEV-9029-M41",
         "ip_address": "195.229.241.19",
         "city": "Dubai",
         "country": "United Arab Emirates",
+        "country_code": "AE",
         "isp": "Etisalat Enterprise",
         "vpn_detected": False,
     },
@@ -103,11 +111,13 @@ _BLOCKED_TRANSACTIONS_STORE: List[Dict[str, Any]] = [
         "risk_score": 55,
         "reason": "Multiple card-not-present high-value settlements in 15m window",
         "blocked_at": (datetime.utcnow() - timedelta(hours=9, minutes=20)).isoformat(),
+        "blocked_date": (datetime.utcnow() - timedelta(hours=9, minutes=20)).isoformat(),
         "status": "cleared",
         "device_id": "DEV-9022-Z04",
         "ip_address": "178.197.224.10",
         "city": "Zurich",
         "country": "Switzerland",
+        "country_code": "CH",
         "isp": "Swisscom Ltd",
         "vpn_detected": False,
     },
@@ -116,48 +126,68 @@ _BLOCKED_TRANSACTIONS_STORE: List[Dict[str, Any]] = [
 _FRAUD_DEVICES_STORE: List[Dict[str, Any]] = [
     {
         "id": "DEV-9041-X88",
+        "device_id": "DEV-9041-X88",
         "user_email": "m.korolev@balticshipping.io",
         "device_type": "Tor / Firefox 115 ESR (Linux x86_64)",
+        "browser": "Tor / Firefox 115 ESR (Linux x86_64)",
         "ip_address": "185.220.101.44",
         "location": "Riga, Latvia",
         "last_seen": (datetime.utcnow() - timedelta(minutes=22)).isoformat(),
+        "last_active": (datetime.utcnow() - timedelta(minutes=22)).isoformat(),
         "status": "blocked",
+        "risk_level": "high",
     },
     {
         "id": "DEV-9038-B12",
+        "device_id": "DEV-9038-B12",
         "user_email": "a.mercer@apexventures.com",
         "device_type": "Chrome 126.0 (macOS Sonoma)",
+        "browser": "Chrome 126.0 (macOS Sonoma)",
         "ip_address": "104.28.194.11",
         "location": "Miami, United States",
         "last_seen": (datetime.utcnow() - timedelta(hours=1, minutes=10)).isoformat(),
+        "last_active": (datetime.utcnow() - timedelta(hours=1, minutes=10)).isoformat(),
         "status": "suspicious",
+        "risk_level": "medium",
     },
     {
         "id": "DEV-9034-K09",
+        "device_id": "DEV-9034-K09",
         "user_email": "c.henderson@hendersonholdings.co.uk",
         "device_type": "HeadlessChromium 125 (Ubuntu Server)",
+        "browser": "HeadlessChromium 125 (Ubuntu Server)",
         "ip_address": "91.132.147.88",
         "location": "Frankfurt, Germany",
         "last_seen": (datetime.utcnow() - timedelta(hours=3, minutes=5)).isoformat(),
+        "last_active": (datetime.utcnow() - timedelta(hours=3, minutes=5)).isoformat(),
         "status": "blocked",
+        "risk_level": "high",
     },
     {
         "id": "DEV-9029-M41",
+        "device_id": "DEV-9029-M41",
         "user_email": "s.patel@globaltradehub.ae",
         "device_type": "Safari 17.5 (iPhone 15 Pro - iOS 17.5)",
+        "browser": "Safari 17.5 (iPhone 15 Pro - iOS 17.5)",
         "ip_address": "195.229.241.19",
         "location": "Dubai, UAE",
         "last_seen": (datetime.utcnow() - timedelta(hours=5, minutes=30)).isoformat(),
+        "last_active": (datetime.utcnow() - timedelta(hours=5, minutes=30)).isoformat(),
         "status": "suspicious",
+        "risk_level": "medium",
     },
     {
         "id": "DEV-9022-Z04",
+        "device_id": "DEV-9022-Z04",
         "user_email": "j.vane@vanecapital.ch",
         "device_type": "Chrome 126.0 (Windows 11 Enterprise)",
+        "browser": "Chrome 126.0 (Windows 11 Enterprise)",
         "ip_address": "178.197.224.10",
         "location": "Zurich, Switzerland",
         "last_seen": (datetime.utcnow() - timedelta(hours=8)).isoformat(),
+        "last_active": (datetime.utcnow() - timedelta(hours=8)).isoformat(),
         "status": "trusted",
+        "risk_level": "low",
     },
 ]
 
@@ -165,46 +195,74 @@ _FRAUD_RULES_STORE: List[Dict[str, Any]] = [
     {
         "id": "RULE-VEL-01",
         "name": "High-Velocity Wire Burst (>5 txns / 10m)",
+        "rule_name": "High-Velocity Wire Burst (>5 txns / 10m)",
         "threat_type": "velocity",
+        "trigger_type": "velocity_check",
         "threshold": 75,
         "action": "block",
+        "mode": "production",
         "triggered_24h": 14,
+        "matches_24h": 14,
         "status": "active",
         "enabled": True,
+        "is_active": True,
         "description": "Automatically blocks accounts executing more than 5 outbound transfers within 10 minutes.",
+        "trigger_condition": "Velocity > 5 wire transfers within 10m (Risk >= 75%)",
+        "last_modified": (datetime.utcnow() - timedelta(days=3)).isoformat(),
     },
     {
         "id": "RULE-SAN-02",
         "name": "OFAC SDN & Sanctioned Corridor Match",
+        "rule_name": "OFAC SDN & Sanctioned Corridor Match",
         "threat_type": "sanctions",
+        "trigger_type": "amount_threshold",
         "threshold": 85,
         "action": "block",
+        "mode": "production",
         "triggered_24h": 4,
+        "matches_24h": 4,
         "status": "active",
         "enabled": True,
+        "is_active": True,
         "description": "Blocks any transfer with >85% fuzzy match against OFAC SDN, UN, EU, or UK sanctions lists.",
+        "trigger_condition": "Sanctions fuzzy match score >= 85%",
+        "last_modified": (datetime.utcnow() - timedelta(days=5)).isoformat(),
     },
     {
         "id": "RULE-DEV-03",
         "name": "Datacenter / Tor Exit Node & Headless Browser",
+        "rule_name": "Datacenter / Tor Exit Node & Headless Browser",
         "threat_type": "device",
+        "trigger_type": "device_change",
         "threshold": 70,
         "action": "challenge",
+        "mode": "production",
         "triggered_24h": 29,
+        "matches_24h": 29,
         "status": "active",
         "enabled": True,
+        "is_active": True,
         "description": "Triggers step-up MFA challenge or block when session originates from known ASN datacenter or Tor exit.",
+        "trigger_condition": "Tor exit node / Datacenter ASN / Headless browser (Risk >= 70%)",
+        "last_modified": (datetime.utcnow() - timedelta(days=2)).isoformat(),
     },
     {
         "id": "RULE-BEH-04",
         "name": "Behavioral Biometrics & IBAN Paste Anomaly",
+        "rule_name": "Behavioral Biometrics & IBAN Paste Anomaly",
         "threat_type": "behavior",
+        "trigger_type": "geographic_anomaly",
         "threshold": 65,
         "action": "alert",
+        "mode": "shadow",
         "triggered_24h": 11,
+        "matches_24h": 11,
         "status": "active",
         "enabled": True,
+        "is_active": True,
         "description": "Flags sessions showing non-human keystroke cadence or scripted DOM manipulation.",
+        "trigger_condition": "Keystroke cadence / IBAN paste anomaly (Risk >= 65%)",
+        "last_modified": (datetime.utcnow() - timedelta(days=1)).isoformat(),
     },
 ]
 
@@ -212,41 +270,61 @@ _SANCTIONS_MATCHES_STORE: List[Dict[str, Any]] = [
     {
         "id": "SAN-8801",
         "user_email": "m.korolev@balticshipping.io",
+        "user_name": "Mikhail Korolev",
         "matched_name": "BALTIC MARITIME TRANSIT LLC (SDN-44910)",
         "sanctions_list": "OFAC SDN",
+        "sanction_list": "OFAC SDN",
         "confidence": 0.94,
+        "match_score": 94.0,
         "detected_at": (datetime.utcnow() - timedelta(minutes=25)).isoformat(),
+        "detection_date": (datetime.utcnow() - timedelta(minutes=25)).isoformat(),
         "action_taken": "blocked",
+        "status": "blocked",
         "notes": "Confirmed SDN entity match on beneficiary shipping company.",
     },
     {
         "id": "SAN-8802",
         "user_email": "s.patel@globaltradehub.ae",
+        "user_name": "Sameer Patel",
         "matched_name": "AL-NOOR EXCHANGE GENERAL TRADING",
         "sanctions_list": "UN Consolidated",
+        "sanction_list": "UN Consolidated",
         "confidence": 0.86,
+        "match_score": 86.0,
         "detected_at": (datetime.utcnow() - timedelta(hours=4, minutes=12)).isoformat(),
+        "detection_date": (datetime.utcnow() - timedelta(hours=4, minutes=12)).isoformat(),
         "action_taken": "Pending Review",
+        "status": "Pending Review",
         "notes": "Partial phonetic match on intermediary remitter name; awaiting compliance analyst review.",
     },
     {
         "id": "SAN-8803",
         "user_email": "v.sokolov@eurochem-logistics.eu",
+        "user_name": "Viktor Sokolov",
         "matched_name": "SOKOLOV, VIKTOR GENNADYEVICH",
         "sanctions_list": "EU Financial Sanctions",
+        "sanction_list": "EU Financial Sanctions",
         "confidence": 0.91,
+        "match_score": 91.0,
         "detected_at": (datetime.utcnow() - timedelta(hours=11, minutes=5)).isoformat(),
+        "detection_date": (datetime.utcnow() - timedelta(hours=11, minutes=5)).isoformat(),
         "action_taken": "blocked",
+        "status": "blocked",
         "notes": "Blocked per EU Council Regulation 269/2014.",
     },
     {
         "id": "SAN-8804",
         "user_email": "j.vane@vanecapital.ch",
+        "user_name": "Julian Vane",
         "matched_name": "VANE HOLDINGS INTERNATIONAL LTD",
         "sanctions_list": "UK OFSI",
+        "sanction_list": "UK OFSI",
         "confidence": 0.62,
+        "match_score": 62.0,
         "detected_at": (datetime.utcnow() - timedelta(days=1, hours=2)).isoformat(),
+        "detection_date": (datetime.utcnow() - timedelta(days=1, hours=2)).isoformat(),
         "action_taken": "cleared",
+        "status": "cleared",
         "notes": "False positive cleared after verifying Swiss commercial registry CHE-114.829.301.",
     },
 ]
@@ -259,8 +337,9 @@ async def fraud_summary(db: Session = Depends(get_db)):
     blocked_amt = sum(float(t.get("amount", 0)) for t in active_blocked)
     flagged_devs = len([d for d in _FRAUD_DEVICES_STORE if d.get("status") in ("suspicious", "blocked")])
     sanctions_cnt = len([s for s in _SANCTIONS_MATCHES_STORE if s.get("action_taken") != "cleared"])
+    active_rules_cnt = len([r for r in _FRAUD_RULES_STORE if r.get("enabled", True)])
+    rules_trig_24h = sum(int(r.get("triggered_24h", 0)) for r in _FRAUD_RULES_STORE)
 
-    # Compute threat distribution counts: [Velocity, Behavioral, Sanctions, Device]
     dist_map = {"velocity": 0, "behavior": 0, "sanctions": 0, "device": 0}
     for t in _BLOCKED_TRANSACTIONS_STORE:
         tt = (t.get("threat_type") or "velocity").lower()
@@ -270,8 +349,12 @@ async def fraud_summary(db: Session = Depends(get_db)):
     return {
         "success": True,
         "threats_detected": len(_BLOCKED_TRANSACTIONS_STORE) + flagged_devs,
+        "blocked_today": len(active_blocked),
         "blocked_amount": round(blocked_amt, 2),
         "flagged_devices": flagged_devs,
+        "flagged_users": len(active_blocked) + flagged_devs,
+        "active_rules": active_rules_cnt,
+        "rules_triggered_24h": rules_trig_24h,
         "sanctions_matches": sanctions_cnt,
         "total_transactions": len(_BLOCKED_TRANSACTIONS_STORE) + 1420,
         "flagged_transactions": len(_BLOCKED_TRANSACTIONS_STORE),
@@ -297,6 +380,7 @@ async def get_blocked_transactions(
     skip: int = Query(0, ge=0),
     risk_score_min: float = Query(0, ge=0),
     threat_type: Optional[str] = Query(None),
+    country: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
     db: Session = Depends(get_db),
 ):
@@ -307,6 +391,13 @@ async def get_blocked_transactions(
     if threat_type and threat_type.strip():
         tt = threat_type.strip().lower()
         items = [t for t in items if (t.get("threat_type") or "").lower() == tt]
+    if country and country.strip():
+        cc = country.strip().lower()
+        items = [
+            t
+            for t in items
+            if (t.get("country_code") or "").lower() == cc or cc in (t.get("country") or "").lower()
+        ]
     if status and status.strip():
         st = status.strip().lower()
         items = [t for t in items if (t.get("status") or "").lower() == st]
@@ -331,7 +422,7 @@ async def create_or_update_blocked_transaction(
     """Block a transaction or update an existing blocked transaction's status."""
     txn_id = str(payload.get("transaction_id") or payload.get("id") or f"TXN-FRD-{9042 + len(_BLOCKED_TRANSACTIONS_STORE)}").strip()
     threat_type = (payload.get("threat_type") or "velocity").strip().lower()
-    reason = (payload.get("reason") or "Manual administrative fraud block").strip()
+    reason = (payload.get("reason") or payload.get("notes") or "Manual administrative fraud block").strip()
     action = (payload.get("action") or "block").strip().lower()
     new_status = "cleared" if action in ("unblock", "clear", "release") else "blocked"
 
@@ -340,11 +431,12 @@ async def create_or_update_blocked_transaction(
         existing["status"] = new_status
         if payload.get("threat_type"):
             existing["threat_type"] = threat_type
-        if payload.get("reason"):
+        if reason:
             existing["reason"] = reason
         existing["updated_at"] = datetime.utcnow().isoformat()
         target = existing
     else:
+        now_iso = datetime.utcnow().isoformat()
         target = {
             "id": txn_id,
             "user_id": payload.get("user_id") or 101,
@@ -353,12 +445,14 @@ async def create_or_update_blocked_transaction(
             "threat_type": threat_type,
             "risk_score": int(payload.get("risk_score") or 88),
             "reason": reason,
-            "blocked_at": datetime.utcnow().isoformat(),
+            "blocked_at": now_iso,
+            "blocked_date": now_iso,
             "status": new_status,
             "device_id": f"DEV-{txn_id[-4:]}-99A",
             "ip_address": "198.51.100.77",
             "city": "New York",
             "country": "United States",
+            "country_code": "US",
             "isp": "Tier-1 Transit ASN",
             "vpn_detected": True,
         }
@@ -418,21 +512,29 @@ async def flag_fraud_device(
     """Update device trust status (trusted, suspicious, blocked)."""
     new_status = (payload.get("status") or "suspicious").strip().lower()
     reason = (payload.get("reason") or "Flagged by fraud analyst").strip()
+    risk_lvl = "high" if new_status == "blocked" else ("medium" if new_status == "suspicious" else "low")
+    now_iso = datetime.utcnow().isoformat()
 
     dev = next((d for d in _FRAUD_DEVICES_STORE if str(d["id"]) == str(device_id)), None)
     if dev:
         dev["status"] = new_status
-        dev["last_seen"] = datetime.utcnow().isoformat()
+        dev["risk_level"] = risk_lvl
+        dev["last_seen"] = now_iso
+        dev["last_active"] = now_iso
         dev["flag_reason"] = reason
     else:
         dev = {
             "id": device_id,
+            "device_id": device_id,
             "user_email": payload.get("user_email") or "monitored.user@finanza.com",
             "device_type": "Browser Session",
+            "browser": "Browser Session",
             "ip_address": "192.0.2.88",
             "location": "Unknown Location",
-            "last_seen": datetime.utcnow().isoformat(),
+            "last_seen": now_iso,
+            "last_active": now_iso,
             "status": new_status,
+            "risk_level": risk_lvl,
             "flag_reason": reason,
         }
         _FRAUD_DEVICES_STORE.insert(0, dev)
@@ -461,31 +563,49 @@ async def flag_fraud_device(
 
 
 @router.get("/rules")
-async def get_fraud_rules():
+async def get_fraud_rules(limit: int = Query(50, ge=1, le=200), skip: int = Query(0, ge=0)):
     """Get active fraud detection rules."""
-    return {"success": True, "rules": _FRAUD_RULES_STORE, "total": len(_FRAUD_RULES_STORE)}
+    paged = _FRAUD_RULES_STORE[skip : skip + limit]
+    return {"success": True, "rules": paged, "total": len(_FRAUD_RULES_STORE)}
 
 
 @router.post("/rules")
 async def create_fraud_rule(payload: Dict[str, Any] = Body(default={}), db: Session = Depends(get_db)):
     """Create a new real-time fraud detection rule."""
-    name = (payload.get("name") or "Custom Fraud Detection Rule").strip()
-    threat_type = (payload.get("threat_type") or "velocity").strip().lower()
+    name = (payload.get("name") or payload.get("rule_name") or "Custom Fraud Detection Rule").strip()
+    raw_type = (payload.get("threat_type") or payload.get("trigger_type") or "velocity").strip().lower()
+    type_map = {
+        "velocity_check": "velocity",
+        "amount_threshold": "velocity",
+        "transaction_count": "velocity",
+        "geographic_anomaly": "behavior",
+        "device_change": "device",
+    }
+    threat_type = type_map.get(raw_type, raw_type if raw_type in ("velocity", "behavior", "sanctions", "device") else "velocity")
     threshold = float(payload.get("threshold") or 75)
     action = (payload.get("action") or "block").strip().lower()
+    mode = (payload.get("mode") or "production").strip().lower()
     enabled = bool(payload.get("enabled", True))
-    description = (payload.get("description") or "").strip()
+    description = (payload.get("description") or payload.get("trigger_condition") or f"Trigger: {raw_type} >= {threshold}").strip()
+    now_iso = datetime.utcnow().isoformat()
 
     new_rule = {
         "id": f"RULE-{threat_type[:3].upper()}-{len(_FRAUD_RULES_STORE) + 1:02d}",
         "name": name,
+        "rule_name": name,
         "threat_type": threat_type,
+        "trigger_type": raw_type,
         "threshold": threshold,
         "action": action,
+        "mode": mode,
         "triggered_24h": 0,
+        "matches_24h": 0,
         "status": "active" if enabled else "paused",
         "enabled": enabled,
+        "is_active": enabled,
         "description": description,
+        "trigger_condition": description,
+        "last_modified": now_iso,
     }
     _FRAUD_RULES_STORE.append(new_rule)
 
@@ -496,7 +616,7 @@ async def create_fraud_rule(payload: Dict[str, Any] = Body(default={}), db: Sess
                 admin_id=1,
                 user_id=1,
                 action_type="FRAUD_RULE_CREATED",
-                details=f"Created fraud rule '{name}' ({threat_type}, threshold>={threshold}, action={action})",
+                details=f"Created fraud rule '{name}' ({threat_type}, mode={mode}, threshold>={threshold}, action={action})",
             )
         )
         await db.commit()
@@ -518,22 +638,41 @@ async def update_fraud_rule(
     if not rule:
         raise HTTPException(status_code=404, detail="Fraud rule not found")
 
-    if "name" in payload and payload["name"]:
-        rule["name"] = str(payload["name"]).strip()
-    if "threat_type" in payload and payload["threat_type"]:
-        rule["threat_type"] = str(payload["threat_type"]).strip().lower()
+    name = payload.get("name") or payload.get("rule_name")
+    if name:
+        rule["name"] = str(name).strip()
+        rule["rule_name"] = rule["name"]
+    raw_type = payload.get("threat_type") or payload.get("trigger_type")
+    if raw_type:
+        rt = str(raw_type).strip().lower()
+        type_map = {
+            "velocity_check": "velocity",
+            "amount_threshold": "velocity",
+            "transaction_count": "velocity",
+            "geographic_anomaly": "behavior",
+            "device_change": "device",
+        }
+        rule["trigger_type"] = rt
+        rule["threat_type"] = type_map.get(rt, rt if rt in ("velocity", "behavior", "sanctions", "device") else "velocity")
     if "threshold" in payload and payload["threshold"] is not None:
         rule["threshold"] = float(payload["threshold"])
     if "action" in payload and payload["action"]:
         rule["action"] = str(payload["action"]).strip().lower()
-    if "description" in payload and payload["description"] is not None:
-        rule["description"] = str(payload["description"]).strip()
+    if "mode" in payload and payload["mode"]:
+        rule["mode"] = str(payload["mode"]).strip().lower()
+    desc = payload.get("description") if "description" in payload else payload.get("trigger_condition")
+    if desc is not None:
+        rule["description"] = str(desc).strip()
+        rule["trigger_condition"] = rule["description"]
     if "status" in payload and payload["status"]:
         rule["status"] = str(payload["status"]).strip().lower()
         rule["enabled"] = rule["status"] == "active"
+        rule["is_active"] = rule["enabled"]
     elif "enabled" in payload:
         rule["enabled"] = bool(payload["enabled"])
+        rule["is_active"] = rule["enabled"]
         rule["status"] = "active" if rule["enabled"] else "paused"
+    rule["last_modified"] = datetime.utcnow().isoformat()
 
     return {"success": True, "rule": rule, "rules": _FRAUD_RULES_STORE}
 
@@ -570,6 +709,7 @@ async def review_fraud_sanctions_match(
     match = next((m for m in _SANCTIONS_MATCHES_STORE if str(m["id"]) == str(match_id)), None)
     if match:
         match["action_taken"] = decision
+        match["status"] = decision
         match["notes"] = notes
         match["reviewed_at"] = datetime.utcnow().isoformat()
 

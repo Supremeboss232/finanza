@@ -28,7 +28,7 @@
         .btn-primary { background: #667eea; border: none; }
         .btn-primary:hover { background: #5568d3; }
         .table-responsive { background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        
+
         .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; }
         .toast-notification {
             background: white;
@@ -46,7 +46,7 @@
         .toast-notification.error { border-left: 4px solid #dc3545; }
         .toast-notification.warning { border-left: 4px solid #ffc107; color: #000; }
         .toast-notification.info { border-left: 4px solid #17a2b8; }
-        
+
         .masked-text { font-family: 'Courier New', monospace; color: #999; }
         .error-container { background: #f8d7da; border: 1px solid #f5c2c7; color: #721c24; padding: 12px; border-radius: 5px; margin-bottom: 15px; display: none; }
         .error-container.show { display: block; }
@@ -175,7 +175,7 @@
 
             <!-- Error Container -->
             <div class="error-container" id="delinqErrorContainer">
-                <i class="fas fa-exclamation-triangle"></i> Failed to load delinquent accounts. 
+                <i class="fas fa-exclamation-triangle"></i> Failed to load delinquent accounts.
                 <a href="javascript:loadDelinquencies()">Retry</a>
             </div>
 
@@ -623,19 +623,19 @@
             const container = document.querySelector('.toast-container');
             const toast = document.createElement('div');
             toast.className = `toast-notification ${type}`;
-            
+
             const icons = {
                 success: 'fa-check-circle',
                 error: 'fa-times-circle',
                 warning: 'fa-exclamation-circle',
                 info: 'fa-info-circle'
             };
-            
+
             toast.innerHTML = `
                 <i class="fas ${icons[type]}"></i>
                 <span>${securityManager.escapeHtml(message)}</span>
             `;
-            
+
             container.appendChild(toast);
             setTimeout(() => toast.remove(), duration);
         }
@@ -646,10 +646,10 @@
                 const response = await fetch(`${CONFIG.API_BASE}/loans/compliance/metrics`, {
                     headers: securityManager.getSecureHeaders()
                 });
-                
+
                 if (!response.ok) throw new Error('Failed');
                 const data = await response.json();
-                
+
                 document.getElementById('delinquentCount').textContent = data.delinquent_count || 0;
                 document.getElementById('totalDaysOverdue').textContent = data.total_days_overdue || 0;
                 document.getElementById('forbearanceCount').textContent = data.forbearance_count || 0;
@@ -665,10 +665,10 @@
                 const response = await fetch(`${CONFIG.API_BASE}/compliance/delinquency-chart-data`, {
                     headers: securityManager.getSecureHeaders()
                 });
-                
+
                 if (!response.ok) throw new Error('Failed');
                 const data = await response.json();
-                
+
                 renderDelinquencyChart(data.delinquency_aging || {});
                 renderCollectionsChart(data.collections_status || {});
             } catch (error) {
@@ -680,7 +680,7 @@
         function renderDelinquencyChart(aging) {
             const ctx = document.getElementById('delinquencyChart').getContext('2d');
             if (state.delinquencyChart) state.delinquencyChart.destroy();
-            
+
             state.delinquencyChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
@@ -691,8 +691,8 @@
                         backgroundColor: ['#28a745', '#ffc107', '#ff9800', '#dc3545']
                     }]
                 },
-                options: { 
-                    responsive: true, 
+                options: {
+                    responsive: true,
                     maintainAspectRatio: false,
                     onClick: (event, activeElements) => {
                         if (activeElements.length > 0) {
@@ -708,7 +708,7 @@
         function renderCollectionsChart(status) {
             const ctx = document.getElementById('collectionsChart').getContext('2d');
             if (state.collectionsChart) state.collectionsChart.destroy();
-            
+
             state.collectionsChart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
@@ -730,10 +730,10 @@
                     `${CONFIG.API_BASE}/compliance/delinquencies/search?skip=${skip}&limit=${state.delinqPageSize}&status=${state.drilldownFilter || ''}`,
                     { headers: securityManager.getSecureHeaders() }
                 );
-                
+
                 if (!response.ok) throw new Error('Failed');
                 const data = await response.json();
-                
+
                 state.totalDelinquencies = data.total || 0;
                 renderDelinquencies(data.data || []);
                 updateDelinqPaginationControls(page);
@@ -760,10 +760,10 @@
                         <td><strong>${securityManager.escapeHtml(d.id || '')}</strong></td>
                         <td>${securityManager.escapeHtml(d.loan_id || '')}</td>
                         <td><span class="masked-text">${borrowerDisplay}</span></td>
-                        <td>$${(d.amount_due || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td>$${Number(d.amount_due ?? d.overdue_amount ?? 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                         <td>${d.days_overdue || 0}</td>
                         <td><span class="status-badge status-${statusClass}">${d.days_overdue || 0} days</span></td>
-                        <td>${d.last_contact_date || 'Never'}</td>
+                        <td>${(d.last_contact_date || d.last_contact) ? new Date(d.last_contact_date || d.last_contact).toLocaleDateString() : 'Never'}</td>
                         <td><button class="btn btn-sm btn-warning" onclick="quickAction('${d.id}')">Action</button></td>
                     </tr>
                 `;
@@ -773,19 +773,19 @@
         async function searchDelinquencies() {
             const query = document.getElementById('delinqSearchInput').value.trim();
             const daysFilter = document.getElementById('daysOverdueFilter').value;
-            
+
             try {
                 let filterParam = '';
                 if (daysFilter === '0-30') filterParam = '&days_overdue_min=0&days_overdue_max=30';
                 else if (daysFilter === '30-60') filterParam = '&days_overdue_min=30&days_overdue_max=60';
                 else if (daysFilter === '60-90') filterParam = '&days_overdue_min=60&days_overdue_max=90';
                 else if (daysFilter === '90+') filterParam = '&days_overdue_min=90';
-                
+
                 const response = await fetch(
                     `${CONFIG.API_BASE}/compliance/delinquencies/search?query=${encodeURIComponent(query)}${filterParam}&limit=${state.delinqPageSize}`,
                     { headers: securityManager.getSecureHeaders() }
                 );
-                
+
                 if (response.ok) {
                     const data = await response.json();
                     state.totalDelinquencies = data.total || 0;
@@ -873,13 +873,16 @@
                     const tbody = document.getElementById('holdsTable');
                     tbody.innerHTML = (data.data || []).map(h => `
                         <tr>
-                            <td>${securityManager.escapeHtml(h.id || '')}</td>
-                            <td>${securityManager.escapeHtml(h.account_id || '')}</td>
+                            <td>${securityManager.escapeHtml(String(h.id || ''))}</td>
+                            <td>${securityManager.escapeHtml(String(h.account_id || ''))}</td>
                             <td>${securityManager.escapeHtml(h.hold_type || '')}</td>
                             <td>${securityManager.escapeHtml(h.reason || '')}</td>
-                            <td>$${(h.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                            <td>${new Date(h.created_date).toLocaleDateString()}</td>
-                            <td><span class="badge bg-warning">${securityManager.escapeHtml(h.status || '')}</span></td>
+                            <td>$${Number(h.amount || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                            <td>${(h.created_date || h.placed_date) ? new Date(h.created_date || h.placed_date).toLocaleDateString() : 'N/A'}</td>
+                            <td>
+                                <span class="badge ${h.status === 'released' ? 'bg-success' : 'bg-warning text-dark'} me-1">${securityManager.escapeHtml(h.status || 'active')}</span>
+                                ${h.status !== 'released' ? `<button class="btn btn-xs btn-outline-success py-0 px-2" onclick="releaseAccountHold(${h.id})"><i class="fas fa-unlock"></i> Release</button>` : ''}
+                            </td>
                         </tr>
                     `).join('') || '<tr><td colspan="7" class="text-center text-muted">No account holds</td></tr>';
                 }
@@ -947,7 +950,7 @@
 
         async function handleDelinquencyAction(event) {
             event.preventDefault();
-            
+
             const delinquencyId = document.getElementById('delinquencyId').value;
             const actionType = document.getElementById('actionType').value;
             const notes = document.getElementById('actionNotes').value.trim();
@@ -994,7 +997,7 @@
 
         async function handleLogContact(event) {
             event.preventDefault();
-            
+
             const loanId = document.getElementById('contactLoanId').value;
             const contactType = document.getElementById('contactType').value;
             const contactDate = document.getElementById('contactDate').value;
@@ -1006,7 +1009,7 @@
                 return;
             }
 
-            if (new Date(contactDate) > new Date()) {
+            if (contactDate > new Date(Date.now() + 86400000).toISOString().split('T')[0]) {
                 showToast('Contact date cannot be in the future', 'error');
                 return;
             }
@@ -1047,7 +1050,7 @@
 
         async function handleCreateHold(event) {
             event.preventDefault();
-            
+
             const accountId = document.getElementById('holdAccountId').value;
             const holdType = document.getElementById('holdType').value;
             const amount = document.getElementById('holdAmount').value;
@@ -1096,7 +1099,7 @@
 
         async function handleCreateForbearance(event) {
             event.preventDefault();
-            
+
             const loanId = document.getElementById('forbearanceLoanId').value;
             const planType = document.getElementById('planType').value;
             const startDate = document.getElementById('forbearanceStartDate').value;
@@ -1113,7 +1116,7 @@
                 return;
             }
 
-            if (new Date(startDate) < new Date().toISOString().split('T')[0]) {
+            if (startDate < '2020-01-01') {
                 showToast('Start date cannot be in the past', 'error');
                 return;
             }
@@ -1171,7 +1174,7 @@
             }
 
             showToast('MFA verified successfully', 'success');
-            
+
             if (state.currentMFACallback && state.currentMFACallback.callback) {
                 await state.currentMFACallback.callback(reason);
             }
@@ -1274,9 +1277,29 @@
             }
         }
 
-        function quickAction(delinquencyId) {
+        async function quickAction(delinquencyId) {
+            await loadDelinquencyDropdown('delinquencyId');
             document.getElementById('delinquencyId').value = delinquencyId;
             new bootstrap.Modal(document.getElementById('actionModal')).show();
+        }
+
+        async function releaseAccountHold(holdId) {
+            try {
+                const resp = await fetch(`${CONFIG.API_BASE}/compliance/holds/${holdId}/release`, {
+                    method: 'POST',
+                    headers: securityManager.getSecureHeaders('POST'),
+                    body: JSON.stringify({ hold_id: holdId })
+                });
+                if (resp.ok) {
+                    showToast(`Account hold #${holdId} released`, 'success');
+                    await loadAccountHolds();
+                    await loadComplianceMetrics();
+                } else {
+                    showToast('Failed to release account hold', 'error');
+                }
+            } catch (e) {
+                showToast('Error releasing hold', 'error');
+            }
         }
 
         // ==================== INITIALIZATION ====================

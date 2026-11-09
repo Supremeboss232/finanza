@@ -294,19 +294,27 @@
                 <form id="returnForm" onsubmit="handleProcessReturn(event)">
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label class="form-label">Original Entry ID</label>
-                            <input type="text" class="form-control" required>
+                            <label class="form-label">Return / Entry ID</label>
+                            <input type="text" id="processReturnEntryId" class="form-control" placeholder="e.g. 1 or trace ID" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Return Code</label>
-                            <select class="form-control" required>
+                            <label class="form-label">NACHA Return Code</label>
+                            <select class="form-select" required>
                                 <option value="">Select code...</option>
                                 <option value="R01">R01 - Insufficient Funds</option>
                                 <option value="R02">R02 - Account Closed</option>
-                                <option value="R03">R03 - No Account/Unable to Locate</option>
+                                <option value="R03">R03 - No Account / Unable to Locate</option>
                                 <option value="R04">R04 - Invalid Account Number</option>
-                                <option value="R05">R05 - Reserved</option>
-                                <option value="R06">R06 - Returned per ODP Order</option>
+                                <option value="R05">R05 - Unauthorized Debit to Consumer Account</option>
+                                <option value="R06">R06 - Returned per ODFI Request</option>
+                                <option value="R07">R07 - Authorization Revoked by Customer</option>
+                                <option value="R08">R08 - Payment Stopped</option>
+                                <option value="R09">R09 - Uncollected Funds</option>
+                                <option value="R10">R10 - Customer Advises Not Authorized</option>
+                                <option value="R16">R16 - Account Frozen</option>
+                                <option value="R20">R20 - Non-Transaction Account</option>
+                                <option value="R29">R29 - Corporate Customer Advises Not Authorized</option>
+                                <option value="R51">R51 - Item is Ineligible</option>
                             </select>
                         </div>
                     </div>
@@ -323,15 +331,55 @@
     <div class="modal fade" id="nsfActionModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">NSF Actions</h5>
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i> NSF Item Decision &amp; Fee Control</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
-                    <p>Action pending NSF transaction processing</p>
+                <form id="nsfActionForm" onsubmit="handleNSFActionSubmit(event)">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Select NSF Item</label>
+                            <select id="nsfItemSelect" class="form-select" required></select>
+                        </div>
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Action Decision</label>
+                                <select id="nsfActionType" class="form-select" required>
+                                    <option value="assess_fee">Assess $35 NSF Overdraft Fee</option>
+                                    <option value="waive_fee">Waive NSF Fee (Courtesy / Override)</option>
+                                    <option value="return_item">Return Item Unpaid (R01)</option>
+                                    <option value="notify">Send NSF Alert to Customer</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Fee Amount ($)</label>
+                                <input type="number" id="nsfFeeAmount" class="form-control" value="35.00" step="0.01" min="0">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Audit Reason / Waiver Note</label>
+                            <input type="text" id="nsfActionNotes" class="form-control" placeholder="e.g. First offense courtesy waiver / R01 return" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-warning">Execute NSF Action</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ACH File Details Modal -->
+    <div class="modal fade" id="achFileDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title"><i class="fas fa-file-invoice-dollar me-2"></i> NACHA Batch File Details</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <div class="modal-body" id="achFileDetailsBody">
+                    <p class="text-muted text-center">Loading batch entries...</p>
                 </div>
             </div>
         </div>
@@ -449,7 +497,7 @@
 
             static maskPII(value, type = 'account') {
                 if (!CONFIG.features.enablePiiMasking || !value) return value;
-                
+
                 if (type === 'account' && value.length > 4) {
                     return '****' + value.slice(-4);
                 }
@@ -505,7 +553,7 @@
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
                 const data = await response.json();
-                
+
                 document.getElementById('totalFiles').textContent = data.total_files || 0;
                 document.getElementById('totalVolume').textContent = '$' + (data.total_volume || 0).toLocaleString();
                 document.getElementById('returnRate').textContent = (data.return_rate || 0).toFixed(2) + '%';
@@ -513,7 +561,7 @@
 
                 // Update charts with real data
                 updateChartsWithData(data);
-                
+
                 logAuditEvent('dashboard_load', 'ACH_METRICS', 'ACH dashboard metrics loaded');
             } catch (error) {
                 console.error('Error loading ACH metrics:', error);
@@ -532,28 +580,31 @@
 
                 const data = await response.json();
                 const tbody = document.getElementById('filesTable');
-                
+
                 if (!data.data || data.data.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No ACH files found</td></tr>';
                     return;
                 }
 
-                tbody.innerHTML = data.data.map(file => `
+                tbody.innerHTML = data.data.map(file => {
+                    const vol = Number(file.total_amount ?? file.total_volume ?? ((file.total_debit || 0) + (file.total_credit || 0)));
+                    const pct = file.processing_pct ?? (file.status === 'processed' ? 100 : (file.status === 'processing' ? 65 : 20));
+                    return `
                     <tr>
-                        <td><strong>${escapeHtml(file.id)}</strong></td>
-                        <td>${escapeHtml(file.filename || 'N/A')}</td>
-                        <td>${new Date(file.upload_date).toLocaleDateString()}</td>
+                        <td><strong>${escapeHtml(String(file.file_id || file.id))}</strong></td>
+                        <td>${escapeHtml(file.filename || file.file_name || 'N/A')}</td>
+                        <td>${(file.upload_date || file.uploaded_at) ? new Date(file.upload_date || file.uploaded_at).toLocaleDateString() : 'N/A'}</td>
                         <td>${file.entry_count || 0}</td>
-                        <td>$${(file.total_volume || 0).toLocaleString()}</td>
+                        <td>$${vol.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                         <td><span class="status-badge status-${file.status}">${escapeHtml(file.status)}</span></td>
-                        <td>${Math.round(file.processing_pct || 0)}%</td>
+                        <td>${Math.round(pct)}%</td>
                         <td>
-                            <button class="btn btn-sm btn-info" onclick="viewFileDetails('${file.id}')" title="View details">
-                                <i class="fas fa-eye"></i>
+                            <button class="btn btn-sm btn-info" onclick="viewFileDetails('${file.id}')" title="View batch entries">
+                                <i class="fas fa-eye"></i> View
                             </button>
                         </td>
-                    </tr>
-                `).join('');
+                    </tr>`;
+                }).join('');
             } catch (error) {
                 console.error('Error loading ACH files:', error);
                 showToast('Failed to load ACH files: ' + error.message, 'error');
@@ -571,30 +622,31 @@
 
                 const data = await response.json();
                 const tbody = document.getElementById('returnsTable');
-                
+
                 if (!data.data || data.data.length === 0) {
                     tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No returns found</td></tr>';
                     return;
                 }
 
                 tbody.innerHTML = data.data.map(ret => {
-                    const accountDisplay = CONFIG.features.enablePiiMasking ? 
-                        SecurityManager.maskPII(ret.account_number, 'account') : 
+                    const accountDisplay = CONFIG.features.enablePiiMasking ?
+                        SecurityManager.maskPII(ret.account_number, 'account') :
                         escapeHtml(ret.account_number);
-                    
+
                     return `
                         <tr>
-                            <td>${escapeHtml(ret.id)}</td>
-                            <td>${escapeHtml(ret.original_entry_id)}</td>
-                            <td><strong>${escapeHtml(ret.return_code)}</strong></td>
-                            <td>${escapeHtml(ret.reason || 'N/A')}</td>
-                            <td>$${(ret.amount || 0).toFixed(2)}</td>
+                            <td><strong>${escapeHtml(String(ret.return_id || ret.id))}</strong></td>
+                            <td>${escapeHtml(String(ret.original_trace || ret.original_entry_id || ret.ach_entry_id || ''))} <small class="text-muted">(${accountDisplay})</small></td>
+                            <td><span class="badge bg-danger">${escapeHtml(ret.return_code)}</span></td>
+                            <td>${escapeHtml(ret.reason || ret.return_reason || 'N/A')}</td>
+                            <td>$${Number(ret.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                             <td>${ret.return_date ? new Date(ret.return_date).toLocaleDateString() : 'N/A'}</td>
                             <td><span class="status-badge status-${ret.status}">${escapeHtml(ret.status)}</span></td>
                             <td>
+                                ${ret.status === 'processed' ? '<span class="text-success small"><i class="fas fa-check-circle"></i> Cleared</span>' : `
                                 <button class="btn btn-sm btn-warning" onclick="processACHReturn('${ret.id}', '${ret.return_code}')" title="Process this return">
                                     <i class="fas fa-cog"></i> Process
-                                </button>
+                                </button>`}
                             </td>
                         </tr>
                     `;
@@ -640,10 +692,10 @@
 
                 showToast('ACH return processed successfully', 'success');
                 logAuditEvent('return_processed', 'ACH_RETURN', `Entry: ${entryIdInput.value}, Code: ${returnCodeSelect.value}`);
-                
+
                 bootstrap.Modal.getInstance(form.closest('.modal')).hide();
                 form.reset();
-                await loadACHReturns();
+                await Promise.all([loadACHMetrics(), loadACHReturns(), loadACHEntries()]);
             } catch (error) {
                 console.error('Process return error:', error);
                 showToast('Failed to process return: ' + error.message, 'error');
@@ -700,10 +752,10 @@
 
                 showToast('ACH file uploaded successfully', 'success');
                 logAuditEvent('file_uploaded', 'ACH_FILE', `File: ${file.name}, Type: ${typeSelect.value}`);
-                
+
                 bootstrap.Modal.getInstance(form.closest('.modal')).hide();
                 form.reset();
-                await loadACHFiles();
+                await Promise.all([loadACHMetrics(), loadACHFiles(), loadACHEntries()]);
             } catch (error) {
                 console.error('Upload error:', error);
                 showToast('Failed to upload file: ' + error.message, 'error');
@@ -744,7 +796,7 @@
 
                 showToast('ACH return processed successfully', 'success');
                 logAuditEvent('return_processed', 'ACH_RETURN', `Return ID: ${returnId}, Code: ${returnCode}`);
-                await loadACHReturns();
+                await Promise.all([loadACHMetrics(), loadACHReturns(), loadACHEntries()]);
             } catch (error) {
                 console.error('Process return error:', error);
                 showToast('Failed to process return: ' + error.message, 'error');
@@ -798,7 +850,7 @@
 
                 showToast('Collection contact added successfully', 'success');
                 logAuditEvent('contact_added', 'ACH_CONTACT', `Contact: ${nameInput.value}`);
-                
+
                 bootstrap.Modal.getInstance(form.closest('.modal')).hide();
                 form.reset();
                 await loadCollectionContacts();
@@ -902,27 +954,206 @@
 
         // ===== HELPER FUNCTIONS =====
         function escapeHtml(text) {
-            if (!text) return '';
+            if (text === null || text === undefined) return '';
             const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
-            return text.replace(/[&<>"']/g, c => map[c]);
+            return String(text).replace(/[&<>"']/g, c => map[c]);
         }
 
-        function viewFileDetails(fileId) {
-            showToast(`Viewing details for file: ${fileId}`, 'info');
-            // Note: Implement file details modal
+        function escapeHtml(text) {
+            if (text === null || text === undefined) return '';
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+            return String(text).replace(/[&<>"']/g, c => map[c]);
         }
 
-        function openModal(modalId) {
+        async function viewFileDetails(fileId) {
+            const body = document.getElementById('achFileDetailsBody');
+            body.innerHTML = '<div class="text-center py-4"><span class="spinner-border spinner-border-sm me-2"></span>Loading batch details...</div>';
+            new bootstrap.Modal(document.getElementById('achFileDetailsModal')).show();
+            try {
+                const resp = await fetch(`${CONFIG.apiBaseUrl}/settlement/ach/files/${fileId}`, {
+                    headers: SecurityManager.getSecureHeaders()
+                });
+                if (!resp.ok) throw new Error('Failed to load file details');
+                const data = await resp.json();
+                const f = data.file || {};
+                const entries = data.entries || [];
+                body.innerHTML = `
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-4"><div class="p-2 border rounded bg-light"><small class="text-muted d-block">Batch ID</small><strong>${escapeHtml(f.file_id)}</strong></div></div>
+                        <div class="col-md-4"><div class="p-2 border rounded bg-light"><small class="text-muted d-block">Filename</small><strong>${escapeHtml(f.filename)}</strong></div></div>
+                        <div class="col-md-4"><div class="p-2 border rounded bg-light"><small class="text-muted d-block">Total Credits / Debits</small><strong>$${Number(f.total_credit || 0).toLocaleString()} / $${Number(f.total_debit || 0).toLocaleString()}</strong></div></div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover">
+                            <thead class="table-light">
+                                <tr><th>Trace #</th><th>Type</th><th>Routing</th><th>Account</th><th>Individual</th><th>Amount</th><th>Status</th></tr>
+                            </thead>
+                            <tbody>
+                                ${entries.map(e => `
+                                    <tr>
+                                        <td><code>${escapeHtml(e.entry_id)}</code></td>
+                                        <td><span class="badge ${e.entry_type === 'CREDIT' ? 'bg-success' : 'bg-primary'}">${escapeHtml(e.entry_type)}</span></td>
+                                        <td>${escapeHtml(e.routing_number)}</td>
+                                        <td>${escapeHtml(SecurityManager.maskPII(e.account_number, 'account'))}</td>
+                                        <td>${escapeHtml(e.individual_name)}</td>
+                                        <td>$${Number(e.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                        <td><span class="status-badge status-${e.status}">${escapeHtml(e.status)}</span></td>
+                                    </tr>
+                                `).join('') || '<tr><td colspan="7" class="text-center text-muted">No entries</td></tr>'}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } catch (e) {
+                body.innerHTML = `<div class="alert alert-danger mb-0">${escapeHtml(e.message)}</div>`;
+            }
+        }
+
+        function openModal(modalId, preselectNsfId = null) {
+            if (modalId === 'nsfActionModal') {
+                populateNSFModalSelect(preselectNsfId);
+            }
             const modal = document.getElementById(modalId);
             if (modal) {
                 new bootstrap.Modal(modal).show();
             }
         }
 
-        // ===== STUB IMPLEMENTATIONS =====
-        async function loadACHEntries() { /* Uses API data */ }
-        async function loadNSFTransactions() { /* Uses API data */ }
-        async function loadCollectionContacts() { /* Uses API data */ }
+        // ===== REAL TABLE IMPLEMENTATIONS =====
+        async function loadACHEntries() {
+            try {
+                const resp = await fetch(`${CONFIG.apiBaseUrl}/settlement/ach/entries?limit=50`, {
+                    headers: SecurityManager.getSecureHeaders()
+                });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const data = await resp.json();
+                const tbody = document.getElementById('entriesTable');
+                const rows = data.data || [];
+                if (!rows.length) {
+                    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No ACH entries found</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = rows.map(e => `
+                    <tr>
+                        <td><code>${escapeHtml(e.entry_id || e.id)}</code></td>
+                        <td>#${escapeHtml(e.ach_file_id)} <small class="text-muted">${escapeHtml(e.file_name || '')}</small></td>
+                        <td><span class="badge ${e.entry_type === 'CREDIT' ? 'bg-success' : 'bg-primary'}">${escapeHtml(e.entry_type)}</span></td>
+                        <td>${escapeHtml(SecurityManager.maskPII(e.account_number, 'account'))} <small class="text-muted">${escapeHtml(e.individual_name || '')}</small></td>
+                        <td>$${Number(e.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                        <td>${e.effective_date ? new Date(e.effective_date).toLocaleDateString() : 'N/A'}</td>
+                        <td><span class="status-badge status-${e.status}">${escapeHtml(e.status)}</span></td>
+                        <td>${e.return_code ? `<span class="badge bg-danger">${escapeHtml(e.return_code)}</span>` : '<span class="text-muted small">Cleared</span>'}</td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                console.error('Error loading ACH entries:', err);
+            }
+        }
+
+        window._nsfItems = [];
+        async function loadNSFTransactions() {
+            try {
+                const resp = await fetch(`${CONFIG.apiBaseUrl}/settlement/ach/nsf?limit=50`, {
+                    headers: SecurityManager.getSecureHeaders()
+                });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const data = await resp.json();
+                const tbody = document.getElementById('nsfTable');
+                const rows = data.data || [];
+                window._nsfItems = rows;
+                if (!rows.length) {
+                    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No NSF transactions found</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = rows.map(n => `
+                    <tr>
+                        <td><strong>${escapeHtml(n.nsf_id || n.id)}</strong></td>
+                        <td>${escapeHtml(n.account_id)} <small class="text-muted d-block">${escapeHtml(n.customer_name || '')}</small></td>
+                        <td class="text-danger fw-bold">$${Number(n.shortfall_amount || n.shortfall || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                        <td>$${Number(n.nsf_fee || 35).toFixed(2)}</td>
+                        <td>${n.occurred_at ? new Date(n.occurred_at).toLocaleDateString() : 'N/A'}</td>
+                        <td><span class="status-badge status-${n.status}">${escapeHtml(n.status)}</span></td>
+                        <td>${n.fee_waived ? '<span class="badge bg-info">Fee Waived</span>' : (n.status === 'returned_r01' ? '<span class="badge bg-danger">Returned R01</span>' : '<span class="badge bg-secondary">Standard</span>')}</td>
+                        <td>
+                            <button class="btn btn-sm btn-warning" onclick="openModal('nsfActionModal', ${n.id})">
+                                <i class="fas fa-gavel"></i> Action
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                console.error('Error loading NSF transactions:', err);
+            }
+        }
+
+        function populateNSFModalSelect(selectedId = null) {
+            const sel = document.getElementById('nsfItemSelect');
+            if (!sel) return;
+            const items = window._nsfItems || [];
+            if (!items.length) {
+                sel.innerHTML = '<option value="1">NSF-0001 (Default Shortfall)</option>';
+                return;
+            }
+            sel.innerHTML = items.map(n =>
+                `<option value="${n.id}" ${selectedId && Number(selectedId) === Number(n.id) ? 'selected' : ''}>${escapeHtml(n.nsf_id || ('NSF-' + n.id))} — ${escapeHtml(n.customer_name)} (Shortfall: $${Number(n.shortfall_amount || 0).toFixed(2)})</option>`
+            ).join('');
+        }
+
+        async function handleNSFActionSubmit(event) {
+            event.preventDefault();
+            const nsfId = document.getElementById('nsfItemSelect').value;
+            const action = document.getElementById('nsfActionType').value;
+            const feeAmount = parseFloat(document.getElementById('nsfFeeAmount').value || 35);
+            const notes = document.getElementById('nsfActionNotes').value.trim();
+            if (!nsfId || !notes) {
+                showToast('Please select an NSF item and enter audit notes', 'warning');
+                return;
+            }
+            try {
+                const resp = await fetch(`${CONFIG.apiBaseUrl}/settlement/ach/nsf/${nsfId}/action`, {
+                    method: 'POST',
+                    headers: SecurityManager.getSecureHeaders(),
+                    body: JSON.stringify({ action, fee_amount: feeAmount, notes })
+                });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                showToast('NSF action executed and recorded in ledger/audit log', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('nsfActionModal')).hide();
+                document.getElementById('nsfActionForm').reset();
+                await Promise.all([loadNSFTransactions(), loadACHMetrics()]);
+            } catch (err) {
+                showToast('Failed to execute NSF action: ' + err.message, 'error');
+            }
+        }
+
+        async function loadCollectionContacts() {
+            try {
+                const resp = await fetch(`${CONFIG.apiBaseUrl}/settlement/ach/contacts?limit=50`, {
+                    headers: SecurityManager.getSecureHeaders()
+                });
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const data = await resp.json();
+                const tbody = document.getElementById('contactsTable');
+                const rows = data.data || [];
+                if (!rows.length) {
+                    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No collection contacts logged</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = rows.map(c => `
+                    <tr>
+                        <td><strong>${escapeHtml(c.contact_id || c.id)}</strong></td>
+                        <td>${escapeHtml(c.customer_name || 'Account Holder')}</td>
+                        <td>${escapeHtml(c.account_id || '')}</td>
+                        <td>${escapeHtml(c.notes || 'Follow-up')}</td>
+                        <td><span class="badge bg-secondary">${escapeHtml(c.contact_type || 'phone')}</span></td>
+                        <td><span class="badge bg-success">${escapeHtml(c.outcome || 'Active')}</span></td>
+                        <td>${c.contact_date ? new Date(c.contact_date).toLocaleDateString() : 'N/A'}</td>
+                        <td>${c.next_followup ? new Date(c.next_followup).toLocaleDateString() : 'Scheduled'}</td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                console.error('Error loading collection contacts:', err);
+            }
+        }
 
         // ===== INITIALIZATION =====
         document.addEventListener('DOMContentLoaded', async function() {
@@ -934,13 +1165,16 @@
             }
 
             try {
+                initCharts();
+
                 await Promise.all([
                     loadACHMetrics(),
                     loadACHFiles(),
-                    loadACHReturns()
+                    loadACHEntries(),
+                    loadACHReturns(),
+                    loadNSFTransactions(),
+                    loadCollectionContacts()
                 ]);
-
-                initCharts();
 
                 // Periodic session check
                 setInterval(() => SecurityManager.validateSession(), CONFIG.sessionCheckInterval);

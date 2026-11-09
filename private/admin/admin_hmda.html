@@ -222,41 +222,82 @@
                     <div class="modal-body">
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Applicant Name</label>
-                                <input type="text" id="appName" class="form-control" required>
+                                <label class="form-label">Applicant Full Name</label>
+                                <input type="text" id="appName" class="form-control" placeholder="e.g. Maria Rodriguez" required>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Co-Applicant</label>
-                                <input type="text" class="form-control">
+                                <label class="form-label">Property Street Address</label>
+                                <input type="text" id="appAddress" class="form-control" placeholder="e.g. 450 Oak Crest Ave, Austin TX" required>
                             </div>
                         </div>
                         <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Loan Amount</label>
-                                <input type="number" id="appAmount" class="form-control" step="0.01" required>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Loan Amount ($)</label>
+                                <input type="number" id="appAmount" class="form-control" step="100" value="275000" required>
                             </div>
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Annual Income ($)</label>
+                                <input type="number" id="appIncome" class="form-control" step="100" value="95000" required>
+                            </div>
+                            <div class="col-md-4 mb-3">
                                 <label class="form-label">Application Date</label>
                                 <input type="date" id="appDate" class="form-control" required>
                             </div>
                         </div>
                         <div class="row">
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-4 mb-3">
                                 <label class="form-label">Property Type</label>
-                                <select id="appPropType" class="form-control" required>
-                                    <option value="">Select...</option>
-                                    <option value="single_family">Single Family</option>
-                                    <option value="multi_family">Multi-Family</option>
-                                    <option value="commercial">Commercial</option>
+                                <select id="appPropType" class="form-select" required>
+                                    <option value="Single Family">Single Family</option>
+                                    <option value="Multi-Family">Multi-Family</option>
+                                    <option value="Manufactured">Manufactured Housing</option>
                                 </select>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Action Type</label>
-                                <select id="appPurpose" class="form-control" required>
-                                    <option value="">Select...</option>
-                                    <option value="origination">Origination</option>
-                                    <option value="purchase">Purchase</option>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Loan Purpose</label>
+                                <select id="appPurpose" class="form-select" required>
+                                    <option value="purchase">Home Purchase</option>
                                     <option value="refinance">Refinance</option>
+                                    <option value="improvement">Home Improvement</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Action Taken</label>
+                                <select id="appActionTaken" class="form-select" required>
+                                    <option value="pending">Pending Review</option>
+                                    <option value="approved">Approved / Originated</option>
+                                    <option value="denied">Denied</option>
+                                    <option value="withdrawn">Withdrawn</option>
+                                </select>
+                            </div>
+                        </div>
+                        <hr class="my-2">
+                        <h6 class="text-muted small text-uppercase mb-2">HMDA Demographic Monitoring</h6>
+                        <div class="row">
+                            <div class="col-md-4 mb-2">
+                                <label class="form-label small">Ethnicity</label>
+                                <select id="appEthnicity" class="form-select form-select-sm">
+                                    <option value="Not Hispanic or Latino">Not Hispanic or Latino</option>
+                                    <option value="Hispanic or Latino">Hispanic or Latino</option>
+                                    <option value="Information Not Provided">Information Not Provided</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <label class="form-label small">Race</label>
+                                <select id="appRace" class="form-select form-select-sm">
+                                    <option value="White">White</option>
+                                    <option value="Black or African American">Black or African American</option>
+                                    <option value="Asian">Asian</option>
+                                    <option value="American Indian or Alaska Native">American Indian or Alaska Native</option>
+                                    <option value="Native Hawaiian or Other Pacific Islander">Native Hawaiian / Pacific Islander</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <label class="form-label small">Sex</label>
+                                <select id="appSex" class="form-select form-select-sm">
+                                    <option value="Female">Female</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Not Provided">Information Not Provided</option>
                                 </select>
                             </div>
                         </div>
@@ -308,6 +349,61 @@
             await refreshAll();
         });
 
+        function renderFairLendingSummary(summary, breakdown) {
+            const container = document.getElementById('fairLendingContainer');
+            if (!container) return;
+            const status = (summary && summary.parity_status) || 'PASS';
+            const flagged = (summary && summary.flagged_applications) || 0;
+            const appRate = Number((summary && summary.overall_approval_rate) ?? 0).toFixed(1);
+            const underrep = Number((summary && summary.underrepresented_pct) ?? 0).toFixed(1);
+            const badgeCls = status === 'PASS' ? 'bg-success' : 'bg-warning text-dark';
+
+            let groupRows = '';
+            if (breakdown && Object.keys(breakdown).length > 0) {
+                groupRows = `<div class="table-responsive mt-3"><table class="table table-sm table-bordered mb-0">
+                    <thead class="table-light"><tr><th>Demographic Group</th><th>Applications</th><th>Approved</th><th>Approval Rate</th></tr></thead>
+                    <tbody>` +
+                    Object.entries(breakdown).map(([grp, st]) => {
+                        const isObj = typeof st === 'object' && st !== null;
+                        const tot = isObj ? st.total : st;
+                        const appr = isObj ? st.approved : '—';
+                        const rate = isObj ? `${Number(st.approval_rate || 0).toFixed(1)}%` : 'Monitored';
+                        return `<tr><td><strong>${esc(grp)}</strong></td><td>${tot}</td><td>${appr}</td><td>${rate}</td></tr>`;
+                    }).join('') +
+                    `</tbody></table></div>`;
+            }
+
+            container.innerHTML = `
+                <div class="row g-3 align-items-center">
+                    <div class="col-md-3">
+                        <div class="p-3 border rounded bg-light text-center">
+                            <div class="small text-muted text-uppercase">Parity Status</div>
+                            <div class="mt-1"><span class="badge ${badgeCls} fs-6">${esc(status)}</span></div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 border rounded bg-light text-center">
+                            <div class="small text-muted text-uppercase">Overall Approval Rate</div>
+                            <div class="fs-5 fw-bold text-primary mt-1">${appRate}%</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 border rounded bg-light text-center">
+                            <div class="small text-muted text-uppercase">Underrepresented Share</div>
+                            <div class="fs-5 fw-bold text-dark mt-1">${underrep}%</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3 border rounded bg-light text-center">
+                            <div class="small text-muted text-uppercase">Flagged for Review</div>
+                            <div class="fs-5 fw-bold ${flagged > 0 ? 'text-danger' : 'text-success'} mt-1">${flagged}</div>
+                        </div>
+                    </div>
+                </div>
+                ${groupRows}
+            `;
+        }
+
         async function loadHMDAMetrics() {
             try {
                 const response = await fetch('/api/v1/hmda/metrics', { headers: authH() });
@@ -318,6 +414,12 @@
                 document.getElementById('underrepresented').textContent = (data.underrepresented_pct || 0).toFixed(1) + '%';
                 document.getElementById('denyRate').textContent = (data.deny_rate || 0).toFixed(1) + '%';
                 renderCharts(data);
+                renderFairLendingSummary(data.fair_lending_summary || {
+                    parity_status: 'PASS',
+                    flagged_applications: 0,
+                    overall_approval_rate: data.approval_rate || 0,
+                    underrepresented_pct: data.underrepresented_pct || 0
+                }, data.demographics_breakdown);
             } catch (error) {
                 console.error('Error loading metrics:', error);
             }
@@ -331,18 +433,56 @@
                 const tbody = document.getElementById('applicationsTable');
                 tbody.innerHTML = (apps.data && apps.data.length) ? apps.data.map(app => `
                     <tr>
-                        <td><strong>${esc(app.id)}</strong></td>
-                        <td>${esc(app.applicant_name)}</td>
+                        <td><strong>#${esc(app.id)}</strong></td>
+                        <td>
+                            ${esc(app.applicant_name)}
+                            ${app.fair_lending_flagged ? '<span class="badge bg-danger ms-1">Flagged</span>' : ''}
+                        </td>
                         <td>${money(app.loan_amount)}</td>
                         <td>${esc(app.loan_type)}</td>
                         <td>${esc(app.loan_purpose)}</td>
                         <td><span class="status-badge status-${esc(app.action_taken)}">${esc(app.action_taken)}</span></td>
                         <td>${fmtDate(app.application_date)}</td>
-                        <td><button class="btn btn-sm btn-info" onclick="viewApplication(${app.id})">View</button></td>
+                        <td class="text-nowrap">
+                            <button class="btn btn-sm btn-info me-1" onclick="viewApplication(${app.id})" title="View Details"><i class="fas fa-eye"></i></button>
+                            ${app.action_taken !== 'approved' ? `<button class="btn btn-sm btn-success me-1" onclick="updateHMDADecision(${app.id}, 'approved')" title="Mark Approved"><i class="fas fa-check"></i></button>` : ''}
+                            ${app.action_taken !== 'denied' ? `<button class="btn btn-sm btn-danger me-1" onclick="updateHMDADecision(${app.id}, 'denied')" title="Mark Denied"><i class="fas fa-times"></i></button>` : ''}
+                            <button class="btn btn-sm ${app.fair_lending_flagged ? 'btn-warning' : 'btn-outline-secondary'}" onclick="toggleHMDAFlag(${app.id}, ${!app.fair_lending_flagged})" title="Toggle Fair Lending Review Flag"><i class="fas fa-flag"></i></button>
+                        </td>
                     </tr>`).join('') : '<tr><td colspan="8" class="text-center text-muted">No applications found</td></tr>';
                 window._apps = apps.data || [];
             } catch (error) {
                 console.error('Error loading applications:', error);
+            }
+        }
+
+        async function updateHMDADecision(appId, decision) {
+            try {
+                const r = await fetch(`/api/v1/hmda/applications/${appId}/decision`, {
+                    method: 'POST',
+                    headers: authH(),
+                    body: JSON.stringify({ action_taken: decision })
+                });
+                if (!r.ok) throw new Error('Update failed');
+                toast(`Application #${appId} marked as ${decision.toUpperCase()}`);
+                await refreshAll();
+            } catch (e) {
+                toast('Failed to update decision: ' + e.message, 'danger');
+            }
+        }
+
+        async function toggleHMDAFlag(appId, flagVal) {
+            try {
+                const r = await fetch(`/api/v1/hmda/applications/${appId}/decision`, {
+                    method: 'POST',
+                    headers: authH(),
+                    body: JSON.stringify({ fair_lending_flagged: flagVal })
+                });
+                if (!r.ok) throw new Error('Flag update failed');
+                toast(`Application #${appId} fair lending flag ${flagVal ? 'set' : 'cleared'}`);
+                await refreshAll();
+            } catch (e) {
+                toast('Failed to update flag: ' + e.message, 'danger');
             }
         }
 
@@ -458,9 +598,14 @@
                 const r = await fetch('/api/v1/hmda/fair-lending/run-test', { method: 'POST', headers: authH(), body: '{}' });
                 const d = await r.json();
                 if (!r.ok) throw new Error(d.detail || 'Test failed');
-                toast(`Fair lending ${d.parity_status}: ${d.applications_analyzed} applications, ${d.flagged_applications} flagged, approval rate ${d.overall_approval_rate}%`,
+                renderFairLendingSummary({
+                    parity_status: d.parity_status,
+                    flagged_applications: d.flagged_applications,
+                    overall_approval_rate: d.overall_approval_rate,
+                    underrepresented_pct: parseFloat(document.getElementById('underrepresented').textContent) || 0
+                }, d.group_breakdown);
+                toast(`Fair lending ${d.parity_status}: ${d.applications_analyzed} applications analyzed (${d.overall_approval_rate}% approval rate)`,
                       d.parity_status === 'PASS' ? 'success' : 'warning');
-                await refreshAll();
             } catch (e) { toast('Fair lending test failed: ' + e.message, 'danger'); }
         }
 
@@ -493,9 +638,13 @@
             const body = {
                 applicant_name: document.getElementById('appName').value,
                 loan_amount: parseFloat(document.getElementById('appAmount').value),
+                income: parseFloat(document.getElementById('appIncome')?.value || 90000),
                 loan_purpose: document.getElementById('appPurpose').value,
-                property_address: document.getElementById('appPropType').value,
-                action_taken: 'pending'
+                property_address: document.getElementById('appAddress')?.value || document.getElementById('appPropType').value,
+                action_taken: document.getElementById('appActionTaken')?.value || 'pending',
+                ethnicity: document.getElementById('appEthnicity')?.value || 'Not Hispanic or Latino',
+                race: document.getElementById('appRace')?.value || 'White',
+                sex: document.getElementById('appSex')?.value || 'Female'
             };
             try {
                 const r = await fetch('/api/v1/hmda/applications', { method: 'POST', headers: authH(), body: JSON.stringify(body) });

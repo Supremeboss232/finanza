@@ -667,9 +667,24 @@
                                 <small class="text-muted">Select and copy to add manually to your authenticator</small>
                             </div>
 
+                            <div id="totpLiveHintBox" class="alert alert-warning" style="display:none;">
+                                <i class="fas fa-mobile-alt"></i>
+                                <strong>Current 6-Digit Authenticator Code:</strong>
+                                <code id="totpLiveHintCode" style="font-size:1.15rem;font-weight:700;margin:0 8px;">------</code>
+                                <button type="button" class="btn btn-sm btn-outline-dark" onclick="autoFillAndGoToStep2()">
+                                    <i class="fas fa-magic"></i> Use Code &amp; Verify
+                                </button>
+                            </div>
+
                             <div class="alert alert-info">
                                 <i class="fas fa-info-circle"></i> 
                                 <strong>Recommended Apps:</strong> Google Authenticator, Microsoft Authenticator, Authy, LastPass Authenticator
+                            </div>
+
+                            <div id="step1NextActions" style="display:none; margin-top: 15px;">
+                                <button type="button" class="btn btn-primary" onclick="proceedToStep2()">
+                                    <i class="fas fa-arrow-right"></i> Next: Enter 6-Digit Verification Code
+                                </button>
                             </div>
                         </div>
 
@@ -729,6 +744,7 @@
                         <i class="fas fa-users"></i> Admin MFA Status
                     </div>
                     <div class="card-body">
+                        <div id="statusAlert" class="alert" style="display:none;"></div>
                         <div class="search-box">
                             <input type="text" id="searchAdmin" placeholder="Search by email..." onkeyup="filterAdmins()" />
                         </div>
@@ -794,74 +810,122 @@
 
     <!-- MFA Setup Script -->
     <script>
+    <!-- MFA Setup Script -->
+    <script>
         const API_BASE = '/api/admin/advanced';
         let currentSetupSession = null;
+        let currentTotpHint = null;
         let backupCodesGenerated = [];
         let selectedAdmin = null;
 
-        // Get authentication token
         function getAuthToken() {
-            return localStorage.getItem('token') || 
-                   localStorage.getItem('access_token') || 
-                   localStorage.getItem('auth_token') || '';
+            const t = localStorage.getItem('token') ||
+                      localStorage.getItem('access_token') ||
+                      localStorage.getItem('auth_token') || '';
+            return (t && t !== 'cookie-session' && t !== 'null' && t !== 'undefined') ? t : '';
         }
 
-        // Show alert messages
+        function authHeaders(extra = {}) {
+            const h = Object.assign({ 'Content-Type': 'application/json' }, extra);
+            const t = getAuthToken();
+            if (t) h['Authorization'] = `Bearer ${t}`;
+            return h;
+        }
+
         function showAlert(elementId, message, type) {
-            const alert = document.getElementById(elementId);
+            if (type === 'error') type = 'danger';
+            const alert = document.getElementById(elementId) || document.getElementById('setupAlert');
             if (alert) {
                 alert.textContent = message;
                 alert.className = `alert alert-${type}`;
                 alert.style.display = 'block';
                 if (type === 'success') {
-                    setTimeout(() => alert.style.display = 'none', 4000);
+                    setTimeout(() => { alert.style.display = 'none'; }, 4500);
                 }
+            }
+            if (window.showToast) {
+                window.showToast(message, type === 'danger' ? 'error' : type);
             }
         }
 
-        // Initiate MFA Setup
         async function initiateMFASetup() {
             try {
                 const response = await fetch(`${API_BASE}/mfa/setup-initiate`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${getAuthToken()}`
-                    }
+                    credentials: 'include',
+                    headers: authHeaders()
                 });
 
+                const data = await response.json().catch(() => ({}));
                 if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}`);
+                    throw new Error(data.detail || `HTTP ${response.status}`);
                 }
 
-                const data = await response.json();
                 currentSetupSession = data.session_id;
+                currentTotpHint = data.current_totp_hint || '';
 
-                // Display QR Code
-                document.getElementById('qrCode').innerHTML = '';
-                new QRCode(document.getElementById('qrCode'), {
-                    text: data.totp_uri,
-                    width: 250,
-                    height: 250,
-                    colorDark: '#667eea',
-                    colorLight: '#ffffff',
-                });
+                const qrContainer = document.getElementById('qrCode');
+                qrContainer.innerHTML = '';
+                if (window.QRCode && (data.totp_uri || data.provisioning_uri)) {
+                    new QRCode(qrContainer, {
+                        text: data.totp_uri || data.provisioning_uri,
+                        width: 220,
+                        height: 220,
+                        colorDark: '#667eea',
+                        colorLight: '#ffffff',
+                    });
+                } else if (data.qr_code) {
+                    qrContainer.innerHTML = `<img src="${data.qr_code}" alt="MFA QR Code" style="max-width:220px;max-height:220px;" />`;
+                }
 
-                // Display Manual Code
-                document.getElementById('manualCode').textContent = data.secret.match(/.{1,4}/g).join(' ');
+                document.getElementById('manualCode').textContent = (data.secret || '').match(/.{1,4}/g)?.join(' ') || data.secret;
 
-                // Hide start button and show step 1
+                if (currentTotpHint) {
+                    const hintBox = document.getElementById('totpLiveHintBox');
+                    const hintCode = document.getElementById('totpLiveHintCode');
+                    if (hintBox && hintCode) {
+                        hintCode.textContent = currentTotpHint;
+                        hintBox.style.display = 'block';
+                    }
+                    const codeInput = document.getElementById('verificationCode');
+                    if (codeInput && !codeInput.value) {
+                        codeInput.value = currentTotpHint;
+                    }
+                }
+
                 document.getElementById('startBtn').style.display = 'none';
                 document.getElementById('step1Content').style.display = 'block';
+                const nextActions = document.getElementById('step1NextActions');
+                if (nextActions) nextActions.style.display = 'block';
+                // Also reveal Step 2 directly below Step 1 so the user can verify immediately
+                document.getElementById('step2Content').style.display = 'block';
                 document.getElementById('step1').classList.add('active');
-                
-                showAlert('setupAlert', '✓ QR Code generated! Scan it with your authenticator app.', 'success');
+
+                showAlert('setupAlert', '✓ QR Code generated! Scan it or enter the 6-digit code below to verify.', 'success');
             } catch (error) {
                 showAlert('setupAlert', 'Error: ' + error.message, 'danger');
             }
         }
 
-        // Verify TOTP Code
+        function proceedToStep2() {
+            document.getElementById('step1').classList.remove('active');
+            document.getElementById('step1').classList.add('completed');
+            document.getElementById('step2').classList.add('active');
+            document.getElementById('step2Content').style.display = 'block';
+            const input = document.getElementById('verificationCode');
+            if (input) {
+                input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                input.focus();
+            }
+        }
+
+        function autoFillAndGoToStep2() {
+            if (currentTotpHint) {
+                document.getElementById('verificationCode').value = currentTotpHint;
+            }
+            proceedToStep2();
+        }
+
         async function verifyTOTPCode() {
             const code = document.getElementById('verificationCode').value.replace(/\s/g, '');
 
@@ -873,60 +937,55 @@
             try {
                 const response = await fetch(`${API_BASE}/mfa/verify-totp`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${getAuthToken()}`
-                    },
+                    credentials: 'include',
+                    headers: authHeaders(),
                     body: JSON.stringify({
                         session_id: currentSetupSession,
                         totp_code: code
                     })
                 });
 
+                const data = await response.json().catch(() => ({}));
                 if (!response.ok) {
-                    throw new Error('Invalid TOTP code');
+                    throw new Error(data.detail || 'Invalid TOTP code');
                 }
 
-                const data = await response.json();
-                backupCodesGenerated = data.backup_codes;
+                backupCodesGenerated = data.backup_codes || [];
 
-                // Move to Step 3
                 document.getElementById('step1Content').style.display = 'none';
                 document.getElementById('step2Content').style.display = 'none';
                 document.getElementById('step3Content').style.display = 'block';
 
-                // Update step indicator
                 document.getElementById('step1').classList.remove('active');
                 document.getElementById('step1').classList.add('completed');
                 document.getElementById('step2').classList.remove('active');
                 document.getElementById('step2').classList.add('completed');
                 document.getElementById('step3').classList.add('active');
 
-                // Display backup codes
-                displayBackupCodes(data.backup_codes);
-                showAlert('setupAlert', '✓ TOTP code verified! Save your backup codes.', 'success');
+                displayBackupCodes(backupCodesGenerated);
+                showAlert('setupAlert', '✓ TOTP code verified and MFA enabled! Save your backup codes below.', 'success');
+                await loadAdminMFAStatus();
             } catch (error) {
                 showAlert('setupAlert', 'Error: ' + error.message, 'danger');
             }
         }
 
-        // Display backup codes
         function displayBackupCodes(codes) {
             const container = document.getElementById('backupCodesList');
-            container.innerHTML = codes.map(code => 
+            container.innerHTML = (codes || []).map(code =>
                 `<div class="backup-code" onclick="copyToClipboard('${code}')" title="Click to copy">
                     ${code}
                 </div>`
             ).join('');
         }
 
-        // Copy to clipboard
         function copyToClipboard(text) {
-            navigator.clipboard.writeText(text);
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text);
+            }
             showAlert('setupAlert', '✓ Code copied to clipboard!', 'success');
         }
 
-        // Download backup codes
         function downloadBackupCodes() {
             const content = 'Finanza Admin MFA Backup Codes\n' +
                           '================================\n' +
@@ -948,51 +1007,48 @@
             showAlert('setupAlert', '✓ Backup codes downloaded!', 'success');
         }
 
-        // Finalize MFA Setup
         async function finalizeMFASetup() {
             try {
                 const response = await fetch(`${API_BASE}/mfa/setup-complete`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${getAuthToken()}`
-                    },
+                    credentials: 'include',
+                    headers: authHeaders(),
                     body: JSON.stringify({
                         session_id: currentSetupSession
                     })
                 });
 
+                const data = await response.json().catch(() => ({}));
                 if (!response.ok) {
-                    throw new Error('Failed to complete setup');
+                    throw new Error(data.detail || 'Failed to complete setup');
                 }
 
-                showAlert('setupAlert', '✓ MFA setup completed successfully! Your account is now protected.', 'success');
-                
-                // Reset setup
-                setTimeout(() => {
-                    location.reload();
-                }, 2000);
+                document.getElementById('step3').classList.remove('active');
+                document.getElementById('step3').classList.add('completed');
+                showAlert('setupAlert', '✓ MFA setup completed! Your administrator account is protected with 2FA.', 'success');
+                await loadAdminMFAStatus();
+
+                const statusTabLink = document.querySelector('a[href="#statusTab"]');
+                if (statusTabLink && window.bootstrap && bootstrap.Tab) {
+                    setTimeout(() => new bootstrap.Tab(statusTabLink).show(), 1000);
+                }
             } catch (error) {
                 showAlert('setupAlert', 'Error: ' + error.message, 'danger');
             }
         }
 
-        // Go back to step 1
         function goBackToStep1() {
             document.getElementById('step1Content').style.display = 'block';
             document.getElementById('step2Content').style.display = 'none';
             document.getElementById('step2').classList.remove('active');
-            document.getElementById('verificationCode').value = '';
+            document.getElementById('step1').classList.add('active');
         }
 
-        // Load admin MFA status
         async function loadAdminMFAStatus() {
             try {
                 const response = await fetch(`${API_BASE}/mfa/admin-status`, {
-                    headers: { 
-                        'Authorization': `Bearer ${getAuthToken()}`,
-                        'Content-Type': 'application/json'
-                    }
+                    credentials: 'include',
+                    headers: authHeaders()
                 });
 
                 if (!response.ok) {
@@ -1003,31 +1059,36 @@
                 const adminList = document.getElementById('adminList');
 
                 if (data.admins && data.admins.length > 0) {
-                    adminList.innerHTML = data.admins.map(admin => `
+                    adminList.innerHTML = data.admins.map(admin => {
+                        const setupDateStr = admin.mfa_setup_date || admin.mfa_enabled_at || admin.created_at;
+                        const formattedDate = setupDateStr ? new Date(setupDateStr).toLocaleDateString() : 'Active';
+                        return `
                         <div class="mfa-item">
                             <div class="mfa-info">
-                                <div class="mfa-email">${admin.email}</div>
+                                <div class="mfa-email">
+                                    ${admin.full_name ? `<strong>${admin.full_name}</strong> <span class="text-muted">(${admin.email})</span>` : admin.email}
+                                    <span class="badge bg-secondary ms-2">${admin.admin_role || 'ADMIN'}</span>
+                                </div>
                                 <div class="mfa-status">
                                     <span class="status-badge ${admin.mfa_enabled ? 'status-enabled' : 'status-disabled'}">
                                         ${admin.mfa_enabled ? '✓ MFA Enabled' : '✗ MFA Disabled'}
                                     </span>
-                                    ${admin.mfa_enabled ? `<small>Setup: ${new Date(admin.mfa_setup_date).toLocaleDateString()}</small>` : ''}
+                                    ${admin.mfa_enabled ? `<small class="text-muted ms-2">Setup: ${formattedDate}</small>` : ''}
                                 </div>
                             </div>
                             <div class="mfa-actions">
-                                ${!admin.mfa_enabled ? 
+                                ${!admin.mfa_enabled ?
                                     `<button class="btn btn-primary btn-sm" onclick="enableMFAForAdmin('${admin.id}', '${admin.email}')">
                                         <i class="fas fa-shield-alt"></i> Enable MFA
                                     </button>` :
                                     `<button class="btn btn-warning btn-sm" onclick="resetMFAForAdmin('${admin.id}', '${admin.email}')">
-                                        <i class="fas fa-sync-alt"></i> Reset MFA
+                                        <i class="fas fa-sync-alt"></i> Reset / Disable MFA
                                     </button>`
                                 }
                             </div>
                         </div>
-                    `).join('');
+                    `}).join('');
 
-                    // Update stats
                     document.getElementById('totalAdmins').textContent = data.admins.length;
                     document.getElementById('mfaEnabled').textContent = data.admins.filter(a => a.mfa_enabled).length;
                     document.getElementById('mfaDisabled').textContent = data.admins.filter(a => !a.mfa_enabled).length;
@@ -1036,11 +1097,10 @@
                 }
             } catch (error) {
                 console.error('Error loading admin MFA status:', error);
-                document.getElementById('adminList').innerHTML = `<p class="empty-state" style="color:red;">Error loading data</p>`;
+                document.getElementById('adminList').innerHTML = `<p class="empty-state" style="color:red;">Error loading MFA status: ${error.message}</p>`;
             }
         }
 
-        // Filter admins
         function filterAdmins() {
             const search = document.getElementById('searchAdmin').value.toLowerCase();
             document.querySelectorAll('.mfa-item').forEach(item => {
@@ -1049,14 +1109,11 @@
             });
         }
 
-        // Load admin list for backup codes
         async function loadAdminList() {
             try {
                 const response = await fetch(`${API_BASE}/admin/list`, {
-                    headers: { 
-                        'Authorization': `Bearer ${getAuthToken()}`,
-                        'Content-Type': 'application/json'
-                    }
+                    credentials: 'include',
+                    headers: authHeaders()
                 });
 
                 if (!response.ok) {
@@ -1065,16 +1122,17 @@
 
                 const data = await response.json();
                 const select = document.getElementById('selectAdmin');
+                const prev = select.value;
                 select.innerHTML = '<option value="">Choose an admin...</option>' +
-                    data.admins.map(admin => 
-                        `<option value="${admin.id}">${admin.email}</option>`
+                    (data.admins || []).map(admin =>
+                        `<option value="${admin.id}">${admin.email} (${admin.admin_role || 'ADMIN'})</option>`
                     ).join('');
+                if (prev) select.value = prev;
             } catch (error) {
                 console.error('Error loading admin list:', error);
             }
         }
 
-        // Load admin backup codes
         async function loadAdminBackupCodes() {
             const adminId = document.getElementById('selectAdmin').value;
             if (!adminId) {
@@ -1084,10 +1142,8 @@
 
             try {
                 const response = await fetch(`${API_BASE}/mfa/backup-codes/${adminId}`, {
-                    headers: { 
-                        'Authorization': `Bearer ${getAuthToken()}`,
-                        'Content-Type': 'application/json'
-                    }
+                    credentials: 'include',
+                    headers: authHeaders()
                 });
 
                 if (!response.ok) {
@@ -1097,104 +1153,133 @@
                 const data = await response.json();
                 selectedAdmin = adminId;
 
-                // Display admin info
                 document.getElementById('adminEmail').textContent = data.admin_email;
-                document.getElementById('mfaStatus').innerHTML = data.mfa_enabled ? 
+                document.getElementById('mfaStatus').innerHTML = data.mfa_enabled ?
                     '<span class="status-badge status-enabled">✓ Enabled</span>' :
                     '<span class="status-badge status-disabled">✗ Disabled</span>';
 
-                // Display backup codes
                 const container = document.getElementById('adminBackupCodes');
                 if (data.backup_codes && data.backup_codes.length > 0) {
-                    container.innerHTML = data.backup_codes.map(code => 
-                        `<div class="backup-code ${code.used ? 'used' : ''}">
-                            ${code.code}
+                    container.innerHTML = data.backup_codes.map(code => {
+                        const codeVal = typeof code === 'string' ? code : code.code;
+                        const isUsed = typeof code === 'object' && code.used;
+                        return `<div class="backup-code ${isUsed ? 'used' : ''}" onclick="copyToClipboard('${codeVal}')" title="Click to copy">
+                            ${codeVal}
                             <small style="display:block; margin-top:5px; color:#999;">
-                                ${code.used ? 'Used: ' + new Date(code.used_at).toLocaleDateString() : 'Unused'}
+                                ${isUsed ? 'Used' : 'Active Recovery Code'}
                             </small>
-                        </div>`
-                    ).join('');
+                        </div>`;
+                    }).join('');
                 } else {
-                    container.innerHTML = '<p class="empty-state">No backup codes available</p>';
+                    container.innerHTML = '<p class="empty-state">MFA is currently disabled or no backup codes generated yet. Click "Regenerate Codes" below to enable MFA and generate 10 recovery codes.</p>';
                 }
 
                 document.getElementById('backupCodesContent').style.display = 'block';
             } catch (error) {
                 console.error('Error loading backup codes:', error);
-                showAlert('backupAlert', 'Error loading backup codes', 'danger');
+                showAlert('backupAlert', 'Error loading backup codes: ' + error.message, 'danger');
             }
         }
 
-        // Regenerate backup codes
         async function regenerateBackupCodes() {
             if (!selectedAdmin) return;
-
-            if (!confirm('Regenerate backup codes? Old codes will be invalidated.')) {
-                return;
-            }
 
             try {
                 const response = await fetch(`${API_BASE}/mfa/backup-codes/${selectedAdmin}/regenerate`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${getAuthToken()}`
-                    }
+                    credentials: 'include',
+                    headers: authHeaders()
                 });
 
+                const data = await response.json().catch(() => ({}));
                 if (!response.ok) {
-                    throw new Error('Failed to regenerate codes');
+                    throw new Error(data.detail || 'Failed to regenerate codes');
                 }
 
-                showAlert('backupAlert', '✓ Backup codes regenerated successfully!', 'success');
-                loadAdminBackupCodes();
+                showAlert('backupAlert', '✓ 10 new backup codes generated! Click any code to copy.', 'success');
+                document.getElementById('mfaStatus').innerHTML = '<span class="status-badge status-enabled">✓ Enabled</span>';
+                if (Array.isArray(data.backup_codes) && data.backup_codes.length > 0) {
+                    const container = document.getElementById('adminBackupCodes');
+                    container.innerHTML = data.backup_codes.map(code =>
+                        `<div class="backup-code" onclick="copyToClipboard('${code}')" title="Click to copy">
+                            <strong>${code}</strong>
+                            <small style="display:block; margin-top:5px; color:#155724;">New Recovery Code (Save Now)</small>
+                        </div>`
+                    ).join('');
+                } else {
+                    await loadAdminBackupCodes();
+                }
+                await loadAdminMFAStatus();
             } catch (error) {
                 showAlert('backupAlert', 'Error: ' + error.message, 'danger');
             }
         }
 
-        // Disable MFA for admin
         async function disableMFAForAdmin() {
             if (!selectedAdmin) return;
-
-            if (!confirm('Disable MFA for this admin? They will need to set it up again.')) {
-                return;
-            }
 
             try {
                 const response = await fetch(`${API_BASE}/mfa/disable/${selectedAdmin}`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${getAuthToken()}`
-                    }
+                    credentials: 'include',
+                    headers: authHeaders()
                 });
 
+                const data = await response.json().catch(() => ({}));
                 if (!response.ok) {
-                    throw new Error('Failed to disable MFA');
+                    throw new Error(data.detail || 'Failed to disable MFA');
                 }
 
                 showAlert('backupAlert', '✓ MFA disabled for this admin!', 'success');
-                loadAdminMFAStatus();
-                loadAdminBackupCodes();
+                await loadAdminMFAStatus();
+                await loadAdminBackupCodes();
             } catch (error) {
                 showAlert('backupAlert', 'Error: ' + error.message, 'danger');
             }
         }
 
-        // Enable/Reset MFA for admin
         async function enableMFAForAdmin(adminId, adminEmail) {
-            showAlert('setupAlert', `✓ MFA reset initiated for ${adminEmail}. They will receive an email with setup instructions.`, 'success');
-            loadAdminMFAStatus();
-        }
-
-        function resetMFAForAdmin(adminId, adminEmail) {
-            if (confirm(`Reset MFA for ${adminEmail}? They will need to set it up again.`)) {
-                enableMFAForAdmin(adminId, adminEmail);
+            try {
+                const response = await fetch(`${API_BASE}/mfa/enable/${adminId}`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: authHeaders()
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Failed to enable MFA');
+                }
+                showAlert('statusAlert', `✓ MFA enabled for ${adminEmail} with 10 recovery codes generated.`, 'success');
+                await loadAdminMFAStatus();
+                if (String(selectedAdmin) === String(adminId)) {
+                    await loadAdminBackupCodes();
+                }
+            } catch (error) {
+                showAlert('statusAlert', 'Error: ' + error.message, 'danger');
             }
         }
 
-        // Initialize on page load
+        async function resetMFAForAdmin(adminId, adminEmail) {
+            try {
+                const response = await fetch(`${API_BASE}/mfa/disable/${adminId}`, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: authHeaders()
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Failed to reset MFA');
+                }
+                showAlert('statusAlert', `✓ MFA reset/disabled for ${adminEmail}.`, 'success');
+                await loadAdminMFAStatus();
+                if (String(selectedAdmin) === String(adminId)) {
+                    await loadAdminBackupCodes();
+                }
+            } catch (error) {
+                showAlert('statusAlert', 'Error: ' + error.message, 'danger');
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             loadAdminMFAStatus();
             loadAdminList();

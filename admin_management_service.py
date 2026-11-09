@@ -29,7 +29,8 @@ class AdminManagementService:
         full_name: str,
         admin_role: str,
         password: str,
-        created_by_admin_id: int
+        created_by_admin_id: int,
+        require_2fa: bool = False
     ) -> Dict:
         """
         Create or promote an admin account.
@@ -94,6 +95,15 @@ class AdminManagementService:
                 )
                 db_session.add(admin_acct)
                 action_label = "ADMIN_CREATED"
+
+            if require_2fa:
+                from mfa_service import MFAService
+                secret = MFAService.generate_secret()
+                backup_codes = MFAService.generate_backup_codes(count=10)
+                target_admin.mfa_secret = secret
+                target_admin.mfa_enabled = True
+                target_admin.mfa_backup_codes = ",".join([get_password_hash(c) for c in backup_codes])
+                target_admin.mfa_enabled_at = datetime.utcnow()
 
             await db_session.flush()
 

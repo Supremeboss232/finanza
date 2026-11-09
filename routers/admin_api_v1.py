@@ -612,3 +612,14 @@ async def update_allow_signups(
         "message": f"Signups {'enabled' if enabled else 'disabled'}",
         "timestamp": datetime.utcnow().isoformat()
     }
+
+
+@admin_v1_router.get("/system/status")
+async def get_system_status_info(request: Request):
+    """Return client IP and system status for admin settings audit trail."""
+    client_ip = request.client.host if request.client else "127.0.0.1"
+    return {
+        "status": "operational",
+        "ip": client_ip,
+        "timestamp": datetime.utcnow().isoformat()
+    }

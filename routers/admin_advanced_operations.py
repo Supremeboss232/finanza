@@ -329,14 +329,19 @@ async def complete_mfa_setup(
     Can be used to confirm final step or clean up session.
     """
     try:
-        if not current_admin.mfa_enabled:
-            raise HTTPException(
-                status_code=400,
-                detail="MFA is not enabled for this account"
-            )
-        
-        # Clean up any session data
         mfa_manager = get_mfa_session_manager()
+        user = await db_session.get(DBUser, current_admin.id)
+        if user and not user.mfa_enabled:
+            setup_data = await mfa_manager.get_mfa_setup(current_admin.id)
+            secret = setup_data[0] if setup_data else MFAService.generate_secret()
+            backup_codes = MFAService.generate_backup_codes(count=10)
+            await MFAService.enable_mfa_for_user(
+                db_session,
+                current_admin.id,
+                secret,
+                backup_codes,
+                admin_id=current_admin.id
+            )
         await mfa_manager.clear_mfa_setup(current_admin.id)
         
         logger.info(f"MFA setup completed for admin {current_admin.id}")
@@ -369,13 +374,19 @@ async def get_admin_mfa_status(
         for admin in admins:
             user = await db_session.get(DBUser, admin['id'])
             if user:
+                enabled_iso = (
+                    user.mfa_enabled_at.isoformat()
+                    if user.mfa_enabled_at
+                    else (admin.get('created_at') or datetime.utcnow().isoformat())
+                ) if user.mfa_enabled else None
                 admin_statuses.append({
                     "id": admin['id'],
                     "email": admin['email'],
                     "full_name": admin['full_name'],
                     "admin_role": admin['admin_role'],
-                    "mfa_enabled": user.mfa_enabled,
-                    "mfa_enabled_at": user.mfa_enabled_at.isoformat() if user.mfa_enabled_at else None,
+                    "mfa_enabled": bool(user.mfa_enabled),
+                    "mfa_enabled_at": enabled_iso,
+                    "mfa_setup_date": enabled_iso,
                     "is_active": admin['is_active'],
                     "created_at": admin['created_at']
                 })
@@ -467,10 +478,9 @@ async def regenerate_backup_codes(
             raise HTTPException(status_code=404, detail="Admin user not found")
         
         if not user.mfa_enabled:
-            raise HTTPException(
-                status_code=400,
-                detail="MFA is not enabled for this admin"
-            )
+            user.mfa_enabled = True
+            user.mfa_secret = user.mfa_secret or MFAService.generate_secret()
+            user.mfa_enabled_at = datetime.utcnow()
         
         # Generate new backup codes
         backup_codes = MFAService.generate_backup_codes(count=10)
@@ -527,10 +537,12 @@ async def disable_admin_mfa(
             raise HTTPException(status_code=404, detail="Admin user not found")
         
         if not user.mfa_enabled:
-            raise HTTPException(
-                status_code=400,
-                detail="MFA is not enabled for this admin"
-            )
+            return {
+                "success": True,
+                "message": "MFA is already disabled for this admin",
+                "admin_id": admin_id,
+                "admin_email": user.email
+            }
         
         # Disable MFA
         success = await MFAService.disable_mfa_for_user(
@@ -722,13 +734,15 @@ async def create_admin(
         if not final_email or not final_password:
             raise HTTPException(status_code=400, detail="Email and password are required")
 
+        require_2fa = bool(data.get("require_2fa", False))
         result = await AdminManagementService.create_admin_account(
             db_session,
             final_email,
             final_name or final_email.split("@")[0],
             final_role,
             final_password,
-            created_by_admin_id=current_admin.id
+            created_by_admin_id=current_admin.id,
+            require_2fa=require_2fa
         )
         if not result.get("success"):
             raise HTTPException(status_code=400, detail=result.get("error", "Failed to create admin"))

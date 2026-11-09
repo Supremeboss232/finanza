@@ -655,8 +655,9 @@
                         <i class="fas fa-users"></i> Active Admins
                     </div>
                     <div class="card-body">
+                        <div id="manageAlert" class="alert" style="display:none;"></div>
                         <div class="search-box">
-                            <input type="text" id="searchAdmin" placeholder="Search by email..." onkeyup="filterAdmins()" />
+                            <input type="text" id="searchAdmin" placeholder="Search by email or name..." onkeyup="filterAdmins()" />
                         </div>
 
                         <div id="adminList">
@@ -957,81 +958,102 @@
 
     <!-- Admin Management Script -->
     <script>
+    <!-- Admin Management Script -->
+    <script>
         const API_BASE = '/api/admin/advanced';
         let selectedAdmin = null;
 
-        // Get authentication token from localStorage
         function getAuthToken() {
-            return localStorage.getItem('token') || 
-                   localStorage.getItem('access_token') || 
-                   localStorage.getItem('auth_token') || '';
+            const t = localStorage.getItem('token') ||
+                      localStorage.getItem('access_token') ||
+                      localStorage.getItem('auth_token') || '';
+            return (t && t !== 'cookie-session' && t !== 'null' && t !== 'undefined') ? t : '';
         }
 
-        // Show alert messages
+        function authHeaders(extra = {}) {
+            const h = Object.assign({ 'Content-Type': 'application/json' }, extra);
+            const t = getAuthToken();
+            if (t) h['Authorization'] = `Bearer ${t}`;
+            return h;
+        }
+
         function showAlert(elementId, message, type) {
-            const alert = document.getElementById(elementId);
-            if (alert) {
-                alert.textContent = message;
-                alert.className = `alert alert-${type}`;
-                alert.style.display = 'block';
+            // Support 2-arg call showAlert(msg, type) by defaulting to manageAlert/createAlert
+            if (type === undefined) {
+                type = message || 'info';
+                message = elementId;
+                elementId = 'manageAlert';
+            }
+            if (type === 'error') type = 'danger';
+            const alertEl = document.getElementById(elementId) || document.getElementById('manageAlert') || document.getElementById('createAlert');
+            if (alertEl) {
+                alertEl.textContent = message;
+                alertEl.className = `alert alert-${type}`;
+                alertEl.style.display = 'block';
                 if (type === 'success') {
-                    setTimeout(() => alert.style.display = 'none', 4000);
+                    setTimeout(() => { alertEl.style.display = 'none'; }, 4500);
                 }
+            }
+            if (window.showToast) {
+                window.showToast(message, type === 'danger' ? 'error' : type);
             }
         }
 
-        // Create new admin
         async function createAdmin() {
-            const email = document.getElementById('createEmail').value;
-            const name = document.getElementById('createName').value;
+            const email = document.getElementById('createEmail').value.trim();
+            const name = document.getElementById('createName').value.trim();
             const password = document.getElementById('createPassword').value;
             const role = document.getElementById('createRole').value;
+            const require2FA = Boolean(document.getElementById('createRequire2FA')?.checked);
 
             if (!email || !name || !password) {
-                showAlert('createAlert', 'Please fill all required fields', 'danger');
+                showAlert('createAlert', 'Please fill in Email, Full Name, and Temporary Password.', 'danger');
+                return;
+            }
+            if (password.length < 8) {
+                showAlert('createAlert', 'Temporary password must be at least 8 characters long.', 'danger');
                 return;
             }
 
             try {
                 const response = await fetch(`${API_BASE}/admin/create`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${getAuthToken()}`
-                    },
+                    credentials: 'include',
+                    headers: authHeaders(),
                     body: JSON.stringify({
                         email,
                         full_name: name,
                         password,
-                        admin_role: role
+                        admin_role: role,
+                        require_2fa: require2FA
                     })
                 });
 
-                if (response.ok) {
-                    showAlert('createAlert', '✓ Admin account created successfully!', 'success');
+                const data = await response.json().catch(() => ({}));
+                if (response.ok && data.success !== false) {
+                    showAlert('createAlert', `✓ Admin account (${email} — ${role}) created successfully!`, 'success');
                     document.getElementById('createEmail').value = '';
                     document.getElementById('createName').value = '';
                     document.getElementById('createPassword').value = '';
                     document.getElementById('createRole').value = 'SUPER_ADMIN';
-                    loadAdmins();
-                    loadAdminList();
+                    if (document.getElementById('createRequire2FA')) {
+                        document.getElementById('createRequire2FA').checked = false;
+                    }
+                    await loadAdmins();
+                    await loadAdminList();
                 } else {
-                    const data = await response.json();
-                    showAlert('createAlert', 'Error: ' + (data.detail || 'Failed to create admin'), 'danger');
+                    showAlert('createAlert', 'Error: ' + (data.detail || data.error || 'Failed to create admin'), 'danger');
                 }
             } catch (error) {
                 showAlert('createAlert', 'Error: ' + error.message, 'danger');
             }
         }
 
-        // Load all admins
         async function loadAdmins() {
             try {
                 const response = await fetch(`${API_BASE}/admin/list`, {
-                    headers: { 
-                        'Authorization': `Bearer ${getAuthToken()}`,
-                        'Content-Type': 'application/json'
-                    }
+                    credentials: 'include',
+                    headers: authHeaders()
                 });
 
                 if (!response.ok) {
@@ -1039,27 +1061,38 @@
                 }
 
                 const data = await response.json();
-                if (!data || !data.admins) {
+                if (!data || !Array.isArray(data.admins)) {
                     throw new Error('Invalid response structure');
                 }
 
                 const adminList = document.getElementById('adminList');
-                
+
+                if (data.role_matrix) {
+                    window.__finanzaRoleMatrix = data.role_matrix;
+                    renderRoleMatrixTab(data.role_matrix);
+                }
+
                 if (data.admins.length > 0) {
-                    if (data.role_matrix) {
-                        window.__finanzaRoleMatrix = data.role_matrix;
-                        renderRoleMatrixTab(data.role_matrix);
-                    }
                     adminList.innerHTML = data.admins.map(admin => {
                         const rKey = (admin.admin_role || 'ADMIN').toUpperCase();
                         const rInfo = (window.FinanzaAdminRBAC && window.FinanzaAdminRBAC.getRoleInfo(rKey)) || {};
                         const canSummary = (admin.can_do || rInfo.can_do || []).slice(0, 2).join(' • ');
                         const cannotSummary = (admin.cannot_do || rInfo.cannot_do || []).slice(0, 1).join(' • ');
+                        const isActive = admin.is_active !== false;
+                        const statusBadge = isActive
+                            ? '<span class="badge bg-success ms-2"><i class="fas fa-check-circle me-1"></i>Active</span>'
+                            : '<span class="badge bg-danger ms-2"><i class="fas fa-ban me-1"></i>Revoked</span>';
+                        const mfaBadge = admin.mfa_enabled
+                            ? '<span class="badge bg-primary ms-1"><i class="fas fa-shield-alt me-1"></i>2FA On</span>'
+                            : '<span class="badge bg-secondary ms-1">2FA Off</span>';
+
                         return `
-                        <div class="admin-item" style="align-items:flex-start;">
+                        <div class="admin-item" style="align-items:flex-start; ${!isActive ? 'opacity:0.8;background:#fff5f5;border-color:#feb2b2;' : ''}">
                             <div class="admin-info">
                                 <div class="admin-email">
                                     ${admin.full_name ? `<strong>${admin.full_name}</strong> <span class="text-muted">(${admin.email})</span>` : admin.email}
+                                    ${statusBadge}
+                                    ${mfaBadge}
                                 </div>
                                 <div class="admin-role" style="margin-top:6px;">
                                     <span class="role-badge role-${rKey.toLowerCase()}">
@@ -1081,12 +1114,19 @@
                                 <button class="btn btn-primary btn-sm" onclick="openResetPassword('${admin.id}', '${admin.email}')">
                                     <i class="fas fa-key"></i> Reset PWD
                                 </button>
-                                <button class="btn btn-warning btn-sm" onclick="openChangeRole('${admin.id}', '${admin.email}')">
+                                <button class="btn btn-warning btn-sm" onclick="openChangeRole('${admin.id}', '${admin.email}', '${rKey}')">
                                     <i class="fas fa-user-cog"></i> Change Role
                                 </button>
+                                <button class="btn btn-secondary btn-sm" onclick="jumpToPermissions('${admin.id}')">
+                                    <i class="fas fa-sliders-h"></i> Permissions
+                                </button>
+                                ${isActive ? `
                                 <button class="btn btn-danger btn-sm" onclick="openRevoke('${admin.id}', '${admin.email}')">
                                     <i class="fas fa-ban"></i> Revoke
-                                </button>
+                                </button>` : `
+                                <button class="btn btn-success btn-sm" onclick="restoreAdmin('${admin.id}', '${admin.email}')">
+                                    <i class="fas fa-undo"></i> Restore
+                                </button>`}
                             </div>
                         </div>
                     `}).join('');
@@ -1103,24 +1143,34 @@
             }
         }
 
-        // Filter admins by search
+        function jumpToPermissions(adminId) {
+            const permSelect = document.getElementById('permissionAdmin');
+            if (permSelect) {
+                permSelect.value = String(adminId);
+                loadAdminPermissions();
+            }
+            const permTabLink = document.querySelector('a[href="#permissionsTab"]');
+            if (permTabLink && window.bootstrap && bootstrap.Tab) {
+                new bootstrap.Tab(permTabLink).show();
+            } else if (permTabLink) {
+                permTabLink.click();
+            }
+        }
+
         async function restoreAdmin(adminId, adminEmail) {
             try {
-                const token = localStorage.getItem('token');
-                const response = await fetch(`/api/admin/advanced/admin/restore/${adminId}`, {
+                const response = await fetch(`${API_BASE}/admin/restore/${adminId}`, {
                     method: 'POST',
                     credentials: 'include',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-                    }
+                    headers: authHeaders()
                 });
-                const data = await response.json();
-                if (!response.ok) throw new Error(data.detail || 'Failed to restore admin');
-                showAlert('✓ Admin access restored for ' + adminEmail, 'success');
-                loadAdmins();
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(data.detail || data.error || 'Failed to restore admin');
+                showAlert('manageAlert', '✓ Admin access restored for ' + adminEmail, 'success');
+                await loadAdmins();
+                await loadAdminList();
             } catch (error) {
-                showAlert('✗ Error: ' + error.message, 'error');
+                showAlert('manageAlert', '✗ Error: ' + error.message, 'danger');
             }
         }
 
@@ -1132,14 +1182,11 @@
             });
         }
 
-        // Load admin list for permissions
         async function loadAdminList() {
             try {
                 const response = await fetch(`${API_BASE}/admin/list`, {
-                    headers: { 
-                        'Authorization': `Bearer ${getAuthToken()}`,
-                        'Content-Type': 'application/json'
-                    }
+                    credentials: 'include',
+                    headers: authHeaders()
                 });
 
                 if (!response.ok) {
@@ -1152,72 +1199,61 @@
                 }
 
                 const select = document.getElementById('permissionAdmin');
+                const currentVal = select.value;
                 select.innerHTML = '<option value="">Choose an admin...</option>' +
-                    data.admins.map(admin => 
-                        `<option value="${admin.id}">${admin.email} (${admin.admin_role || 'STANDARD'})</option>`
+                    data.admins.map(admin =>
+                        `<option value="${admin.id}">${admin.email} (${admin.admin_role || 'ADMIN'})</option>`
                     ).join('');
+                if (currentVal) select.value = currentVal;
             } catch (error) {
                 console.error('Error loading admin list:', error);
             }
         }
 
-        // Load admin permissions
         function loadAdminPermissions() {
             const adminId = document.getElementById('permissionAdmin').value;
             const permissionContent = document.getElementById('permissionContent');
-            
+
             if (!adminId) {
                 permissionContent.style.display = 'none';
                 return;
             }
 
-            // Clear all checkboxes first
             document.querySelectorAll('.permission-checkbox').forEach(cb => cb.checked = false);
-
-            // Load permissions for selected admin from API or use role defaults
             loadPermissionsForAdmin(adminId);
             permissionContent.style.display = 'block';
         }
 
-        // Load permissions from backend
         async function loadPermissionsForAdmin(adminId) {
             try {
                 const response = await fetch(`${API_BASE}/admin/permissions/${adminId}`, {
-                    headers: { 
-                        'Authorization': `Bearer ${getAuthToken()}`,
-                        'Content-Type': 'application/json'
-                    }
+                    credentials: 'include',
+                    headers: authHeaders()
                 });
 
                 if (response.ok) {
                     const data = await response.json();
                     if (data.permissions && Array.isArray(data.permissions)) {
-                        // Check the permissions that are granted
                         data.permissions.forEach(perm => {
                             const checkbox = document.querySelector(`input[value="${perm}"]`);
-                            if (checkbox) {
-                                checkbox.checked = true;
-                            }
+                            if (checkbox) checkbox.checked = true;
                         });
                     }
-                } else if (response.status === 404) {
-                    // If no custom permissions, load role defaults
+                } else {
                     await loadRoleDefaultPermissions(adminId);
                 }
             } catch (error) {
                 console.error('Error loading permissions:', error);
-                // Load role defaults on error
                 await loadRoleDefaultPermissions(adminId);
             }
         }
 
-        // Load default permissions based on admin's role
         async function loadRoleDefaultPermissions(adminId) {
             try {
                 const adminSelect = document.getElementById('permissionAdmin');
                 const selectedOption = adminSelect.options[adminSelect.selectedIndex];
-                const roleMatch = selectedOption.text.match(/\((.*?)\)$/);
-                const role = roleMatch ? roleMatch[1].toUpperCase() : 'STANDARD';
+                const roleMatch = selectedOption ? selectedOption.text.match(/\((.*?)\)$/) : null;
+                const role = roleMatch ? roleMatch[1].toUpperCase() : 'ADMIN';
 
                 const rolePermissions = {
                     'SUPER_ADMIN': [
@@ -1254,19 +1290,17 @@
                     ]
                 };
 
-                const permissions = rolePermissions[role] || rolePermissions['STANDARD'] || [];
+                document.querySelectorAll('.permission-checkbox').forEach(cb => cb.checked = false);
+                const permissions = rolePermissions[role] || rolePermissions['ADMIN'] || [];
                 permissions.forEach(perm => {
                     const checkbox = document.querySelector(`input[value="${perm}"]`);
-                    if (checkbox) {
-                        checkbox.checked = true;
-                    }
+                    if (checkbox) checkbox.checked = true;
                 });
             } catch (error) {
                 console.error('Error loading role defaults:', error);
             }
         }
 
-        // Open reset password modal
         function openResetPassword(adminId, adminEmail) {
             selectedAdmin = adminId;
             document.getElementById('resetEmailDisplay').textContent = adminEmail;
@@ -1276,7 +1310,6 @@
             document.getElementById('resetPasswordModal').classList.add('active');
         }
 
-        // Open revoke modal
         function openRevoke(adminId, adminEmail) {
             selectedAdmin = adminId;
             document.getElementById('revokeEmailDisplay').textContent = adminEmail;
@@ -1285,27 +1318,24 @@
             document.getElementById('revokeModal').classList.add('active');
         }
 
-        // Open change role modal
-        function openChangeRole(adminId, adminEmail) {
+        function openChangeRole(adminId, adminEmail, currentRole = '') {
             selectedAdmin = adminId;
             document.getElementById('changeRoleEmailDisplay').textContent = adminEmail;
-            document.getElementById('newRole').value = '';
+            document.getElementById('newRole').value = currentRole || '';
             document.getElementById('changeRoleAlert').style.display = 'none';
             document.getElementById('changeRoleModal').classList.add('active');
         }
 
-        // Close modal
         function closeModal(modalId) {
             document.getElementById(modalId).classList.remove('active');
         }
 
-        // Confirm reset password
         async function confirmResetPassword() {
             const newPassword = document.getElementById('newPassword').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
 
-            if (!newPassword) {
-                showAlert('resetAlert', 'Please enter a password', 'danger');
+            if (!newPassword || newPassword.length < 8) {
+                showAlert('resetAlert', 'Password must be at least 8 characters long', 'danger');
                 return;
             }
 
@@ -1317,53 +1347,47 @@
             try {
                 const response = await fetch(`${API_BASE}/admin/reset-password/${selectedAdmin}`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${getAuthToken()}`
-                    },
+                    credentials: 'include',
+                    headers: authHeaders(),
                     body: JSON.stringify({ password: newPassword })
                 });
 
+                const data = await response.json().catch(() => ({}));
                 if (response.ok) {
                     showAlert('resetAlert', '✓ Password reset successfully!', 'success');
-                    setTimeout(() => closeModal('resetPasswordModal'), 1000);
+                    setTimeout(() => closeModal('resetPasswordModal'), 900);
                 } else {
-                    const data = await response.json();
-                    showAlert('resetAlert', 'Error: ' + (data.detail || 'Failed to reset password'), 'danger');
+                    showAlert('resetAlert', 'Error: ' + (data.detail || data.error || 'Failed to reset password'), 'danger');
                 }
             } catch (error) {
                 showAlert('resetAlert', 'Error: ' + error.message, 'danger');
             }
         }
 
-        // Confirm revoke
         async function confirmRevoke() {
             const reason = document.getElementById('revocationReason')?.value || 'Administrative revocation';
             try {
                 const response = await fetch(`${API_BASE}/admin/revoke/${selectedAdmin}`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${getAuthToken()}`
-                    },
+                    credentials: 'include',
+                    headers: authHeaders(),
                     body: JSON.stringify({ reason })
                 });
 
+                const data = await response.json().catch(() => ({}));
                 if (response.ok) {
                     showAlert('revokeAlert', '✓ Admin access revoked!', 'success');
-                    setTimeout(() => closeModal('revokeModal'), 1000);
-                    loadAdmins();
-                    loadAdminList();
+                    setTimeout(() => closeModal('revokeModal'), 900);
+                    await loadAdmins();
+                    await loadAdminList();
                 } else {
-                    const data = await response.json();
-                    showAlert('revokeAlert', 'Error: ' + (data.detail || 'Failed to revoke admin'), 'danger');
+                    showAlert('revokeAlert', 'Error: ' + (data.detail || data.error || 'Failed to revoke admin'), 'danger');
                 }
             } catch (error) {
                 showAlert('revokeAlert', 'Error: ' + error.message, 'danger');
             }
         }
 
-        // Confirm change role
         async function confirmChangeRole() {
             const newRole = document.getElementById('newRole').value;
             if (!newRole) {
@@ -1374,27 +1398,25 @@
             try {
                 const response = await fetch(`${API_BASE}/admin/change-role/${selectedAdmin}`, {
                     method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${getAuthToken()}`
-                    },
+                    credentials: 'include',
+                    headers: authHeaders(),
                     body: JSON.stringify({ admin_role: newRole })
                 });
 
+                const data = await response.json().catch(() => ({}));
                 if (response.ok) {
                     showAlert('changeRoleAlert', '✓ Role updated successfully!', 'success');
-                    setTimeout(() => closeModal('changeRoleModal'), 1000);
-                    loadAdmins();
+                    setTimeout(() => closeModal('changeRoleModal'), 900);
+                    await loadAdmins();
+                    await loadAdminList();
                 } else {
-                    const data = await response.json();
-                    showAlert('changeRoleAlert', 'Error: ' + (data.detail || 'Failed to change role'), 'danger');
+                    showAlert('changeRoleAlert', 'Error: ' + (data.detail || data.error || 'Failed to change role'), 'danger');
                 }
             } catch (error) {
                 showAlert('changeRoleAlert', 'Error: ' + error.message, 'danger');
             }
         }
 
-        // Save permissions
         async function savePermissions() {
             const adminId = document.getElementById('permissionAdmin').value;
             if (!adminId) {
@@ -1402,32 +1424,29 @@
                 return;
             }
 
-            // Get selected permissions
             const selectedPermissions = Array.from(document.querySelectorAll('.permission-checkbox:checked'))
                 .map(cb => cb.value);
 
             try {
                 const response = await fetch(`${API_BASE}/admin/permissions/${adminId}`, {
                     method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${getAuthToken()}`
-                    },
+                    credentials: 'include',
+                    headers: authHeaders(),
                     body: JSON.stringify({ permissions: selectedPermissions })
                 });
 
+                const data = await response.json().catch(() => ({}));
                 if (response.ok) {
-                    showAlert('permAlert', `✓ Permissions saved for ${selectedPermissions.length} items!`, 'success');
+                    showAlert('permAlert', `✓ Permissions saved (${selectedPermissions.length} scopes granted)!`, 'success');
+                    await loadAdmins();
                 } else {
-                    const data = await response.json();
-                    showAlert('permAlert', 'Error: ' + (data.detail || 'Failed to save permissions'), 'danger');
+                    showAlert('permAlert', 'Error: ' + (data.detail || data.error || 'Failed to save permissions'), 'danger');
                 }
             } catch (error) {
                 showAlert('permAlert', 'Error: ' + error.message, 'danger');
             }
         }
 
-        // Reset permissions
         async function resetPermissions() {
             const adminId = document.getElementById('permissionAdmin').value;
             if (!adminId) {
@@ -1435,25 +1454,20 @@
                 return;
             }
 
-            if (!confirm('Reset permissions to role defaults? This will remove any custom permissions.')) {
-                return;
-            }
-
             try {
                 const response = await fetch(`${API_BASE}/admin/permissions/${adminId}`, {
                     method: 'DELETE',
-                    headers: {
-                        'Authorization': `Bearer ${getAuthToken()}`
-                    }
+                    credentials: 'include',
+                    headers: authHeaders()
                 });
 
+                const data = await response.json().catch(() => ({}));
                 if (response.ok) {
                     showAlert('permAlert', '✓ Permissions reset to role defaults!', 'success');
-                    // Reload the role defaults
-                    await loadRoleDefaultPermissions(adminId);
+                    await loadPermissionsForAdmin(adminId);
+                    await loadAdmins();
                 } else {
-                    const data = await response.json();
-                    showAlert('permAlert', 'Error: ' + (data.detail || 'Failed to reset permissions'), 'danger');
+                    showAlert('permAlert', 'Error: ' + (data.detail || data.error || 'Failed to reset permissions'), 'danger');
                 }
             } catch (error) {
                 showAlert('permAlert', 'Error: ' + error.message, 'danger');
@@ -1487,7 +1501,7 @@
                                 <strong style="font-size:1.15rem;color:#1e293b;">${r.title || roleKey}</strong>
                                 ${r.default_account ? `<span class="badge bg-light text-secondary border ms-2"><i class="fas fa-envelope me-1"></i>${r.default_account}</span>` : ''}
                             </div>
-                            <div class="d-flex gap-2 align-items-center">
+                            <div class="d-flex gap-2 align-items-center flex-wrap">
                                 ${isCurrent ? '<span class="badge bg-primary"><i class="fas fa-user-check me-1"></i>Active Tier</span>' : ''}
                                 ${actualRole === 'SUPER_ADMIN' && !isCurrent ? `<button class="btn btn-sm btn-outline-primary" onclick="window.previewAdminRole && window.previewAdminRole('${roleKey}'); renderRoleMatrixTab();"><i class="fas fa-eye me-1"></i>Preview as ${roleKey}</button>` : ''}
                                 <button class="btn btn-sm btn-primary" onclick="prefillRoleForCreation('${roleKey}')"><i class="fas fa-user-plus me-1"></i>Create ${roleKey}</button>
@@ -1544,7 +1558,6 @@
             if (emailInput) emailInput.focus();
         }
 
-        // Initialize on page load
         document.addEventListener('DOMContentLoaded', () => {
             renderRoleMatrixTab();
             loadAdmins();

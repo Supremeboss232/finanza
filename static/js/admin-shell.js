@@ -387,6 +387,9 @@ window.navigateTo = window.navigateTo || function (url) {
                 </div>
 
                 <div class="adm-right-controls">
+                    <button type="button" class="adm-pill-btn adm-hide-mobile" onclick="window.installFinanzaApp && window.installFinanzaApp()" title="Install Finanza Mobile / Desktop App" style="background:rgba(16,185,129,0.22);border:1px solid rgba(16,185,129,0.5);color:#fff;cursor:pointer;">
+                        <i class="fas fa-mobile-alt"></i> <span>Install App</span>
+                    </button>
                     <button type="button" class="adm-pill-btn" id="admRoleMatrixBtn" onclick="window.openAdminRolesMatrixModal()" title="View Admin Role Privileges (What Each Admin Can & Cannot Do)" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.35);color:#fff;cursor:pointer;">
                         <i class="fas fa-shield-alt"></i> <span id="admNavRoleBadge">${initialRole}</span>
                     </button>
@@ -426,6 +429,9 @@ window.navigateTo = window.navigateTo || function (url) {
                     ${drawerDivisionsHtml}
                 </div>
                 <div class="adm-drawer-footer">
+                    <button type="button" onclick="window.toggleAdminMobileDrawer(false);window.installFinanzaApp && window.installFinanzaApp();" class="btn btn-sm btn-success flex-fill fw-semibold" style="font-size:0.76rem;">
+                        <i class="fas fa-mobile-alt me-1"></i>Install App
+                    </button>
                     <button type="button" onclick="window.toggleAdminMobileDrawer(false);window.openAdminRolesMatrixModal();" class="btn btn-sm btn-outline-primary flex-fill fw-semibold" style="font-size:0.76rem;">
                         <i class="fas fa-shield-alt me-1"></i>Role Matrix
                     </button>
@@ -545,6 +551,13 @@ window.navigateTo = window.navigateTo || function (url) {
                 }
             })
             .catch(() => {});
+
+        if (!document.querySelector('script[src*="pwa-init.js"]')) {
+            const pwaScript = document.createElement("script");
+            pwaScript.src = "/static/js/pwa-init.js";
+            pwaScript.defer = true;
+            document.head.appendChild(pwaScript);
+        }
     }
 
     if (document.readyState === "loading") {

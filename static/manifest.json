@@ -1,0 +1,70 @@
+{
+  "id": "/",
+  "name": "Finanza Digital Bank",
+  "short_name": "Finanza",
+  "description": "Finanza Digital Banking, Treasury, Cards, Transfers & Admin Control Center",
+  "start_url": "/user/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait-primary",
+  "background_color": "#0f172a",
+  "theme_color": "#667eea",
+  "categories": ["finance", "business", "productivity"],
+  "icons": [
+    {
+      "src": "/static/img/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/img/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/static/img/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/img/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Client Dashboard",
+      "short_name": "Dashboard",
+      "description": "View accounts, balances, and recent activity",
+      "url": "/user/dashboard",
+      "icons": [{ "src": "/static/img/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Send & Transfer",
+      "short_name": "Transfer",
+      "description": "Initiate domestic or international transfers",
+      "url": "/user/transfers",
+      "icons": [{ "src": "/static/img/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Virtual & Physical Cards",
+      "short_name": "Cards",
+      "description": "Manage spending limits and card security",
+      "url": "/user/cards",
+      "icons": [{ "src": "/static/img/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Admin Control Center",
+      "short_name": "Admin Hub",
+      "description": "Open the 29-module Admin Control Center",
+      "url": "/user/admin/dashboard",
+      "icons": [{ "src": "/static/img/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ]
+}

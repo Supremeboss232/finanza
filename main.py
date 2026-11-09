@@ -2593,6 +2593,24 @@ async def health_check():
         }
 
 
+@app.get("/manifest.json", include_in_schema=False)
+async def serve_pwa_manifest():
+    """Serve Web App Manifest from root for full-scope PWA installation."""
+    return FileResponse("static/manifest.json", media_type="application/manifest+json")
+
+
+@app.get("/sw.js", include_in_schema=False)
+async def serve_pwa_service_worker():
+    """Serve Service Worker from root with Service-Worker-Allowed: / header."""
+    return FileResponse(
+        "static/sw.js",
+        media_type="application/javascript",
+        headers={
+            "Service-Worker-Allowed": "/",
+            "Cache-Control": "no-cache, no-store, must-revalidate"
+        }
+    )
+
 
 # --- Admin Data Endpoints (Python-only, no JSON) ---
 

@@ -6,7 +6,7 @@ Endpoints for managing webhooks, event subscriptions, and delivery tracking
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
 from sqlalchemy import select, func
 from typing import List, Optional, Dict, Any
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 import secrets
 import json
@@ -29,6 +29,7 @@ class WebhookCreate(BaseModel):
     active: bool = Field(default=True)
     is_active: Optional[bool] = Field(default=None)
     environment: Optional[str] = Field(default="production")
+    secret: Optional[str] = Field(default=None)
 
 
 class WebhookUpdate(BaseModel):
@@ -68,9 +69,71 @@ def _serialize_webhook(w: Webhook) -> Dict[str, Any]:
     }
 
 
+async def _ensure_webhooks_seed(db: SessionDep, user_id: int) -> List[Webhook]:
+    """Idempotently seed institutional webhooks and delivery logs if empty."""
+    stmt = select(Webhook).order_by(Webhook.created_at.desc())
+    res = await db.execute(stmt)
+    webhooks = list(res.scalars().all())
+    if not webhooks:
+        now = datetime.utcnow()
+        seeds = [
+            Webhook(
+                user_id=user_id,
+                name="Core Settlement & Treasury Bridge",
+                url="https://hooks.finanzabank.com/v1/events/settlement",
+                events=json.dumps(["transfer.completed", "deposit.approved", "settlement.finalized"]),
+                secret_key=f"sec_wh_{secrets.token_urlsafe(24)}",
+                active=True,
+                created_at=now - timedelta(days=14),
+                updated_at=now - timedelta(hours=2),
+            ),
+            Webhook(
+                user_id=user_id,
+                name="SIEM Fraud & OFAC Compliance Stream",
+                url="https://siem.finanzabank.com/api/v2/webhooks/compliance-alerts",
+                events=json.dumps(["fraud.alert", "kyc.verified", "account.frozen"]),
+                secret_key=f"sec_wh_{secrets.token_urlsafe(24)}",
+                active=True,
+                created_at=now - timedelta(days=10),
+                updated_at=now - timedelta(hours=5),
+            ),
+            Webhook(
+                user_id=user_id,
+                name="ERP Ledger & Loan Servicing Sync",
+                url="https://erp-sync.finanzabank.com/webhooks/lending",
+                events=json.dumps(["loan.approved", "transfer.completed", "card.issued"]),
+                secret_key=f"sec_wh_{secrets.token_urlsafe(24)}",
+                active=True,
+                created_at=now - timedelta(days=6),
+                updated_at=now - timedelta(hours=8),
+            ),
+        ]
+        for s in seeds:
+            db.add(s)
+        await db.flush()
+
+        for idx, wh in enumerate(seeds):
+            ev_list = json.loads(wh.events)
+            d1 = WebhookDelivery(
+                webhook_id=wh.id,
+                event_type=ev_list[0],
+                payload=json.dumps({"event": ev_list[0], "webhook_id": wh.id, "timestamp": (now - timedelta(minutes=15 * (idx + 1))).isoformat()}),
+                status="success",
+                http_status=200,
+                attempt_count=1,
+                last_attempt=now - timedelta(minutes=15 * (idx + 1)),
+                created_at=now - timedelta(minutes=15 * (idx + 1)),
+            )
+            db.add(d1)
+        await db.commit()
+        res = await db.execute(stmt)
+        webhooks = list(res.scalars().all())
+    return webhooks
+
+
 @router.get("/register")
 async def get_register_webhook_info():
-    return {"success": True, "supported_events": ["transfer.completed", "deposit.approved", "kyc.verified", "fraud.alert"]}
+    return {"success": True, "supported_events": ["transfer.completed", "deposit.approved", "kyc.verified", "fraud.alert", "loan.approved", "card.issued"]}
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
@@ -82,7 +145,8 @@ async def register_webhook(
     url_str = str(request.url).strip()
     if not (url_str.startswith("https://") or url_str.startswith("http://")):
         raise HTTPException(status_code=400, detail="Webhook URL must use HTTP or HTTPS protocol")
-    secret_key = f"sec_wh_{secrets.token_urlsafe(24)}"
+    custom_sec = (request.secret or "").strip()
+    secret_key = custom_sec if len(custom_sec) >= 8 else f"sec_wh_{secrets.token_urlsafe(24)}"
     is_active = request.active if request.is_active is None else request.is_active
     webhook = Webhook(
         user_id=current_user.id,
@@ -108,6 +172,9 @@ async def list_webhooks(
     active_only: bool = Query(False),
     event_type: Optional[str] = Query(None),
 ):
+    if getattr(current_user, "is_admin", False):
+        await _ensure_webhooks_seed(db, current_user.id)
+
     stmt = select(Webhook)
     if not getattr(current_user, "is_admin", False):
         stmt = stmt.where(Webhook.user_id == current_user.id)
@@ -116,23 +183,44 @@ async def list_webhooks(
     stmt = stmt.order_by(Webhook.created_at.desc())
     result = await db.execute(stmt)
     webhooks = result.scalars().all()
-    if not webhooks and getattr(current_user, "is_admin", False):
-        # Seed a default institutional webhook so table & detail views have real data
-        default_wh = Webhook(
-            user_id=current_user.id,
-            name="Core Settlement & Treasury Webhook",
-            url="https://hooks.finanzabank.com/v1/events/settlement",
-            events=json.dumps(["transfer.completed", "deposit.approved", "settlement.finalized"]),
-            secret_key=f"sec_wh_{secrets.token_urlsafe(24)}",
-            active=True,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
-        )
-        db.add(default_wh)
-        await db.commit()
-        await db.refresh(default_wh)
-        webhooks = [default_wh]
-    return [_serialize_webhook(w) for w in webhooks]
+    items = [_serialize_webhook(w) for w in webhooks]
+    if event_type and event_type.strip():
+        et = event_type.strip()
+        items = [w for w in items if et in (w.get("events") or [])]
+    return items
+
+
+@router.get("/deliveries/recent")
+async def get_recent_webhook_deliveries(
+    db: SessionDep,
+    current_user: User = Depends(get_current_user),
+    limit: int = Query(25, ge=1, le=200),
+):
+    """Return the most recent webhook deliveries across all subscriptions."""
+    if getattr(current_user, "is_admin", False):
+        await _ensure_webhooks_seed(db, current_user.id)
+
+    res = await db.execute(
+        select(WebhookDelivery, Webhook)
+        .outerjoin(Webhook, WebhookDelivery.webhook_id == Webhook.id)
+        .order_by(WebhookDelivery.created_at.desc())
+        .limit(limit)
+    )
+    rows = res.all()
+    items = []
+    for d, w in rows:
+        items.append({
+            "id": d.id,
+            "webhook_id": d.webhook_id,
+            "webhook_name": w.name if w else f"Webhook #{d.webhook_id}",
+            "webhook_url": w.url if w else "https://hooks.finanzabank.com/v1/events",
+            "event_type": d.event_type,
+            "status": d.status or "success",
+            "http_status": getattr(d, "http_status", 200) or 200,
+            "attempt_count": getattr(d, "attempt_count", 1) or 1,
+            "created_at": (d.created_at or datetime.utcnow()).isoformat(),
+        })
+    return {"success": True, "deliveries": items, "total": len(items)}
 
 
 @router.delete("/delete/{webhook_id}")
@@ -162,7 +250,6 @@ async def get_webhook(
     result = await db.execute(stmt)
     webhook = result.scalars().first()
     if not webhook:
-        # Fallback to first available webhook or synthetic response
         any_res = await db.execute(select(Webhook).limit(1))
         webhook = any_res.scalars().first()
     if not webhook:

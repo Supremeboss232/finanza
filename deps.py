@@ -4,7 +4,7 @@
 import logging
 from typing import Annotated, AsyncGenerator, Optional
 
-from fastapi import Depends, HTTPException, status, Form, Cookie
+from fastapi import Depends, HTTPException, status, Form, Cookie, Query
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -53,12 +53,15 @@ async def is_token_blacklisted(token: str, db: AsyncSession) -> bool:
 async def get_current_user(
     db: SessionDep,
     cookie_token: Annotated[Optional[str], Cookie(alias="access_token")] = None,
+    alt_cookie_token: Annotated[Optional[str], Cookie(alias="token")] = None,
     bearer_token: Annotated[Optional[str], Depends(oauth2_scheme)] = None,
+    query_token: Annotated[Optional[str], Query(alias="token")] = None,
 ):
     """
     Accepts authentication from:
-    - Cookie: access_token
     - Authorization Header: Bearer <token>
+    - Cookie: access_token or token
+    - Query param: ?token=<token>
     """
 
     credentials_exception = HTTPException(
@@ -67,19 +70,26 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
 
-    # Token priority: valid Bearer > valid Cookie
+    def _clean(raw: Optional[str]) -> Optional[str]:
+        if not raw:
+            return None
+        val = raw.strip().strip('"').strip("'")
+        if val.lower().startswith("bearer "):
+            val = val[7:].strip()
+        if val in ("null", "undefined", "cookie-session", ""):
+            return None
+        return val
+
     email = None
     token = None
 
-    if bearer_token and bearer_token not in ("null", "undefined", ""):
-        email = auth_utils.decode_access_token(bearer_token)
-        if email:
-            token = bearer_token
-
-    if not email and cookie_token and cookie_token not in ("null", "undefined", ""):
-        email = auth_utils.decode_access_token(cookie_token)
-        if email:
-            token = cookie_token
+    for candidate in (_clean(bearer_token), _clean(cookie_token), _clean(alt_cookie_token), _clean(query_token)):
+        if candidate:
+            decoded_email = auth_utils.decode_access_token(candidate)
+            if decoded_email:
+                email = decoded_email
+                token = candidate
+                break
 
     if not token or not email:
         logging.warning("Authentication failed: Invalid, expired, or missing token.")

@@ -29,6 +29,11 @@
 
     <script src="/static/js/toast-utils.js"></script>
     <link href="/static/css/public-modern.css" rel="stylesheet">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#667eea">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
+    <script src="/static/js/pwa-init.js" defer></script>
 </head>
 
 <body>
@@ -528,6 +533,21 @@
             localStorage.removeItem('is_admin');
             localStorage.removeItem('permissions');
             localStorage.removeItem('token_refresh_time');
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('admin_token');
+            sessionStorage.clear();
+            document.cookie = 'access_token=; Max-Age=0; path=/; SameSite=Lax';
+            document.cookie = 'token=; Max-Age=0; path=/; SameSite=Lax';
+
+            localStorage.removeItem('access_token');
+
+            localStorage.removeItem('admin_token');
+
+            sessionStorage.clear();
+
+            document.cookie = 'access_token=; Max-Age=0; path=/; SameSite=Lax';
+
+            document.cookie = 'token=; Max-Age=0; path=/; SameSite=Lax';
             
             // Show session expired alert on signin page
             const sessionAlert = document.getElementById('session-expired-alert');
@@ -808,27 +828,39 @@
         /**
          * Check if user is already logged in
          */
-        function checkAndLockIfLoggedIn() {
-            if (window.location.search.includes('logged_out=1')) {
-                localStorage.clear();
-                sessionStorage.clear();
+        async function checkAndLockIfLoggedIn() {
+            if (window.location.search.includes('logged_out=1') || window.location.search.includes('session_expired=true')) {
+                handleSessionExpired();
                 return;
             }
             const token = localStorage.getItem('token');
             
-            if (token && token !== 'cookie-session') {
-                // Check if token is expired
+            if (token && token !== 'cookie-session' && token !== 'null' && token !== 'undefined') {
                 if (isTokenExpired(token)) {
                     debugLog('Token expired - clearing session');
                     handleSessionExpired();
                     return;
                 }
                 
-                debugLog('User already logged in - checking role...');
+                // Verify token with backend before redirecting so invalid/stale tokens never cause {"detail":"Could not validate credentials"}
+                try {
+                    const verifyResp = await fetch('/api/v1/users/me', {
+                        method: 'GET',
+                        credentials: 'include',
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    if (!verifyResp.ok) {
+                        handleSessionExpired();
+                        return;
+                    }
+                    // Sync valid token into cookies so GET /user/dashboard succeeds
+                    document.cookie = 'access_token=' + encodeURIComponent(token) + '; path=/; max-age=1209600; SameSite=Lax';
+                    document.cookie = 'token=' + encodeURIComponent(token) + '; path=/; max-age=1209600; SameSite=Lax';
+                } catch (_) {
+                    return;
+                }
                 
-                // User has valid token, redirect to appropriate dashboard
                 const adminRole = localStorage.getItem('admin_role') || 'USER';
-                
                 const isAdminFlag = localStorage.getItem('is_admin') === 'true';
                 if (isAdminFlag || ['SUPER_ADMIN', 'SUPERADMIN', 'ADMIN', 'TREASURY', 'COMPLIANCE', 'SUPPORT'].includes(adminRole)) {
                     window.location.href = '/user/admin/dashboard';
@@ -1002,11 +1034,14 @@
                     
                     // ==================== STORE AUTHENTICATION DATA ====================
                     
-                    // Store JWT token
+                    // Store JWT token in both localStorage and cookies
                     if (data.access_token) {
                         localStorage.setItem('token', data.access_token);
+                        localStorage.setItem('access_token', data.access_token);
                         localStorage.setItem('token_type', data.token_type || 'bearer');
                         localStorage.setItem('token_refresh_time', Date.now());
+                        document.cookie = 'access_token=' + encodeURIComponent(data.access_token) + '; path=/; max-age=1209600; SameSite=Lax';
+                        document.cookie = 'token=' + encodeURIComponent(data.access_token) + '; path=/; max-age=1209600; SameSite=Lax';
                     }
                     
                     // Store user information

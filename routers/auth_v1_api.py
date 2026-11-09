@@ -169,7 +169,7 @@ async def login_v1(
         
         # Create access token
         print(f"[LOGIN] Creating access token...")
-        access_token_expires = timedelta(minutes=30)
+        access_token_expires = timedelta(days=14)
         access_token = create_access_token(
             data={"sub": user.email}, expires_delta=access_token_expires
         )
@@ -215,8 +215,8 @@ async def login_v1(
         response.set_cookie(
             key="access_token",
             value=access_token,
-            max_age=30 * 60,  # 30 minutes
-            httponly=True,
+            max_age=14 * 24 * 3600,  # 14 days
+            httponly=False,
             secure=False,  # Set to True in production with HTTPS
             samesite="lax",
             path="/"
@@ -950,7 +950,7 @@ async def refresh_token(request: Request):
         log_instance.info(f"[REFRESH] [OK] Token refreshed for: {user_email}")
         
         # Create new token with extended expiration
-        access_token_expires = timedelta(minutes=30)
+        access_token_expires = timedelta(days=14)
         new_access_token = create_access_token(
             data={"sub": user_email},
             expires_delta=access_token_expires
@@ -960,7 +960,7 @@ async def refresh_token(request: Request):
             "success": True,
             "access_token": new_access_token,
             "token_type": "bearer",
-            "expires_in": 1800,  # 30 minutes in seconds
+            "expires_in": 14 * 24 * 3600,  # 14 days in seconds
             "message": "Token refreshed successfully"
         }
     except HTTPException:
@@ -988,4 +988,5 @@ async def logout_v1():
     """Clear authentication cookie and end user session."""
     response = JSONResponse(content={"success": True, "message": "Logged out successfully"})
     response.delete_cookie(key="access_token", path="/")
+    response.delete_cookie(key="token", path="/")
     return response

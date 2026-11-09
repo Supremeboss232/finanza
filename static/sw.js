@@ -1,4 +1,4 @@
-const CACHE_NAME = 'finanza-pwa-v1';
+const CACHE_NAME = 'finanza-pwa-v2';
 const STATIC_ASSETS = [
   '/manifest.json',
   '/static/css/mobile.css',
@@ -99,18 +99,45 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(req.url);
 
-  // Never cache API calls — always go to network
-  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/auth/')) {
+  // Never cache API or auth endpoints — always pass straight to network
+  if (
+    url.pathname.startsWith('/api/') ||
+    url.pathname.startsWith('/auth/') ||
+    url.pathname.startsWith('/user/') ||
+    url.pathname.startsWith('/admin/')
+  ) {
+    if (req.mode === 'navigate') {
+      event.respondWith(
+        fetch(req)
+          .then((res) => {
+            if (res.status === 401) {
+              return Response.redirect(new URL('/signin?session_expired=true&logged_out=1', url.origin).href, 302);
+            }
+            return res;
+          })
+          .catch(() =>
+            new Response(OFFLINE_HTML, {
+              headers: { 'Content-Type': 'text/html; charset=utf-8' }
+            })
+          )
+      );
+    }
     return;
   }
 
-  // Navigation requests (HTML pages): network-first, fallback to cached copy or offline screen
+  // Navigation requests for public pages: network-first, only cache valid 200 HTML
   if (req.mode === 'navigate') {
     event.respondWith(
       fetch(req)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE_NAME).then((c) => c.put(req, copy)).catch(() => {});
+          if (res.status === 401) {
+            return Response.redirect(new URL('/signin?session_expired=true&logged_out=1', url.origin).href, 302);
+          }
+          const ct = (res.headers.get('content-type') || '').toLowerCase();
+          if (res.ok && ct.includes('text/html') && !res.redirected) {
+            const copy = res.clone();
+            caches.open(CACHE_NAME).then((c) => c.put(req, copy)).catch(() => {});
+          }
           return res;
         })
         .catch(() =>
@@ -118,7 +145,6 @@ self.addEventListener('fetch', (event) => {
             (cached) =>
               cached ||
               new Response(OFFLINE_HTML, {
-                status: 200,
                 headers: { 'Content-Type': 'text/html; charset=utf-8' }
               })
           )
@@ -127,21 +153,24 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static assets: stale-while-revalidate
-  if (url.pathname.startsWith('/static/') || url.pathname === '/manifest.json') {
+  // Static assets: network-first with cache fallback
+  if (
+    url.pathname.startsWith('/static/') ||
+    url.pathname.startsWith('/css/') ||
+    url.pathname.startsWith('/js/') ||
+    url.pathname.startsWith('/img/') ||
+    url.pathname === '/manifest.json'
+  ) {
     event.respondWith(
-      caches.match(req).then((cached) => {
-        const networkFetch = fetch(req)
-          .then((res) => {
-            if (res && res.status === 200) {
-              const copy = res.clone();
-              caches.open(CACHE_NAME).then((c) => c.put(req, copy)).catch(() => {});
-            }
-            return res;
-          })
-          .catch(() => cached);
-        return cached || networkFetch;
-      })
+      fetch(req)
+        .then((res) => {
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE_NAME).then((c) => c.put(req, copy)).catch(() => {});
+          }
+          return res;
+        })
+        .catch(() => caches.match(req))
     );
   }
 });

@@ -2013,6 +2013,69 @@ async def lifespan(app: FastAPI):
 app.router.lifespan_context = lifespan
 
 
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.responses import JSONResponse
+from urllib.parse import quote as _url_quote
+
+
+@app.exception_handler(StarletteHTTPException)
+@app.exception_handler(HTTPException)
+async def custom_http_exception_handler(request: Request, exc: HTTPException):
+    """
+    Ensure app users never see raw JSON {"detail": "Could not validate credentials"}.
+    Any browser/page navigation request (or /user/*, /admin/* route) that fails with 401
+    or invalid credentials automatically clears stale auth cookies and redirects to /signin.
+    """
+    path = request.url.path or ""
+    accept = (request.headers.get("accept") or "").lower()
+    sec_fetch_mode = (request.headers.get("sec-fetch-mode") or "").lower()
+    detail_str = str(getattr(exc, "detail", ""))
+
+    is_auth_error = (
+        exc.status_code == 401
+        or "Could not validate credentials" in detail_str
+        or "Not authenticated" in detail_str
+        or "Inactive user" in detail_str
+    )
+
+    is_api_call = (
+        path.startswith("/api/")
+        or path.startswith("/auth/")
+        or path.startswith("/webhooks/")
+        or path == "/user/admin/user-info"
+    )
+
+    is_page_navigation = (
+        not is_api_call
+        and (
+            request.method == "GET"
+            or "text/html" in accept
+            or sec_fetch_mode == "navigate"
+            or path.startswith("/user")
+            or path.startswith("/admin")
+            or path.startswith("/private")
+        )
+    )
+
+    if is_auth_error and is_page_navigation:
+        signin_url = "/signin?session_expired=true&logged_out=1"
+        if path.startswith("/user/"):
+            signin_url += f"&next={_url_quote(path)}"
+        resp = RedirectResponse(url=signin_url, status_code=302)
+        resp.delete_cookie("access_token", path="/")
+        resp.delete_cookie("token", path="/")
+        return resp
+
+    headers = dict(getattr(exc, "headers", None) or {})
+    if is_auth_error:
+        headers["X-Auth-Redirect"] = "/signin?session_expired=true&logged_out=1"
+
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+        headers=headers,
+    )
+
 
 # --- Static Files & Routers ---
 

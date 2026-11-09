@@ -1,12 +1,157 @@
 /**
- * Finanza PWA Initializer & Mobile App Installer
- * Injects Web App Manifest, iOS/Android standalone meta tags, registers /sw.js,
- * and provides one-tap "Install Finanza App" support on Android & iOS.
+ * Finanza PWA Initializer, Mobile App Installer & Global Credential Guard
+ * 1. Syncs JWT token between localStorage and cookies so page navigations never lose auth.
+ * 2. Intercepts 401 ("Could not validate credentials") across fetch/XHR and redirects cleanly to /signin.
+ * 3. Injects Web App Manifest, registers /sw.js, and provides one-tap "Install Finanza App" support.
  */
 (function () {
     if (window.__FINANZA_PWA_INITIALIZED__) return;
     window.__FINANZA_PWA_INITIALIZED__ = true;
 
+    const TOKEN_KEYS = ['token', 'access_token', 'admin_token', 'authToken', 'jwt_token'];
+
+    function isRealJwt(val) {
+        if (typeof val !== 'string') return false;
+        const clean = val.trim();
+        if (!clean || clean === 'cookie-session' || clean === 'null' || clean === 'undefined') return false;
+        const parts = clean.split('.');
+        if (parts.length !== 3) return false;
+        try {
+            const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+            if (payload && payload.exp && Date.now() >= payload.exp * 1000) {
+                return false;
+            }
+        } catch (_) {}
+        return true;
+    }
+
+    function getValidJwt() {
+        for (const k of TOKEN_KEYS) {
+            const v = localStorage.getItem(k) || sessionStorage.getItem(k);
+            if (isRealJwt(v)) return v.trim();
+        }
+        return null;
+    }
+
+    function clearAllAuthState() {
+        for (const k of TOKEN_KEYS) {
+            localStorage.removeItem(k);
+            sessionStorage.removeItem(k);
+        }
+        localStorage.removeItem('is_admin');
+        localStorage.removeItem('admin_role');
+        localStorage.removeItem('token_refresh_time');
+        document.cookie = 'access_token=; Max-Age=0; path=/; SameSite=Lax';
+        document.cookie = 'token=; Max-Age=0; path=/; SameSite=Lax';
+    }
+
+    window.redirectToSignInClean = function () {
+        if (window.__finanzaRedirectingToSignIn) return;
+        const path = window.location.pathname || '';
+        if (
+            path === '/signin' ||
+            path === '/signin.html' ||
+            path === '/signup' ||
+            path === '/signup.html' ||
+            path === '/forgot-password' ||
+            path === '/forgot_password' ||
+            path === '/reset-password' ||
+            path === '/reset_password'
+        ) {
+            return;
+        }
+        window.__finanzaRedirectingToSignIn = true;
+        clearAllAuthState();
+        const nextParam = path.startsWith('/user/') ? '&next=' + encodeURIComponent(path) : '';
+        window.location.replace('/signin?session_expired=true&logged_out=1' + nextParam);
+    };
+
+    // Sync valid localStorage JWT into cookies so browser GET navigations (/user/dashboard, etc.) always authenticate
+    const activeJwt = getValidJwt();
+    if (activeJwt) {
+        document.cookie = 'access_token=' + encodeURIComponent(activeJwt) + '; path=/; max-age=1209600; SameSite=Lax';
+        document.cookie = 'token=' + encodeURIComponent(activeJwt) + '; path=/; max-age=1209600; SameSite=Lax';
+    }
+
+    // Check if the current page rendered raw {"detail":"Could not validate credentials"}
+    function checkRawCredentialErrorPage() {
+        if (!document.body) return;
+        const txt = (document.body.innerText || '').trim();
+        if (
+            txt.startsWith('{"detail":"Could not validate credentials"}') ||
+            txt.startsWith('{"detail": "Could not validate credentials"}') ||
+            txt === '{"detail":"Not authenticated"}'
+        ) {
+            window.redirectToSignInClean();
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', checkRawCredentialErrorPage);
+    } else {
+        checkRawCredentialErrorPage();
+    }
+
+    // Global Fetch Interceptor for Protected Pages (/user/* and /admin/*)
+    if (!window.__finanzaGlobalAuthFetchWrapped) {
+        window.__finanzaGlobalAuthFetchWrapped = true;
+        const nativeFetch = window.fetch.bind(window);
+
+        window.fetch = async function (resource, config) {
+            config = config ? Object.assign({}, config) : {};
+            const urlStr = typeof resource === 'string' ? resource : (resource && resource.url ? resource.url : '');
+            const isInternal = urlStr.startsWith('/') || urlStr.startsWith(window.location.origin);
+
+            if (isInternal) {
+                if (!config.credentials) {
+                    config.credentials = 'include';
+                }
+                const jwt = getValidJwt();
+                if (config.headers instanceof Headers) {
+                    const cur = config.headers.get('Authorization') || config.headers.get('authorization');
+                    if (cur && (cur.includes('null') || cur.includes('undefined') || cur.includes('cookie-session'))) {
+                        config.headers.delete('Authorization');
+                        config.headers.delete('authorization');
+                    }
+                    if (jwt && !config.headers.has('Authorization') && !config.headers.has('authorization')) {
+                        config.headers.set('Authorization', 'Bearer ' + jwt);
+                    }
+                } else {
+                    config.headers = Object.assign({}, config.headers || {});
+                    const cur = config.headers['Authorization'] || config.headers['authorization'];
+                    if (cur && (String(cur).includes('null') || String(cur).includes('undefined') || String(cur).includes('cookie-session'))) {
+                        delete config.headers['Authorization'];
+                        delete config.headers['authorization'];
+                    }
+                    if (jwt && !config.headers['Authorization'] && !config.headers['authorization']) {
+                        config.headers['Authorization'] = 'Bearer ' + jwt;
+                    }
+                }
+            }
+
+            const response = await nativeFetch(resource, config);
+
+            if (isInternal && response && response.status === 401) {
+                const isLoginEndpoint =
+                    urlStr.includes('/auth/login') ||
+                    urlStr.includes('/auth/token') ||
+                    urlStr.includes('/audit/login') ||
+                    urlStr.includes('/auth/csrf-token');
+                const onProtectedPage =
+                    window.location.pathname.startsWith('/user') ||
+                    window.location.pathname.startsWith('/admin') ||
+                    window.location.pathname.startsWith('/private');
+
+                if (!isLoginEndpoint && onProtectedPage) {
+                    window.redirectToSignInClean();
+                }
+            }
+
+            return response;
+        };
+    }
+
+    // ==================== PWA INSTALLER & SERVICE WORKER ====================
     let deferredPrompt = null;
 
     function injectPwaHeadTags() {
@@ -52,6 +197,9 @@
             window.addEventListener('load', function () {
                 navigator.serviceWorker
                     .register('/sw.js', { scope: '/' })
+                    .then(function (reg) {
+                        if (reg && reg.update) reg.update();
+                    })
                     .catch(function (err) {
                         console.debug('SW registration info:', err);
                     });

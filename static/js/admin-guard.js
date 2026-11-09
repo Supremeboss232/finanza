@@ -499,6 +499,10 @@ window.checkAdminAccessWithRole = async function (requiredRole) {
             localStorage.setItem(k, tokenValue);
             sessionStorage.setItem(k, tokenValue);
         }
+        if (isRealJwt(tokenValue)) {
+            document.cookie = 'access_token=' + encodeURIComponent(tokenValue) + '; path=/; max-age=1209600; SameSite=Lax';
+            document.cookie = 'token=' + encodeURIComponent(tokenValue) + '; path=/; max-age=1209600; SameSite=Lax';
+        }
     }
 
     const existingJwt = getAnyRealJwt();
@@ -558,7 +562,21 @@ window.checkAdminAccessWithRole = async function (requiredRole) {
                 }
             }
 
-            return originalFetch(resource, config);
+            return originalFetch(resource, config).then(function (resp) {
+                if (isInternal && resp && resp.status === 401 && !urlStr.includes('/auth/login')) {
+                    for (const k of TOKEN_KEYS) {
+                        localStorage.removeItem(k);
+                        sessionStorage.removeItem(k);
+                    }
+                    localStorage.removeItem('is_admin');
+                    document.cookie = 'access_token=; Max-Age=0; path=/; SameSite=Lax';
+                    document.cookie = 'token=; Max-Age=0; path=/; SameSite=Lax';
+                    if (!window.location.pathname.startsWith('/signin')) {
+                        window.location.replace('/signin?session_expired=true&logged_out=1');
+                    }
+                }
+                return resp;
+            });
         };
     }
 

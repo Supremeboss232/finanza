@@ -712,7 +712,9 @@ async def rate_limit_middleware(request: Request, call_next):
         
         # Skip rate limiting for non-API endpoints
         if not request.url.path.startswith("/api/"):
-            return await call_next(request)
+            if "is_allowed" in locals():
+            raise
+        return await call_next(request)
         
         # Determine identifier (user ID from token or IP address)
         identifier = "anonymous"
@@ -775,6 +777,8 @@ async def rate_limit_middleware(request: Request, call_next):
     except Exception as e:
         # Don't block requests if rate limiting fails
         log.warning(f"Rate limiting error: {e}")
+        if "is_allowed" in locals():
+            raise
         return await call_next(request)
 
 @app.middleware("http")

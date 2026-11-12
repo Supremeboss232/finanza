@@ -38,20 +38,30 @@ if [ -d "/sdcard/finanza" ]; then
     echo "[OK] Workspace synchronized."
 fi
 
-# 3. Clean up any old stuck uvicorn or tunnel processes
-pkill -f "uvicorn main:app" 2>/dev/null || true
-pkill -f "cloudflared" 2>/dev/null || true
-pkill -f "pinggy.io" 2>/dev/null || true
-pkill -f "serveo.net" 2>/dev/null || true
-sleep 1
+# 3. Clean up any previous background supervisor loops and stuck processes
+for old_pid in $(pgrep -f "start_backend_loop" 2>/dev/null); do
+    if [ "${old_pid}" != "$$" ]; then
+        kill -9 "${old_pid}" 2>/dev/null || true
+    fi
+done
+pkill -9 -f "uvicorn" 2>/dev/null || true
+pkill -9 -f "cloudflared" 2>/dev/null || true
+pkill -9 -f "pinggy" 2>/dev/null || true
+pkill -9 -f "serveo" 2>/dev/null || true
+sleep 2
 
 # 4. Start FastAPI / Uvicorn in an auto-restarting background supervisor
 start_backend_loop() {
     while true; do
+        # Check if port is already running and healthy to avoid Errno 98 port collision
+        if curl -s "http://127.0.0.1:${PORT}/health" >/dev/null 2>&1; then
+            sleep 5
+            continue
+        fi
         echo "[BACKEND] Starting Finanza FastAPI server on 0.0.0.0:${PORT}..."
         uvicorn main:app --host 0.0.0.0 --port "${PORT}" --timeout-keep-alive 75 2>&1 | tee -a finanza_server.log
         EXIT_CODE=$?
-        echo "[BACKEND] Uvicorn exited (code ${EXIT_CODE}). Restarting in 3 seconds..."
+        echo "[BACKEND] Uvicorn process ended (code ${EXIT_CODE}). Checking health in 3 seconds..."
         sleep 3
     done
 }
@@ -63,9 +73,9 @@ BACKEND_PID=$!
 cleanup() {
     echo ""
     echo "[SHUTDOWN] Stopping Finanza 24/7 Launcher..."
-    kill "${BACKEND_PID}" 2>/dev/null || true
-    pkill -f "uvicorn main:app" 2>/dev/null || true
-    pkill -f "cloudflared" 2>/dev/null || true
+    kill -9 "${BACKEND_PID}" 2>/dev/null || true
+    pkill -9 -f "uvicorn" 2>/dev/null || true
+    pkill -9 -f "cloudflared" 2>/dev/null || true
     if command -v termux-wake-unlock >/dev/null 2>&1; then
         termux-wake-unlock
     fi

@@ -116,6 +116,8 @@
                     if (jwt && !config.headers.has('Authorization') && !config.headers.has('authorization')) {
                         config.headers.set('Authorization', 'Bearer ' + jwt);
                     }
+                    config.headers.set('Bypass-Tunnel-Reminder', 'true');
+                    config.headers.set('ngrok-skip-browser-warning', 'true');
                 } else {
                     config.headers = Object.assign({}, config.headers || {});
                     const cur = config.headers['Authorization'] || config.headers['authorization'];
@@ -126,6 +128,8 @@
                     if (jwt && !config.headers['Authorization'] && !config.headers['authorization']) {
                         config.headers['Authorization'] = 'Bearer ' + jwt;
                     }
+                    config.headers['Bypass-Tunnel-Reminder'] = 'true';
+                    config.headers['ngrok-skip-browser-warning'] = 'true';
                 }
             }
 

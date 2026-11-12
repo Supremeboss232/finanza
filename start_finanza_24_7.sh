@@ -13,9 +13,10 @@
 # ==============================================================================
 
 PORT="${PORT:-8000}"
-TUNNEL_PROVIDER="${TUNNEL_PROVIDER:-cloudflare}"   # "cloudflare" (default), "pinggy", or "custom"
+SUBDOMAIN="${SUBDOMAIN:-bankfinanza}"
+TUNNEL_PROVIDER="${TUNNEL_PROVIDER:-cloudflare}"   # "cloudflare" (default), "localtunnel" (fixed subdomain), or "pinggy"
 CLOUDFLARE_TUNNEL_TOKEN="${CLOUDFLARE_TUNNEL_TOKEN:-}"
-CUSTOM_DOMAIN="${CUSTOM_DOMAIN:-}"
+CUSTOM_DOMAIN="${CUSTOM_DOMAIN:-bankfinanza.trycloudflare.com}"
 
 echo "============================================================"
 echo "  FINANZA DIGITAL BANK — 24/7 SECURE LAUNCHER"
@@ -146,7 +147,20 @@ while true; do
         fi
     fi
 
-    if [ "${TUNNEL_PROVIDER}" = "pinggy" ]; then
+    elif [ "${TUNNEL_PROVIDER}" = "localtunnel" ]; then
+        # Fixed Subdomain (https://${SUBDOMAIN}.loca.lt) via Localtunnel
+        echo "============================================================"
+        echo "  CONNECTING TO FIXED SUBDOMAIN TUNNEL..."
+        echo "  Target Domain: https://${SUBDOMAIN}.loca.lt"
+        echo "============================================================"
+        if ! command -v lt >/dev/null 2>&1; then
+            if ! command -v node >/dev/null 2>&1; then
+                pkg install nodejs -y
+            fi
+            npm install -g localtunnel 2>/dev/null || true
+        fi
+        lt --port "${PORT}" --subdomain "${SUBDOMAIN}"
+    elif [ "${TUNNEL_PROVIDER}" = "pinggy" ]; then
         # Secure HTTPS via Pinggy with Let's Encrypt TLS and no phishing warnings
         echo "============================================================"
         echo "  CONNECTING TO PINGGY SECURE HTTPS TUNNEL..."

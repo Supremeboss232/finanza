@@ -1,40 +1,25 @@
 #!/data/data/com.termux/files/usr/bin/bash
 # ==============================================================================
-# FINANZA BANK — 24/7 MULTI-ENGINE SECURE LAUNCHER (TELEBIT #4 + FIXED SUBDOMAIN)
+# FINANZA BANK — 24/7 5-ENGINE SIMULTANEOUS SECURE LAUNCHER
 # ==============================================================================
-# What Runs Automatically:
-#  1. Primary Engine (#4 Telebit): https://*.telebit.io (via Telebit Relay)
-#  2. Fixed Subdomain Tunnel (Pure Python): https://bankfinanza.loca.lt
-#  3. Zero-Warning Backup Tunnel: https://*.lhr.life
-#  4. Android Hardware Wake-Lock + 24/7 FastAPI Uvicorn Supervisor
+# Runs 5 Simultaneous Tunnels to http://127.0.0.1:8000:
+#  1. PageKite Fixed Domain:    https://bankfinanza.pagekite.me
+#  2. Serveo SSH Tunnel:        https://bankfinanza.serveousercontent.com
+#  3. Pinggy Port 443 Tunnel:   https://*.run.pinggy-free.link
+#  4. Localhost.run Tunnel:     https://*.lhr.life
+#  5. LocalTunnel Fixed Domain: https://bankfinanza.loca.lt
 # ==============================================================================
 
 PORT="${PORT:-8000}"
 SUBDOMAIN="${SUBDOMAIN:-bankfinanza}"
-TUNNEL_PROVIDER="${TUNNEL_PROVIDER:-telebit}"   # "telebit" (#4 default), "lhr", "ngrok", or "cloudflare"
-NGROK_AUTHTOKEN="${NGROK_AUTHTOKEN:-}"
-NGROK_DOMAIN="${NGROK_DOMAIN:-bankfinanza.ngrok.app}"
-CLOUDFLARE_TUNNEL_TOKEN="${CLOUDFLARE_TUNNEL_TOKEN:-}"
-
-if [ -f ".env" ]; then
-    ENV_NGROK_TOKEN=$(grep -E "^NGROK_AUTHTOKEN=" .env | cut -d'=' -f2- | tr -d '"' | tr -d "'" | tr -d '\r')
-    ENV_NGROK_DOMAIN=$(grep -E "^NGROK_DOMAIN=" .env | cut -d'=' -f2- | tr -d '"' | tr -d "'" | tr -d '\r')
-    ENV_CF_TOKEN=$(grep -E "^CLOUDFLARE_TUNNEL_TOKEN=" .env | cut -d'=' -f2- | tr -d '"' | tr -d "'" | tr -d '\r')
-    [ -z "${NGROK_AUTHTOKEN}" ] && [ -n "${ENV_NGROK_TOKEN}" ] && NGROK_AUTHTOKEN="${ENV_NGROK_TOKEN}"
-    [ -n "${ENV_NGROK_DOMAIN}" ] && NGROK_DOMAIN="${ENV_NGROK_DOMAIN}"
-    [ -z "${CLOUDFLARE_TUNNEL_TOKEN}" ] && [ -n "${ENV_CF_TOKEN}" ] && CLOUDFLARE_TUNNEL_TOKEN="${ENV_CF_TOKEN}"
-fi
-
-if [ -n "${NGROK_AUTHTOKEN}" ]; then
-    TUNNEL_PROVIDER="ngrok"
-elif [ -n "${CLOUDFLARE_TUNNEL_TOKEN}" ]; then
-    TUNNEL_PROVIDER="cloudflare_named"
-fi
 
 echo "============================================================"
-echo "  FINANZA DIGITAL BANK — 24/7 SECURE LAUNCHER"
-echo "  Primary Tunnel (#4):     https://${SUBDOMAIN}.telebit.io"
-echo "  Fixed Subdomain Backup:  https://${SUBDOMAIN}.loca.lt"
+echo "  FINANZA DIGITAL BANK — 24/7 5-TUNNEL SECURE LAUNCHER"
+echo "  1) PageKite:      https://${SUBDOMAIN}.pagekite.me"
+echo "  2) Serveo:        https://${SUBDOMAIN}.serveousercontent.com"
+echo "  3) Pinggy (443):  https://*.run.pinggy-free.link"
+echo "  4) Localhost.run: https://*.lhr.life"
+echo "  5) LocalTunnel:   https://${SUBDOMAIN}.loca.lt"
 echo "============================================================"
 
 # 1. Prevent Android from sleeping or killing Termux in the background
@@ -52,20 +37,26 @@ if [ -d "/sdcard/finanza" ]; then
     echo "[OK] Workspace synchronized."
 fi
 
-# 3. Ensure SSH key exists for encrypted SSH tunnels
+# 3. Ensure SSH key exists for Serveo, Pinggy, and Localhost.run
 if [ ! -f "$HOME/.ssh/id_ed25519" ] && [ ! -f "$HOME/.ssh/id_rsa" ]; then
     echo "[SSH] Generating Termux SSH keypair..."
     mkdir -p "$HOME/.ssh"
     chmod 700 "$HOME/.ssh"
     ssh-keygen -t ed25519 -N "" -f "$HOME/.ssh/id_ed25519" >/dev/null 2>&1 || true
 fi
+SSH_KEY_ARG=""
+if [ -f "$HOME/.ssh/id_ed25519" ]; then
+    SSH_KEY_ARG="-i $HOME/.ssh/id_ed25519"
+elif [ -f "$HOME/.ssh/id_rsa" ]; then
+    SSH_KEY_ARG="-i $HOME/.ssh/id_rsa"
+fi
 
 # 4. Clean up old tunnel processes (keep existing healthy uvicorn if already running)
 pkill -f "finanza_tunnel.py" 2>/dev/null || true
+pkill -f "pagekite.py" 2>/dev/null || true
+pkill -f "serveo.net" 2>/dev/null || true
 pkill -f "localhost.run" 2>/dev/null || true
 pkill -f "pinggy.io" 2>/dev/null || true
-pkill -f "ngrok http" 2>/dev/null || true
-pkill -f "cloudflared" 2>/dev/null || true
 sleep 1
 
 # 5. Start FastAPI / Uvicorn in a quiet, non-duplicating background supervisor
@@ -94,28 +85,79 @@ for i in $(seq 1 30); do
     sleep 1
 done
 
-# 6. Start Pure-Python Fixed 'bankfinanza' Tunnel (https://bankfinanza.loca.lt) in background
+PUB_IP=$(curl -s --max-time 5 https://loca.lt/mytunnelpassword || curl -s --max-time 5 https://api.ipify.org || echo "")
+
+# 6. Start Background Tunnel Supervisors (#2 Serveo, #3 Pinggy, #4 Localhost.run, #5 LocalTunnel)
+rm -f serveo.log pinggy.log lhr.log localtunnel.log LIVE_URL.txt
+touch serveo.log pinggy.log lhr.log localtunnel.log
+
+# Tunnel #2: Serveo (serveo.net)
+start_serveo_loop() {
+    while true; do
+        ssh -T ${SSH_KEY_ARG} \
+            -o ServerAliveInterval=15 \
+            -o ServerAliveCountMax=3 \
+            -o ExitOnForwardFailure=yes \
+            -o ConnectTimeout=12 \
+            -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            -R "${SUBDOMAIN}:80:localhost:${PORT}" serveo.net > serveo.log 2>&1
+        sleep 4
+    done
+}
+start_serveo_loop &
+SERVEO_PID=$!
+
+# Tunnel #3: Pinggy Port 443 (a.pinggy.io)
+start_pinggy_loop() {
+    while true; do
+        ssh -T -p 443 ${SSH_KEY_ARG} \
+            -o ServerAliveInterval=15 \
+            -o ServerAliveCountMax=3 \
+            -o ExitOnForwardFailure=yes \
+            -o ConnectTimeout=12 \
+            -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            -R0:localhost:${PORT} a.pinggy.io > pinggy.log 2>&1
+        sleep 4
+    done
+}
+start_pinggy_loop &
+PINGGY_PID=$!
+
+# Tunnel #4: Localhost.run (nokey@localhost.run)
+start_lhr_loop() {
+    while true; do
+        ssh -T \
+            -o ServerAliveInterval=15 \
+            -o ServerAliveCountMax=3 \
+            -o ExitOnForwardFailure=yes \
+            -o ConnectTimeout=12 \
+            -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            -R 80:localhost:${PORT} nokey@localhost.run > lhr.log 2>&1
+        sleep 5
+    done
+}
+start_lhr_loop &
+LHR_PID=$!
+
+# Tunnel #5: LocalTunnel Fixed Subdomain (https://bankfinanza.loca.lt)
 if [ -f "finanza_tunnel.py" ]; then
-    PUB_IP=$(curl -s --max-time 5 https://loca.lt/mytunnelpassword || curl -s --max-time 5 https://api.ipify.org || echo "")
-    if [ -n "${PUB_IP}" ]; then
-        echo "[INFO] Fixed Link https://${SUBDOMAIN}.loca.lt (1-Time Password if asked: ${PUB_IP})"
-    fi
-    PORT="${PORT}" SUBDOMAIN="${SUBDOMAIN}" python finanza_tunnel.py &
+    PORT="${PORT}" SUBDOMAIN="${SUBDOMAIN}" python finanza_tunnel.py > localtunnel.log 2>&1 &
     PY_TUNNEL_PID=$!
 fi
 
 # Cleanup trap when user presses Ctrl+C
 cleanup() {
     echo ""
-    echo "[SHUTDOWN] Stopping Finanza 24/7 Launcher..."
-    kill "${BACKEND_PID}" 2>/dev/null || true
-    kill "${PY_TUNNEL_PID}" 2>/dev/null || true
+    echo "[SHUTDOWN] Stopping all 5 Finanza tunnels & backend supervisor..."
+    kill "${BACKEND_PID}" "${SERVEO_PID}" "${PINGGY_PID}" "${LHR_PID}" "${PY_TUNNEL_PID}" "${DASH_PID}" 2>/dev/null || true
     pkill -f "finanza_tunnel.py" 2>/dev/null || true
-    pkill -f "telebit" 2>/dev/null || true
+    pkill -f "pagekite.py" 2>/dev/null || true
+    pkill -f "serveo.net" 2>/dev/null || true
     pkill -f "localhost.run" 2>/dev/null || true
     pkill -f "pinggy.io" 2>/dev/null || true
-    pkill -f "ngrok http" 2>/dev/null || true
-    pkill -f "cloudflared" 2>/dev/null || true
     if command -v termux-wake-unlock >/dev/null 2>&1; then
         termux-wake-unlock
     fi
@@ -123,213 +165,70 @@ cleanup() {
 }
 trap cleanup INT TERM
 
-# Helper to install and start #4 Telebit in Termux configured for https://bankfinanza.telebit.io
-ensure_telebit() {
-    if ! command -v node >/dev/null 2>&1; then
-        echo "[TELEBIT] Installing Node.js runtime for Telebit..."
-        pkg install nodejs -y || return 1
-    fi
-    if ! command -v telebit >/dev/null 2>&1 && [ ! -f "${PREFIX}/lib/node_modules/telebit/bin/telebit.js" ]; then
-        echo "[TELEBIT] Installing Telebit CLI & Relay Daemon..."
-        npm install -g telebit || return 1
-    fi
-    TELEBIT_SOCK="$HOME/.local/share/telebit/var/run/telebit.sock"
-    TELEBIT_TOKEN="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkb21haW5zIjpbImJhbmtmaW5hbnphLnRlbGViaXQuaW8iXSwicG9ydHMiOltdLCJhdWQiOiJodHRwczovL3RlbGViaXQuY2xvdWQiLCJpc3MiOjE3OTQ1MDg3ODIsInN1YiI6ImFkbWluQGJhbmtmaW5hbnphLmNvbSJ9.9THXjjeb66Z58OYI4Ji_TvB94APjdV9MH3hOg-5KoNs"
-    mkdir -p "$HOME/.config/telebit" "$HOME/.local/share/telebit/var/run" "$HOME/.local/share/telebit/var/log" "$HOME/.local/share/telebit/etc"
+# Helper to print all 5 live URLs once PageKite configuration exists
+print_5_tunnel_dashboard() {
+    (
+        # Wait until first-time PageKite wizard finishes creating ~/.pagekite.rc so we don't interrupt typing
+        while [ ! -f "$HOME/.pagekite.rc" ]; do
+            sleep 2
+        done
+        sleep 8
+        SERVEO_URL=$(grep -i "Forwarding HTTP" serveo.log 2>/dev/null | grep -oE "https://[a-zA-Z0-9.-]+" | tail -n 1)
+        if [ -z "${SERVEO_URL}" ]; then
+            SERVEO_URL=$(grep -oE "https://[a-zA-Z0-9.-]+\.serveousercontent\.com" serveo.log 2>/dev/null | tail -n 1)
+        fi
+        PINGGY_URL=$(grep -oE "https://[a-zA-Z0-9.-]+\.(run\.pinggy-free\.link|free\.pinggy\.net|a\.pinggy\.link)" pinggy.log 2>/dev/null | tail -n 1)
+        LHR_URL=$(grep -oE "https://[a-zA-Z0-9.-]+\.lhr\.life" lhr.log 2>/dev/null | tail -n 1)
+        LOCA_URL=$(grep -oE "https://[a-zA-Z0-9.-]+\.loca\.lt" LIVE_URL.txt 2>/dev/null | tail -n 1)
 
-    # Always ensure telebit.yml points to the exact same socket path as telebitd.js (var/run/telebit.sock)
-    cat > "$HOME/.config/telebit/telebit.yml" <<EOF
-sock: ${TELEBIT_SOCK}
-root: $HOME/.local/share/telebit
-EOF
+        [ -z "${SERVEO_URL}" ] && SERVEO_URL="connecting (check serveo.log)..."
+        [ -z "${PINGGY_URL}" ] && PINGGY_URL="connecting (check pinggy.log)..."
+        [ -z "${LHR_URL}" ] && LHR_URL="connecting (check lhr.log)..."
+        [ -z "${LOCA_URL}" ] && LOCA_URL="https://${SUBDOMAIN}.loca.lt (check localtunnel.log)"
 
-    echo "${TELEBIT_TOKEN}" > "$HOME/.config/telebit/access_token.txt"
+        echo ""
+        echo "********************************************************************"
+        echo "  ALL 5 FINANZA PUBLIC HTTPS TUNNELS ACTIVE:"
+        echo "  1) PageKite (Fixed):    https://${SUBDOMAIN}.pagekite.me"
+        echo "  2) Serveo (Zero-Wait):  ${SERVEO_URL}"
+        echo "  3) Pinggy (Zero-Warn):  ${PINGGY_URL}"
+        echo "  4) Localhost.run:       ${LHR_URL}"
+        echo "  5) LocalTunnel (Fixed): ${LOCA_URL}"
+        if [ -n "${PUB_IP}" ]; then
+            echo "     (LocalTunnel 1-Time Password if asked: ${PUB_IP})"
+        fi
+        echo "********************************************************************"
+        echo ""
+    ) &
+    DASH_PID=$!
+}
 
-    # Write complete telebitd.yml with email, agree_tos, relay, secret, token, and bankfinanza.telebit.io
-    if ! grep -q "email:" "$HOME/.config/telebit/telebitd.yml" 2>/dev/null || ! grep -q "token:" "$HOME/.config/telebit/telebitd.yml" 2>/dev/null; then
-        cat > "$HOME/.config/telebit/telebitd.yml" <<EOF
-email: admin@${SUBDOMAIN}.com
-agree_tos: true
-community_member: true
-telemetry: true
-newsletter: false
-ssh_auto: false
-relay: https://telebit.cloud
-secret: 66696e616e7a615f74656c656269745f736563726574
-token: ${TELEBIT_TOKEN}
-sock: ${TELEBIT_SOCK}
-root: $HOME/.local/share/telebit
-servernames:
-  ${SUBDOMAIN}.telebit.io:
-    sub: true
-    wildcard: true
-    handler: ${PORT}
-ports: {}
-EOF
-        pkill -f "telebitd" 2>/dev/null || true
-        rm -f "${TELEBIT_SOCK}"
+print_5_tunnel_dashboard
+
+# 7. Tunnel #1: PageKite (https://bankfinanza.pagekite.me) in foreground (supports interactive 1st-time setup)
+ensure_pagekite() {
+    if [ ! -f "pagekite.py" ]; then
+        echo "[PAGEKITE] Downloading PageKite pure-Python client..."
+        curl -sSL "https://pagekite.net/pk/pagekite.py" -o pagekite.py || return 1
+        chmod +x pagekite.py 2>/dev/null || true
     fi
     return 0
 }
 
-ensure_ngrok() {
-    if ! command -v ngrok >/dev/null 2>&1 && [ ! -f "./ngrok" ]; then
-        echo "[NGROK] Downloading official Ngrok v3 Linux ARM64 binary..."
-        curl -sSL "https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-arm64.tgz" -o ngrok.tgz
-        tar -xzf ngrok.tgz -C "${PREFIX}/bin" 2>/dev/null || tar -xzf ngrok.tgz
-        chmod +x "${PREFIX}/bin/ngrok" 2>/dev/null || chmod +x ./ngrok
-        rm -f ngrok.tgz
-    fi
-    NGROK_BIN=$(command -v ngrok || echo "./ngrok")
-    if [ -n "${NGROK_AUTHTOKEN}" ]; then
-        "${NGROK_BIN}" config add-authtoken "${NGROK_AUTHTOKEN}" >/dev/null 2>&1 || true
-    fi
-}
-
-ensure_cloudflared() {
-    if ! command -v cloudflared >/dev/null 2>&1 && [ ! -f "./cloudflared" ]; then
-        echo "[CLOUDFLARE] Downloading official cloudflared Linux ARM64 binary..."
-        curl -sSL "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64" -o "${PREFIX}/bin/cloudflared" 2>/dev/null || \
-        curl -sSL "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64" -o "./cloudflared"
-        chmod +x "${PREFIX}/bin/cloudflared" 2>/dev/null || chmod +x "./cloudflared"
-    fi
-    CF_BIN=$(command -v cloudflared || echo "./cloudflared")
-}
-
-WATCH_PID=""
-watch_and_print_url() {
-    if [ -n "${WATCH_PID}" ]; then
-        kill "${WATCH_PID}" 2>/dev/null || true
-    fi
-    touch tunnel.log
-    (
-        for attempt in $(seq 1 25); do
-            sleep 1
-            if [ -f tunnel.log ]; then
-                LIVE_URL=$(grep -oE "https://[a-zA-Z0-9.-]+\.(telebit\.io|lhr\.life|pinggy-free\.link|free\.pinggy\.net|a\.pinggy\.link|pinggy\.link|ngrok-free\.app|ngrok\.app|ngrok\.io|trycloudflare\.com)" tunnel.log 2>/dev/null | tail -n 1)
-                if [ -n "${LIVE_URL}" ]; then
-                    echo ""
-                    echo "************************************************************"
-                    echo "  YOUR ACTIVE FINANZA WEB ADDRESSES:"
-                    echo "  1) Telebit Domain (#4):      https://${SUBDOMAIN}.telebit.io"
-                    echo "  2) Direct Zero-Warning Link: ${LIVE_URL}"
-                    echo "  3) Fixed Subdomain:          https://${SUBDOMAIN}.loca.lt"
-                    if [ -n "${PUB_IP}" ]; then
-                        echo "     (1-Time Tunnel Password if prompted: ${PUB_IP})"
-                    fi
-                    echo "************************************************************"
-                    echo ""
-                    break
-                fi
-            fi
-        done
-    ) &
-    WATCH_PID=$!
-}
-
-# 7. Start 24/7 Auto-Reconnecting Tunnel Loop
-FAIL_COUNT=0
 while true; do
-    rm -f tunnel.log
-    touch tunnel.log
-
-    if [ "${TUNNEL_PROVIDER}" = "telebit" ]; then
+    if ensure_pagekite; then
         echo "============================================================"
-        echo "  CONNECTING TO #4 TELEBIT: https://${SUBDOMAIN}.telebit.io"
+        echo "  STARTING #1 PAGEKITE: https://${SUBDOMAIN}.pagekite.me"
+        echo "  (While #2 Serveo, #3 Pinggy, #4 LHR, #5 LocalTunnel run in background)"
         echo "============================================================"
-        if ensure_telebit; then
-            TELEBIT_SOCK="$HOME/.local/share/telebit/var/run/telebit.sock"
-            TELEBITD_CMD="telebitd"
-            TELEBIT_CMD="telebit"
-            if [ -f "${PREFIX}/lib/node_modules/telebit/bin/telebitd.js" ]; then
-                TELEBITD_CMD="node ${PREFIX}/lib/node_modules/telebit/bin/telebitd.js"
-                TELEBIT_CMD="node ${PREFIX}/lib/node_modules/telebit/bin/telebit.js"
-            fi
-            if ! pgrep -f "telebitd" >/dev/null 2>&1 || [ ! -S "${TELEBIT_SOCK}" ]; then
-                pkill -f "telebitd" 2>/dev/null || true
-                rm -f "${TELEBIT_SOCK}"
-                ${TELEBITD_CMD} --config "$HOME/.config/telebit/telebitd.yml" >> telebitd.log 2>&1 &
-                for s_wait in $(seq 1 8); do
-                    [ -S "${TELEBIT_SOCK}" ] && break
-                    sleep 1
-                done
-            fi
-            echo "[TELEBIT] Registering https://${SUBDOMAIN}.telebit.io => http://localhost:${PORT}..."
-            ${TELEBIT_CMD} --config "$HOME/.config/telebit/telebit.yml" http "${PORT}" "${SUBDOMAIN}.telebit.io"
+        if [ ! -f "$HOME/.pagekite.rc" ]; then
+            echo "[FIRST-TIME SETUP] Answer PageKite's 2 quick prompts below:"
+            echo "  1) 'Use the PageKite.net service? [Y/n]' -> Type Y and press Enter"
+            echo "  2) 'What is your e-mail address?'        -> Enter your email and press Enter"
             echo ""
-            echo "************************************************************"
-            echo "  TELEBIT DAEMON ACTIVE:"
-            echo "  >> https://${SUBDOMAIN}.telebit.io => localhost:${PORT} <<"
-            echo "  >> https://${SUBDOMAIN}.loca.lt    => localhost:${PORT} <<"
-            echo "************************************************************"
-            echo ""
-            echo "[TELEBIT] Starting parallel high-speed edge relay (Pinggy Port 443)..."
-            TUNNEL_PROVIDER="pinggy"
-            continue
-        else
-            echo "[TELEBIT] Telebit setup unavailable; activating edge tunnel..."
-            TUNNEL_PROVIDER="pinggy"
-            continue
         fi
-    elif [ "${TUNNEL_PROVIDER}" = "ngrok" ]; then
-        ensure_ngrok
-        echo "============================================================"
-        echo "  CONNECTING TO NGROK: https://${NGROK_DOMAIN}"
-        echo "============================================================"
-        watch_and_print_url
-        "${NGROK_BIN}" http --url="${NGROK_DOMAIN}" "${PORT}" --log=stdout 2>&1 | tee tunnel.log
-        if grep -qE "ERR_NGROK_313|ERR_NGROK_3208|ERR_NGROK_108" tunnel.log 2>/dev/null; then
-            echo "[NGROK] Starting standard Ngrok HTTPS tunnel..."
-            rm -f tunnel.log
-            watch_and_print_url
-            "${NGROK_BIN}" http "${PORT}" --log=stdout 2>&1 | tee tunnel.log
-        fi
-    elif [ "${TUNNEL_PROVIDER}" = "cloudflare_named" ]; then
-        ensure_cloudflared
-        echo "============================================================"
-        echo "  CONNECTING PRIVATE CLOUDFLARE DOMAIN (bankfinanza.com)..."
-        echo "============================================================"
-        "${CF_BIN}" tunnel --no-autoupdate run --token "${CLOUDFLARE_TUNNEL_TOKEN}"
-    elif [ "${TUNNEL_PROVIDER}" = "pinggy" ]; then
-        echo "============================================================"
-        echo "  CONNECTING TO PINGGY SECURE HTTPS TUNNEL..."
-        echo "============================================================"
-        watch_and_print_url
-        ssh -T -p 443 \
-            -o ServerAliveInterval=15 \
-            -o ServerAliveCountMax=3 \
-            -o ExitOnForwardFailure=yes \
-            -o ConnectTimeout=12 \
-            -o StrictHostKeyChecking=no \
-            -o UserKnownHostsFile=/dev/null \
-            -R0:localhost:${PORT} a.pinggy.io 2>&1 | tee tunnel.log
-    else
-        echo "============================================================"
-        echo "  CONNECTING DIRECT ZERO-WARNING TUNNEL (*.lhr.life)..."
-        echo "============================================================"
-        watch_and_print_url
-        START_TS=$(date +%s)
-        ssh -T -o ServerAliveInterval=15 \
-            -o ServerAliveCountMax=3 \
-            -o ExitOnForwardFailure=yes \
-            -o ConnectTimeout=12 \
-            -o StrictHostKeyChecking=no \
-            -o UserKnownHostsFile=/dev/null \
-            -R 80:localhost:${PORT} nokey@localhost.run 2>&1 | tee tunnel.log
-        END_TS=$(date +%s)
-
-        if [ $((END_TS - START_TS)) -lt 5 ]; then
-            FAIL_COUNT=$((FAIL_COUNT + 1))
-            if [ "${FAIL_COUNT}" -ge 2 ]; then
-                echo "[AUTO-SWITCH] Switching backup tunnel to Pinggy (Port 443)..."
-                TUNNEL_PROVIDER="pinggy"
-                FAIL_COUNT=0
-            fi
-        else
-            FAIL_COUNT=0
-        fi
+        python pagekite.py "${PORT}" "${SUBDOMAIN}.pagekite.me"
     fi
-
-    echo "[TUNNEL] Re-establishing edge tunnel in 3 seconds..."
-    sleep 3
+    echo "[PAGEKITE] Reconnecting https://${SUBDOMAIN}.pagekite.me in 5 seconds..."
+    sleep 5
 done

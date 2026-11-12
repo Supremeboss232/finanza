@@ -263,11 +263,11 @@ async def test_connection(data: dict = Body(default={}), admin=Depends(_require_
     status_code = None
     error_msg = None
 
-    # Check if endpoint URL points back to local instance (localhost / ngrok / serveo / onrender loopback)
+    # Check if endpoint URL points back to local instance (localhost / ngrok / cloudflare / pinggy / onrender loopback)
     # to avoid single-worker event loop re-entrancy deadlock.
     is_loopback = any(
         domain in url.lower()
-        for domain in ["127.0.0.1", "localhost", "ngrok-free.dev", "ngrok.io", "serveousercontent.com", "onrender.com"]
+        for domain in ["127.0.0.1", "localhost", "trycloudflare.com", "pinggy.link", "a.pinggy.io", "ngrok-free.dev", "ngrok.io", "serveousercontent.com", "onrender.com"]
     )
 
     if is_loopback:

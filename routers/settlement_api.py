@@ -609,7 +609,7 @@ async def allocate_clearing_pool_liquidity(
         }
         is_self = any(
             d in endpoint_url.lower()
-            for d in ("127.0.0.1", "localhost", "trycloudflare.com", "pinggy.link", "serveousercontent.com", "onrender.com", "ngrok")
+            for d in ("127.0.0.1", "localhost", "lhr.life", "localhost.run", "ngrok-free.app", "trycloudflare.com", "pinggy.link", "serveousercontent.com", "onrender.com", "ngrok")
         )
         if is_self:
             payrail_sync_result = {
@@ -827,7 +827,7 @@ async def dispatch_interbank_settlement(
     if endpoint_url:
         is_self = any(
             d in endpoint_url.lower()
-            for d in ("127.0.0.1", "localhost", "trycloudflare.com", "pinggy.link", "serveousercontent.com", "onrender.com", "ngrok")
+            for d in ("127.0.0.1", "localhost", "lhr.life", "localhost.run", "ngrok-free.app", "trycloudflare.com", "pinggy.link", "serveousercontent.com", "onrender.com", "ngrok")
         )
         if is_self:
             webhook_delivery = {

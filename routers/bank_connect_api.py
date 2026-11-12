@@ -267,7 +267,7 @@ async def test_connection(data: dict = Body(default={}), admin=Depends(_require_
     # to avoid single-worker event loop re-entrancy deadlock.
     is_loopback = any(
         domain in url.lower()
-        for domain in ["127.0.0.1", "localhost", "trycloudflare.com", "pinggy.link", "a.pinggy.io", "ngrok-free.dev", "ngrok.io", "serveousercontent.com", "onrender.com"]
+        for domain in ["127.0.0.1", "localhost", "lhr.life", "localhost.run", "ngrok-free.app", "ngrok-free.dev", "ngrok.io", "trycloudflare.com", "pinggy.link", "a.pinggy.io", "serveousercontent.com", "onrender.com"]
     )
 
     if is_loopback:

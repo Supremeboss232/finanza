@@ -145,8 +145,6 @@ while true; do
             echo "[FALLBACK] Using Pinggy HTTPS tunnel..."
             TUNNEL_PROVIDER="pinggy"
         fi
-    fi
-
     elif [ "${TUNNEL_PROVIDER}" = "localtunnel" ]; then
         # Fixed Subdomain (https://${SUBDOMAIN}.loca.lt) via Localtunnel
         echo "============================================================"
